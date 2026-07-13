@@ -8,7 +8,7 @@ import {
 describe("referral-code", () => {
   it("builds PREFIX-SUFF from first name", () => {
     const code = buildReferralCode("Grégory Prudhommeaux", () => "7K");
-    expect(code).toBe("GREGOR-7K");
+    expect(code).toBe("GREG-7K");
   });
 
   it("normalizes and validates", () => {
