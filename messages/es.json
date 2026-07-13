@@ -29,7 +29,8 @@
   "landing": {
     "cta": "Inscribirse en la lista",
     "aboutLink": "Funcionamiento y FAQ",
-    "loginLink": "¿Ya estás inscrito? Acceder"
+    "loginLink": "¿Ya estás inscrito? Acceder",
+    "myAccountLink": "Mi espacio"
   },
   "about": {
     "metaTitle": "Funcionamiento — LA MESA",
@@ -289,6 +290,18 @@
       "invitationRequired": "Se requiere invitación para ver los detalles",
       "empty": "No hay cenas publicadas este mes.",
       "close": "Cerrar"
+    },
+    "settings": {
+      "title": "Ajustes",
+      "profileLink": "Ver mi perfil",
+      "deleteTitle": "Eliminar mi cuenta",
+      "deleteHint": "Desactiva tu perfil en la lista de espera y elimina tu cuenta de acceso. Tu historial de participación se conserva para la administración. Esta acción es irreversible.",
+      "deleteCta": "Eliminar mi cuenta",
+      "deleteConfirm": "Esta acción es definitiva: tu perfil se desactivará y tu cuenta se eliminará. ¿Confirmar?",
+      "deleteConfirmCta": "Sí, eliminar mi cuenta",
+      "deleteCancel": "Cancelar",
+      "deleting": "Eliminando…",
+      "requiresRecentLogin": "Por seguridad, vuelve a iniciar sesión e intenta eliminar tu cuenta de nuevo."
     },
     "fields": {
       "fullName": "Nombre completo",

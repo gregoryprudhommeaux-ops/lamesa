@@ -29,7 +29,8 @@
   "landing": {
     "cta": "Join the waitlist",
     "aboutLink": "How it works & FAQ",
-    "loginLink": "Already registered? Sign in"
+    "loginLink": "Already registered? Sign in",
+    "myAccountLink": "My space"
   },
   "about": {
     "metaTitle": "How it works — LA MESA",
@@ -289,6 +290,18 @@
       "invitationRequired": "Invitation required to see details",
       "empty": "No published dinners this month.",
       "close": "Close"
+    },
+    "settings": {
+      "title": "Settings",
+      "profileLink": "View my profile",
+      "deleteTitle": "Delete my account",
+      "deleteHint": "Deactivates your waitlist profile and deletes your sign-in account. Your participation history is kept for admin purposes. This action cannot be undone.",
+      "deleteCta": "Delete my account",
+      "deleteConfirm": "This is permanent: your profile will be deactivated and your account deleted. Confirm?",
+      "deleteConfirmCta": "Yes, delete my account",
+      "deleteCancel": "Cancel",
+      "deleting": "Deleting…",
+      "requiresRecentLogin": "For security, please sign in again and retry deleting your account."
     },
     "fields": {
       "fullName": "Full name",

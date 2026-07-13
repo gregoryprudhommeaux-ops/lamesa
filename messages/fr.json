@@ -29,7 +29,8 @@
   "landing": {
     "cta": "S'inscrire à la liste",
     "aboutLink": "Fonctionnement & FAQ",
-    "loginLink": "Déjà inscrit ? Connexion"
+    "loginLink": "Déjà inscrit ? Connexion",
+    "myAccountLink": "Mon espace"
   },
   "about": {
     "metaTitle": "Fonctionnement — LA MESA",
@@ -289,6 +290,18 @@
       "invitationRequired": "Invitation requise pour voir les détails",
       "empty": "Aucun dîner publié ce mois-ci.",
       "close": "Fermer"
+    },
+    "settings": {
+      "title": "Réglages",
+      "profileLink": "Voir mon profil",
+      "deleteTitle": "Supprimer mon compte",
+      "deleteHint": "Désactive ton profil sur la liste d'attente et supprime ton compte de connexion. Ton historique de participations est conservé pour l'administration. Cette action est irréversible.",
+      "deleteCta": "Supprimer mon compte",
+      "deleteConfirm": "Cette action est définitive : ton profil sera désactivé et ton compte supprimé. Confirmer ?",
+      "deleteConfirmCta": "Oui, supprimer mon compte",
+      "deleteCancel": "Annuler",
+      "deleting": "Suppression…",
+      "requiresRecentLogin": "Pour des raisons de sécurité, reconnecte-toi puis réessaie de supprimer ton compte."
     },
     "fields": {
       "fullName": "Nom complet",

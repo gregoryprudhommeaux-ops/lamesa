@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/auth/auth-provider";
 import { AppFooter } from "@/components/layout/app-footer";
 import { LaMesaBrandHeader } from "@/components/la-mesa-brand-header";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -35,17 +36,34 @@ export function LanguageSwitcher() {
   );
 }
 
+const TOP_BAR_LINK_CLASS =
+  "whitespace-nowrap text-xs font-medium text-white/45 transition hover:text-white/70";
+
 function TopBarLoginLink() {
-  const t = useTranslations("landing");
+  const tLanding = useTranslations("landing");
+  const tAccount = useTranslations("account");
   const pathname = usePathname();
+  const { user, loading } = useAuth();
+
   if (pathname === "/connexion" || pathname.startsWith("/connexion/")) return null;
+  if (loading) return null;
+
+  if (user) {
+    return (
+      <div className="flex items-center gap-3">
+        <Link href="/compte" className={TOP_BAR_LINK_CLASS}>
+          {tLanding("myAccountLink")}
+        </Link>
+        <Link href="/reglages" className={TOP_BAR_LINK_CLASS}>
+          {tAccount("settingsLink")}
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <Link
-      href="/connexion"
-      className="whitespace-nowrap text-xs font-medium text-white/45 transition hover:text-white/70"
-    >
-      {t("loginLink")}
+    <Link href="/connexion" className={TOP_BAR_LINK_CLASS}>
+      {tLanding("loginLink")}
     </Link>
   );
 }
