@@ -18,7 +18,7 @@ type MemberShellProps = {
 export function MemberShell({ children, title }: MemberShellProps) {
   const t = useTranslations("account");
   const locale = useLocale();
-  const { logout, user, isAdmin } = useAuth();
+  const { logout, isAdmin } = useAuth();
   const searchParams = useSearchParams();
   const tab = (searchParams.get("tab") as MemberTab) || "dashboard";
   const active = TABS.includes(tab) ? tab : "dashboard";
@@ -29,9 +29,6 @@ export function MemberShell({ children, title }: MemberShellProps) {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-ns-hero">{heading}</h2>
-          {user?.email && (
-            <p className="mt-1 text-sm text-ns-secondary">{user.email}</p>
-          )}
           <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold">
             {isAdmin && (
               <a href="/admin/evenements" className="text-ns-primary hover:underline">
