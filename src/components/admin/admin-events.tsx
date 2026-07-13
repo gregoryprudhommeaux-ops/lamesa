@@ -13,6 +13,7 @@ import {
   LABEL_CLASS,
 } from "@/lib/ui/nextstep";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
+import { buildDefaultEventInviteTemplate } from "@/lib/email/build-event-invite-template";
 import {
   buildEmailTemplate,
   buildWhatsappTemplate,
@@ -23,7 +24,7 @@ import {
   countSeatedParticipations,
   totalCoversWithAdmin,
 } from "@/lib/events/capacity";
-import { Copy, Plus, Save, Trash2 } from "lucide-react";
+import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminEventsProps = {
@@ -102,6 +103,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [status, setStatus] = useState<"draft" | "published" | "closed">("draft");
   const [eventLanguage, setEventLanguage] = useState<"fr" | "en" | "es">(locale);
   const [selectedInvitees, setSelectedInvitees] = useState<SelectedInvitee[]>([]);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteSubject, setInviteSubject] = useState("");
+  const [inviteBody, setInviteBody] = useState("");
+  const [includeWaitlist, setIncludeWaitlist] = useState(false);
+  const [sendingInvites, setSendingInvites] = useState(false);
+  const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
 
   const activeEvent = useMemo(
     () => events.find((e) => e.id === activeId) ?? null,
@@ -325,6 +332,72 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       setError(e instanceof Error ? e.message : String(e));
     }
   }
+
+  function openInviteModal() {
+    if (!activeEvent) return;
+    const defaults = buildDefaultEventInviteTemplate({
+      event: activeEvent,
+      publicBaseUrl,
+      lang: eventLanguage,
+    });
+    setInviteSubject(activeEvent.inviteEmailSubject?.trim() || defaults.subject);
+    setInviteBody(activeEvent.inviteEmailBody?.trim() || defaults.body);
+    setIncludeWaitlist(false);
+    setInviteSendResult(null);
+    setInviteModalOpen(true);
+  }
+
+  function resetInviteTemplate() {
+    if (!activeEvent) return;
+    const defaults = buildDefaultEventInviteTemplate({
+      event: activeEvent,
+      publicBaseUrl,
+      lang: eventLanguage,
+    });
+    setInviteSubject(defaults.subject);
+    setInviteBody(defaults.body);
+  }
+
+  async function sendInvitations() {
+    if (!activeId) return;
+    setSendingInvites(true);
+    setInviteSendResult(null);
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/events/${activeId}/send-invitations`, {
+        method: "POST",
+        body: JSON.stringify({
+          subject: inviteSubject,
+          body: inviteBody,
+          includeWaitlist,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        failed?: number;
+        recipientCount?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "send_failed");
+      }
+      setInviteSendResult(
+        `Envoyé : ${json.sent ?? 0} / ${json.recipientCount ?? 0}` +
+          ((json.failed ?? 0) > 0 ? ` · échecs : ${json.failed}` : ""),
+      );
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingInvites(false);
+    }
+  }
+
+  const invitedRecipientCount = useMemo(() => {
+    const statuses = includeWaitlist ? new Set(["invited", "waitlist"]) : new Set(["invited"]);
+    return activeParticipations.filter((p) => statuses.has(p.status)).length;
+  }, [activeParticipations, includeWaitlist]);
 
   const publicUrl = activeEvent
     ? eventPublicUrl(publicBaseUrl, activeEvent.slug, eventLanguage)
@@ -634,6 +707,20 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             {activeId && (
               <button
                 type="button"
+                onClick={openInviteModal}
+                disabled={
+                  activeParticipations.filter((p) => p.status === "invited").length === 0 &&
+                  activeParticipations.filter((p) => p.status === "waitlist").length === 0
+                }
+                className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
+                title="Envoie un email à tous les invités (template éditable)"
+              >
+                <Mail className="h-4 w-4" /> Lancer les invitations
+              </button>
+            )}
+            {activeId && (
+              <button
+                type="button"
                 onClick={() => void deleteEvent()}
                 className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-red-600`}
               >
@@ -642,6 +729,102 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             )}
           </div>
         </section>
+
+        {inviteModalOpen && activeEvent && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lancer les invitations"
+            onClick={() => setInviteModalOpen(false)}
+          >
+            <div
+              className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div>
+                  <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    Template par défaut généré depuis l’événement. Tu peux le modifier avant l’envoi.
+                    Variable utile : {"{{fullName}}"}.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-ns-secondary hover:text-ns-tertiary"
+                  onClick={() => setInviteModalOpen(false)}
+                  aria-label="Fermer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto px-5 py-4">
+                <div>
+                  <label className={LABEL_CLASS}>Objet</label>
+                  <input
+                    className={INPUT_CLASS}
+                    value={inviteSubject}
+                    onChange={(e) => setInviteSubject(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Message</label>
+                  <textarea
+                    className={`${INPUT_CLASS} min-h-[260px] font-mono text-sm`}
+                    value={inviteBody}
+                    onChange={(e) => setInviteBody(e.target.value)}
+                  />
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 text-sm text-ns-tertiary">
+                  <input
+                    type="checkbox"
+                    className="accent-ns-primary"
+                    checked={includeWaitlist}
+                    onChange={(e) => setIncludeWaitlist(e.target.checked)}
+                  />
+                  Inclure aussi la Waiting List
+                </label>
+                <p className="text-xs text-ns-secondary">
+                  Destinataires : {invitedRecipientCount} personne
+                  {invitedRecipientCount > 1 ? "s" : ""}
+                  {activeEvent.inviteEmailSentAt
+                    ? ` · dernier envoi : ${new Date(activeEvent.inviteEmailSentAt).toLocaleString("fr-FR")}`
+                    : ""}
+                </p>
+                {inviteSendResult && (
+                  <p className="text-sm font-medium text-ns-primary">{inviteSendResult}</p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-5 py-4">
+                <button type="button" className={BTN_SECONDARY} onClick={resetInviteTemplate}>
+                  Réinitialiser le template
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={BTN_SECONDARY}
+                    onClick={() => setInviteModalOpen(false)}
+                  >
+                    Fermer
+                  </button>
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    disabled={sendingInvites || invitedRecipientCount === 0}
+                    onClick={() => void sendInvitations()}
+                  >
+                    {sendingInvites
+                      ? "Envoi…"
+                      : `Envoyer à ${invitedRecipientCount}`}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {activeEvent && (
           <>

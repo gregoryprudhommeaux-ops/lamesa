@@ -31,6 +31,10 @@ export interface AdminEvent {
   createdAt?: string;
   updatedAt?: string;
   createdByUid?: string;
+  /** Last edited invite blast template (admin) */
+  inviteEmailSubject?: string;
+  inviteEmailBody?: string;
+  inviteEmailSentAt?: string;
 }
 
 export interface AdminEventParticipation {
@@ -84,13 +88,9 @@ export interface WaitlistRegistration {
   updatedAt?: string;
   /** Soft-delete — present when member deactivated their profile */
   deletedAt?: string;
-  /** Lazy-generated permanent referral code (e.g. GREG-7K) */
   referralCode?: string;
-  /** Code used at registration (filleul) */
   referredByCode?: string;
-  /** Waitlist doc id of sponsor */
   referredById?: string;
-  /** When referral acceptance was recorded (registration with ref) */
   referralAcceptedAt?: string;
 }
 
