@@ -16,6 +16,7 @@ const inviteesSchema = z.object({
         fullName: z.string().optional(),
         companyName: z.string().optional(),
         contactId: z.string().optional(),
+        status: z.enum(["invited", "waitlist"]).optional(),
       }),
     )
     .min(1)
@@ -77,7 +78,11 @@ export async function POST(request: Request, { params }: Params) {
         skipped += 1;
         continue;
       }
-      const status = nextInviteStatus(capacity, seated);
+      const preferred = inv.status;
+      const status =
+        preferred === "waitlist"
+          ? "waitlist"
+          : nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
       else waitlisted += 1;
       await db.collection(COLLECTIONS.participations).add({

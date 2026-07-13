@@ -62,6 +62,7 @@ export const eventSchema = z.object({
         fullName: z.string().optional(),
         companyName: z.string().optional(),
         contactId: z.string().optional(),
+        status: z.enum(["invited", "waitlist"]).optional(),
       }),
     )
     .optional(),

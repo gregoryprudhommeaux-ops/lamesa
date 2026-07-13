@@ -175,7 +175,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       typeof window !== "undefined" &&
       new URLSearchParams(window.location.search).get("nouveau") === "1";
     if (pending.length === 0 && !wantsNew) return;
-    resetForm(pending);
+    resetForm(
+      pending.map((p) => ({
+        ...p,
+        inviteAs: "invited" as const,
+      })),
+    );
     if (wantsNew && typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("nouveau");
@@ -258,6 +263,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 fullName: inv.fullName,
                 companyName: inv.companyName,
                 contactId: inv.contactId,
+                status: inv.inviteAs,
               })),
             }),
           });
@@ -276,6 +282,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               fullName: inv.fullName,
               companyName: inv.companyName,
               contactId: inv.contactId,
+              status: inv.inviteAs,
             })),
           }),
         });

@@ -87,7 +87,11 @@ export async function POST(request: Request) {
     const inviteEmails = data.inviteEmails ?? [];
     let seated = 0;
     for (const inv of inviteEmails) {
-      const status = nextInviteStatus(capacity, seated);
+      const preferred = inv.status;
+      const status =
+        preferred === "waitlist"
+          ? "waitlist"
+          : nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
       await db.collection(COLLECTIONS.participations).add({
         eventId: ref.id,

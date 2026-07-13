@@ -188,6 +188,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       companyName: r.company,
       contactId: r.id,
       source: "waitlist" as const,
+      inviteAs: "invited" as const,
     }));
   }
 

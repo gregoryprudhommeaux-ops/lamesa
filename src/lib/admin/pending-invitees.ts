@@ -6,6 +6,7 @@ export type PendingInvitee = {
   companyName?: string;
   contactId?: string;
   source: "database_perso" | "waitlist" | "external";
+  inviteAs?: "invited" | "waitlist";
 };
 
 export function setPendingInvitees(invitees: PendingInvitee[]): void {
