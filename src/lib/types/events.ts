@@ -45,6 +45,8 @@ export interface AdminEventParticipation {
   email: string;
   fullName?: string;
   companyName?: string;
+  /** Enriched from waitlist by email (admin list only) */
+  phone?: string | null;
   status: EventParticipationStatus;
   statusSource: EventStatusSource;
   declineReason?: string;

@@ -52,6 +52,71 @@ export function buildWhatsappTemplate(
   return `${intro}${when ? `\n${when}` : ""}\n${url}`;
 }
 
+/** Personalized WhatsApp invite body (keeps {{fullName}} for substitution). */
+export function buildWhatsappInviteMessage(input: {
+  title: string;
+  when: string;
+  where?: string;
+  url: string;
+  lang: "fr" | "en" | "es";
+}): string {
+  const { title, when, where, url, lang } = input;
+  if (lang === "en") {
+    return [
+      "Hi {{fullName}},",
+      "",
+      `You're invited to a private LA MESA dinner: ${title}`,
+      when ? `When: ${when}` : "",
+      where ? `Where: ${where}` : "",
+      "",
+      "Details & RSVP:",
+      url,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  if (lang === "es") {
+    return [
+      "Hola {{fullName}},",
+      "",
+      `Estás invitad@ a una cena privada LA MESA: ${title}`,
+      when ? `Cuándo: ${when}` : "",
+      where ? `Dónde: ${where}` : "",
+      "",
+      "Detalles y confirmación:",
+      url,
+    ]
+      .filter(Boolean)
+      .join("\n");
+  }
+  return [
+    "Bonjour {{fullName}},",
+    "",
+    `Tu es invité(e) à un dîner privé LA MESA : ${title}`,
+    when ? `Quand : ${when}` : "",
+    where ? `Où : ${where}` : "",
+    "",
+    "Détails et confirmation :",
+    url,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** Digits-only international number for wa.me links, or null if unusable. */
+export function toWhatsAppDigits(phone: string | null | undefined): string | null {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 10 || digits.length > 15) return null;
+  return digits;
+}
+
+export function whatsappShareUrl(message: string, phoneDigits?: string | null): string {
+  const text = encodeURIComponent(message);
+  if (phoneDigits) return `https://wa.me/${phoneDigits}?text=${text}`;
+  return `https://wa.me/?text=${text}`;
+}
+
 export function fmtDateTime(iso: string | undefined, lang: "fr" | "en" | "es"): string {
   if (!iso) return "";
   try {

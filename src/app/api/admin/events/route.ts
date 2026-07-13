@@ -25,7 +25,24 @@ export async function GET(request: Request) {
     ]);
 
     const events = eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const participations = partsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const waitlistSnap = await db.collection(COLLECTIONS.waitlist).limit(2000).get();
+    const phoneByEmail = new Map<string, string>();
+    for (const d of waitlistSnap.docs) {
+      const data = d.data();
+      const email = normalizeEmail(String(data.email ?? ""));
+      const phone = String(data.phone ?? "").trim();
+      if (email && phone) phoneByEmail.set(email, phone);
+    }
+
+    const participations = partsSnap.docs.map((d) => {
+      const data = d.data();
+      const email = normalizeEmail(String(data.email ?? ""));
+      return {
+        id: d.id,
+        ...data,
+        phone: phoneByEmail.get(email) ?? null,
+      };
+    });
 
     return NextResponse.json({ ok: true, events, participations });
   } catch (error) {

@@ -16,15 +16,19 @@ import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { buildDefaultEventInviteTemplate } from "@/lib/email/build-event-invite-template";
 import {
   buildEmailTemplate,
+  buildWhatsappInviteMessage,
   buildWhatsappTemplate,
   eventPublicUrl,
   fmtDateTime,
+  toWhatsAppDigits,
+  whatsappShareUrl,
 } from "@/lib/events/utils";
+import { applyInviteTemplateVars } from "@/lib/email/build-event-invite-template";
 import {
   countSeatedParticipations,
   totalCoversWithAdmin,
 } from "@/lib/events/capacity";
-import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
+import { Copy, Mail, MessageCircle, Plus, Save, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminEventsProps = {
@@ -421,6 +425,57 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         eventLanguage,
       )
     : "";
+
+  function personalizedWhatsappMessage(fullName?: string) {
+    if (!activeEvent) return "";
+    const where = [activeEvent.venueName, activeEvent.address].filter(Boolean).join(" — ");
+    const template = buildWhatsappInviteMessage({
+      title: activeEvent.title,
+      when: fmtDateTime(activeEvent.startsAt, eventLanguage),
+      where,
+      url: publicUrl,
+      lang: eventLanguage,
+    });
+    return applyInviteTemplateVars(template, {
+      fullName: fullName ?? "",
+      email: "",
+      eventUrl: publicUrl,
+    });
+  }
+
+  function openWhatsAppForParticipation(
+    p: AdminEventParticipation,
+    options?: { silentMissingPhone?: boolean },
+  ) {
+    const digits = toWhatsAppDigits(p.phone);
+    if (!digits && !options?.silentMissingPhone) {
+      window.alert(
+        "Aucun téléphone trouvé pour ce contact (profil waitlist). Le chat WhatsApp s’ouvrira sans numéro prérempli.",
+      );
+    }
+    const url = whatsappShareUrl(personalizedWhatsappMessage(p.fullName), digits);
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function openWhatsAppForAll() {
+    const targets = activeParticipations.filter(
+      (p) => p.status === "invited" || p.status === "waitlist" || p.status === "present",
+    );
+    if (targets.length === 0) return;
+    const withPhone = targets.filter((p) => toWhatsAppDigits(p.phone));
+    const without = targets.length - withPhone.length;
+    const ok = window.confirm(
+      `Ouvrir WhatsApp un par un pour ${targets.length} contact(s)` +
+        (without > 0 ? ` (${without} sans numéro → choix manuel)` : "") +
+        " ?\n\nAutorise les pop-ups si le navigateur le demande.",
+    );
+    if (!ok) return;
+    for (let i = 0; i < targets.length; i += 1) {
+      const p = targets[i]!;
+      openWhatsAppForParticipation(p, { silentMissingPhone: true });
+      await new Promise((r) => window.setTimeout(r, 700));
+    }
+  }
 
   if (loading) return <p className="text-sm text-ns-secondary">Chargement…</p>;
 
@@ -857,7 +912,18 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             </section>
 
             <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-              <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
+                <button
+                  type="button"
+                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
+                  onClick={() => void openWhatsAppForAll()}
+                  disabled={activeParticipations.length === 0}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  WhatsApp à tous
+                </button>
+              </div>
               {(() => {
                 const seatCap = activeEvent.capacity ?? capacity ?? 15;
                 const seated = countSeatedParticipations(activeParticipations);
@@ -879,25 +945,43 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     key={p.id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
                   >
-                    <span>
+                    <span className="min-w-0 flex-1">
                       {p.fullName ?? p.email}
                       {p.companyName ? ` · ${p.companyName}` : ""}
+                      {p.phone ? (
+                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
+                      ) : (
+                        <span className="mt-0.5 block text-xs text-ns-secondary">
+                          Pas de téléphone
+                        </span>
+                      )}
                     </span>
-                    <select
-                      value={p.status}
-                      onChange={(e) =>
-                        void setParticipationStatus(
-                          p.id,
-                          e.target.value as AdminEventParticipation["status"],
-                        )
-                      }
-                      className="rounded border border-ns-alternate px-2 py-1 text-xs"
-                    >
-                      <option value="invited">{labels["statuses.invited"]}</option>
-                      <option value="present">{labels["statuses.present"]}</option>
-                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                      <option value="declined">{labels["statuses.declined"]}</option>
-                    </select>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className={`${BTN_SECONDARY} inline-flex items-center gap-1 px-2 py-1 text-xs`}
+                        onClick={() => openWhatsAppForParticipation(p)}
+                        title="Envoyer l’invitation par WhatsApp"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        WhatsApp
+                      </button>
+                      <select
+                        value={p.status}
+                        onChange={(e) =>
+                          void setParticipationStatus(
+                            p.id,
+                            e.target.value as AdminEventParticipation["status"],
+                          )
+                        }
+                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
+                      >
+                        <option value="invited">{labels["statuses.invited"]}</option>
+                        <option value="present">{labels["statuses.present"]}</option>
+                        <option value="waitlist">{labels["statuses.waitlist"]}</option>
+                        <option value="declined">{labels["statuses.declined"]}</option>
+                      </select>
+                    </div>
                   </li>
                 ))}
               </ul>
