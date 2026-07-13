@@ -240,8 +240,8 @@
     "joinWaitlist": "Inscribirse",
     "title": "Mi espacio LA MESA",
     "tabs": {
-      "dashboard": "Dashboard",
       "calendrier": "Calendario",
+      "dashboard": "Dashboard",
       "profil": "Mi perfil"
     },
     "loading": "Cargando…",

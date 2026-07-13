@@ -6,9 +6,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-export type MemberTab = "dashboard" | "calendrier" | "profil";
+export type MemberTab = "calendrier" | "dashboard" | "profil";
 
-const TABS: MemberTab[] = ["dashboard", "calendrier", "profil"];
+const TABS: MemberTab[] = ["calendrier", "dashboard", "profil"];
+export const DEFAULT_MEMBER_TAB: MemberTab = "calendrier";
 
 type MemberShellProps = {
   children: ReactNode;
@@ -20,8 +21,9 @@ export function MemberShell({ children, title }: MemberShellProps) {
   const locale = useLocale();
   const { logout, isAdmin } = useAuth();
   const searchParams = useSearchParams();
-  const tab = (searchParams.get("tab") as MemberTab) || "dashboard";
-  const active = TABS.includes(tab) ? tab : "dashboard";
+  const tabParam = searchParams.get("tab") as MemberTab | null;
+  const active =
+    tabParam && TABS.includes(tabParam) ? tabParam : DEFAULT_MEMBER_TAB;
   const heading = title ?? t("title");
 
   return (
@@ -79,5 +81,5 @@ export function useMemberTab(): MemberTab {
   const searchParams = useSearchParams();
   const tab = searchParams.get("tab") as MemberTab | null;
   if (tab && TABS.includes(tab)) return tab;
-  return "dashboard";
+  return DEFAULT_MEMBER_TAB;
 }

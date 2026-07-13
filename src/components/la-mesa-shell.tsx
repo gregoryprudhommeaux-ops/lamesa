@@ -51,7 +51,7 @@ function TopBarLoginLink() {
   if (user) {
     return (
       <div className="flex items-center gap-3">
-        <Link href="/compte" className={TOP_BAR_LINK_CLASS}>
+        <Link href="/compte?tab=calendrier" className={TOP_BAR_LINK_CLASS}>
           {tLanding("myAccountLink")}
         </Link>
         <Link href="/reglages" className={TOP_BAR_LINK_CLASS}>

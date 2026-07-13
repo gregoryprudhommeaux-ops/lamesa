@@ -19,7 +19,7 @@ export function MemberLoginPanel() {
       router.replace("/admin/evenements");
       return;
     }
-    router.replace(`/${locale}/compte`);
+    router.replace(`/${locale}/compte?tab=calendrier`);
   }, [user, loading, isAdmin, router, locale]);
 
   return (
