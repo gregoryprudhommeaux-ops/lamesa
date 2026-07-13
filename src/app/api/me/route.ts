@@ -6,7 +6,16 @@ import {
   requireVerifiedUser,
 } from "@/lib/auth/member.server";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { computeDashboardStats } from "@/lib/member/dashboard-stats";
+import { withoutSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
+
+const EMPTY_STATS = {
+  invitationsReceived: 0,
+  pastParticipations: 0,
+  upcomingInvitations: 0,
+  friendsReferred: 0,
+} as const;
 
 function isNextResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
@@ -28,6 +37,8 @@ export async function GET(request: Request) {
       notOnWaitlist: !isAdmin,
       pastInvitations: [],
       upcomingInvitations: [],
+      stats: EMPTY_STATS,
+      referral: { code: null, canBeSponsor: !isAdmin },
       isAdmin,
       dev: true,
     });
@@ -49,6 +60,8 @@ export async function GET(request: Request) {
       notOnWaitlist: true,
       pastInvitations: [],
       upcomingInvitations: [],
+      stats: EMPTY_STATS,
+      referral: { code: null, canBeSponsor: true },
       isAdmin: false,
     });
   }
@@ -94,6 +107,7 @@ export async function GET(request: Request) {
     return snap.docs
       .map((d) => d.data())
       .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
+      .filter((d) => String(d.status ?? "invited") === "present")
       .map((d) => ({
         fullName: d.fullName ? String(d.fullName) : undefined,
         companyName: d.companyName ? String(d.companyName) : undefined,
@@ -136,12 +150,39 @@ export async function GET(request: Request) {
     (a, b) => new Date(a.event.startsAt).getTime() - new Date(b.event.startsAt).getTime(),
   );
 
+  const allInvitations = [...pastInvitations, ...upcomingInvitations];
+  const refereesSnap = profile?.referralCode
+    ? await db
+        .collection(COLLECTIONS.waitlist)
+        .where("referredByCode", "==", profile.referralCode)
+        .get()
+    : null;
+  const friendsReferred = refereesSnap
+    ? withoutSoftDeleted(
+        refereesSnap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+          deletedAt: d.data().deletedAt,
+        })),
+      ).filter((r) => Boolean((r as { referralAcceptedAt?: string }).referralAcceptedAt)).length
+    : 0;
+
+  const stats = computeDashboardStats({
+    invitations: allInvitations,
+    friendsReferred,
+  });
+
   return NextResponse.json({
     ok: true,
     profile,
     notOnWaitlist: !profile && !isAdmin,
     pastInvitations,
     upcomingInvitations,
+    stats,
+    referral: {
+      code: profile?.referralCode ?? null,
+      canBeSponsor: !isPlatformAdminIdentity({ email }),
+    },
     isAdmin,
   });
 }
