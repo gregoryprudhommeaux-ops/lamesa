@@ -1,5 +1,6 @@
 "use client";
 
+import { MemberCalendar } from "@/components/account/member-calendar";
 import { MemberDashboard } from "@/components/account/member-dashboard";
 import { MemberShell, useMemberTab } from "@/components/account/member-shell";
 import { MemberProfilePanel } from "@/components/account/member-profile-panel";
@@ -71,9 +72,7 @@ function MemberAccountInner() {
 
         {tab === "dashboard" && data && <MemberDashboard data={data} />}
 
-        {tab === "calendrier" && (
-          <p className="text-sm text-ns-secondary">{t("calendarComingSoon")}</p>
-        )}
+        {tab === "calendrier" && <MemberCalendar />}
 
         {tab === "profil" && data?.profile && (
           <MemberProfilePanel profile={data.profile} onSaved={load} />

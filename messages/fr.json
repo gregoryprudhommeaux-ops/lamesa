@@ -243,7 +243,6 @@
       "calendrier": "Calendrier",
       "profil": "Mon profil"
     },
-    "calendarComingSoon": "Le calendrier membre arrive bientôt.",
     "loading": "Chargement…",
     "notOnWaitlist": "Aucun profil trouvé pour cet email. Inscris-toi d'abord à la liste d'attente.",
     "logout": "Déconnexion",
@@ -281,6 +280,15 @@
       "sending": "Envoi en cours…",
       "emailSentConfirmation": "Invitation envoyée par email.",
       "viewCalendar": "Voir le calendrier complet"
+    },
+    "calendar": {
+      "prevMonth": "Mois précédent",
+      "nextMonth": "Mois suivant",
+      "legendInvited": "Invité",
+      "legendNotInvited": "Non invité",
+      "invitationRequired": "Invitation requise pour voir les détails",
+      "empty": "Aucun dîner publié ce mois-ci.",
+      "close": "Fermer"
     },
     "fields": {
       "fullName": "Nom complet",

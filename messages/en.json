@@ -243,7 +243,6 @@
       "calendrier": "Calendar",
       "profil": "My profile"
     },
-    "calendarComingSoon": "Member calendar coming soon.",
     "loading": "Loading…",
     "notOnWaitlist": "No profile found for this email. Join the waitlist first.",
     "logout": "Sign out",
@@ -281,6 +280,15 @@
       "sending": "Sending…",
       "emailSentConfirmation": "Invitation sent by email.",
       "viewCalendar": "View full calendar"
+    },
+    "calendar": {
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "legendInvited": "Invited",
+      "legendNotInvited": "Not invited",
+      "invitationRequired": "Invitation required to see details",
+      "empty": "No published dinners this month.",
+      "close": "Close"
     },
     "fields": {
       "fullName": "Full name",
