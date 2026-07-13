@@ -24,10 +24,17 @@ export async function GET(request: Request) {
       .limit(200)
       .get();
 
-    const results = snap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Record<string, unknown>),
-    }));
+    const results = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        ...(data as Record<string, unknown>),
+        referralCode: data.referralCode ?? null,
+        referredByCode: data.referredByCode ?? null,
+        referredById: data.referredById ?? null,
+        deletedAt: data.deletedAt ?? null,
+      };
+    });
 
     return NextResponse.json({ ok: true, results });
   } catch (error) {

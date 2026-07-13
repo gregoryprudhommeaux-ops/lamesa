@@ -3,6 +3,7 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { setPendingInvitees } from "@/lib/admin/pending-invitees";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
+import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { CalendarPlus, UserPlus } from "lucide-react";
@@ -17,6 +18,7 @@ function uniqueSorted(values: string[]): string[] {
 }
 
 type ContextMenuState = { x: number; y: number } | null;
+type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
@@ -31,6 +33,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [position, setPosition] = useState("");
   const [city, setCity] = useState("");
   const [company, setCompany] = useState("");
+  const [referralFilter, setReferralFilter] = useState<ReferralFilter>("all");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
@@ -98,24 +101,37 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
+      if (referralFilter === "with_referrer" && !r.referredByCode?.trim()) return false;
+      if (referralFilter === "without_referrer" && r.referredByCode?.trim()) return false;
+      if (referralFilter === "deactivated" && !isSoftDeleted(r)) return false;
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && r.city.trim().toLowerCase() !== city.trim().toLowerCase()) return false;
       if (company && r.company.trim().toLowerCase() !== company.trim().toLowerCase()) return false;
       if (!needle) return true;
-      const haystack = [r.fullName, r.email, r.company, r.city, r.sector, r.position, r.phone]
+      const haystack = [
+        r.fullName,
+        r.email,
+        r.company,
+        r.city,
+        r.sector,
+        r.position,
+        r.phone,
+        r.referredByCode,
+        r.referralCode,
+      ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, q, sector, position, city, company]);
+  }, [rows, q, sector, position, city, company, referralFilter]);
 
   const active = filtered.find((r) => r.id === activeId) ?? null;
   const selectedRows = useMemo(
     () => rows.filter((r) => selectedIds.has(r.id)),
     [rows, selectedIds],
   );
-  const hasFilters = Boolean(q || sector || position || city || company);
+  const hasFilters = Boolean(q || sector || position || city || company || referralFilter !== "all");
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
@@ -141,6 +157,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     setPosition("");
     setCity("");
     setCompany("");
+    setReferralFilter("all");
   }
 
   function toggleOne(id: string) {
@@ -271,7 +288,23 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div>
+            <label className={LABEL_CLASS} htmlFor="filter-referral">
+              Parrainage
+            </label>
+            <select
+              id="filter-referral"
+              value={referralFilter}
+              onChange={(e) => setReferralFilter(e.target.value as ReferralFilter)}
+              className={INPUT_CLASS}
+            >
+              <option value="all">Tous</option>
+              <option value="with_referrer">Avec parrain</option>
+              <option value="without_referrer">Sans parrain</option>
+              <option value="deactivated">Désactivés</option>
+            </select>
+          </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="filter-position">
               Position
@@ -397,7 +430,23 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             setContextMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary">
+          <div className="hidden border-b border-gray-100 px-4 py-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_7rem] sm:items-center sm:gap-3">
+            <span />
+            <span className="text-xs font-semibold text-ns-secondary">Inscrit</span>
+            <span className="text-right text-xs font-semibold text-ns-secondary">Parrain</span>
+          </div>
+          <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary sm:hidden">
+            <label className="inline-flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={allFilteredSelected}
+                onChange={toggleAllFiltered}
+                className="h-4 w-4 accent-ns-primary"
+              />
+              Tous (filtrés)
+            </label>
+          </div>
+          <div className="hidden items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary sm:flex">
             <label className="inline-flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
@@ -413,7 +462,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             {filtered.map((r) => (
               <li key={r.id}>
                 <div
-                  className={`flex w-full items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""}`}
+                  className={`grid w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
                 >
                   <input
                     type="checkbox"
@@ -424,16 +473,31 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   />
                   <button
                     type="button"
-                    className="min-w-0 flex-1 text-left"
+                    className="min-w-0 text-left"
                     onClick={() => setActiveId(r.id)}
                   >
-                    <span className="font-semibold text-ns-tertiary">{r.fullName}</span>
+                    <span className="inline-flex flex-wrap items-center gap-2 font-semibold text-ns-tertiary">
+                      {r.fullName}
+                      {isSoftDeleted(r) ? (
+                        <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                          Désactivé
+                        </span>
+                      ) : null}
+                    </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary">
                       {labelPosition(r.position)} · {labelSector(r.sector)} · {r.company} ·{" "}
                       {r.city}
                     </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary/80">{r.email}</span>
+                    <span className="mt-1 block text-xs text-ns-secondary sm:hidden">
+                      Parrain : {r.referredByCode?.trim() || "—"}
+                    </span>
                   </button>
+                  <div className="hidden text-right text-xs text-ns-secondary sm:block">
+                    <span className="font-medium text-ns-tertiary">
+                      {r.referredByCode?.trim() || "—"}
+                    </span>
+                  </div>
                 </div>
               </li>
             ))}
@@ -450,7 +514,14 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             <dl className="space-y-3">
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Nom</dt>
-                <dd className="font-semibold text-ns-tertiary">{active.fullName}</dd>
+                <dd className="flex flex-wrap items-center gap-2 font-semibold text-ns-tertiary">
+                  {active.fullName}
+                  {isSoftDeleted(active) ? (
+                    <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                      Désactivé
+                    </span>
+                  ) : null}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Email</dt>
@@ -488,6 +559,14 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                     {active.linkedinUrl}
                   </a>
                 </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold uppercase text-ns-secondary">Parrain</dt>
+                <dd>{active.referredByCode?.trim() || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold uppercase text-ns-secondary">Code parrainage</dt>
+                <dd>{active.referralCode?.trim() || "—"}</dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Intérêts</dt>
