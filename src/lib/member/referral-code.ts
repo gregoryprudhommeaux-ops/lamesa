@@ -1,13 +1,15 @@
 const SUFFIX_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // Prefixes use the first 4 letters of the first name (accent-stripped, uppercased).
+// Single-letter names are doubled so the code matches /^[A-Z]{2,4}-/.
 export function firstNameToken(fullName: string): string {
   const first = (fullName.trim().split(/\s+/)[0] ?? "USER")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z]/g, "")
     .toUpperCase();
-  return first.slice(0, 4) || "USER";
+  const token = first.slice(0, 4) || "USER";
+  return token.length === 1 ? `${token}${token}` : token;
 }
 
 export function randomSuffix(len = 2, rng: () => number = Math.random): string {
