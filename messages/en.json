@@ -1,0 +1,279 @@
+{
+  "meta": {
+    "title": "LA MESA — Cena Strategica Exclusiva",
+    "description": "Exclusive themed dinners in Guadalajara. Qualified network, confidential access."
+  },
+  "nav": {
+    "languageAria": "Language"
+  },
+  "brand": {
+    "name": "LA MESA",
+    "tagline": "A series of exclusive private dinners around one table, sharing the same theme for one evening.",
+    "nsMarkAria": "LA MESA — back to home"
+  },
+  "footer": {
+    "tagline": "An NS Suite tool for entrepreneurs.",
+    "taglineBefore": "An ",
+    "taglineSuiteLink": "NS Suite",
+    "taglineAfter": " tool for entrepreneurs.",
+    "taglineLead": "LA MESA: exclusive themed dinners in Guadalajara, ",
+    "rights": "© {year} NextStep Services",
+    "about": "How it works & FAQ",
+    "login": "Sign in",
+    "admin": "Admin",
+    "navAria": "Footer",
+    "homeAria": "LA MESA — back to home",
+    "suiteAria": "NS Suite — open hub",
+    "companyAria": "NextStep Services — open website"
+  },
+  "landing": {
+    "cta": "Join the waitlist",
+    "aboutLink": "How it works & FAQ",
+    "loginLink": "Already registered? Sign in"
+  },
+  "about": {
+    "metaTitle": "How it works — LA MESA",
+    "metaDescription": "How LA MESA dinners work: limited seats, advance payment to confirm, themes, sponsors, and guest speakers.",
+    "eyebrow": "About",
+    "title": "How it works",
+    "introLead": "LA MESA brings together a small group of qualified professionals around one theme, for one dinner in Guadalajara.",
+    "introBody": "Access is by invitation, after joining the waitlist. Each evening is designed for meaningful conversation — not surface-level networking.",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "seats": {
+        "q": "Why are seats limited?",
+        "a": "By design. A smaller table ensures everyone takes part in the conversation. LA MESA prioritizes quality of exchange over headcount."
+      },
+      "payment": {
+        "q": "How do I confirm my seat?",
+        "a": "Once invited, you must pay for your meal in advance to secure your place. If payment is not received within the stated deadline, the seat is released and offered to someone else."
+      },
+      "themes": {
+        "q": "Do themes change?",
+        "a": "Yes. Dinner topics vary with opportunities and the network's interests. A theme may return if enough people show interest in the same subject, field, or related topic."
+      },
+      "sponsors": {
+        "q": "Are some dinners sponsored?",
+        "a": "Yes. Some events may be sponsored. When that is the case, it is clearly stated at the time of invitation."
+      },
+      "speakers": {
+        "q": "Is there sometimes a guest speaker?",
+        "a": "Sometimes. Certain dinners feature a guest aligned with the theme. Their profile is shared when you register for that specific evening."
+      },
+      "join": {
+        "q": "How do I join the list?",
+        "a": "Sign up via the waitlist form. We contact you when a dinner matches your profile and interests."
+      }
+    },
+    "backHome": "Back to home",
+    "cta": "Join the waitlist"
+  },
+  "registration": {
+    "title": "Join the waitlist",
+    "subtitle": "Professional profile — selection by application.",
+    "sections": {
+      "identity": "Identity",
+      "professional": "Professional",
+      "interests": "Extra-professional interests",
+      "contact": "Contact"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "linkedinUrl": "LinkedIn profile",
+      "linkedinPlaceholder": "https://www.linkedin.com/in/…",
+      "email": "Email",
+      "emailHint": "Email to use to receive invitations to upcoming dinners",
+      "company": "Company",
+      "sector": "Industry sector",
+      "position": "Position in company",
+      "extraActivitiesIntro": "Let's break the ice and discover other interests",
+      "extraActivitiesPlaceholder": "e.g. golf, natural wine, hiking, jazz, philanthropy…",
+      "city": "City",
+      "cityPlaceholder": "Guadalajara",
+      "phone": "Phone / WhatsApp",
+      "phonePlaceholder": "555 123 4567",
+      "phoneCountryAria": "Country code",
+      "phoneIncomplete": "Incomplete number — check country code and local number.",
+      "invitationMotivation": "Why would you like to be invited to a future dinner?",
+      "invitationMotivationPlaceholder": "In a few sentences — what draws you to the LA MESA experience…"
+    },
+    "sectors": {
+      "tech": "Tech & digital",
+      "finance": "Finance & investment",
+      "real_estate": "Real estate",
+      "consulting": "Consulting",
+      "health": "Healthcare",
+      "hospitality": "Hospitality & dining",
+      "legal": "Legal",
+      "marketing": "Marketing & communications",
+      "manufacturing": "Manufacturing",
+      "other": "Other"
+    },
+    "positions": {
+      "founder": "Founder",
+      "ceo": "CEO / MD",
+      "director": "Director",
+      "manager": "Manager",
+      "investor": "Investor",
+      "consultant": "Consultant",
+      "other": "Other"
+    },
+    "activities": {
+      "sports": "Sports",
+      "entertainment": "Entertainment",
+      "leisure": "Leisure",
+      "art_culture": "Art & culture",
+      "travel": "Travel",
+      "gastronomy": "Gastronomy",
+      "tech_innovation": "Tech & innovation",
+      "philanthropy": "Philanthropy",
+      "other": "Other"
+    },
+    "submit": "Join the waitlist",
+    "submitting": "Sending…",
+    "success": "Thank you. You have been added to the waitlist. We will contact you soon to invite you to a qualified professional dinner.",
+    "successLoginHint": "To update your profile anytime, sign in with the same Google email.",
+    "successLoginCta": "Sign in and edit my profile",
+    "error": "Could not submit. Please try again.",
+    "errors": {
+      "invalid_linkedin": "Invalid LinkedIn URL (linkedin.com/in/…)",
+      "invalid_phone": "Invalid phone number — country code and local number required.",
+      "validation": "Please check the form fields."
+    }
+  },
+  "admin": {
+    "loginTitle": "LA MESA Organizer",
+    "password": "Password",
+    "login": "Sign in",
+    "googleLogin": "Continue with Google",
+    "googleRedirecting": "Redirecting to Google…",
+    "logout": "Sign out",
+    "eventsTitle": "LA MESA Dinners",
+    "calendarTitle": "Calendar",
+    "registrantsTitle": "Registrants",
+    "newEvent": "New dinner",
+    "save": "Save",
+    "delete": "Delete",
+    "searchContacts": "Search a contact",
+    "selectedContacts": "Selected invitees",
+    "addExternal": "Add external email",
+    "copyEmail": "Copy email",
+    "copyWhatsapp": "Copy WhatsApp",
+    "statuses": {
+      "invited": "Invited",
+      "present": "Present",
+      "declined": "Declined",
+      "waitlist": "Waitlist"
+    },
+    "eventStatus": {
+      "draft": "Draft",
+      "published": "Published",
+      "closed": "Closed"
+    },
+    "fields": {
+      "title": "Dinner theme",
+      "organizer": "Organizer",
+      "date": "Date",
+      "startsAt": "Start time",
+      "endsAt": "Estimated end time",
+      "venueName": "Venue name",
+      "address": "Full address",
+      "mapsUrl": "Google Maps link (optional)",
+      "capacity": "Guest seats",
+      "capacityHint": "E.g. 15 guests + you (admin) = 16 covers. Overflow goes to the waitlist.",
+      "intro": "Introduction text",
+      "status": "Status",
+      "eventLanguage": "Event language",
+      "shareEnabled": "Allow members to share the invitation",
+      "shareEnabledHint": "Shows a Share button for members (link /e/…).",
+      "registrationFormUrl": "Registration form (URL)",
+      "registrationFormUrlHint": "Shown as a card on the public page.",
+      "flyerUrl": "Flyer (URL)",
+      "flyerUrlHint": "Image/PDF/page. Visible on the public page.",
+      "dressCode": "Dress code",
+      "parking": "Parking"
+    },
+    "dress": {
+      "none_specified": "Not specified",
+      "casual": "Casual",
+      "smart_casual": "Smart casual",
+      "business": "Business",
+      "formal": "Formal",
+      "traditional": "Traditional"
+    },
+    "parking": {
+      "unknown": "No option identified",
+      "on_site": "On-site parking",
+      "secure_nearby": "Secure nearby parking",
+      "valet": "Valet service"
+    },
+    "formHint": "Fill in the details, then build the guest list.",
+    "inviteGroup": "Build guest list",
+    "inviteGroupHint": "Search by name/company/email. Overflow goes to the waitlist.",
+    "venueSection": "Venue & schedule",
+    "seatingSummary": "{seated}/{capacity} seats · {waitlist} waitlisted · {total} covers including you"
+  },
+  "publicEvent": {
+    "loading": "Loading…",
+    "notFound": "This dinner is not available.",
+    "mapsLink": "Open in Google Maps",
+    "rsvpTitle": "Confirm your attendance",
+    "submitRsvp": "Submit",
+    "rsvpSuccess": "Thank you — your response has been recorded.",
+    "fields": {
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "jobTitle": "Job title",
+      "company": "Company",
+      "comments": "Comments"
+    }
+  },
+  "account": {
+    "loginTitle": "Member sign-in",
+    "loginHint": "Sign in with the same Google email you used on the waitlist.",
+    "googleLogin": "Continue with Google",
+    "googleRedirecting": "Redirecting to Google…",
+    "noAccount": "Not on the list yet?",
+    "joinWaitlist": "Join the waitlist",
+    "title": "My LA MESA space",
+    "loading": "Loading…",
+    "notOnWaitlist": "No profile found for this email. Join the waitlist first.",
+    "logout": "Sign out",
+    "adminLink": "Admin",
+    "profileTitle": "My profile",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Profile updated.",
+    "deleteTitle": "Stop receiving invitations",
+    "deleteHint": "Deletes your waitlist profile and upcoming invitations. You won't be contacted for LA MESA dinners anymore.",
+    "deleteCta": "Delete my profile",
+    "deleteConfirm": "This cannot be undone. Confirm deletion?",
+    "deleteConfirmCta": "Yes, delete my profile",
+    "deleteCancel": "Cancel",
+    "deleting": "Deleting…",
+    "upcomingTitle": "Upcoming invitations",
+    "upcomingEmpty": "No upcoming invitations yet.",
+    "pastTitle": "Past invitations",
+    "pastEmpty": "No dinner history yet.",
+    "fellows": "Other guests",
+    "guest": "Guest",
+    "viewEvent": "View dinner",
+    "fields": {
+      "fullName": "Full name",
+      "linkedinUrl": "LinkedIn",
+      "company": "Company",
+      "city": "City",
+      "phone": "Phone",
+      "extraActivities": "Extra-pro interests",
+      "invitationMotivation": "Motivation"
+    },
+    "status": {
+      "invited": "Invited",
+      "present": "Present",
+      "declined": "Declined",
+      "waitlist": "Waitlist"
+    }
+  }
+}

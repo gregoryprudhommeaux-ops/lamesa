@@ -1,0 +1,29 @@
+{
+  "name": "@ns-suite/ui",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NS Calque — Swiss-Tech design tokens and shared UI for NS Suite apps (NextStep Services).",
+  "type": "module",
+  "sideEffects": [
+    "./src/theme/ns-theme.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./tokens": "./src/tokens/nextstep.ts",
+    "./brand": "./src/brand/index.ts",
+    "./components": "./src/components/index.ts",
+    "./theme.css": "./src/theme/ns-theme.css"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

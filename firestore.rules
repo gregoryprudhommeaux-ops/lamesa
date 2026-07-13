@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerEmail(email) {
+      return isSignedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == email.lower();
+    }
+
+    // Public can read published events; all mutations go through Admin SDK APIs
+    match /events/{eventId} {
+      allow read: if resource.data.status == 'published' || isSignedIn();
+      allow write: if false;
+    }
+
+    // Members read only their own participation rows via client if needed;
+    // co-guest lists are served by /api/me (Admin SDK).
+    match /event_participations/{partId} {
+      allow read: if isSignedIn() && isOwnerEmail(resource.data.email);
+      allow write: if false;
+    }
+
+    match /event_respondents/{docId} {
+      allow create: if true;
+      allow read: if isSignedIn();
+      allow update, delete: if false;
+    }
+
+    // Waitlist: server Admin SDK only (no client create/update)
+    match /la_mesa_waitlist/{docId} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,279 @@
+{
+  "meta": {
+    "title": "LA MESA — Cena Strategica Exclusiva",
+    "description": "Dîners thématiques exclusifs à Guadalajara. Réseau qualifié, accès confidentiel."
+  },
+  "nav": {
+    "languageAria": "Langue"
+  },
+  "brand": {
+    "name": "LA MESA",
+    "tagline": "Série de dîners privés exclusifs autour d'une table s'intéressant à la même thématique le temps d'une soirée.",
+    "nsMarkAria": "LA MESA — retour à l'accueil"
+  },
+  "footer": {
+    "tagline": "Un outil NS Suite pour les entrepreneurs.",
+    "taglineBefore": "Un outil ",
+    "taglineSuiteLink": "NS Suite",
+    "taglineAfter": " pour les entrepreneurs.",
+    "taglineLead": "LA MESA : dîners thématiques exclusifs à Guadalajara, ",
+    "rights": "© {year} NextStep Services",
+    "about": "Fonctionnement & FAQ",
+    "login": "Connexion",
+    "admin": "Administration",
+    "navAria": "Pied de page",
+    "homeAria": "LA MESA — retour à l'accueil",
+    "suiteAria": "NS Suite — ouvrir le hub",
+    "companyAria": "NextStep Services — ouvrir le site"
+  },
+  "landing": {
+    "cta": "S'inscrire à la liste",
+    "aboutLink": "Fonctionnement & FAQ",
+    "loginLink": "Déjà inscrit ? Connexion"
+  },
+  "about": {
+    "metaTitle": "Fonctionnement — LA MESA",
+    "metaDescription": "Comment fonctionnent les dîners LA MESA : places limitées, confirmation par paiement, thématiques, sponsors et intervenants.",
+    "eyebrow": "À propos",
+    "title": "Fonctionnement",
+    "introLead": "LA MESA réunit un petit groupe de professionnels qualifiés autour d'une même thématique, le temps d'un dîner à Guadalajara.",
+    "introBody": "L'accès se fait sur invitation, après inscription à la liste d'attente. Chaque soirée est pensée pour favoriser des échanges utiles — pas du networking de surface.",
+    "faqTitle": "Questions fréquentes",
+    "faq": {
+      "seats": {
+        "q": "Pourquoi les places sont-elles limitées ?",
+        "a": "Volontairement. Une table réduite garantit que chacun participe vraiment à la conversation. LA MESA privilégie la qualité des échanges à la quantité de convives."
+      },
+      "payment": {
+        "q": "Comment confirmer sa place à table ?",
+        "a": "Une fois invité, tu dois régler ton repas en amont pour valider ta place. Si le paiement n'est pas reçu dans le délai indiqué, la place est libérée et proposée à une autre personne."
+      },
+      "themes": {
+        "q": "Les thématiques changent-elles ?",
+        "a": "Oui. Les sujets des dîners varient selon les opportunités et les envies du réseau. Une thématique peut revenir si un nombre suffisant de personnes manifeste le même intérêt — même domaine, même sujet, ou proximité thématique."
+      },
+      "sponsors": {
+        "q": "Certains dîners sont-ils sponsorisés ?",
+        "a": "Oui. Certains événements peuvent l'être. Le cas échéant, c'est indiqué clairement au moment de l'invitation."
+      },
+      "speakers": {
+        "q": "Y a-t-il parfois un intervenant ?",
+        "a": "Parfois. Certains dîners accueillent un invité en lien avec la thématique. Son profil est présenté au moment de l'inscription à la soirée concernée."
+      },
+      "join": {
+        "q": "Comment rejoindre la liste ?",
+        "a": "Inscris-toi via le formulaire de liste d'attente. Nous te contactons lorsqu'un dîner correspond à ton profil et à tes centres d'intérêt."
+      }
+    },
+    "backHome": "Retour à l'accueil",
+    "cta": "Rejoindre la liste d'attente"
+  },
+  "registration": {
+    "title": "Rejoindre la liste d'attente",
+    "subtitle": "Profil professionnel — sélection sur dossier.",
+    "sections": {
+      "identity": "Identité",
+      "professional": "Professionnel",
+      "interests": "Intérêts extra-pro",
+      "contact": "Contact"
+    },
+    "fields": {
+      "fullName": "Nom complet",
+      "linkedinUrl": "Profil LinkedIn",
+      "linkedinPlaceholder": "https://www.linkedin.com/in/…",
+      "email": "Email",
+      "emailHint": "Email à utiliser pour recevoir les invitations aux futurs dîners",
+      "company": "Entreprise",
+      "sector": "Secteur d'activité",
+      "position": "Position dans l'entreprise",
+      "extraActivitiesIntro": "Brisons la glace, et trouvons d'autres centres d'intérêts",
+      "extraActivitiesPlaceholder": "Ex. golf, vin naturel, randonnée, jazz, philanthropy…",
+      "city": "Ville",
+      "cityPlaceholder": "Guadalajara",
+      "phone": "Téléphone / WhatsApp",
+      "phonePlaceholder": "33 1234 5678",
+      "phoneCountryAria": "Indicatif pays",
+      "phoneIncomplete": "Numéro incomplet — vérifie l'indicatif et le numéro local.",
+      "invitationMotivation": "Pourquoi j'aimerais pouvoir être invité à participer à un futur dîner ?",
+      "invitationMotivationPlaceholder": "En quelques phrases — ce qui t'attire dans l'expérience LA MESA…"
+    },
+    "sectors": {
+      "tech": "Tech & digital",
+      "finance": "Finance & investissement",
+      "real_estate": "Immobilier",
+      "consulting": "Conseil",
+      "health": "Santé",
+      "hospitality": "Hospitality & restauration",
+      "legal": "Juridique",
+      "marketing": "Marketing & communication",
+      "manufacturing": "Industrie",
+      "other": "Autre"
+    },
+    "positions": {
+      "founder": "Fondateur",
+      "ceo": "CEO / DG",
+      "director": "Directeur",
+      "manager": "Manager",
+      "investor": "Investisseur",
+      "consultant": "Consultant",
+      "other": "Autre"
+    },
+    "activities": {
+      "sports": "Sports",
+      "entertainment": "Divertissement",
+      "leisure": "Loisirs",
+      "art_culture": "Art & culture",
+      "travel": "Voyage",
+      "gastronomy": "Gastronomie",
+      "tech_innovation": "Tech & innovation",
+      "philanthropy": "Philanthropie",
+      "other": "Autre"
+    },
+    "submit": "Rejoindre la liste d'attente",
+    "submitting": "Envoi en cours…",
+    "success": "Merci. Tu as été ajouté à la liste d'attente. Nous te contacterons prochainement pour t'inviter à un dîner professionnel qualifié.",
+    "successLoginHint": "Pour modifier ton profil à tout moment, connecte-toi avec le même email Google.",
+    "successLoginCta": "Se connecter et modifier mon profil",
+    "error": "Envoi impossible. Réessaie dans un instant.",
+    "errors": {
+      "invalid_linkedin": "URL LinkedIn invalide (linkedin.com/in/…)",
+      "invalid_phone": "Numéro de téléphone invalide — indicatif pays + numéro local requis.",
+      "validation": "Vérifie les champs du formulaire."
+    }
+  },
+  "admin": {
+    "loginTitle": "Organisateur LA MESA",
+    "password": "Mot de passe",
+    "login": "Connexion",
+    "googleLogin": "Continuer avec Google",
+    "googleRedirecting": "Redirection Google…",
+    "logout": "Déconnexion",
+    "eventsTitle": "Dîners LA MESA",
+    "calendarTitle": "Calendrier",
+    "registrantsTitle": "Inscrits",
+    "newEvent": "Nouveau dîner",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "searchContacts": "Rechercher un contact",
+    "selectedContacts": "Invités sélectionnés",
+    "addExternal": "Ajouter un email externe",
+    "copyEmail": "Copier email",
+    "copyWhatsapp": "Copier WhatsApp",
+    "statuses": {
+      "invited": "Invité",
+      "present": "Présent",
+      "declined": "Refusé",
+      "waitlist": "Liste d'attente"
+    },
+    "eventStatus": {
+      "draft": "Brouillon",
+      "published": "Publié",
+      "closed": "Clôturé"
+    },
+    "fields": {
+      "title": "Thématique du dîner",
+      "organizer": "Organisateur",
+      "date": "Date",
+      "startsAt": "Heure de début",
+      "endsAt": "Heure de fin estimée",
+      "venueName": "Nom du lieu",
+      "address": "Adresse complète",
+      "mapsUrl": "Lien Google Maps (optionnel)",
+      "capacity": "Places invités",
+      "capacityHint": "Ex. 15 invités + toi (admin) = 16 couverts. Au-delà → liste d'attente.",
+      "intro": "Texte d'introduction",
+      "status": "Statut",
+      "eventLanguage": "Événement en",
+      "shareEnabled": "Autoriser le partage de l'invitation par les membres",
+      "shareEnabledHint": "Affiche un bouton “Partager” côté membres (lien /e/…).",
+      "registrationFormUrl": "Formulaire d'inscription (URL)",
+      "registrationFormUrlHint": "Affiché en encart sur la page publique.",
+      "flyerUrl": "Flyer (URL)",
+      "flyerUrlHint": "Image/PDF/page. Visible depuis la page publique.",
+      "dressCode": "Tenue",
+      "parking": "Stationnement"
+    },
+    "dress": {
+      "none_specified": "Non précisée",
+      "casual": "Décontractée (casual)",
+      "smart_casual": "Casual chic (smart casual)",
+      "business": "Business",
+      "formal": "Formelle",
+      "traditional": "Traditionnelle"
+    },
+    "parking": {
+      "unknown": "Pas de solution identifiée",
+      "on_site": "Parking sur place",
+      "secure_nearby": "Parking sécurisé proche",
+      "valet": "Voiturier (valet service)"
+    },
+    "formHint": "Renseigne les infos, puis compose un groupe d’invités.",
+    "inviteGroup": "Constituer un groupe (invités)",
+    "inviteGroupHint": "Recherche par nom/société/email. Au-delà des places → liste d’attente.",
+    "venueSection": "Lieu & horaires",
+    "seatingSummary": "{seated}/{capacity} places · {waitlist} en attente · {total} couverts avec toi"
+  },
+  "publicEvent": {
+    "loading": "Chargement…",
+    "notFound": "Ce dîner n'est pas disponible.",
+    "mapsLink": "Voir sur Google Maps",
+    "rsvpTitle": "Confirmer ta présence",
+    "submitRsvp": "Envoyer",
+    "rsvpSuccess": "Merci — ta réponse a été enregistrée.",
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Email",
+      "whatsapp": "WhatsApp",
+      "jobTitle": "Poste",
+      "company": "Entreprise",
+      "comments": "Commentaires"
+    }
+  },
+  "account": {
+    "loginTitle": "Connexion membre",
+    "loginHint": "Connecte-toi avec le même email Google que ton inscription à la liste d'attente.",
+    "googleLogin": "Continuer avec Google",
+    "googleRedirecting": "Redirection Google…",
+    "noAccount": "Pas encore sur la liste ?",
+    "joinWaitlist": "S'inscrire",
+    "title": "Mon espace LA MESA",
+    "loading": "Chargement…",
+    "notOnWaitlist": "Aucun profil trouvé pour cet email. Inscris-toi d'abord à la liste d'attente.",
+    "logout": "Déconnexion",
+    "adminLink": "Administration",
+    "profileTitle": "Mon profil",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saved": "Profil mis à jour.",
+    "deleteTitle": "Ne plus recevoir d'invitations",
+    "deleteHint": "Supprime ton profil de la liste d'attente et tes invitations à venir. Tu ne seras plus contacté(e) pour les dîners LA MESA.",
+    "deleteCta": "Supprimer mon profil",
+    "deleteConfirm": "Cette action est définitive. Confirmer la suppression ?",
+    "deleteConfirmCta": "Oui, supprimer mon profil",
+    "deleteCancel": "Annuler",
+    "deleting": "Suppression…",
+    "upcomingTitle": "Prochaines invitations",
+    "upcomingEmpty": "Aucune invitation à venir pour le moment.",
+    "pastTitle": "Invitations passées",
+    "pastEmpty": "Pas encore d'historique de dîners.",
+    "fellows": "Autres convives",
+    "guest": "Invité",
+    "viewEvent": "Voir le dîner",
+    "fields": {
+      "fullName": "Nom complet",
+      "linkedinUrl": "LinkedIn",
+      "company": "Entreprise",
+      "city": "Ville",
+      "phone": "Téléphone",
+      "extraActivities": "Intérêts extra-pro",
+      "invitationMotivation": "Motivation"
+    },
+    "status": {
+      "invited": "Invité",
+      "present": "Présent",
+      "declined": "Décliné",
+      "waitlist": "Liste d'attente"
+    }
+  }
+}

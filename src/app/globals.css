@@ -1,0 +1,40 @@
+@import "tailwindcss";
+@import "../../packages/@ns-suite/ui/src/theme/ns-theme.css";
+
+:root {
+  color-scheme: light;
+}
+
+@theme inline {
+  --font-sans: var(--font-inter), "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Lumios Marker", var(--font-la-mesa-display-fallback), "Caveat", cursive;
+}
+
+body {
+  background: var(--color-ns-background);
+  color: var(--color-ns-tertiary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+@font-face {
+  font-family: "Lumios Marker";
+  src:
+    url("/fonts/lumios-marker.woff2") format("woff2"),
+    url("/fonts/lumios-marker.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+input,
+textarea,
+select {
+  color: #3d5166;
+  background-color: #ffffff;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgb(107 143 168 / 0.65);
+}

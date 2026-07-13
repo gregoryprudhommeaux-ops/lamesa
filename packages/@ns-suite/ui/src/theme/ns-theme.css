@@ -1,0 +1,19 @@
+/**
+ * NS Calque — Tailwind v4 theme tokens.
+ * In your app globals.css:
+ *   @import "tailwindcss";
+ *   @import "@ns-suite/ui/theme.css";
+ */
+@theme inline {
+  --color-ns-primary: #9dc41a;
+  --color-ns-secondary: #6b8fa8;
+  --color-ns-tertiary: #3d5166;
+  --color-ns-hero: #1a1a1a;
+  --color-ns-brand-light: #f8f9fa;
+  --color-ns-alternate: #d9d9d9;
+  --color-ns-surface: #ffffff;
+  --color-ns-background: #ffffff;
+
+  --tracking-tighter: -0.05em;
+  --tracking-widest: 0.15em;
+}

@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+.next/
+out/
+dist/
+
+# Git worktrees
+.worktrees/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Reference copy (large)
+reference/
+.vercel
+.env*
