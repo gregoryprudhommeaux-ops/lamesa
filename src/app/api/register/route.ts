@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { registrationSchema } from "@/lib/validation";
 import { isDatabasePersoConfigured, upsertContact } from "@/lib/database-perso";
+import { sendAdminNewRegistrationEmail } from "@/lib/email/send-admin-new-registration";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/send-waitlist-confirmation";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
@@ -104,6 +105,11 @@ export async function POST(request: Request) {
   });
   if (!mail.ok) {
     console.warn("[register] confirmation email skipped/failed:", mail.error);
+  }
+
+  const adminMail = await sendAdminNewRegistrationEmail(record);
+  if (!adminMail.ok) {
+    console.warn("[register] admin notify skipped/failed:", adminMail.error);
   }
 
   return NextResponse.json({ ok: true, id: storedId, emailSent: mail.ok });
