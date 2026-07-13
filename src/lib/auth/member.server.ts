@@ -16,17 +16,37 @@ export async function findWaitlistByEmail(
   if (!exact.empty) {
     const d = exact.docs[0]!;
     const data = d.data() as Omit<WaitlistRegistration, "id">;
-    if (isSoftDeleted(data)) return null;
-    return { id: d.id, ...data };
+    if (!isSoftDeleted(data)) return { id: d.id, ...data };
   }
 
-  // Legacy rows may have mixed-case emails
+  // Legacy rows may have mixed-case emails; prefer an active profile when exact match is soft-deleted
+  const snap = await db.collection(COLLECTIONS.waitlist).orderBy("createdAt", "desc").limit(400).get();
+  const hit = snap.docs.find((d) => {
+    if (normalizeEmail(String(d.data().email ?? "")) !== target) return false;
+    return !isSoftDeleted(d.data() as Omit<WaitlistRegistration, "id">);
+  });
+  if (!hit) return null;
+  const data = hit.data() as Omit<WaitlistRegistration, "id">;
+  return { id: hit.id, ...data };
+}
+
+export async function findWaitlistByEmailIncludingDeleted(
+  email: string,
+): Promise<(WaitlistRegistration & { id: string; uid?: string; linkedAt?: string }) | null> {
+  if (!isFirebaseAdminConfigured()) return null;
+  const db = getAdminFirestore();
+  const target = normalizeEmail(email);
+
+  const exact = await db.collection(COLLECTIONS.waitlist).where("email", "==", target).limit(1).get();
+  if (!exact.empty) {
+    const d = exact.docs[0]!;
+    return { id: d.id, ...(d.data() as Omit<WaitlistRegistration, "id">) };
+  }
+
   const snap = await db.collection(COLLECTIONS.waitlist).orderBy("createdAt", "desc").limit(400).get();
   const hit = snap.docs.find((d) => normalizeEmail(String(d.data().email ?? "")) === target);
   if (!hit) return null;
-  const data = hit.data() as Omit<WaitlistRegistration, "id">;
-  if (isSoftDeleted(data)) return null;
-  return { id: hit.id, ...data };
+  return { id: hit.id, ...(hit.data() as Omit<WaitlistRegistration, "id">) };
 }
 
 export async function findWaitlistByReferralCode(

@@ -1,10 +1,21 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
-import { registrationSchema } from "@/lib/validation";
+import {
+  findWaitlistByEmail,
+  findWaitlistByEmailIncludingDeleted,
+  findWaitlistByReferralCode,
+} from "@/lib/auth/member.server";
+import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { isDatabasePersoConfigured, upsertContact } from "@/lib/database-perso";
 import { sendAdminNewRegistrationEmail } from "@/lib/email/send-admin-new-registration";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/send-waitlist-confirmation";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { isSoftDeleted } from "@/lib/member/soft-delete";
+import {
+  isValidReferralCodeFormat,
+  normalizeReferralCode,
+} from "@/lib/member/referral-code";
+import { registrationSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -24,10 +35,34 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  const email = normalizeEmail(data.email);
+  const now = new Date().toISOString();
+
+  if (isFirebaseAdminConfigured()) {
+    const active = await findWaitlistByEmail(email);
+    if (active) {
+      return NextResponse.json({ ok: false, error: "already_registered" }, { status: 409 });
+    }
+  }
+
+  let referredByCode: string | undefined;
+  let referredById: string | undefined;
+  let referralAcceptedAt: string | undefined;
+
+  if (data.referralCode && isValidReferralCodeFormat(data.referralCode)) {
+    const code = normalizeReferralCode(data.referralCode);
+    const sponsor = await findWaitlistByReferralCode(code);
+    if (sponsor) {
+      referredByCode = code;
+      referredById = sponsor.id;
+      referralAcceptedAt = now;
+    }
+  }
+
   const record = {
     fullName: data.fullName,
     linkedinUrl: data.linkedinUrl,
-    email: normalizeEmail(data.email),
+    email,
     company: data.company,
     sector: data.sector,
     position: data.position,
@@ -38,7 +73,10 @@ export async function POST(request: Request) {
     locale: data.locale,
     source: "la-mesa-registration",
     tags: ["la-mesa", "waitlist", "guadalajara"],
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    ...(referredByCode
+      ? { referredByCode, referredById, referralAcceptedAt }
+      : {}),
   };
 
   let storedId: string | undefined;
@@ -46,8 +84,23 @@ export async function POST(request: Request) {
   if (isFirebaseAdminConfigured()) {
     try {
       const db = getAdminFirestore();
-      const ref = await db.collection(COLLECTIONS.waitlist).add(record);
-      storedId = ref.id;
+      const existing = await findWaitlistByEmailIncludingDeleted(email);
+
+      if (existing && isSoftDeleted(existing)) {
+        const { createdAt: _ignored, ...updates } = record;
+        await db.collection(COLLECTIONS.waitlist).doc(existing.id).set(
+          {
+            ...updates,
+            deletedAt: FieldValue.delete(),
+            updatedAt: now,
+          },
+          { merge: true },
+        );
+        storedId = existing.id;
+      } else {
+        const ref = await db.collection(COLLECTIONS.waitlist).add(record);
+        storedId = ref.id;
+      }
     } catch (error) {
       console.error("[register] Firestore error:", error);
     }
@@ -62,6 +115,7 @@ export async function POST(request: Request) {
         `Activités: ${data.extraActivities.join(", ")}`,
         `Ville: ${data.city}`,
         `Motivation: ${data.invitationMotivation}`,
+        ...(referredByCode ? [`Parrainé via: ${referredByCode}`] : []),
       ].join("\n");
 
       const result = await upsertContact({
@@ -107,7 +161,19 @@ export async function POST(request: Request) {
     console.warn("[register] confirmation email skipped/failed:", mail.error);
   }
 
-  const adminMail = await sendAdminNewRegistrationEmail(record);
+  const adminMail = await sendAdminNewRegistrationEmail({
+    fullName: record.fullName,
+    email: record.email,
+    company: record.company,
+    sector: record.sector,
+    position: record.position,
+    city: record.city,
+    phone: record.phone,
+    linkedinUrl: record.linkedinUrl,
+    locale: record.locale,
+    invitationMotivation: record.invitationMotivation,
+    ...(referredByCode ? { referredByCode } : {}),
+  });
   if (!adminMail.ok) {
     console.warn("[register] admin notify skipped/failed:", adminMail.error);
   }

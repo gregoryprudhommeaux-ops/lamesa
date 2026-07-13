@@ -26,6 +26,12 @@ export const registrationSchema = z.object({
   invitationMotivation: z.string().trim().min(10).max(2000),
   locale: z.enum(["fr", "en", "es"]),
   website: z.string().optional(),
+  referralCode: z
+    .string()
+    .trim()
+    .max(32)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
 });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;

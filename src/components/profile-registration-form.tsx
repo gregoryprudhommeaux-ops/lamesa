@@ -16,7 +16,13 @@ import { useState } from "react";
 
 type FormState = "idle" | "sending" | "success" | "error";
 
-export function ProfileRegistrationForm() {
+type ProfileRegistrationFormProps = {
+  initialReferralCode?: string;
+};
+
+export function ProfileRegistrationForm({
+  initialReferralCode = "",
+}: ProfileRegistrationFormProps) {
   const t = useTranslations("registration");
   const tFooter = useTranslations("footer");
   const locale = useLocale();
@@ -59,6 +65,7 @@ export function ProfileRegistrationForm() {
       invitationMotivation: String(data.get("invitationMotivation") ?? "").trim(),
       locale,
       website: String(data.get("website") ?? ""),
+      referralCode: String(data.get("referralCode") ?? "").trim(),
     };
 
     try {
@@ -105,6 +112,9 @@ export function ProfileRegistrationForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
+      {initialReferralCode ? (
+        <input type="hidden" name="referralCode" value={initialReferralCode} />
+      ) : null}
 
       <div>
         <h2 className="text-xl font-bold text-ns-hero">{t("title")}</h2>
