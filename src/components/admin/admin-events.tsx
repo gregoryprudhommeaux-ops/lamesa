@@ -37,6 +37,18 @@ function toIsoFromLocalInput(value: string): string {
   return new Date(value).toISOString();
 }
 
+/** Open native date/time picker when clicking anywhere on the field (not only the icon). */
+function openNativePicker(e: { currentTarget: HTMLInputElement }) {
+  const el = e.currentTarget;
+  try {
+    if (typeof el.showPicker === "function") {
+      el.showPicker();
+    }
+  } catch {
+    // Unsupported or blocked by browser — user can still type.
+  }
+}
+
 function toLocalInputFromIso(iso?: string | null): string {
   if (!iso) return "";
   try {
@@ -418,7 +430,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 type="date"
                 value={eventDate}
                 onChange={(e) => setEventDate(e.target.value)}
-                className={INPUT_CLASS}
+                onClick={openNativePicker}
+                onFocus={openNativePicker}
+                className={`${INPUT_CLASS} cursor-pointer`}
               />
             </div>
             <div>
@@ -427,7 +441,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className={INPUT_CLASS}
+                onClick={openNativePicker}
+                onFocus={openNativePicker}
+                className={`${INPUT_CLASS} cursor-pointer`}
               />
             </div>
             <div>
@@ -436,7 +452,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                className={INPUT_CLASS}
+                onClick={openNativePicker}
+                onFocus={openNativePicker}
+                className={`${INPUT_CLASS} cursor-pointer`}
               />
             </div>
             <div>
