@@ -43,7 +43,10 @@ function buildInviteUrl(locale: AppLocale, referralCode: string): string {
 }
 
 const referralPostSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("ensure") }),
+  z.object({
+    action: z.literal("ensure"),
+    locale: z.enum(["fr", "en", "es"]).optional(),
+  }),
   z.object({
     action: z.literal("invite_email"),
     email: z.string().trim().email().max(254),
@@ -203,7 +206,7 @@ export async function POST(request: Request) {
   }
 
   if (parsed.data.action === "ensure") {
-    const locale = resolveLocaleFromRequest(request);
+    const locale = parsed.data.locale ?? resolveLocaleFromRequest(request);
     return NextResponse.json({
       ok: true,
       referralCode: ensured.referralCode,

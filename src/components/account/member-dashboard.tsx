@@ -46,7 +46,7 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
     try {
       const res = await authFetch("/api/me/referral", {
         method: "POST",
-        body: JSON.stringify({ action: "ensure" }),
+        body: JSON.stringify({ action: "ensure", locale }),
       });
       const json = (await res.json()) as { ok?: boolean; inviteUrl?: string; error?: string };
       if (!res.ok || !json.ok) {
@@ -147,6 +147,20 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
                       {copied ? t("dashboard.copied") : t("dashboard.copy")}
                     </button>
                   </div>
+                </div>
+
+                <div>
+                  <label className={LABEL_CLASS}>{t("dashboard.whatsappLabel")}</label>
+                  <a
+                    className={`${BTN_SECONDARY} inline-flex`}
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `${t("dashboard.whatsappMessage")} ${inviteUrl}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t("dashboard.whatsappCta")}
+                  </a>
                 </div>
 
                 <form onSubmit={(e) => void sendInviteEmail(e)} className="space-y-2">
