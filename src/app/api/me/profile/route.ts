@@ -93,29 +93,16 @@ export async function DELETE(request: Request) {
 
   const db = getAdminFirestore();
 
-  const partsSnap = await db
-    .collection(COLLECTIONS.participations)
-    .where("email", "==", email)
-    .get();
-
-  let participationDocs = partsSnap.docs;
-  if (participationDocs.length === 0) {
-    const all = await db.collection(COLLECTIONS.participations).limit(2000).get();
-    participationDocs = all.docs.filter(
-      (d) => normalizeEmail(String(d.data().email ?? "")) === email,
-    );
-  }
-
-  const batch = db.batch();
-  batch.delete(db.collection(COLLECTIONS.waitlist).doc(profile.id));
-  for (const doc of participationDocs) {
-    batch.delete(doc.ref);
-  }
-  await batch.commit();
+  await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
+    {
+      deletedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    { merge: true },
+  );
 
   return NextResponse.json({
     ok: true,
-    deletedProfileId: profile.id,
-    deletedParticipations: participationDocs.length,
+    softDeletedProfileId: profile.id,
   });
 }
