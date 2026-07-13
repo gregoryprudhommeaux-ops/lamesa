@@ -1,5 +1,6 @@
 "use client";
 
+import { MemberDashboard } from "@/components/account/member-dashboard";
 import { MemberShell, useMemberTab } from "@/components/account/member-shell";
 import { MemberProfilePanel } from "@/components/account/member-profile-panel";
 import { RequireAuth } from "@/components/auth/require-auth";
@@ -68,9 +69,7 @@ function MemberAccountInner() {
       <div className="space-y-8">
         {error && <p className={ERROR_TEXT}>{error}</p>}
 
-        {tab === "dashboard" && (
-          <p className="text-sm text-ns-secondary">{t("dashboardComingSoon")}</p>
-        )}
+        {tab === "dashboard" && data && <MemberDashboard data={data} />}
 
         {tab === "calendrier" && (
           <p className="text-sm text-ns-secondary">{t("calendarComingSoon")}</p>

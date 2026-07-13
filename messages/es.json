@@ -243,7 +243,6 @@
       "calendrier": "Calendario",
       "profil": "Mi perfil"
     },
-    "dashboardComingSoon": "El panel llegará pronto.",
     "calendarComingSoon": "El calendario de miembro llegará pronto.",
     "loading": "Cargando…",
     "notOnWaitlist": "No hay perfil para este email. Inscríbete primero a la lista de espera.",
@@ -261,6 +260,28 @@
     "guest": "Invitado",
     "viewEvent": "Ver la cena",
     "settingsLink": "Ajustes de la cuenta",
+    "dashboard": {
+      "statsTitle": "De un vistazo",
+      "stats": {
+        "invitationsReceived": "Invitaciones recibidas",
+        "pastParticipations": "Cenas pasadas",
+        "upcomingInvitations": "Invitaciones próximas",
+        "friendsReferred": "Amigos referidos"
+      },
+      "inviteTitle": "Invitar a un amigo",
+      "inviteCta": "Invitar a un amigo",
+      "generating": "Generando enlace…",
+      "adminCannotSponsor": "Los administradores no pueden referir nuevos miembros.",
+      "inviteUrlLabel": "Tu enlace de referido",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "emailLabel": "O enviar por email",
+      "emailPlaceholder": "email@ejemplo.com",
+      "sendEmail": "Enviar",
+      "sending": "Enviando…",
+      "emailSentConfirmation": "Invitación enviada por email.",
+      "viewCalendar": "Ver calendario completo"
+    },
     "fields": {
       "fullName": "Nombre completo",
       "linkedinUrl": "LinkedIn",

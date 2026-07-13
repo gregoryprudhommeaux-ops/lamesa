@@ -243,7 +243,6 @@
       "calendrier": "Calendrier",
       "profil": "Mon profil"
     },
-    "dashboardComingSoon": "Le tableau de bord arrive bientôt.",
     "calendarComingSoon": "Le calendrier membre arrive bientôt.",
     "loading": "Chargement…",
     "notOnWaitlist": "Aucun profil trouvé pour cet email. Inscris-toi d'abord à la liste d'attente.",
@@ -261,6 +260,28 @@
     "guest": "Invité",
     "viewEvent": "Voir le dîner",
     "settingsLink": "Réglages du compte",
+    "dashboard": {
+      "statsTitle": "En un coup d'œil",
+      "stats": {
+        "invitationsReceived": "Invitations reçues",
+        "pastParticipations": "Dîners passés",
+        "upcomingInvitations": "Invitations à venir",
+        "friendsReferred": "Amis parrainés"
+      },
+      "inviteTitle": "Inviter un ami",
+      "inviteCta": "Inviter un ami",
+      "generating": "Génération du lien…",
+      "adminCannotSponsor": "Les administrateurs ne peuvent pas parrainer de nouveaux membres.",
+      "inviteUrlLabel": "Ton lien de parrainage",
+      "copy": "Copier",
+      "copied": "Copié !",
+      "emailLabel": "Ou envoyer par email",
+      "emailPlaceholder": "email@exemple.com",
+      "sendEmail": "Envoyer",
+      "sending": "Envoi en cours…",
+      "emailSentConfirmation": "Invitation envoyée par email.",
+      "viewCalendar": "Voir le calendrier complet"
+    },
     "fields": {
       "fullName": "Nom complet",
       "linkedinUrl": "LinkedIn",

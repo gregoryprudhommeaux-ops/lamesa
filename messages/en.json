@@ -243,7 +243,6 @@
       "calendrier": "Calendar",
       "profil": "My profile"
     },
-    "dashboardComingSoon": "Dashboard coming soon.",
     "calendarComingSoon": "Member calendar coming soon.",
     "loading": "Loading…",
     "notOnWaitlist": "No profile found for this email. Join the waitlist first.",
@@ -261,6 +260,28 @@
     "guest": "Guest",
     "viewEvent": "View dinner",
     "settingsLink": "Account settings",
+    "dashboard": {
+      "statsTitle": "At a glance",
+      "stats": {
+        "invitationsReceived": "Invitations received",
+        "pastParticipations": "Past dinners",
+        "upcomingInvitations": "Upcoming invitations",
+        "friendsReferred": "Friends referred"
+      },
+      "inviteTitle": "Invite a friend",
+      "inviteCta": "Invite a friend",
+      "generating": "Generating link…",
+      "adminCannotSponsor": "Admins cannot sponsor new members.",
+      "inviteUrlLabel": "Your referral link",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "emailLabel": "Or send by email",
+      "emailPlaceholder": "email@example.com",
+      "sendEmail": "Send",
+      "sending": "Sending…",
+      "emailSentConfirmation": "Invitation sent by email.",
+      "viewCalendar": "View full calendar"
+    },
     "fields": {
       "fullName": "Full name",
       "linkedinUrl": "LinkedIn",
