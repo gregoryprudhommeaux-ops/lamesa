@@ -238,6 +238,13 @@
     "noAccount": "Not on the list yet?",
     "joinWaitlist": "Join the waitlist",
     "title": "My LA MESA space",
+    "tabs": {
+      "dashboard": "Dashboard",
+      "calendrier": "Calendar",
+      "profil": "My profile"
+    },
+    "dashboardComingSoon": "Dashboard coming soon.",
+    "calendarComingSoon": "Member calendar coming soon.",
     "loading": "Loading…",
     "notOnWaitlist": "No profile found for this email. Join the waitlist first.",
     "logout": "Sign out",

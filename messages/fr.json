@@ -238,6 +238,13 @@
     "noAccount": "Pas encore sur la liste ?",
     "joinWaitlist": "S'inscrire",
     "title": "Mon espace LA MESA",
+    "tabs": {
+      "dashboard": "Dashboard",
+      "calendrier": "Calendrier",
+      "profil": "Mon profil"
+    },
+    "dashboardComingSoon": "Le tableau de bord arrive bientôt.",
+    "calendarComingSoon": "Le calendrier membre arrive bientôt.",
     "loading": "Chargement…",
     "notOnWaitlist": "Aucun profil trouvé pour cet email. Inscris-toi d'abord à la liste d'attente.",
     "logout": "Déconnexion",
