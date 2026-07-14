@@ -9,10 +9,10 @@ const SCORES = [0, 1, 2, 3, 4, 5] as const;
 type ScoreField = "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn";
 
 const QUESTIONS: { key: ScoreField; label: string }[] = [
-  { key: "venueQuality", label: "Calidad del lugar / Qualité de l’endroit" },
-  { key: "menuQuality", label: "Calidad del menú / Qualité du menu" },
-  { key: "guestsQuality", label: "Calidad de los otros invitados / Qualité des autres invités" },
-  { key: "wouldReturn", label: "¿Volverías a una próxima cena? / Reviendrais-tu à un prochain dîner ?" },
+  { key: "venueQuality", label: "Calidad del lugar" },
+  { key: "menuQuality", label: "Calidad del menú" },
+  { key: "guestsQuality", label: "Calidad de los demás invitados" },
+  { key: "wouldReturn", label: "¿Asistirías a una próxima cena?" },
 ];
 
 export function SatisfactionSurveyForm() {
@@ -80,7 +80,7 @@ export function SatisfactionSurveyForm() {
   if (!token) {
     return (
       <p className={ERROR_TEXT}>
-        Lien invalide. Ouvre le questionnaire depuis l’email de remerciement.
+        Enlace no válido. Abre el cuestionario desde el correo de agradecimiento.
       </p>
     );
   }
@@ -88,13 +88,13 @@ export function SatisfactionSurveyForm() {
   if (done) {
     return (
       <div className="space-y-3 text-center">
-        <h1 className="text-2xl font-bold text-ns-primary">¡Gracias! / Merci</h1>
+        <h1 className="text-2xl font-bold text-ns-primary">Gracias</h1>
         <p className="text-sm text-ns-secondary">
-          Tu feedback nos ayuda a mejorar las próximas cenas.
+          Tus comentarios nos ayudan a mejorar las próximas cenas.
         </p>
         {inviteSent && (
           <p className="text-sm text-ns-primary">
-            Se envió una invitación a registrarse en LA MESA.
+            Se envió una invitación de registro a LA MESA.
           </p>
         )}
       </div>
@@ -134,9 +134,7 @@ export function SatisfactionSurveyForm() {
       ))}
 
       <fieldset className="space-y-2">
-        <legend className={LABEL_CLASS}>
-          ¿Te gustaría invitar a alguien más? / Aimerais-tu inviter quelqu’un d’autre ?
-        </legend>
+        <legend className={LABEL_CLASS}>¿Te gustaría invitar a otra persona?</legend>
         <div className="flex gap-2">
           <button
             type="button"
@@ -145,7 +143,7 @@ export function SatisfactionSurveyForm() {
             }`}
             onClick={() => setWantInviteOther("yes")}
           >
-            Sí / Oui
+            Sí
           </button>
           <button
             type="button"
@@ -162,7 +160,7 @@ export function SatisfactionSurveyForm() {
       {wantInviteOther === "yes" && (
         <div>
           <label className={LABEL_CLASS} htmlFor="invitedEmail">
-            Email de la persona a invitar
+            Correo electrónico de la persona a invitar
           </label>
           <input
             id="invitedEmail"

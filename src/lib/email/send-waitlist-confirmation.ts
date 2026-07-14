@@ -38,11 +38,11 @@ function buildContent(locale: MailLocale, fullName: string): {
         }
       : locale === "es"
         ? {
-            subject: "Ya estás en la lista de espera LA MESA",
-            greeting: `Hola${name ? ` ${name}` : ""},`,
+            subject: "Registro en lista de espera — LA MESA",
+            greeting: name ? `Estimado/a ${name}:` : "Estimado/a:",
             thanks:
-              "Gracias por unirte a la lista de espera de LA MESA. Hemos recibido tu perfil.",
-            next: "Te contactaremos pronto para invitarte a una cena profesional seleccionada. Conéctate con el mismo email de Google cuando quieras para editar tu perfil.",
+              "Gracias por registrarte en la lista de espera de LA MESA. Hemos recibido tu perfil.",
+            next: "Te contactaremos pronto para invitarte a una cena profesional selecta. Inicia sesión con el mismo correo de Google cuando desees actualizar tu perfil.",
             cta: "Iniciar sesión y editar mi perfil",
             footer: "LA MESA — cenas privadas exclusivas.",
           }

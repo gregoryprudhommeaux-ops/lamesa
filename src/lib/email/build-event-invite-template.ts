@@ -21,9 +21,9 @@ const DRESS_LABELS: Record<Lang, Record<string, string>> = {
     none_specified: "Not specified",
   },
   es: {
-    casual: "Casual",
+    casual: "Informal",
     smart_casual: "Smart casual",
-    business: "Business",
+    business: "Formal de negocios",
     formal: "Formal",
     traditional: "Tradicional",
     none_specified: "No especificado",
@@ -44,8 +44,8 @@ const PARKING_LABELS: Record<Lang, Record<string, string>> = {
     unknown: "TBC",
   },
   es: {
-    secure_nearby: "Estacionamiento seguro cercano",
-    valet: "Valet",
+    secure_nearby: "Estacionamiento seguro cerca del lugar",
+    valet: "Servicio de valet",
     on_site: "En el lugar",
     unknown: "Por confirmar",
   },
@@ -107,23 +107,23 @@ export function buildDefaultEventInviteTemplate(input: {
         ]
       : lang === "es"
         ? [
-            "Hola {{fullName}},",
+            "Estimado/a {{fullName}}:",
             "",
-            `Estás invitad@ a una cena privada LA MESA: ${event.title}.`,
+            `Te invitamos a la cena privada LA MESA: ${event.title}.`,
             "",
-            when ? `Cuándo: ${when}${ends ? ` → ${ends}` : ""}` : null,
-            where ? `Dónde: ${where}` : null,
+            when ? `Fecha y hora: ${when}${ends ? ` → ${ends}` : ""}` : null,
+            where ? `Lugar: ${where}` : null,
             dress ? `Código de vestimenta: ${dress}` : null,
             parking ? `Estacionamiento: ${parking}` : null,
             event.organizerName ? `Anfitrión: ${event.organizerName}` : null,
             event.introText?.trim() ? "" : null,
             event.introText?.trim() || null,
             "",
-            "Todos los detalles y confirmación:",
+            "Consulta los detalles y confirma tu asistencia:",
             url,
-            event.mapsUrl ? `Maps: ${event.mapsUrl}` : null,
+            event.mapsUrl ? `Mapa: ${event.mapsUrl}` : null,
             "",
-            "Nos vemos pronto,",
+            "Quedamos a tus órdenes,",
             "LA MESA",
           ]
         : [

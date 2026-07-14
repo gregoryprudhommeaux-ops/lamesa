@@ -1,14 +1,14 @@
 {
   "meta": {
-    "title": "LA MESA — Cena Strategica Exclusiva",
-    "description": "Cenas temáticas exclusivas en Guadalajara. Red calificada, acceso confidencial."
+    "title": "LA MESA — Cena Estratégica Exclusiva",
+    "description": "Cenas temáticas exclusivas en Guadalajara. Red selecta, acceso confidencial."
   },
   "nav": {
     "languageAria": "Idioma"
   },
   "brand": {
     "name": "LA MESA",
-    "tagline": "Serie de cenas privadas exclusivas en torno a una mesa con la misma temática durante una velada.",
+    "tagline": "Serie de cenas privadas exclusivas en torno a una mesa, reunidas por una misma temática a lo largo de una velada.",
     "nsMarkAria": "LA MESA — volver al inicio"
   },
   "footer": {
@@ -18,7 +18,7 @@
     "taglineAfter": " para emprendedores.",
     "taglineLead": "LA MESA: cenas temáticas exclusivas en Guadalajara, ",
     "rights": "© {year} NextStep Services",
-    "about": "Funcionamiento y FAQ",
+    "about": "Funcionamiento y preguntas frecuentes",
     "login": "Acceso",
     "admin": "Administración",
     "navAria": "Pie de página",
@@ -27,81 +27,81 @@
     "companyAria": "NextStep Services — abrir el sitio"
   },
   "landing": {
-    "cta": "Inscribirse en la lista",
-    "aboutLink": "Funcionamiento y FAQ",
-    "loginLink": "¿Ya estás inscrito? Acceder",
+    "cta": "Unirme a la lista de espera",
+    "aboutLink": "Funcionamiento y preguntas frecuentes",
+    "loginLink": "¿Ya estás registrado? Ingresar",
     "myAccountLink": "Mi espacio"
   },
   "about": {
     "metaTitle": "Funcionamiento — LA MESA",
-    "metaDescription": "Cómo funcionan las cenas LA MESA: plazas limitadas, pago anticipado, temáticas, patrocinios e invitados especiales.",
+    "metaDescription": "Cómo funcionan las cenas LA MESA: cupos limitados, pago anticipado, temáticas, patrocinios e invitados especiales.",
     "eyebrow": "Acerca de",
     "title": "Funcionamiento",
-    "introLead": "LA MESA reúne a un pequeño grupo de profesionales calificados en torno a una misma temática, durante una cena en Guadalajara.",
-    "introBody": "El acceso es por invitación, tras inscribirse en la lista de espera. Cada velada está pensada para favorecer intercambios útiles — no networking superficial.",
+    "introLead": "LA MESA reúne a un grupo reducido de profesionales de alto nivel alrededor de una misma temática, en una cena en Guadalajara.",
+    "introBody": "El acceso es por invitación, tras registrarse en la lista de espera. Cada velada está diseñada para favorecer conversaciones de valor — no networking superficial.",
     "faqTitle": "Preguntas frecuentes",
     "faq": {
       "seats": {
-        "q": "¿Por qué las plazas son limitadas?",
-        "a": "Voluntariamente. Una mesa reducida garantiza que cada persona participe de verdad en la conversación. LA MESA prioriza la calidad del intercambio sobre el número de comensales."
+        "q": "¿Por qué el número de lugares es limitado?",
+        "a": "De forma deliberada. Una mesa reducida garantiza que cada persona participe realmente en la conversación. LA MESA privilegia la calidad del intercambio por encima del número de comensales."
       },
       "payment": {
-        "q": "¿Cómo confirmar mi lugar en la mesa?",
-        "a": "Una vez invitado, debes pagar tu comida por adelantado para validar tu plaza. Si el pago no se recibe en el plazo indicado, la plaza se libera y se ofrece a otra persona."
+        "q": "¿Cómo confirmo mi lugar en la mesa?",
+        "a": "Una vez invitado, debes pagar tu comida por adelantado para asegurar tu lugar. Si el pago no se recibe dentro del plazo indicado, el lugar se libera y se ofrece a otra persona."
       },
       "themes": {
-        "q": "¿Cambian las temáticas?",
-        "a": "Sí. Los temas de las cenas varían según las oportunidades y los intereses de la red. Una temática puede volver si un número suficiente de personas manifiesta el mismo interés — mismo ámbito, mismo tema u otro afín."
+        "q": "¿Las temáticas cambian?",
+        "a": "Sí. Los temas de las cenas varían según las oportunidades y los intereses de la red. Una temática puede repetirse si un número suficiente de personas expresa el mismo interés — mismo sector, mismo tema u otro afín."
       },
       "sponsors": {
         "q": "¿Algunas cenas están patrocinadas?",
-        "a": "Sí. Algunos eventos pueden estarlo. En ese caso, se indica claramente en el momento de la invitación."
+        "a": "Sí. Algunos eventos pueden contar con patrocinio. En ese caso, se indica con claridad en el momento de la invitación."
       },
       "speakers": {
-        "q": "¿A veces hay un invitado especial?",
-        "a": "A veces. Algunas cenas reciben a un invitado vinculado a la temática. Su perfil se presenta al inscribirse a esa velada."
+        "q": "¿Hay invitados especiales?",
+        "a": "En ocasiones. Algunas cenas reciben a un invitado vinculado a la temática. Su perfil se presenta al confirmar la asistencia a esa velada."
       },
       "join": {
-        "q": "¿Cómo unirse a la lista?",
-        "a": "Inscríbete mediante el formulario de lista de espera. Te contactamos cuando una cena encaje con tu perfil e intereses."
+        "q": "¿Cómo unirme a la lista de espera?",
+        "a": "Regístrate mediante el formulario de lista de espera. Te contactaremos cuando una cena coincida con tu perfil e intereses."
       }
     },
     "backHome": "Volver al inicio",
-    "cta": "Unirse a la lista de espera"
+    "cta": "Unirme a la lista de espera"
   },
   "registration": {
-    "title": "Unirse a la lista de espera",
-    "subtitle": "Perfil profesional — selección por dossier.",
+    "title": "Unirme a la lista de espera",
+    "subtitle": "Perfil profesional — selección por expediente.",
     "sections": {
       "identity": "Identidad",
-      "professional": "Profesional",
-      "interests": "Intereses extra-profesionales",
+      "professional": "Información profesional",
+      "interests": "Intereses fuera del ámbito profesional",
       "contact": "Contacto"
     },
     "fields": {
       "fullName": "Nombre completo",
-      "linkedinUrl": "Perfil LinkedIn",
+      "linkedinUrl": "Perfil de LinkedIn",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
-      "email": "Email",
-      "emailHint": "Email para recibir invitaciones a futuras cenas",
+      "email": "Correo electrónico",
+      "emailHint": "Correo para recibir invitaciones a próximas cenas",
       "company": "Empresa",
       "sector": "Sector de actividad",
-      "position": "Posición en la empresa",
-      "extraActivitiesIntro": "Rompemos el hielo y encontremos otros intereses",
+      "position": "Puesto en la empresa",
+      "extraActivitiesIntro": "Romper el hielo y descubrir otros intereses en común",
       "extraActivitiesPlaceholder": "Ej. golf, vino natural, senderismo, jazz, filantropía…",
       "city": "Ciudad",
       "cityPlaceholder": "Guadalajara",
       "phone": "Teléfono / WhatsApp",
       "phonePlaceholder": "33 1234 5678",
       "phoneCountryAria": "Código de país",
-      "phoneIncomplete": "Número incompleto — verifica el código de país y el número local.",
-      "invitationMotivation": "¿Por qué te gustaría ser invitado a participar en una futura cena?",
-      "invitationMotivationPlaceholder": "En pocas frases — qué te atrae de la experiencia LA MESA…"
+      "phoneIncomplete": "Número incompleto: verifica el código de país y el número local.",
+      "invitationMotivation": "¿Por qué te gustaría ser invitado a una próxima cena?",
+      "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de la experiencia LA MESA…"
     },
     "sectors": {
-      "tech": "Tech y digital",
+      "tech": "Tecnología y digital",
       "finance": "Finanzas e inversión",
-      "real_estate": "Inmobiliario",
+      "real_estate": "Bienes raíces",
       "consulting": "Consultoría",
       "health": "Salud",
       "hospitality": "Hospitalidad y gastronomía",
@@ -111,12 +111,12 @@
       "other": "Otro"
     },
     "positions": {
-      "founder": "Fundador/a",
-      "ceo": "CEO / DG",
-      "director": "Director/a",
-      "manager": "Manager",
-      "investor": "Inversor/a",
-      "consultant": "Consultor/a",
+      "founder": "Fundador(a)",
+      "ceo": "Director(a) General / CEO",
+      "director": "Director(a)",
+      "manager": "Gerente",
+      "investor": "Inversionista",
+      "consultant": "Consultor(a)",
       "other": "Otro"
     },
     "activities": {
@@ -126,19 +126,19 @@
       "art_culture": "Arte y cultura",
       "travel": "Viajes",
       "gastronomy": "Gastronomía",
-      "tech_innovation": "Tech e innovación",
+      "tech_innovation": "Tecnología e innovación",
       "philanthropy": "Filantropía",
       "other": "Otro"
     },
-    "submit": "Unirse a la lista de espera",
+    "submit": "Unirme a la lista de espera",
     "submitting": "Enviando…",
-    "success": "Gracias. Has sido añadido a la lista de espera. Te contactaremos pronto para invitarte a una cena profesional calificada.",
-    "successLoginHint": "Para editar tu perfil cuando quieras, conéctate con el mismo email de Google.",
+    "success": "Gracias. Tu registro en la lista de espera ha sido recibido. Te contactaremos próximamente para invitarte a una cena profesional de alto nivel.",
+    "successLoginHint": "Para editar tu perfil cuando lo desees, inicia sesión con el mismo correo de Google.",
     "successLoginCta": "Iniciar sesión y editar mi perfil",
-    "error": "No se pudo enviar. Inténtalo de nuevo.",
+    "error": "No fue posible enviar el formulario. Inténtalo de nuevo.",
     "errors": {
-      "invalid_linkedin": "URL de LinkedIn inválida (linkedin.com/in/…)",
-      "invalid_phone": "Número de teléfono inválido — código de país y número local requeridos.",
+      "invalid_linkedin": "URL de LinkedIn no válida (linkedin.com/in/…)",
+      "invalid_phone": "Número de teléfono no válido: se requieren el código de país y el número local.",
       "validation": "Revisa los campos del formulario."
     }
   },
@@ -147,8 +147,8 @@
     "password": "Contraseña",
     "login": "Entrar",
     "googleLogin": "Continuar con Google",
-    "googleRedirecting": "Redirección a Google…",
-    "logout": "Salir",
+    "googleRedirecting": "Redirigiendo a Google…",
+    "logout": "Cerrar sesión",
     "eventsTitle": "Eventos",
     "calendarTitle": "Calendario",
     "registrantsTitle": "Miembros",
@@ -157,19 +157,19 @@
     "delete": "Eliminar",
     "searchContacts": "Buscar un contacto",
     "selectedContacts": "Invitados seleccionados",
-    "addExternal": "Añadir email externo",
-    "copyEmail": "Copiar email",
+    "addExternal": "Agregar correo externo",
+    "copyEmail": "Copiar correo",
     "copyWhatsapp": "Copiar WhatsApp",
     "statuses": {
       "invited": "Invitado",
-      "attending": "Attending",
+      "attending": "Asistirá",
       "confirmed": "Confirmado",
-      "not_attending": "Not attending",
-      "waitlist": "Waiting List",
+      "not_attending": "No asistirá",
+      "waitlist": "Lista de espera",
       "present": "Confirmado",
-      "declined": "Not attending"
+      "declined": "No asistirá"
     },
-    "templatesTitle": "Plantillas email",
+    "templatesTitle": "Plantillas de correo",
     "inviteFromWaitlist": "Invitar",
     "eventStatus": {
       "draft": "Borrador",
@@ -186,44 +186,44 @@
       "address": "Dirección completa",
       "mapsUrl": "Enlace de Google Maps (opcional)",
       "capacity": "Personas en la mesa",
-      "capacityHint": "Por defecto 16, incluida Gregory (admin). 15 plazas invitados — el resto va a lista de espera.",
+      "capacityHint": "Por defecto 16, incluido Gregory (administrador). 15 lugares para invitados; el resto pasa a lista de espera.",
       "priceMxn": "Precio (MXN, sin IVA)",
-      "priceMxnHint": "Monto editable. El IVA (16%) y el total se calculan automáticamente.",
-      "ivaLabel": "IVA (16%)",
+      "priceMxnHint": "Monto editable. El IVA (16 %) y el total se calculan automáticamente.",
+      "ivaLabel": "IVA (16 %)",
       "totalWithIva": "Total con IVA",
-      "menuIncluded": "Menú e incluido en el precio",
-      "menuIncludedHint": "Describe el menú y lo incluido (bebidas, servicio, etc.).",
+      "menuIncluded": "Menú e incluidos en el precio",
+      "menuIncludedHint": "Describe el menú y lo que incluye el precio (bebidas, servicio, etc.).",
       "intro": "Texto de introducción",
       "status": "Estado",
       "eventLanguage": "Idioma del evento",
       "shareEnabled": "Permitir que los miembros compartan la invitación",
-      "shareEnabledHint": "Muestra un botón Compartir para miembros (enlace /e/…).",
-      "registrationFormUrl": "Formulario de inscripción (URL)",
+      "shareEnabledHint": "Muestra un botón Compartir para los miembros (enlace /e/…).",
+      "registrationFormUrl": "Formulario de registro (URL)",
       "registrationFormUrlHint": "Se muestra en la página pública.",
       "flyerUrl": "Flyer (URL)",
-      "flyerUrlHint": "Imagen/PDF/página. Visible en la página pública.",
-      "dressCode": "Vestimenta",
+      "flyerUrlHint": "Imagen, PDF o página. Visible en la página pública.",
+      "dressCode": "Código de vestimenta",
       "parking": "Estacionamiento"
     },
     "dress": {
-      "none_specified": "No especificada",
-      "casual": "Casual",
+      "none_specified": "No especificado",
+      "casual": "Informal",
       "smart_casual": "Smart casual",
-      "business": "Business",
+      "business": "Formal de negocios",
       "formal": "Formal",
       "traditional": "Tradicional"
     },
     "parking": {
-      "unknown": "Sin opción identificada",
-      "on_site": "Parking en el lugar",
-      "secure_nearby": "Parking seguro cercano",
-      "valet": "Valet (estacionamiento con servicio)"
+      "unknown": "Por confirmar",
+      "on_site": "Estacionamiento en el lugar",
+      "secure_nearby": "Estacionamiento seguro cerca del lugar",
+      "valet": "Servicio de valet"
     },
-    "formHint": "Completa la info y luego arma el grupo de invitados.",
-    "inviteGroup": "Constituir un grupo (invitados)",
-    "inviteGroupHint": "Busca por nombre/empresa/email. El exceso pasa a lista de espera.",
+    "formHint": "Completa la información y, a continuación, arma el grupo de invitados.",
+    "inviteGroup": "Armar un grupo (invitados)",
+    "inviteGroupHint": "Busca por nombre, empresa o correo. El exceso pasa a lista de espera.",
     "venueSection": "Lugar y horario",
-    "seatingSummary": "{seated}/{capacity} plazas · {waitlist} en espera · {total} cubiertos contigo"
+    "seatingSummary": "{seated}/{capacity} lugares · {waitlist} en espera · {total} cubiertos contigo"
   },
   "publicEvent": {
     "loading": "Cargando…",
@@ -231,15 +231,15 @@
     "mapsLink": "Ver en Google Maps",
     "rsvpTitle": "Confirmar asistencia",
     "submitRsvp": "Enviar",
-    "rsvpSuccess": "Gracias — tu respuesta ha sido registrada.",
+    "rsvpSuccess": "Gracias: tu respuesta ha quedado registrada.",
     "price": "Precio",
-    "iva": "IVA (16%)",
+    "iva": "IVA (16 %)",
     "totalWithIva": "Total con IVA",
-    "menuIncluded": "Menú e incluido",
+    "menuIncluded": "Menú e incluidos",
     "fields": {
       "firstName": "Nombre",
       "lastName": "Apellido",
-      "email": "Email",
+      "email": "Correo electrónico",
       "whatsapp": "WhatsApp",
       "jobTitle": "Puesto",
       "company": "Empresa",
@@ -248,28 +248,28 @@
   },
   "account": {
     "loginTitle": "Acceso de miembro",
-    "loginHint": "Conéctate con el mismo email de Google que usaste en la lista de espera.",
+    "loginHint": "Inicia sesión con el mismo correo de Google que usaste en la lista de espera.",
     "googleLogin": "Continuar con Google",
-    "googleRedirecting": "Redirección a Google…",
+    "googleRedirecting": "Redirigiendo a Google…",
     "noAccount": "¿Aún no estás en la lista?",
-    "joinWaitlist": "Inscribirse",
+    "joinWaitlist": "Registrarme",
     "title": "Mi espacio LA MESA",
     "tabs": {
       "calendrier": "Calendario",
-      "dashboard": "Dashboard",
+      "dashboard": "Panel",
       "profil": "Mi perfil"
     },
     "loading": "Cargando…",
-    "notOnWaitlist": "No hay perfil para este email. Inscríbete primero a la lista de espera.",
-    "logout": "Salir",
+    "notOnWaitlist": "No hay un perfil asociado a este correo. Regístrate primero en la lista de espera.",
+    "logout": "Cerrar sesión",
     "adminLink": "Administración",
     "profileTitle": "Mi perfil",
     "save": "Guardar",
     "saving": "Guardando…",
     "saved": "Perfil actualizado.",
     "upcomingTitle": "Próximas invitaciones",
-    "upcomingEmpty": "Ninguna invitación próxima por ahora.",
-    "pastTitle": "Invitaciones pasadas",
+    "upcomingEmpty": "No hay invitaciones próximas por el momento.",
+    "pastTitle": "Invitaciones anteriores",
     "pastEmpty": "Aún no hay historial de cenas.",
     "fellows": "Otros comensales",
     "guest": "Invitado",
@@ -279,26 +279,26 @@
       "statsTitle": "De un vistazo",
       "stats": {
         "invitationsReceived": "Invitaciones recibidas",
-        "pastParticipations": "Cenas pasadas",
+        "pastParticipations": "Cenas anteriores",
         "upcomingInvitations": "Invitaciones próximas",
         "friendsReferred": "Amigos referidos"
       },
       "inviteTitle": "Invitar a un amigo",
       "inviteCta": "Invitar a un amigo",
       "generating": "Generando enlace…",
-      "adminCannotSponsor": "Los administradores no pueden referir nuevos miembros.",
+      "adminCannotSponsor": "Los administradores no pueden referir a nuevos miembros.",
       "inviteUrlLabel": "Tu enlace de referido",
       "copy": "Copiar",
       "copied": "¡Copiado!",
       "whatsappLabel": "O compartir por WhatsApp",
       "whatsappCta": "Compartir por WhatsApp",
-      "whatsappMessage": "Formo parte de un grupo privado de cenas temáticas con personas seleccionadas y creo que tú también deberías inscribirte:",
-      "emailLabel": "O enviar por email",
-      "emailPlaceholder": "email@ejemplo.com",
+      "whatsappMessage": "Formo parte de una red privada de cenas temáticas con profesionales seleccionados. Creo que también te interesaría registrarte:",
+      "emailLabel": "O enviar por correo",
+      "emailPlaceholder": "correo@ejemplo.com",
       "sendEmail": "Enviar",
       "sending": "Enviando…",
-      "emailSentConfirmation": "Invitación enviada por email.",
-      "viewCalendar": "Ver calendario completo"
+      "emailSentConfirmation": "Invitación enviada por correo.",
+      "viewCalendar": "Ver el calendario completo"
     },
     "calendar": {
       "prevMonth": "Mes anterior",
@@ -313,9 +313,9 @@
       "title": "Ajustes",
       "profileLink": "Ver mi perfil",
       "deleteTitle": "Eliminar mi cuenta",
-      "deleteHint": "Desactiva tu perfil en la lista de espera y elimina tu cuenta de acceso. Tu historial de participación se conserva para la administración. Esta acción es irreversible.",
+      "deleteHint": "Desactiva tu perfil en la lista de espera y elimina tu cuenta de acceso. El historial de participación se conserva para la administración. Esta acción es irreversible.",
       "deleteCta": "Eliminar mi cuenta",
-      "deleteConfirm": "Esta acción es definitiva: tu perfil se desactivará y tu cuenta se eliminará. ¿Confirmar?",
+      "deleteConfirm": "Esta acción es definitiva: tu perfil se desactivará y tu cuenta se eliminará. ¿Deseas continuar?",
       "deleteConfirmCta": "Sí, eliminar mi cuenta",
       "deleteCancel": "Cancelar",
       "deleting": "Eliminando…",
@@ -327,17 +327,17 @@
       "company": "Empresa",
       "city": "Ciudad",
       "phone": "Teléfono",
-      "extraActivities": "Intereses extra-pro",
+      "extraActivities": "Intereses personales",
       "invitationMotivation": "Motivación"
     },
     "status": {
       "invited": "Invitado",
-      "attending": "Attending",
+      "attending": "Asistirá",
       "confirmed": "Confirmado",
-      "not_attending": "Not attending",
+      "not_attending": "No asistirá",
       "waitlist": "Lista de espera",
       "present": "Confirmado",
-      "declined": "Not attending"
+      "declined": "No asistirá"
     }
   }
 }

@@ -77,13 +77,13 @@ export function buildWhatsappInviteMessage(input: {
   }
   if (lang === "es") {
     return [
-      "Hola {{fullName}},",
+      "Estimado/a {{fullName}}:",
       "",
-      `Estás invitad@ a una cena privada LA MESA: ${title}`,
-      when ? `Cuándo: ${when}` : "",
-      where ? `Dónde: ${where}` : "",
+      `Te invitamos a la cena privada LA MESA: ${title}`,
+      when ? `Fecha y hora: ${when}` : "",
+      where ? `Lugar: ${where}` : "",
       "",
-      "Detalles y confirmación:",
+      "Consulta los detalles y confirma tu asistencia:",
       url,
     ]
       .filter(Boolean)

@@ -36,13 +36,13 @@ function buildContent(
         }
       : locale === "es"
         ? {
-            subject: `${sponsor} te ha invitado a unirte a LA MESA`,
-            greeting: "Hola,",
+            subject: `${sponsor} te invita a unirte a LA MESA`,
+            greeting: "Estimado/a:",
             concept:
-              "LA MESA es una red privada de cenas profesionales seleccionadas: mesas pequeñas, conversaciones de alto valor, sin networking frío.",
+              "LA MESA es una red privada de cenas profesionales selectas: mesas reducidas, conversaciones de alto valor y sin networking superficial.",
             invite: `${sponsor} te ha invitado a unirte a LA MESA.`,
-            body: "Inscríbete gratis aquí y recibe próximamente una invitación para participar en una cena.",
-            cta: "Inscribirme gratis",
+            body: "Regístrate sin costo aquí. Próximamente recibirás una invitación para participar en una cena.",
+            cta: "Registrarme sin costo",
             footer: "LA MESA — cenas privadas exclusivas.",
           }
         : {

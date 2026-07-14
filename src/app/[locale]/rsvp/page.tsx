@@ -46,13 +46,13 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
   }
   if (locale === "es") {
     return {
-      title: "¡Gracias por tu participación!",
+      title: "Gracias por confirmar tu asistencia",
       body: [
         eventBit
-          ? `Estás inscrito/a en este evento ${eventBit}.`
-          : "Estás inscrito/a en este evento.",
-        "Esperamos la confirmación del pago en un plazo de 3 días para poder confirmar tu participación.",
-        "Una vez pasado ese plazo, tendremos que ofrecer este lugar a otro miembro.",
+          ? `Has quedado registrado/a para este evento ${eventBit}.`
+          : "Has quedado registrado/a para este evento.",
+        "Esperamos recibir la confirmación de tu pago en un plazo de 3 días para poder confirmar tu participación.",
+        "Transcurrido ese plazo, deberemos ofrecer este lugar a otro miembro.",
       ].join("\n\n"),
     };
   }
@@ -89,7 +89,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
           : locale === "es"
             ? {
                 title: "Respuesta registrada",
-                body: "Indicaste que no participarás. Gracias por responder.",
+                body: "Has indicado que no asistirás. Gracias por avisarnos.",
               }
             : {
                 title: "Réponse enregistrée",
@@ -121,7 +121,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
                 locale === "en"
                   ? "We couldn’t process your response. Contact the LA MESA team if needed."
                   : locale === "es"
-                    ? "No pudimos procesar tu respuesta. Contacta al equipo LA MESA si lo necesitas."
+                    ? "No pudimos procesar tu respuesta. Comunícate con el equipo de LA MESA si lo necesitas."
                     : "Impossible de traiter ta réponse. Contacte l’équipe LA MESA si besoin.",
             };
 

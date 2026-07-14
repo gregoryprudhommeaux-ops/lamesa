@@ -23,7 +23,7 @@ export function paymentDeadlineBlock(locale: "es" | "fr" | "en"): string {
   }
   return [
     "Importante — pago:",
-    "Tu participación solo se validará si el pago se realiza en un plazo de 3 días. De lo contrario, ofreceremos tu lugar a otro miembro.",
+    "Tu participación quedará confirmada únicamente si el pago se realiza dentro de un plazo de 3 días. De lo contrario, ofreceremos tu lugar a otro miembro.",
   ].join("\n");
 }
 
@@ -53,12 +53,12 @@ export function paymentBankBlock(locale: "es" | "fr" | "en"): string {
     ].join("\n");
   }
   return [
-    "Datos bancarios para la transferencia:",
+    "Datos para transferencia bancaria (SPEI):",
     `Entidad: ${b.entidad}`,
-    `Número CLABE: ${b.clabe}`,
+    `CLABE: ${b.clabe}`,
     `Número de cuenta: ${b.cuenta}`,
-    `Nombre: ${b.nombre}`,
+    `Beneficiario: ${b.nombre}`,
     "",
-    `Para solicitar factura: responde a este email (o escribe a ${b.invoiceEmail}) adjuntando el CSF (Constancia de Situación Fiscal) de tu empresa.`,
+    `Para solicitar factura: responde a este correo (o escribe a ${b.invoiceEmail}) adjuntando la Constancia de Situación Fiscal (CSF) de tu empresa.`,
   ].join("\n");
 }
