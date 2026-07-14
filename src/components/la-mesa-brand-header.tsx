@@ -4,7 +4,12 @@ import { Link } from "@/i18n/navigation";
 import { NsMark } from "@ns-suite/ui/brand";
 import { useTranslations } from "next-intl";
 
-export function LaMesaBrandHeader() {
+type LaMesaBrandHeaderProps = {
+  /** Override default brand.tagline (e.g. light signup page) */
+  tagline?: string;
+};
+
+export function LaMesaBrandHeader({ tagline }: LaMesaBrandHeaderProps) {
   const t = useTranslations("brand");
 
   return (
@@ -26,7 +31,7 @@ export function LaMesaBrandHeader() {
         </Link>
       </div>
       <p className="text-pretty text-sm leading-relaxed text-white/65 md:text-base">
-        {t("tagline")}
+        {tagline ?? t("tagline")}
       </p>
     </header>
   );

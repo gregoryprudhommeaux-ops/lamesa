@@ -36,6 +36,29 @@ export const registrationSchema = z.object({
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 
+/** Express signup (/light) — contact only; profile completed later in /compte */
+export const expressRegistrationSchema = z.object({
+  fullName: z.string().trim().min(3).max(120),
+  email: z.string().trim().email().max(254),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => {
+      const digits = v.replace(/\D/g, "");
+      return digits.length >= 10 && digits.length <= 15;
+    }, { message: "invalid_phone" }),
+  locale: z.enum(["fr", "en", "es"]),
+  website: z.string().optional(),
+  referralCode: z
+    .string()
+    .trim()
+    .max(32)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+});
+
+export type ExpressRegistrationInput = z.infer<typeof expressRegistrationSchema>;
+
 export const eventSchema = z.object({
   title: z.string().trim().min(3).max(200),
   organizerName: z.string().trim().max(120).optional(),

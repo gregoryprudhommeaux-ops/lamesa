@@ -32,6 +32,30 @@
     "loginLink": "¿Ya estás registrado? Ingresar",
     "myAccountLink": "Mi espacio"
   },
+  "light": {
+    "title": "Únete a LA MESA",
+    "brandTagline": "Únete a la lista de espera y recibe pronto una invitación a participar.",
+    "subtitle": "Déjanos tus datos. Te enviamos un acceso para completar tu perfil cuando quieras.",
+    "fields": {
+      "fullName": "Nombre completo",
+      "fullNamePlaceholder": "Ana García",
+      "whatsapp": "WhatsApp",
+      "email": "Correo electrónico",
+      "emailPlaceholder": "nombre@empresa.com"
+    },
+    "submit": "Registrarme",
+    "submitting": "Enviando…",
+    "submitHint": "Te enviaremos un acceso por correo para completar tu perfil cuando quieras.",
+    "successTitle": "Listo",
+    "successBody": "Revisa tu correo: encontrarás el enlace para iniciar sesión (Google, o correo + contraseña) y completar tu perfil.",
+    "successCta": "Ir al acceso",
+    "fullFormHint": "¿Prefieres el formulario completo?",
+    "fullFormLink": "Inscripción detallada",
+    "errors": {
+      "alreadyRegistered": "Este correo ya está registrado. Inicia sesión para editar tu perfil.",
+      "generic": "No fue posible enviar el formulario. Inténtalo de nuevo."
+    }
+  },
   "about": {
     "metaTitle": "Funcionamiento — LA MESA",
     "metaDescription": "Cómo funcionan las cenas LA MESA: cupos limitados, pago anticipado, temáticas, patrocinios e invitados especiales.",
@@ -248,9 +272,30 @@
   },
   "account": {
     "loginTitle": "Acceso de miembro",
-    "loginHint": "Inicia sesión con el mismo correo de Google que usaste en la lista de espera.",
+    "loginHint": "Inicia sesión con el mismo correo que usaste al registrarte — Google, o correo y contraseña.",
     "googleLogin": "Continuar con Google",
     "googleRedirecting": "Redirigiendo a Google…",
+    "emailAuth": {
+      "or": "o",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar contraseña",
+      "signIn": "Iniciar sesión",
+      "createAccount": "Crear contraseña / cuenta",
+      "working": "Un momento…",
+      "switchToSignup": "¿Primera vez? Crea tu contraseña aquí",
+      "switchToSignin": "¿Ya tienes contraseña? Inicia sesión",
+      "errors": {
+        "invalidEmail": "Correo no válido.",
+        "invalidCredentials": "Correo o contraseña incorrectos.",
+        "emailInUse": "Este correo ya tiene una cuenta. Inicia sesión o usa Google.",
+        "weakPassword": "La contraseña debe tener al menos 6 caracteres.",
+        "passwordMismatch": "Las contraseñas no coinciden.",
+        "notEnabled": "El acceso por correo no está activado en Firebase. Activa Email/Password en la consola.",
+        "notConfigured": "Firebase Auth no está configurado.",
+        "generic": "No fue posible iniciar sesión. Inténtalo de nuevo."
+      }
+    },
     "noAccount": "¿Aún no estás en la lista?",
     "joinWaitlist": "Registrarme",
     "title": "Mi espacio LA MESA",

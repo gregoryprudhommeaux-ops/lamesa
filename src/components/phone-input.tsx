@@ -16,6 +16,8 @@ type PhoneInputProps = {
   disabled?: boolean;
   required?: boolean;
   resetKey?: number;
+  /** Override default registration.fields.phone label */
+  label?: string;
 };
 
 export function PhoneInput({
@@ -23,6 +25,7 @@ export function PhoneInput({
   disabled,
   required = true,
   resetKey = 0,
+  label,
 }: PhoneInputProps) {
   const t = useTranslations("registration.fields");
   const locale = useLocale();
@@ -41,7 +44,7 @@ export function PhoneInput({
   return (
     <div>
       <label htmlFor={`${id}-national`} className={LABEL_CLASS}>
-        {t("phone")}
+        {label ?? t("phone")}
       </label>
       <div className="mt-1 grid grid-cols-[8.75rem_minmax(0,1fr)] gap-2">
         <select

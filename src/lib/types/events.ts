@@ -155,6 +155,8 @@ export interface WaitlistRegistration {
   source: string;
   tags: string[];
   createdAt: string;
+  /** False for express (/light) signups until profile is completed */
+  profileComplete?: boolean;
   uid?: string;
   linkedAt?: string;
   updatedAt?: string;

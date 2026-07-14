@@ -2,6 +2,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 
 type MailLocale = "fr" | "en" | "es";
+type ConfirmVariant = "full" | "express";
 
 function resolveLocale(raw?: string | null): MailLocale {
   if (raw === "en" || raw === "es" || raw === "fr") return raw;
@@ -16,7 +17,11 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function buildContent(locale: MailLocale, fullName: string): {
+function buildContent(
+  locale: MailLocale,
+  fullName: string,
+  variant: ConfirmVariant,
+): {
   subject: string;
   html: string;
   text: string;
@@ -26,35 +31,65 @@ function buildContent(locale: MailLocale, fullName: string): {
   const loginUrl = `${base}/${locale}/connexion`;
 
   const copy =
-    locale === "en"
-      ? {
-          subject: "You're on the LA MESA waitlist",
-          greeting: `Hello${name ? ` ${name}` : ""},`,
-          thanks:
-            "Thank you for joining the LA MESA waitlist. Your profile has been received.",
-          next: "We'll contact you soon to invite you to a curated professional dinner. Sign in with the same Google email anytime to update your profile.",
-          cta: "Sign in and edit my profile",
-          footer: "LA MESA — exclusive private dinners.",
-        }
-      : locale === "es"
+    variant === "express"
+      ? locale === "en"
         ? {
-            subject: "Registro en lista de espera — LA MESA",
-            greeting: name ? `Estimado/a ${name}:` : "Estimado/a:",
+            subject: "Welcome to LA MESA — complete your profile",
+            greeting: name ? `Hello ${name},` : "Hello,",
             thanks:
-              "Gracias por registrarte en la lista de espera de LA MESA. Hemos recibido tu perfil.",
-            next: "Te contactaremos pronto para invitarte a una cena profesional selecta. Inicia sesión con el mismo correo de Google cuando desees actualizar tu perfil.",
-            cta: "Iniciar sesión y editar mi perfil",
-            footer: "LA MESA — cenas privadas exclusivas.",
+              "Thanks for your express signup. You’re on the LA MESA waitlist.",
+            next: "Sign in with the same email (Google, or email + password you create on the sign-in page) to complete your profile.",
+            cta: "Sign in and complete my profile",
+            footer: "LA MESA — exclusive private dinners.",
           }
-        : {
-            subject: "Tu es sur la liste d'attente LA MESA",
-            greeting: `Bonjour${name ? ` ${name}` : ""},`,
+        : locale === "es"
+          ? {
+              subject: "Bienvenido/a a LA MESA — completa tu perfil",
+              greeting: name ? `Estimado/a ${name}:` : "Estimado/a:",
+              thanks:
+                "Gracias por tu registro express. Ya estás en la lista de espera de LA MESA.",
+              next: "Inicia sesión con el mismo correo (Google, o correo + contraseña que crees en la página de acceso) para completar tu perfil.",
+              cta: "Iniciar sesión y completar mi perfil",
+              footer: "LA MESA — cenas privadas exclusivas.",
+            }
+          : {
+              subject: "Bienvenue chez LA MESA — complète ton profil",
+              greeting: name ? `Bonjour ${name},` : "Bonjour,",
+              thanks:
+                "Merci pour ton inscription express. Tu es bien sur la liste d’attente LA MESA.",
+              next: "Connecte-toi avec le même email (Google, ou email + mot de passe créé sur la page de connexion) pour compléter ton profil.",
+              cta: "Se connecter et compléter mon profil",
+              footer: "LA MESA — dîners privés exclusifs.",
+            }
+      : locale === "en"
+        ? {
+            subject: "You're on the LA MESA waitlist",
+            greeting: name ? `Hello ${name},` : "Hello,",
             thanks:
-              "Merci de t'être inscrit(e) à la liste d'attente LA MESA. Ton profil a bien été reçu.",
-            next: "Nous te contacterons prochainement pour t'inviter à un dîner professionnel qualifié. Connecte-toi avec le même email Google à tout moment pour modifier ton profil.",
-            cta: "Se connecter et modifier mon profil",
-            footer: "LA MESA — dîners privés exclusifs.",
-          };
+              "Thank you for joining the LA MESA waitlist. Your profile has been received.",
+            next: "We'll contact you soon to invite you to a curated professional dinner. Sign in with the same email (Google or email + password) anytime to update your profile.",
+            cta: "Sign in and edit my profile",
+            footer: "LA MESA — exclusive private dinners.",
+          }
+        : locale === "es"
+          ? {
+              subject: "Registro en lista de espera — LA MESA",
+              greeting: name ? `Estimado/a ${name}:` : "Estimado/a:",
+              thanks:
+                "Gracias por registrarte en la lista de espera de LA MESA. Hemos recibido tu perfil.",
+              next: "Te contactaremos pronto para invitarte a una cena profesional selecta. Inicia sesión con el mismo correo (Google, o correo + contraseña) cuando desees actualizar tu perfil.",
+              cta: "Iniciar sesión y editar mi perfil",
+              footer: "LA MESA — cenas privadas exclusivas.",
+            }
+          : {
+              subject: "Tu es sur la liste d'attente LA MESA",
+              greeting: name ? `Bonjour ${name},` : "Bonjour,",
+              thanks:
+                "Merci de t'être inscrit(e) à la liste d'attente LA MESA. Ton profil a bien été reçu.",
+              next: "Nous te contacterons prochainement pour t'inviter à un dîner professionnel qualifié. Connecte-toi avec le même email (Google, ou email + mot de passe) à tout moment pour modifier ton profil.",
+              cta: "Se connecter et modifier mon profil",
+              footer: "LA MESA — dîners privés exclusifs.",
+            };
 
   const safeGreeting = escapeHtml(copy.greeting);
   const html = `<!DOCTYPE html>
@@ -101,9 +136,10 @@ export async function sendWaitlistConfirmationEmail(input: {
   to: string;
   fullName: string;
   locale?: string | null;
+  variant?: ConfirmVariant;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const locale = resolveLocale(input.locale);
-  const { subject, html, text } = buildContent(locale, input.fullName);
+  const { subject, html, text } = buildContent(locale, input.fullName, input.variant ?? "full");
 
   return sendTransactionalEmail({
     to: input.to,

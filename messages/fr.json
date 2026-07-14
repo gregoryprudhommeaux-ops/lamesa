@@ -32,6 +32,30 @@
     "loginLink": "Déjà inscrit ? Connexion",
     "myAccountLink": "Mon espace"
   },
+  "light": {
+    "title": "Rejoindre LA MESA",
+    "brandTagline": "Rejoignez la waiting list, et recevez bientôt une invitation à participer.",
+    "subtitle": "Laisse tes coordonnées. Tu recevras un accès pour compléter ton profil quand tu veux.",
+    "fields": {
+      "fullName": "Nom complet",
+      "fullNamePlaceholder": "Ana García",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "emailPlaceholder": "nom@entreprise.com"
+    },
+    "submit": "S'inscrire",
+    "submitting": "Envoi…",
+    "submitHint": "Nous t’enverrons un accès par email pour compléter ton profil quand tu veux.",
+    "successTitle": "C’est noté",
+    "successBody": "Vérifie ta boîte mail : tu y trouveras le lien pour te connecter (Google, ou email + mot de passe) et compléter ton profil.",
+    "successCta": "Aller à la connexion",
+    "fullFormHint": "Tu préfères le formulaire complet ?",
+    "fullFormLink": "Inscription détaillée",
+    "errors": {
+      "alreadyRegistered": "Cet email est déjà inscrit. Connecte-toi pour modifier ton profil.",
+      "generic": "Impossible d’envoyer le formulaire. Réessaie."
+    }
+  },
   "about": {
     "metaTitle": "Fonctionnement — LA MESA",
     "metaDescription": "Comment fonctionnent les dîners LA MESA : places limitées, confirmation par paiement, thématiques, sponsors et intervenants.",
@@ -248,9 +272,30 @@
   },
   "account": {
     "loginTitle": "Connexion membre",
-    "loginHint": "Connecte-toi avec le même email Google que ton inscription à la liste d'attente.",
+    "loginHint": "Connecte-toi avec le même email que ton inscription — Google, ou email et mot de passe.",
     "googleLogin": "Continuer avec Google",
     "googleRedirecting": "Redirection Google…",
+    "emailAuth": {
+      "or": "ou",
+      "email": "Email",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "signIn": "Se connecter",
+      "createAccount": "Créer un mot de passe / compte",
+      "working": "Un instant…",
+      "switchToSignup": "Première fois ? Crée ton mot de passe ici",
+      "switchToSignin": "Déjà un mot de passe ? Se connecter",
+      "errors": {
+        "invalidEmail": "Email invalide.",
+        "invalidCredentials": "Email ou mot de passe incorrect.",
+        "emailInUse": "Cet email a déjà un compte. Connecte-toi ou utilise Google.",
+        "weakPassword": "Le mot de passe doit faire au moins 6 caractères.",
+        "passwordMismatch": "Les mots de passe ne correspondent pas.",
+        "notEnabled": "La connexion email/mot de passe n’est pas activée dans Firebase. Active Email/Password dans la console.",
+        "notConfigured": "Firebase Auth n’est pas configuré.",
+        "generic": "Connexion impossible. Réessaie."
+      }
+    },
     "noAccount": "Pas encore sur la liste ?",
     "joinWaitlist": "S'inscrire",
     "title": "Mon espace LA MESA",

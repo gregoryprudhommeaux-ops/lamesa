@@ -46,6 +46,7 @@ function TopBarLoginLink() {
   const { user, loading } = useAuth();
 
   if (pathname === "/connexion" || pathname.startsWith("/connexion/")) return null;
+  if (pathname === "/light" || pathname.startsWith("/light/")) return null;
   if (loading) return null;
 
   if (user) {
@@ -74,6 +75,8 @@ type LaMesaShellProps = {
   cardClassName?: string;
   /** Admin pages force FR in layout — hide switcher to avoid mixed locales. */
   showLanguageSwitcher?: boolean;
+  /** Override brand tagline under the wordmark (page-specific). */
+  brandTagline?: string;
 };
 
 export function LaMesaShell({
@@ -81,6 +84,7 @@ export function LaMesaShell({
   card = false,
   cardClassName = "",
   showLanguageSwitcher = true,
+  brandTagline,
 }: LaMesaShellProps) {
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-ns-hero">
@@ -95,7 +99,7 @@ export function LaMesaShell({
         </div>
       ) : null}
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-12">
-        <LaMesaBrandHeader />
+        <LaMesaBrandHeader tagline={brandTagline} />
         {card ? (
           <div
             className={`w-full rounded-2xl border border-white/10 bg-ns-surface p-8 shadow-2xl ${cardClassName}`}

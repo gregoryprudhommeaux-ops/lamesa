@@ -32,6 +32,30 @@
     "loginLink": "Already registered? Sign in",
     "myAccountLink": "My space"
   },
+  "light": {
+    "title": "Join LA MESA",
+    "brandTagline": "Join the waiting list, and soon receive an invitation to take part.",
+    "subtitle": "Share your details. We’ll email you access to complete your profile whenever you’re ready.",
+    "fields": {
+      "fullName": "Full name",
+      "fullNamePlaceholder": "Ana García",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "emailPlaceholder": "name@company.com"
+    },
+    "submit": "Sign up",
+    "submitting": "Sending…",
+    "submitHint": "We’ll email you access to complete your profile whenever you’re ready.",
+    "successTitle": "You’re in",
+    "successBody": "Check your inbox for the link to sign in (Google, or email + password) and complete your profile.",
+    "successCta": "Go to sign-in",
+    "fullFormHint": "Prefer the full form?",
+    "fullFormLink": "Detailed registration",
+    "errors": {
+      "alreadyRegistered": "This email is already registered. Sign in to edit your profile.",
+      "generic": "We couldn’t submit the form. Please try again."
+    }
+  },
   "about": {
     "metaTitle": "How it works — LA MESA",
     "metaDescription": "How LA MESA dinners work: limited seats, advance payment to confirm, themes, sponsors, and guest speakers.",
@@ -248,9 +272,30 @@
   },
   "account": {
     "loginTitle": "Member sign-in",
-    "loginHint": "Sign in with the same Google email you used on the waitlist.",
+    "loginHint": "Sign in with the same email you used to register — Google, or email and password.",
     "googleLogin": "Continue with Google",
     "googleRedirecting": "Redirecting to Google…",
+    "emailAuth": {
+      "or": "or",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "signIn": "Sign in",
+      "createAccount": "Create password / account",
+      "working": "One moment…",
+      "switchToSignup": "First time? Create your password here",
+      "switchToSignin": "Already have a password? Sign in",
+      "errors": {
+        "invalidEmail": "Invalid email.",
+        "invalidCredentials": "Incorrect email or password.",
+        "emailInUse": "This email already has an account. Sign in or use Google.",
+        "weakPassword": "Password must be at least 6 characters.",
+        "passwordMismatch": "Passwords do not match.",
+        "notEnabled": "Email/password sign-in is not enabled in Firebase. Enable Email/Password in the console.",
+        "notConfigured": "Firebase Auth is not configured.",
+        "generic": "Could not sign in. Please try again."
+      }
+    },
     "noAccount": "Not on the list yet?",
     "joinWaitlist": "Join the waitlist",
     "title": "My LA MESA space",

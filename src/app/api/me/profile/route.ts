@@ -15,14 +15,16 @@ function isNextResponse(value: unknown): value is NextResponse {
 
 const profilePatchSchema = z.object({
   fullName: z.string().trim().min(3).max(120).optional(),
-  linkedinUrl: z.string().trim().url().optional(),
-  company: z.string().trim().min(2).max(120).optional(),
-  sector: z.string().trim().min(1).max(80).optional(),
-  position: z.string().trim().min(1).max(80).optional(),
+  linkedinUrl: z
+    .union([z.literal(""), z.string().trim().url()])
+    .optional(),
+  company: z.string().trim().max(120).optional(),
+  sector: z.string().trim().max(80).optional(),
+  position: z.string().trim().max(80).optional(),
   extraActivities: z.array(z.string().trim().min(1).max(500)).optional(),
-  city: z.string().trim().min(2).max(80).optional(),
+  city: z.string().trim().max(80).optional(),
   phone: z.string().trim().min(8).max(40).optional(),
-  invitationMotivation: z.string().trim().min(10).max(2000).optional(),
+  invitationMotivation: z.string().trim().max(2000).optional(),
 });
 
 export async function PATCH(request: Request) {
@@ -61,11 +63,21 @@ export async function PATCH(request: Request) {
   }
 
   const db = getAdminFirestore();
+  const patch = { ...parsed.data };
+  const completeHint =
+    Boolean(patch.company?.trim()) ||
+    Boolean(patch.linkedinUrl?.trim()) ||
+    Boolean(patch.city?.trim()) ||
+    Boolean(patch.invitationMotivation?.trim());
+
   await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
     {
-      ...parsed.data,
+      ...patch,
       updatedAt: new Date().toISOString(),
       uid: user.uid,
+      ...(completeHint && profile.profileComplete === false
+        ? { profileComplete: true }
+        : {}),
     },
     { merge: true },
   );
