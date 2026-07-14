@@ -77,6 +77,10 @@ async function runDailyFollowups() {
       }
 
       const result = await sendSatisfactionSurveyEmail({ event, participation: p });
+      if (result.ok && "skipped" in result && result.skipped) {
+        skipped += 1;
+        continue;
+      }
       if (result.ok) {
         surveysSent += 1;
         const stamp = new Date().toISOString();

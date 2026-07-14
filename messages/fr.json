@@ -77,6 +77,10 @@
         "q": "Combien ça coûte — et qui paie ?",
         "a": "Le prix varie d’un événement à l’autre et est indiqué au moment de l’invitation. En moyenne, compte entre 700 $ et 1 500 $ MXN. Il inclut généralement entrée, plat et dessert ; les boissons ne sont en principe pas incluses et se règlent sur place. Chaque participant paie sa place (sauf cas particulier, par exemple un dîner offert dans le cadre d’un sponsoring)."
       },
+      "absence": {
+        "q": "Que faire en cas d’absence de dernière minute ?",
+        "a": "Préviens-nous dès que possible. Si tu annules plus de 48 h avant l’événement, le paiement est remboursé ou conservé en acompte pour un prochain événement. Si l’annulation intervient à moins de 48 h, le règlement est conservé en totalité."
+      },
       "themes": {
         "q": "Les thématiques changent-elles ?",
         "a": "Oui. Les sujets des dîners sont composés à partir des profils de la liste d’attente — notamment le secteur d’activité, le poste en entreprise et l’expertise. C’est pour cela qu’il est important de remplir son profil : plus il est complet, plus nous pouvons te proposer une table alignée avec ton parcours et tes intérêts."

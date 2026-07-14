@@ -77,6 +77,10 @@
         "q": "¿Cuánto cuesta y quién paga?",
         "a": "El precio varía de un evento a otro y se indica al momento de la invitación. En promedio, oscila entre $700 y $1,500 MXN. Por lo general incluye entrada, plato fuerte y postre; las bebidas no suelen estar incluidas y se pagan en el lugar. Cada participante paga su lugar (salvo casos particulares, por ejemplo una cena cortesía por patrocinio)."
       },
+      "absence": {
+        "q": "¿Qué hago si no puedo asistir a última hora?",
+        "a": "Avísanos lo antes posible. Si cancelas con más de 48 h de anticipación, el pago se reembolsa o se conserva a cuenta para un próximo evento. Si cancelas con menos de 48 h, el pago se retiene por completo."
+      },
       "themes": {
         "q": "¿Las temáticas cambian?",
         "a": "Sí. Los temas de las cenas se arman a partir de los perfiles de la lista de espera — en particular el sector, el puesto en la empresa y la experiencia. Por eso es importante completar tu perfil: cuanto más completo esté, mejor podremos invitarte a una mesa alineada con tu trayectoria e intereses."

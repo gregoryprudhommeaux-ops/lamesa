@@ -35,6 +35,10 @@ export type TemplateVars = {
   email?: string;
   firstName?: string;
   loginUrl?: string;
+  /** Inviter / sponsor display name (referral + satisfaction invite) */
+  sponsorName?: string;
+  /** Signup / referral invite link */
+  inviteUrl?: string;
   eventTitle: string;
   when: string;
   where: string;
@@ -55,11 +59,16 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     vars.firstName?.trim() ||
     fallbackName.split(/\s+/)[0] ||
     fallbackName;
+  const sponsorFallback =
+    vars.sponsorName?.trim() ||
+    (fallbackName !== "amigo/a" ? fallbackName : "Un amigo");
   return text
     .replaceAll("{{fullName}}", fallbackName)
     .replaceAll("{{firstName}}", firstName)
     .replaceAll("{{email}}", vars.email ?? "")
     .replaceAll("{{loginUrl}}", vars.loginUrl ?? "")
+    .replaceAll("{{sponsorName}}", sponsorFallback)
+    .replaceAll("{{inviteUrl}}", vars.inviteUrl ?? "")
     .replaceAll("{{eventTitle}}", vars.eventTitle)
     .replaceAll("{{when}}", vars.when)
     .replaceAll("{{where}}", vars.where)
@@ -163,36 +172,77 @@ export async function getEmailTemplate(
 ): Promise<EmailTemplateDoc> {
   const lang = resolveTemplateLocale(locale ?? event?.eventLanguage);
 
-  const override = contentFromStored(event?.emailTemplateOverrides?.[key] as StoredOverride | undefined, lang);
-  if (override) {
-    return { key, locale: lang, subject: override.subject, body: override.body };
-  }
+  let enabled = true;
+  let storedLocales: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> | null = null;
+  let updatedAt: string | undefined;
 
   if (isFirebaseAdminConfigured()) {
     try {
       const db = getAdminFirestore();
       const snap = await db.collection(COLLECTIONS.emailTemplates).doc(key).get();
       if (snap.exists) {
-        const data = snap.data() as Partial<EmailTemplateDoc>;
-        const locales = normalizeStoredDoc(key, data);
-        const pair = locales[lang] ?? locales[DEFAULT_SEND_LOCALE];
-        if (pair?.subject?.trim() && pair?.body?.trim()) {
-          return {
-            key,
-            locale: lang,
-            subject: pair.subject,
-            body: pair.body,
-            locales,
-            updatedAt: data.updatedAt,
-          };
-        }
+        const data = snap.data() as Partial<EmailTemplateDoc> & {
+          locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>>;
+          subject?: string;
+          body?: string;
+          enabled?: boolean;
+        };
+        enabled = data.enabled !== false;
+        updatedAt = data.updatedAt;
+        storedLocales = normalizeStoredDoc(key, data);
       }
     } catch {
       /* fall through */
     }
   }
 
-  return defaultEmailTemplate(key, lang);
+  const eventOverrideRaw = event?.emailTemplateOverrides?.[key] as
+    | (StoredOverride & { enabled?: boolean })
+    | undefined;
+  if (eventOverrideRaw && typeof eventOverrideRaw === "object" && "enabled" in eventOverrideRaw) {
+    if (typeof eventOverrideRaw.enabled === "boolean") {
+      enabled = eventOverrideRaw.enabled;
+    }
+  }
+
+  const override = contentFromStored(eventOverrideRaw, lang);
+  if (override) {
+    return {
+      key,
+      locale: lang,
+      subject: override.subject,
+      body: override.body,
+      enabled,
+      updatedAt,
+    };
+  }
+
+  if (storedLocales) {
+    const pair = storedLocales[lang] ?? storedLocales[DEFAULT_SEND_LOCALE];
+    if (pair?.subject?.trim() && pair?.body?.trim()) {
+      return {
+        key,
+        locale: lang,
+        subject: pair.subject,
+        body: pair.body,
+        locales: storedLocales,
+        enabled,
+        updatedAt,
+      };
+    }
+  }
+
+  const fallback = defaultEmailTemplate(key, lang);
+  return { ...fallback, enabled };
+}
+
+/** Whether templated email sends for this key should go out. Default: enabled. */
+export async function isEmailTemplateEnabled(
+  key: EmailTemplateKey,
+  event?: AdminEvent | null,
+): Promise<boolean> {
+  const doc = await getEmailTemplate(key, event, DEFAULT_SEND_LOCALE);
+  return doc.enabled !== false;
 }
 
 export async function getEmailTemplateBundle(

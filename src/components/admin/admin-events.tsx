@@ -177,8 +177,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
   }, [loading, events]);
 
-  function resetForm(invitees: SelectedInvitee[] = []) {
+  function resetForm(invitees: SelectedInvitee[] = [], presetDate?: string) {
     const now = splitLocal(new Date().toISOString());
+    const date =
+      presetDate && /^\d{4}-\d{2}-\d{2}$/.test(presetDate) ? presetDate : now.date;
     setActiveId(null);
     setTitle("");
     setOrganizerName("LA MESA");
@@ -187,7 +189,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setVenueName("");
     setAddress("");
     setMapsUrl("");
-    setEventDate(now.date);
+    setEventDate(date);
     setStartTime("19:30");
     setEndTime("22:30");
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
@@ -204,20 +206,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
   useEffect(() => {
     const pending = consumePendingInvitees();
-    const wantsNew =
-      typeof window !== "undefined" &&
-      new URLSearchParams(window.location.search).get("nouveau") === "1";
+    const params =
+      typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const wantsNew = params?.get("nouveau") === "1";
+    const dateParam = params?.get("date")?.trim() ?? "";
     if (pending.length === 0 && !wantsNew) return;
     resetForm(
       pending.map((p) => ({
         ...p,
         inviteAs: "invited" as const,
       })),
+      dateParam || undefined,
     );
     if (wantsNew && typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("nouveau");
-      window.history.replaceState({}, "", url.pathname);
+      url.searchParams.delete("date");
+      window.history.replaceState({}, "", url.pathname + (url.search || ""));
     }
     // seed once on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps

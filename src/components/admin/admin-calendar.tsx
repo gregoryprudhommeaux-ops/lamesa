@@ -30,6 +30,14 @@ function formatMonthTitle(d: Date) {
   return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
+/** Local calendar day as YYYY-MM-DD for event create deep-link. */
+function toDateParam(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function formatTime(iso: string) {
   try {
     return new Date(iso).toLocaleTimeString("fr-FR", {
@@ -148,7 +156,8 @@ export function AdminCalendarPanel({ title }: { title: string }) {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">{title}</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Vue mensuelle — places = invités / présents sur capacité.
+            Vue mensuelle — places = invités / présents sur capacité. Clique une date vide pour créer
+            un événement.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -196,6 +205,7 @@ export function AdminCalendarPanel({ title }: { title: string }) {
             const key = `${cell.date.getFullYear()}-${cell.date.getMonth()}-${cell.date.getDate()}`;
             const dayEvents = eventsByDay.get(key) ?? [];
             const isToday = sameDay(cell.date, today);
+            const createHref = `/admin/evenements?nouveau=1&date=${encodeURIComponent(toDateParam(cell.date))}`;
             return (
               <div
                 key={key + String(cell.inMonth)}
@@ -203,43 +213,75 @@ export function AdminCalendarPanel({ title }: { title: string }) {
                   cell.inMonth ? "bg-white" : "bg-ns-brand-light/30"
                 }`}
               >
-                <div
-                  className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
-                    isToday
-                      ? "bg-ns-primary text-ns-hero"
-                      : cell.inMonth
-                        ? "text-ns-tertiary"
-                        : "text-ns-secondary/50"
-                  }`}
-                >
-                  {cell.date.getDate()}
-                </div>
-                <ul className="space-y-1">
-                  {dayEvents.map((ev) => {
-                    const cap = ev.capacity ?? DEFAULT_GUEST_CAPACITY;
-                    const filled = filledByEvent.get(ev.id) ?? 0;
-                    return (
-                      <li key={ev.id}>
-                        <Link
-                          href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
-                          className="block rounded-lg border border-ns-primary/20 bg-ns-primary/10 px-1.5 py-1 text-left transition hover:bg-ns-primary/20"
-                          title={ev.title}
-                        >
-                          <p className="truncate text-[11px] font-bold leading-tight text-ns-tertiary">
-                            {ev.title}
-                          </p>
-                          <p className="truncate text-[10px] text-ns-secondary">
-                            {formatTime(ev.startsAt)}
-                            {ev.venueName ? ` · ${ev.venueName}` : ""}
-                          </p>
-                          <p className="mt-0.5 text-[10px] font-semibold text-ns-primary">
-                            {filled}/{cap}
-                          </p>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
+                {dayEvents.length === 0 ? (
+                  <Link
+                    href={createHref}
+                    className="group flex h-full min-h-[96px] flex-col rounded-lg p-0.5 transition hover:bg-ns-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ns-primary"
+                    title={`Créer un événement le ${toDateParam(cell.date)}`}
+                  >
+                    <span
+                      className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday
+                          ? "bg-ns-primary text-ns-hero"
+                          : cell.inMonth
+                            ? "text-ns-tertiary group-hover:bg-ns-primary/20"
+                            : "text-ns-secondary/50"
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
+                    <span className="mt-auto hidden px-0.5 pb-1 text-[10px] font-semibold text-ns-primary group-hover:block">
+                      + Créer
+                    </span>
+                  </Link>
+                ) : (
+                  <>
+                    <div
+                      className={`mb-1 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday
+                          ? "bg-ns-primary text-ns-hero"
+                          : cell.inMonth
+                            ? "text-ns-tertiary"
+                            : "text-ns-secondary/50"
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </div>
+                    <ul className="space-y-1">
+                      {dayEvents.map((ev) => {
+                        const cap = ev.capacity ?? DEFAULT_GUEST_CAPACITY;
+                        const filled = filledByEvent.get(ev.id) ?? 0;
+                        return (
+                          <li key={ev.id}>
+                            <Link
+                              href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
+                              className="block rounded-lg border border-ns-primary/20 bg-ns-primary/10 px-1.5 py-1 text-left transition hover:bg-ns-primary/20"
+                              title={ev.title}
+                            >
+                              <p className="truncate text-[11px] font-bold leading-tight text-ns-tertiary">
+                                {ev.title}
+                              </p>
+                              <p className="truncate text-[10px] text-ns-secondary">
+                                {formatTime(ev.startsAt)}
+                                {ev.venueName ? ` · ${ev.venueName}` : ""}
+                              </p>
+                              <p className="mt-0.5 text-[10px] font-semibold text-ns-primary">
+                                {filled}/{cap}
+                              </p>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    <Link
+                      href={createHref}
+                      className="mt-1 block rounded px-1 py-0.5 text-[10px] font-semibold text-ns-secondary hover:bg-ns-primary/10 hover:text-ns-primary"
+                      title={`Ajouter un autre événement le ${toDateParam(cell.date)}`}
+                    >
+                      + Ajouter
+                    </Link>
+                  </>
+                )}
               </div>
             );
           })}

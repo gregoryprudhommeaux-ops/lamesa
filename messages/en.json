@@ -77,6 +77,10 @@
         "q": "How much does it cost — and who pays?",
         "a": "The price varies from one event to another and is stated at invitation time. On average, expect between MXN $700 and $1,500. It generally includes starter, main course, and dessert; drinks are usually not included and are settled on site. Each guest pays for their own seat (except special cases, such as a complimentary dinner under a sponsorship)."
       },
+      "absence": {
+        "q": "What if I can’t make it at the last minute?",
+        "a": "Let us know as soon as you can. If you cancel more than 48 hours before the event, your payment is refunded or kept as credit toward a future event. If you cancel within 48 hours, the payment is retained in full."
+      },
       "themes": {
         "q": "Do themes change?",
         "a": "Yes. Dinner topics are shaped from waitlist profiles — especially industry, role in a company, and expertise. That’s why completing your profile matters: the fuller it is, the better we can invite you to a table aligned with your background and interests."

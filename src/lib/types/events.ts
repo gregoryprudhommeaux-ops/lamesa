@@ -19,7 +19,8 @@ export type EmailTemplateKey =
   | "reminder_36h"
   | "reminder_90m"
   | "satisfaction_survey"
-  | "light_signup";
+  | "light_signup"
+  | "referral_invite";
 
 export type TemplateLocale = "es" | "fr" | "en";
 
@@ -36,6 +37,8 @@ export interface EmailTemplateDoc {
   locale?: TemplateLocale;
   /** All locales when loaded from store / defaults */
   locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>>;
+  /** When false, automated / templated sends are skipped. Default true. */
+  enabled?: boolean;
   updatedAt?: string;
 }
 

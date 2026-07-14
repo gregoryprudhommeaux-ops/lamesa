@@ -26,6 +26,8 @@ export function AdminEmailTemplatesPanel() {
   const [eventId, setEventId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [enabledByKey, setEnabledByKey] = useState<Partial<Record<EmailTemplateKey, boolean>>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -54,9 +56,15 @@ export function AdminEmailTemplatesPanel() {
       if (!tplRes.ok || !tplJson.ok) throw new Error(tplJson.error ?? "load_failed");
       const list = tplJson.templates ?? EMAIL_TEMPLATE_KEYS.map((k) => defaultEmailTemplate(k, editLocale));
       setEvents(evJson.events ?? []);
+      const flags: Partial<Record<EmailTemplateKey, boolean>> = {};
+      for (const t of list) {
+        flags[t.key] = t.enabled !== false;
+      }
+      setEnabledByKey(flags);
       const current = list.find((t) => t.key === activeKey) ?? defaultEmailTemplate(activeKey, editLocale);
       setSubject(current.subject);
       setBody(current.body);
+      setEnabled(current.enabled !== false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -91,16 +99,97 @@ export function AdminEmailTemplatesPanel() {
         ok?: boolean;
         template?: EmailTemplateDoc;
         error?: string;
+        translated?: boolean;
       };
       if (!res.ok || !json.ok || !json.template) throw new Error(json.error ?? "save_failed");
       setSubject(json.template.subject);
       setBody(json.template.body);
+      const otherLocales = TEMPLATE_LOCALES.filter((l) => l !== editLocale)
+        .map((l) => TEMPLATE_LOCALE_LABELS[l])
+        .join(" et ");
       setMessage(
         opts.reset
           ? `Template ${TEMPLATE_LOCALE_LABELS[editLocale]} réinitialisé.`
           : opts.asEventOverride
-            ? `Override ${TEMPLATE_LOCALE_LABELS[editLocale]} enregistré pour l’event.`
-            : `Template ${TEMPLATE_LOCALE_LABELS[editLocale]} enregistré (global).`,
+            ? `Override enregistré pour l’event (${TEMPLATE_LOCALE_LABELS[editLocale]}) — ${otherLocales} mis à jour par traduction.`
+            : `Template ${TEMPLATE_LOCALE_LABELS[editLocale]} enregistré (global) — ${otherLocales} mis à jour par traduction.`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function toggleEnabled() {
+    setSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const next = !enabled;
+      const res = await authFetch("/api/admin/email-templates", {
+        method: "PUT",
+        body: JSON.stringify({
+          key: activeKey,
+          locale: editLocale,
+          enabled: next,
+          ...(eventId ? { eventId } : {}),
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        template?: EmailTemplateDoc;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.template) throw new Error(json.error ?? "toggle_failed");
+      setEnabled(json.template.enabled !== false);
+      setMessage(
+        json.template.enabled !== false
+          ? "Template activé — les envois repris."
+          : "Template désactivé — aucun envoi pour ce mail.",
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeCustomTemplate() {
+    const scopeLabel = eventId
+      ? "l’override de cet événement"
+      : "la version personnalisée globale (ES / FR / EN)";
+    const ok = window.confirm(
+      `Supprimer ${scopeLabel} pour « ${EMAIL_TEMPLATE_LABELS[activeKey]} » ?\n\nLe texte reviendra aux valeurs par défaut du code.`,
+    );
+    if (!ok) return;
+
+    setSaving(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/email-templates", {
+        method: "DELETE",
+        body: JSON.stringify({
+          key: activeKey,
+          locale: editLocale,
+          ...(eventId ? { eventId } : {}),
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        template?: EmailTemplateDoc;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.template) throw new Error(json.error ?? "delete_failed");
+      setSubject(json.template.subject);
+      setBody(json.template.body);
+      setMessage(
+        eventId
+          ? "Override event supprimé — retour au template global / défaut."
+          : "Template personnalisé supprimé — retour aux valeurs par défaut.",
       );
       await load();
     } catch (e) {
@@ -129,7 +218,14 @@ export function AdminEmailTemplatesPanel() {
                 : "hover:bg-ns-brand-light"
             }`}
           >
-            {EMAIL_TEMPLATE_LABELS[key]}
+            <span className="block">{EMAIL_TEMPLATE_LABELS[key]}</span>
+            <span
+              className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
+                (enabledByKey[key] ?? true) ? "text-ns-primary" : "text-red-600"
+              }`}
+            >
+              {(enabledByKey[key] ?? true) ? "Actif" : "Désactivé"}
+            </span>
           </button>
         ))}
       </aside>
@@ -141,6 +237,13 @@ export function AdminEmailTemplatesPanel() {
             Multilingue ES / FR / EN. Envoi email & WhatsApp : langue de l’événement (défaut{" "}
             <strong>Español</strong>).
           </p>
+          <p
+            className={`mt-2 text-sm font-semibold ${
+              enabled ? "text-ns-primary" : "text-red-700"
+            }`}
+          >
+            Statut envoi : {enabled ? "activé" : "désactivé (non envoyé)"}
+          </p>
           <p className="mt-1 text-xs text-ns-secondary">
             Variables événement : {"{{fullName}}"}, {"{{email}}"}, {"{{eventTitle}}"},{" "}
             {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"},{" "}
@@ -150,6 +253,10 @@ export function AdminEmailTemplatesPanel() {
           <p className="mt-1 text-xs text-ns-secondary">
             Variables inscription /light : {"{{fullName}}"}, {"{{firstName}}"}, {"{{email}}"},{" "}
             {"{{loginUrl}}"}
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Variables invitation ami (parrainage / satisfaction) : {"{{sponsorName}}"},{" "}
+            {"{{inviteUrl}}"} — place {"{{inviteUrl}}"} sur sa propre ligne pour le bouton CTA.
           </p>
         </div>
         {error && <p className={ERROR_TEXT}>{error}</p>}
@@ -172,6 +279,10 @@ export function AdminEmailTemplatesPanel() {
             </button>
           ))}
         </div>
+        <p className="text-xs text-ns-secondary">
+          À l’enregistrement, ES / FR / EN sont synchronisés par traduction depuis la langue
+          active. Les variables {"{{…}}"} sont conservées.
+        </p>
 
         <div>
           <label className={LABEL_CLASS}>Événement (override optionnel)</label>
@@ -204,11 +315,25 @@ export function AdminEmailTemplatesPanel() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            className={
+              enabled
+                ? "inline-flex items-center justify-center rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-amber-900 transition hover:bg-amber-100 disabled:opacity-50"
+                : BTN_PRIMARY
+            }
+            disabled={saving}
+            onClick={() => void toggleEnabled()}
+          >
+            {enabled ? "Désactiver" : "Activer"}
+          </button>
+          <button
+            type="button"
             className={BTN_PRIMARY}
             disabled={saving}
             onClick={() => void save({ asEventOverride: false })}
           >
-            {saving ? "Enregistrement…" : `Enregistrer global (${TEMPLATE_LOCALE_LABELS[editLocale]})`}
+            {saving
+              ? "Traduction + enregistrement…"
+              : `Enregistrer ES/FR/EN depuis ${TEMPLATE_LOCALE_LABELS[editLocale]}`}
           </button>
           <button
             type="button"
@@ -225,6 +350,14 @@ export function AdminEmailTemplatesPanel() {
             onClick={() => void save({ reset: true, asEventOverride: Boolean(eventId) })}
           >
             Réinit. cette langue
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+            disabled={saving}
+            onClick={() => void removeCustomTemplate()}
+          >
+            Supprimer
           </button>
         </div>
       </section>

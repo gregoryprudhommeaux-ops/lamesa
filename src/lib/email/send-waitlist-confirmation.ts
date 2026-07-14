@@ -3,6 +3,7 @@ import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
   getEmailTemplate,
+  isEmailTemplateEnabled,
   resolveTemplateLocale,
   type TemplateVars,
 } from "@/lib/email/templates";
@@ -162,10 +163,15 @@ export async function sendWaitlistConfirmationEmail(input: {
   fullName: string;
   locale?: string | null;
   variant?: ConfirmVariant;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {
   const variant = input.variant ?? "full";
   const locale =
     variant === "express" ? "es" : resolveTemplateLocale(input.locale);
+
+  if (variant === "express" && !(await isEmailTemplateEnabled("light_signup"))) {
+    return { ok: true, skipped: true };
+  }
+
   const { subject, html, text } =
     variant === "express"
       ? await buildExpressFromTemplate({

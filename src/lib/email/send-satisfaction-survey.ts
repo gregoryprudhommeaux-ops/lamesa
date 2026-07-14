@@ -5,6 +5,7 @@ import {
   applyTemplateVars,
   buildEventTemplateVars,
   getEmailTemplate,
+  isEmailTemplateEnabled,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
@@ -25,7 +26,10 @@ function textToHtml(text: string): string {
 export async function sendSatisfactionSurveyEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
-}): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string }> {
+}): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string } | { ok: true; skipped: true; surveyUrl?: string }> {
+  if (!(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
+    return { ok: true, skipped: true };
+  }
   const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const token = signSurveyToken({

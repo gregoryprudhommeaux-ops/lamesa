@@ -57,6 +57,12 @@ export function AppFooter() {
           <span aria-hidden className="text-white/20">
             ·
           </span>
+          <Link href="/fonctionnement" className="font-medium transition hover:text-white/55">
+            {t("about")}
+          </Link>
+          <span aria-hidden className="text-white/20">
+            ·
+          </span>
           <Link href="/connexion" className="font-medium transition hover:text-white/55">
             {t("login")}
           </Link>

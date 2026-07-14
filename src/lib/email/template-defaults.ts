@@ -9,6 +9,7 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "reminder_90m",
   "satisfaction_survey",
   "light_signup",
+  "referral_invite",
 ];
 
 export const TEMPLATE_LOCALES: TemplateLocale[] = ["es", "fr", "en"];
@@ -24,6 +25,8 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
   reminder_90m: "Rappel H-1h30 (legacy email — préférer VALARM ICS)",
   satisfaction_survey: "Questionnaire satisfaction (+12h, cron 1×/jour)",
   light_signup: "Inscription express (/light) — compléter le profil",
+  referral_invite:
+    "Invitation ami (parrainage / satisfaction « Sí, invitar »)",
 };
 
 export const TEMPLATE_LOCALE_LABELS: Record<TemplateLocale, string> = {
@@ -423,6 +426,53 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
       ].join("\n"),
     },
   },
+  referral_invite: {
+    es: {
+      subject: "{{sponsorName}} te invita a unirte a LA MESA",
+      body: [
+        "Estimado/a:",
+        "",
+        "LA MESA es una red privada de cenas profesionales selectas: mesas reducidas, conversaciones de alto valor y sin networking superficial.",
+        "",
+        "{{sponsorName}} te ha invitado a unirte a LA MESA.",
+        "",
+        "Regístrate sin costo aquí. Próximamente recibirás una invitación para participar en una cena.",
+        "{{inviteUrl}}",
+        "",
+        "LA MESA — cenas privadas exclusivas.",
+      ].join("\n"),
+    },
+    fr: {
+      subject: "{{sponsorName}} vous a invité à rejoindre LA MESA",
+      body: [
+        "Bonjour,",
+        "",
+        "LA MESA est un réseau privé de dîners professionnels sélectionnés — petites tables, conversations à forte valeur, sans networking froid.",
+        "",
+        "{{sponsorName}} vous a invité à rejoindre LA MESA.",
+        "",
+        "Inscrivez-vous gratuitement ici et recevez prochainement une invitation à participer à un dîner.",
+        "{{inviteUrl}}",
+        "",
+        "LA MESA — dîners privés exclusifs.",
+      ].join("\n"),
+    },
+    en: {
+      subject: "{{sponsorName}} invited you to join LA MESA",
+      body: [
+        "Hello,",
+        "",
+        "LA MESA is a private network of curated professional dinners — small tables, high-signal conversations, no cold networking.",
+        "",
+        "{{sponsorName}} invited you to join LA MESA.",
+        "",
+        "Sign up for free here. You’ll soon receive an invitation to attend a dinner.",
+        "{{inviteUrl}}",
+        "",
+        "LA MESA — exclusive private dinners.",
+      ].join("\n"),
+    },
+  },
 };
 
 export function resolveTemplateLocale(raw?: string | null): TemplateLocale {
@@ -442,6 +492,7 @@ export function defaultEmailTemplate(
     subject: pair.subject,
     body: pair.body,
     locales,
+    enabled: true,
   };
 }
 

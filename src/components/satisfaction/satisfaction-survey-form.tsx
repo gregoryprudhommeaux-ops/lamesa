@@ -105,7 +105,7 @@ export function SatisfactionSurveyForm() {
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
       <div className="text-center">
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b4e600]">LA MESA</p>
-        <h1 className="mt-3 text-2xl font-bold text-ns-primary">¿Cómo estuvo la cena?</h1>
+        <h1 className="mt-3 text-2xl font-bold text-ns-primary">¿Cómo estuvo el evento?</h1>
         <p className="mt-2 text-sm text-ns-secondary">
           Gracias por participar. Califica de 0 a 5 (5 = excelente).
         </p>

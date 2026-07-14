@@ -5,6 +5,7 @@ import {
   applyTemplateVars,
   buildEventTemplateVars,
   getEmailTemplate,
+  isEmailTemplateEnabled,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site-url";
@@ -63,7 +64,10 @@ export async function sendCalendarInviteEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
   locale?: TemplateLocale;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {
+  if (!(await isEmailTemplateEnabled("calendar_invite", input.event))) {
+    return { ok: true, skipped: true };
+  }
   const base = getSiteUrl();
   const token = signRsvpToken({
     participationId: input.participation.id,
@@ -140,7 +144,10 @@ export async function sendTemplatedEventEmail(input: {
   key: "participation_confirmed" | "reminder_7d" | "reminder_36h" | "reminder_90m";
   event: AdminEvent;
   participation: AdminEventParticipation;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {
+  if (!(await isEmailTemplateEnabled(input.key, input.event))) {
+    return { ok: true, skipped: true };
+  }
   const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const template = await getEmailTemplate(input.key, input.event, locale);
