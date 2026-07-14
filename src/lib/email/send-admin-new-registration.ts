@@ -1,13 +1,5 @@
 import { configuredAdminEmails } from "@/lib/auth/platform-admin";
-
-const RESEND_API = "https://api.resend.com/emails";
-
-function fromAddress(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    "LA MESA <onboarding@resend.dev>"
-  );
-}
+import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 
 function escapeHtml(value: string): string {
   return value
@@ -114,9 +106,6 @@ function buildContent(input: AdminNewRegistrationInput): { subject: string; html
 export async function sendAdminNewRegistrationEmail(
   input: AdminNewRegistrationInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const recipients = [...configuredAdminEmails()];
   if (recipients.length === 0) {
     return { ok: false, error: "no_recipients" };
@@ -124,28 +113,11 @@ export async function sendAdminNewRegistrationEmail(
 
   const { subject, html, text } = buildContent(input);
 
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress(),
-        to: recipients,
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      return { ok: false, error: detail || `resend_${res.status}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  return sendTransactionalEmail({
+    to: recipients,
+    subject,
+    html,
+    text,
+    bccAdmins: false,
+  });
 }

@@ -1,13 +1,6 @@
-const RESEND_API = "https://api.resend.com/emails";
+import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 
 type MailLocale = "fr" | "en" | "es";
-
-function fromAddress(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    "LA MESA <onboarding@resend.dev>"
-  );
-}
 
 function resolveLocale(raw?: string | null): MailLocale {
   if (raw === "en" || raw === "es" || raw === "fr") return raw;
@@ -112,34 +105,14 @@ export async function sendReferralInviteEmail(input: {
   inviteUrl: string;
   locale?: string | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const locale = resolveLocale(input.locale);
   const { subject, html, text } = buildContent(locale, input.sponsorFullName, input.inviteUrl);
 
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress(),
-        to: [input.to],
-        subject,
-        html,
-        text,
-      }),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      return { ok: false, error: detail || `resend_${res.status}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  return sendTransactionalEmail({
+    to: input.to,
+    subject,
+    html,
+    text,
+    bccAdmins: false,
+  });
 }

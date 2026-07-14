@@ -1,6 +1,6 @@
 import { sendReferralInviteEmail } from "@/lib/email/send-referral-invite";
-import { eventMailAddressing } from "@/lib/email/event-mail-addressing";
 import { signSurveyToken } from "@/lib/email/rsvp-token";
+import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
   buildEventTemplateVars,
@@ -9,12 +9,6 @@ import {
 } from "@/lib/email/templates";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { getSiteUrl } from "@/lib/site-url";
-
-const RESEND_API = "https://api.resend.com/emails";
-
-function fromAddress(): string {
-  return process.env.RESEND_FROM_EMAIL?.trim() || "LA MESA <onboarding@resend.dev>";
-}
 
 function escapeHtml(value: string): string {
   return value
@@ -32,9 +26,6 @@ export async function sendSatisfactionSurveyEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
 }): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const token = signSurveyToken({
@@ -74,29 +65,14 @@ export async function sendSatisfactionSurveyEmail(input: {
 </body>
 </html>`;
 
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress(),
-        ...eventMailAddressing(input.participation.email),
-        subject,
-        html,
-        text: bodyText,
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `resend_${res.status}:${errText.slice(0, 200)}` };
-    }
-    return { ok: true, surveyUrl };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  const result = await sendTransactionalEmail({
+    to: input.participation.email,
+    subject,
+    html,
+    text: bodyText,
+  });
+  if (!result.ok) return result;
+  return { ok: true, surveyUrl };
 }
 
 /** Platform invite after satisfaction “Yes, invite someone” — Spanish by default. */

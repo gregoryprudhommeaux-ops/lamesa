@@ -938,10 +938,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   </pre>
                 )}
                 <p className="text-xs text-ns-secondary">
-                  Si un envoi échoue vers un autre email que le tien : Resend est probablement
-                  encore en mode test (<code>onboarding@resend.dev</code>) — seuls les mails vers
-                  ton adresse admin passent. Vérifie un domaine d’envoi sur resend.com et mets à
-                  jour <code>RESEND_FROM_EMAIL</code>.
+                  Si un envoi échoue : vérifie que Brevo est configuré (`BREVO_API_KEY` +
+                  `BREVO_FROM_EMAIL`) et que le domaine d’envoi est validé dans Brevo
+                  (Senders &amp; IP / Domains).
                 </p>
               </div>
 

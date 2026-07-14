@@ -1,6 +1,6 @@
 import { buildCalendarInviteIcs } from "@/lib/email/ics";
-import { eventMailAddressing } from "@/lib/email/event-mail-addressing";
 import { signRsvpToken } from "@/lib/email/rsvp-token";
+import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
   buildEventTemplateVars,
@@ -9,21 +9,6 @@ import {
 } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
-
-const RESEND_API = "https://api.resend.com/emails";
-
-function fromAddress(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    "LA MESA <onboarding@resend.dev>"
-  );
-}
-
-function organizerEmail(): string {
-  const from = fromAddress();
-  const m = from.match(/<([^>]+)>/);
-  return m?.[1] ?? "onboarding@resend.dev";
-}
 
 function escapeHtml(value: string): string {
   return value
@@ -49,7 +34,6 @@ export function inviteBodyToHtml(
   if (noUrl) prepared = prepared.split(noUrl).join(NO);
   if (eventUrl) prepared = prepared.split(eventUrl).join(EVENT);
 
-  // Collapse "YES : TOKEN" / "YES: TOKEN" into a single token (any language spacing).
   prepared = prepared
     .replace(/YES\s*:?\s*__LM_YES__/gi, YES)
     .replace(/NO\s*:?\s*__LM_NO__/gi, NO);
@@ -60,20 +44,14 @@ export function inviteBodyToHtml(
     "color:#111111;font-weight:800;text-decoration:underline;letter-spacing:0.04em;";
   html = html
     .split(YES)
-    .join(
-      `<a href="${escapeHtml(yesUrl)}" style="${linkStyle}">YES</a>`,
-    )
+    .join(`<a href="${escapeHtml(yesUrl)}" style="${linkStyle}">YES</a>`)
     .split(NO)
-    .join(
-      `<a href="${escapeHtml(noUrl)}" style="${linkStyle}">NO</a>`,
-    )
+    .join(`<a href="${escapeHtml(noUrl)}" style="${linkStyle}">NO</a>`)
     .split(EVENT)
     .join(
       `<a href="${escapeHtml(eventUrl)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${escapeHtml(eventUrl)}</a>`,
     );
 
-  // For event URL, prefer a short label if the line already says "Page…"
-  // Keep full URL as link text only when no surrounding label — already handled.
   return html;
 }
 
@@ -86,9 +64,6 @@ export async function sendCalendarInviteEmail(input: {
   participation: AdminEventParticipation;
   locale?: TemplateLocale;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const base = getSiteUrl();
   const token = signRsvpToken({
     participationId: input.participation.id,
@@ -114,6 +89,7 @@ export async function sendCalendarInviteEmail(input: {
   const bodyText = applyTemplateVars(template.body, vars);
 
   const location = [input.event.venueName, input.event.address].filter(Boolean).join(" — ");
+  const from = brevoFromAddress();
   const ics = buildCalendarInviteIcs({
     uid: `${input.event.id}-${input.participation.id}@lamesa`,
     title: `LA MESA — ${input.event.title}`,
@@ -121,8 +97,8 @@ export async function sendCalendarInviteEmail(input: {
     location,
     startsAt: input.event.startsAt,
     endsAt: input.event.endsAt,
-    organizerEmail: organizerEmail(),
-    organizerName: input.event.organizerName ?? "LA MESA",
+    organizerEmail: from.email,
+    organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
     attendeeEmail: input.participation.email,
     attendeeName: input.participation.fullName,
     url: vars.eventUrl,
@@ -146,38 +122,18 @@ export async function sendCalendarInviteEmail(input: {
 </body>
 </html>`;
 
-  const addressing = eventMailAddressing(input.participation.email);
-
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+  return sendTransactionalEmail({
+    to: input.participation.email,
+    subject,
+    html,
+    text: bodyText,
+    attachments: [
+      {
+        name: "invite.ics",
+        content: Buffer.from(ics, "utf8").toString("base64"),
       },
-      body: JSON.stringify({
-        from: fromAddress(),
-        ...addressing,
-        subject,
-        html,
-        text: bodyText,
-        attachments: [
-          {
-            filename: "invite.ics",
-            content: Buffer.from(ics, "utf8").toString("base64"),
-            content_type: "text/calendar; method=REQUEST; charset=UTF-8",
-          },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `resend_${res.status}:${errText.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+    ],
+  });
 }
 
 export async function sendTemplatedEventEmail(input: {
@@ -185,9 +141,6 @@ export async function sendTemplatedEventEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const template = await getEmailTemplate(input.key, input.event, locale);
@@ -201,29 +154,11 @@ export async function sendTemplatedEventEmail(input: {
   const subject = applyTemplateVars(template.subject, vars);
   const bodyText = applyTemplateVars(template.body, vars);
   const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;line-height:1.5">${textToHtml(bodyText)}</body></html>`;
-  const addressing = eventMailAddressing(input.participation.email);
 
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress(),
-        ...addressing,
-        subject,
-        html,
-        text: bodyText,
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `resend_${res.status}:${errText.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  return sendTransactionalEmail({
+    to: input.participation.email,
+    subject,
+    html,
+    text: bodyText,
+  });
 }

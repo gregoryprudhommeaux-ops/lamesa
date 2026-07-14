@@ -1,13 +1,4 @@
-import { eventMailAddressing } from "@/lib/email/event-mail-addressing";
-
-const RESEND_API = "https://api.resend.com/emails";
-
-function fromAddress(): string {
-  return (
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    "LA MESA <onboarding@resend.dev>"
-  );
-}
+import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 
 function escapeHtml(value: string): string {
   return value
@@ -26,9 +17,6 @@ export async function sendEventInvitationEmail(input: {
   subject: string;
   bodyText: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) return { ok: false, error: "resend_not_configured" };
-
   const html = `<!DOCTYPE html>
 <html>
 <body style="margin:0;padding:0;background:#0f1210;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;">
@@ -46,27 +34,10 @@ export async function sendEventInvitationEmail(input: {
 </body>
 </html>`;
 
-  try {
-    const res = await fetch(RESEND_API, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: fromAddress(),
-        ...eventMailAddressing(input.to),
-        subject: input.subject,
-        html,
-        text: input.bodyText,
-      }),
-    });
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return { ok: false, error: `resend_${res.status}:${errText.slice(0, 200)}` };
-    }
-    return { ok: true };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) };
-  }
+  return sendTransactionalEmail({
+    to: input.to,
+    subject: input.subject,
+    html,
+    text: input.bodyText,
+  });
 }
