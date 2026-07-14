@@ -163,9 +163,9 @@ export async function sendWaitlistConfirmationEmail(input: {
   locale?: string | null;
   variant?: ConfirmVariant;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  const locale = resolveTemplateLocale(input.locale);
   const variant = input.variant ?? "full";
-
+  const locale =
+    variant === "express" ? "es" : resolveTemplateLocale(input.locale);
   const { subject, html, text } =
     variant === "express"
       ? await buildExpressFromTemplate({

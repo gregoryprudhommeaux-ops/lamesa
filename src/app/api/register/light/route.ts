@@ -149,7 +149,8 @@ export async function POST(request: Request) {
   const mail = await sendWaitlistConfirmationEmail({
     to: record.email,
     fullName: record.fullName,
-    locale: record.locale,
+    /** Express /light confirmation always sends in Spanish (product default). */
+    locale: "es",
     variant: "express",
   });
   if (!mail.ok) {
