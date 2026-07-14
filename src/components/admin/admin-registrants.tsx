@@ -621,15 +621,15 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
               </div>
               {!isSoftDeleted(active) ? (
-                <div className="pt-2">
+                <div className="border-t border-gray-100 pt-4">
                   <button
                     type="button"
-                    className={`${BTN_SECONDARY} inline-flex w-full items-center justify-center gap-2 text-red-700`}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-red-700 transition hover:bg-red-100 disabled:opacity-50"
                     disabled={deleting}
                     onClick={() => void deleteContacts([active.id])}
                   >
                     <Trash2 className="h-4 w-4" />
-                    {deleting ? "Suppression…" : "Supprimer ce contact"}
+                    {deleting ? "Suppression…" : "Supprimer"}
                   </button>
                 </div>
               ) : null}
