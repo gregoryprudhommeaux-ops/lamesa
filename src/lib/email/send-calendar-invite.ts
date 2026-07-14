@@ -40,6 +40,50 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Turn RSVP / event URLs in the template body into short clickable labels in HTML. */
+export function inviteBodyToHtml(
+  bodyText: string,
+  yesUrl: string,
+  noUrl: string,
+  eventUrl: string,
+): string {
+  const YES = "__LM_YES__";
+  const NO = "__LM_NO__";
+  const EVENT = "__LM_EVENT__";
+
+  let prepared = bodyText;
+  if (yesUrl) prepared = prepared.split(yesUrl).join(YES);
+  if (noUrl) prepared = prepared.split(noUrl).join(NO);
+  if (eventUrl) prepared = prepared.split(eventUrl).join(EVENT);
+
+  // Collapse "YES : TOKEN" / "YES: TOKEN" into a single token (any language spacing).
+  prepared = prepared
+    .replace(/YES\s*:?\s*__LM_YES__/gi, YES)
+    .replace(/NO\s*:?\s*__LM_NO__/gi, NO);
+
+  let html = escapeHtml(prepared).replace(/\n/g, "<br/>");
+
+  const linkStyle =
+    "color:#111111;font-weight:800;text-decoration:underline;letter-spacing:0.04em;";
+  html = html
+    .split(YES)
+    .join(
+      `<a href="${escapeHtml(yesUrl)}" style="${linkStyle}">YES</a>`,
+    )
+    .split(NO)
+    .join(
+      `<a href="${escapeHtml(noUrl)}" style="${linkStyle}">NO</a>`,
+    )
+    .split(EVENT)
+    .join(
+      `<a href="${escapeHtml(eventUrl)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${escapeHtml(eventUrl)}</a>`,
+    );
+
+  // For event URL, prefer a short label if the line already says "Page…"
+  // Keep full URL as link text only when no surrounding label — already handled.
+  return html;
+}
+
 function textToHtml(text: string): string {
   return escapeHtml(text).replace(/\n/g, "<br/>");
 }
@@ -98,10 +142,10 @@ export async function sendCalendarInviteEmail(input: {
     <tr><td align="center">
       <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;">
         <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
-        <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;">${textToHtml(bodyText)}</td></tr>
+        <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;">${inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl)}</td></tr>
         <tr><td style="padding-top:24px;">
-          <a href="${escapeHtml(yesUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 16px;border-radius:999px;margin-right:8px;">YES</a>
-          <a href="${escapeHtml(noUrl)}" style="display:inline-block;background:#eee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 16px;border-radius:999px;">NO</a>
+          <a href="${escapeHtml(yesUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin-right:10px;">YES</a>
+          <a href="${escapeHtml(noUrl)}" style="display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;">NO</a>
         </td></tr>
       </table>
     </td></tr>
