@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { fmtDateTime } from "@/lib/events/utils";
 import type { AdminEvent } from "@/lib/types/events";
 
 type Params = { params: Promise<{ token: string }> };
@@ -16,6 +17,22 @@ function siteUrl(request: Request): string {
   } catch {
     return "http://127.0.0.1:3000";
   }
+}
+
+function rsvpOkRedirect(input: {
+  base: string;
+  locale: string;
+  response: string;
+  eventTitle?: string;
+  eventWhen?: string;
+}) {
+  const q = new URLSearchParams({
+    status: "ok",
+    response: input.response,
+  });
+  if (input.eventTitle) q.set("title", input.eventTitle);
+  if (input.eventWhen) q.set("when", input.eventWhen);
+  return NextResponse.redirect(`${input.base}/${input.locale}/rsvp?${q.toString()}`);
 }
 
 export async function GET(request: Request, { params }: Params) {
@@ -62,24 +79,36 @@ export async function GET(request: Request, { params }: Params) {
     }
 
     const eventSnap = await db.collection(COLLECTIONS.events).doc(payload.eventId).get();
+    const event = eventSnap.exists
+      ? ({ id: eventSnap.id, ...(eventSnap.data() as Omit<AdminEvent, "id">) } as AdminEvent)
+      : null;
     const eventLang =
-      eventSnap.exists && (eventSnap.data() as AdminEvent)?.eventLanguage
-        ? (eventSnap.data() as AdminEvent).eventLanguage!
-        : locale;
+      event?.eventLanguage === "fr" || event?.eventLanguage === "en" || event?.eventLanguage === "es"
+        ? event.eventLanguage
+        : (locale as "fr" | "en" | "es");
+    const eventTitle = event?.title?.trim() || "";
+    const eventWhen = event?.startsAt
+      ? fmtDateTime(event.startsAt, eventLang)
+      : "";
 
     const current = normalizeParticipationStatus(data.status);
     const next = response === "yes" ? "attending" : "not_attending";
 
+    const okRedirect = () =>
+      rsvpOkRedirect({
+        base,
+        locale: eventLang,
+        response,
+        eventTitle,
+        eventWhen,
+      });
+
     // Idempotent: already at target, or confirmed stays confirmed on YES
     if (current === next) {
-      return NextResponse.redirect(
-        `${base}/${eventLang}/rsvp?status=ok&response=${response}`,
-      );
+      return okRedirect();
     }
     if (response === "yes" && current === "confirmed") {
-      return NextResponse.redirect(
-        `${base}/${eventLang}/rsvp?status=ok&response=yes`,
-      );
+      return okRedirect();
     }
     // Don't override confirmed → not_attending unless explicit NO from invite (allow)
     // Don't move waitlist via RSVP
@@ -100,9 +129,7 @@ export async function GET(request: Request, { params }: Params) {
       { merge: true },
     );
 
-    return NextResponse.redirect(
-      `${base}/${eventLang}/rsvp?status=ok&response=${response}`,
-    );
+    return okRedirect();
   } catch (error) {
     console.error("[rsvp]", error);
     return redirect("error");
