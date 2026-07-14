@@ -33,6 +33,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     metadataBase: new URL(getSiteUrl() || PRODUCTION_SITE_URL),
     title: t("title"),
     description: t("description"),
+    icons: {
+      icon: [
+        { url: "/icon", type: "image/png" },
+        { url: "/favicon.svg", type: "image/svg+xml" },
+      ],
+      apple: [{ url: "/apple-icon", type: "image/png" }],
+    },
     alternates: {
       canonical: `/${locale}`,
     },

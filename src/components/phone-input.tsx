@@ -46,13 +46,13 @@ export function PhoneInput({
       <label htmlFor={`${id}-national`} className={LABEL_CLASS}>
         {label ?? t("phone")}
       </label>
-      <div className="mt-1 grid grid-cols-[8.75rem_minmax(0,1fr)] gap-2">
+      <div className="mt-1 grid grid-cols-[5.75rem_minmax(0,1fr)] gap-2">
         <select
           id={`${id}-country`}
           value={dialCode}
           onChange={(e) => setDialCode(e.target.value)}
           disabled={disabled}
-          className={`${fieldClass} px-2`}
+          className={`${fieldClass} px-1.5 text-sm`}
           aria-label={t("phoneCountryAria")}
         >
           {PHONE_COUNTRIES.map((country) => (

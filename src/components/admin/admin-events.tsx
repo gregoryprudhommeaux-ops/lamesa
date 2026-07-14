@@ -1062,12 +1062,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       )}
                       <button
                         type="button"
-                        className={`${BTN_SECONDARY} inline-flex items-center gap-1 px-2 py-1 text-xs`}
+                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
                         onClick={() => openWhatsAppForParticipation(p)}
                         title="Envoyer l’invitation par WhatsApp"
+                        aria-label="WhatsApp"
                       >
                         <MessageCircle className="h-3.5 w-3.5" />
-                        WhatsApp
                       </button>
                       <select
                         value={
