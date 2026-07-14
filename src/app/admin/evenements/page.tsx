@@ -1,6 +1,11 @@
 import { AdminEventsPanel } from "@/components/admin/admin-events";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getSiteUrl } from "@/lib/site-url";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Événements",
+};
 
 function flattenAdminLabels(messages: Record<string, unknown>, prefix = ""): Record<string, string> {
   const out: Record<string, string> = {};

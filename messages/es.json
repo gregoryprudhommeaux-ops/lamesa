@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "LA MESA — Cena Estratégica Exclusiva",
+    "title": "LA MESA Secreta",
     "description": "Cenas temáticas exclusivas en Guadalajara. Red selecta, acceso confidencial."
   },
   "nav": {
@@ -73,13 +73,17 @@
         "q": "¿Cómo confirmo mi lugar en la mesa?",
         "a": "Una vez invitado, debes pagar tu comida por adelantado para asegurar tu lugar. Si el pago no se recibe dentro del plazo indicado, el lugar se libera y se ofrece a otra persona."
       },
+      "price": {
+        "q": "¿Cuánto cuesta y quién paga?",
+        "a": "El precio varía de un evento a otro y se indica al momento de la invitación. En promedio, oscila entre $700 y $1,500 MXN. Por lo general incluye entrada, plato fuerte y postre; las bebidas no suelen estar incluidas y se pagan en el lugar. Cada participante paga su lugar (salvo casos particulares, por ejemplo una cena cortesía por patrocinio)."
+      },
       "themes": {
         "q": "¿Las temáticas cambian?",
-        "a": "Sí. Los temas de las cenas varían según las oportunidades y los intereses de la red. Una temática puede repetirse si un número suficiente de personas expresa el mismo interés — mismo sector, mismo tema u otro afín."
+        "a": "Sí. Los temas de las cenas se arman a partir de los perfiles de la lista de espera — en particular el sector, el puesto en la empresa y la experiencia. Por eso es importante completar tu perfil: cuanto más completo esté, mejor podremos invitarte a una mesa alineada con tu trayectoria e intereses."
       },
       "sponsors": {
         "q": "¿Algunas cenas están patrocinadas?",
-        "a": "Sí. Algunos eventos pueden contar con patrocinio. En ese caso, se indica con claridad en el momento de la invitación."
+        "a": "Sí, en ocasiones — y se indica con claridad al momento de la invitación. El patrocinio está pensado para beneficiar a los miembros (cenas cortesía, obsequios, etc.), sin perder de vista la calidad del momento para quienes están a la mesa."
       },
       "speakers": {
         "q": "¿Hay invitados especiales?",

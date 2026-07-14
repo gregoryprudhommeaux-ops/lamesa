@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "LA MESA — Cena Strategica Exclusiva",
+    "title": "LA MESA Secreta",
     "description": "Dîners thématiques exclusifs à Guadalajara. Réseau qualifié, accès confidentiel."
   },
   "nav": {
@@ -73,13 +73,17 @@
         "q": "Comment confirmer sa place à table ?",
         "a": "Une fois invité, tu dois régler ton repas en amont pour valider ta place. Si le paiement n'est pas reçu dans le délai indiqué, la place est libérée et proposée à une autre personne."
       },
+      "price": {
+        "q": "Combien ça coûte — et qui paie ?",
+        "a": "Le prix varie d’un événement à l’autre et est indiqué au moment de l’invitation. En moyenne, compte entre 700 $ et 1 500 $ MXN. Il inclut généralement entrée, plat et dessert ; les boissons ne sont en principe pas incluses et se règlent sur place. Chaque participant paie sa place (sauf cas particulier, par exemple un dîner offert dans le cadre d’un sponsoring)."
+      },
       "themes": {
         "q": "Les thématiques changent-elles ?",
-        "a": "Oui. Les sujets des dîners varient selon les opportunités et les envies du réseau. Une thématique peut revenir si un nombre suffisant de personnes manifeste le même intérêt — même domaine, même sujet, ou proximité thématique."
+        "a": "Oui. Les sujets des dîners sont composés à partir des profils de la liste d’attente — notamment le secteur d’activité, le poste en entreprise et l’expertise. C’est pour cela qu’il est important de remplir son profil : plus il est complet, plus nous pouvons te proposer une table alignée avec ton parcours et tes intérêts."
       },
       "sponsors": {
         "q": "Certains dîners sont-ils sponsorisés ?",
-        "a": "Oui. Certains événements peuvent l'être. Le cas échéant, c'est indiqué clairement au moment de l'invitation."
+        "a": "Oui, parfois — et c’est indiqué clairement au moment de l’invitation. Le sponsoring est pensé pour bénéficier aux membres (dîners offerts, cadeaux, etc.), tout en préservant la qualité du moment pour les personnes assises à table."
       },
       "speakers": {
         "q": "Y a-t-il parfois un intervenant ?",

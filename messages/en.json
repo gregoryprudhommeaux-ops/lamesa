@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "LA MESA — Cena Strategica Exclusiva",
+    "title": "LA MESA Secreta",
     "description": "Exclusive themed dinners in Guadalajara. Qualified network, confidential access."
   },
   "nav": {
@@ -73,13 +73,17 @@
         "q": "How do I confirm my seat?",
         "a": "Once invited, you must pay for your meal in advance to secure your place. If payment is not received within the stated deadline, the seat is released and offered to someone else."
       },
+      "price": {
+        "q": "How much does it cost — and who pays?",
+        "a": "The price varies from one event to another and is stated at invitation time. On average, expect between MXN $700 and $1,500. It generally includes starter, main course, and dessert; drinks are usually not included and are settled on site. Each guest pays for their own seat (except special cases, such as a complimentary dinner under a sponsorship)."
+      },
       "themes": {
         "q": "Do themes change?",
-        "a": "Yes. Dinner topics vary with opportunities and the network's interests. A theme may return if enough people show interest in the same subject, field, or related topic."
+        "a": "Yes. Dinner topics are shaped from waitlist profiles — especially industry, role in a company, and expertise. That’s why completing your profile matters: the fuller it is, the better we can invite you to a table aligned with your background and interests."
       },
       "sponsors": {
         "q": "Are some dinners sponsored?",
-        "a": "Yes. Some events may be sponsored. When that is the case, it is clearly stated at the time of invitation."
+        "a": "Yes, sometimes — and it is clearly stated at invitation time. Sponsorship is designed to benefit members (complimentary dinners, gifts, and similar), while preserving the quality of the moment for everyone at the table."
       },
       "speakers": {
         "q": "Is there sometimes a guest speaker?",

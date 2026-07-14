@@ -1,6 +1,11 @@
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { AdminGoogleLogin } from "@/components/admin/admin-google-login";
+import type { Metadata } from "next";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Connexion",
+};
 
 export default async function AdminLoginPage() {
   // Admin is FR-only (see admin/layout). Avoid getTranslations() — without a

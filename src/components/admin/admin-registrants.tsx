@@ -586,14 +586,18 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">LinkedIn</dt>
                 <dd>
-                  <a
-                    href={active.linkedinUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-ns-primary hover:underline"
-                  >
-                    {active.linkedinUrl}
-                  </a>
+                  {active.linkedinUrl?.trim() ? (
+                    <a
+                      href={active.linkedinUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-semibold text-ns-primary hover:underline"
+                    >
+                      LINKEDIN
+                    </a>
+                  ) : (
+                    "—"
+                  )}
                 </dd>
               </div>
               <div>

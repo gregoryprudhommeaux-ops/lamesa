@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import { BTN_PRIMARY, BTN_GHOST, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 import { useTranslations } from "next-intl";
 
-const FAQ_KEYS = ["seats", "payment", "themes", "sponsors", "speakers", "join"] as const;
+const FAQ_KEYS = ["seats", "payment", "price", "themes", "sponsors", "speakers", "join"] as const;
 
 export function AboutPageContent() {
   const t = useTranslations("about");
