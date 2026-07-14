@@ -47,7 +47,7 @@
     "submitting": "Sending…",
     "submitHint": "We’ll email you access to complete your profile whenever you’re ready.",
     "successTitle": "You’re in",
-    "successBody": "Check your inbox for the link to sign in (Google, or email + password) and complete your profile.",
+    "successBody": "Check your inbox (and your spam) for the link to sign in and complete your profile",
     "successCta": "Go to sign-in",
     "fullFormHint": "Prefer the full form?",
     "fullFormLink": "Detailed registration",

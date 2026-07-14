@@ -47,7 +47,7 @@
     "submitting": "Enviando…",
     "submitHint": "Te enviaremos un acceso por correo para completar tu perfil cuando quieras.",
     "successTitle": "Listo",
-    "successBody": "Revisa tu correo: encontrarás el enlace para iniciar sesión (Google, o correo + contraseña) y completar tu perfil.",
+    "successBody": "Revisa tu correo (y la carpeta de spam) para el enlace e inicia sesión y completa tu perfil.",
     "successCta": "Ir al acceso",
     "fullFormHint": "¿Prefieres el formulario completo?",
     "fullFormLink": "Inscripción detallada",

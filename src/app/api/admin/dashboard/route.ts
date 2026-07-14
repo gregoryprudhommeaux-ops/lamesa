@@ -11,8 +11,19 @@ import {
 import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
+import {
+  computeProfileCompletionPercent,
+  isExpressSignup,
+} from "@/lib/member/profile-completion";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
+import type {
+  AdminEvent,
+  AdminEventParticipation,
+  WaitlistRegistration,
+} from "@/lib/types/events";
+
+const RECENT_REGISTRANTS_LIMIT = 25;
 
 export async function GET(request: Request) {
   const admin = await requirePlatformAdmin(request);
@@ -39,9 +50,56 @@ export async function GET(request: Request) {
       ...(d.data() as Omit<AdminEventParticipation, "id">),
     }));
 
-    const waitlistActive = waitlistSnap.docs
-      .map((d) => ({ id: d.id, ...(d.data() as { deletedAt?: string | null }) }))
-      .filter((r) => !isSoftDeleted(r));
+    const waitlistAll = waitlistSnap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<WaitlistRegistration, "id">),
+    }));
+    const waitlistActive = waitlistAll.filter((r) => !isSoftDeleted(r));
+
+    const recentMembers = [...waitlistActive]
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+      )
+      .slice(0, RECENT_REGISTRANTS_LIMIT);
+
+    const engagementByMember = buildMemberEngagementIndex({
+      members: recentMembers,
+      participations,
+      events,
+      waitlist: waitlistAll,
+    });
+
+    const recentRegistrants = recentMembers.map((r) => {
+      const completionPercent = computeProfileCompletionPercent(r);
+      const engagement = engagementByMember.get(r.id) ?? {
+        invitationsSent: 0,
+        eventsConfirmed: 0,
+        revenueMxn: 0,
+        referralsMade: 0,
+      };
+      return {
+        id: r.id,
+        fullName: r.fullName ?? "",
+        email: r.email ?? "",
+        phone: r.phone ?? "",
+        company: r.company ?? "",
+        city: r.city ?? "",
+        position: r.position ?? "",
+        sector: r.sector ?? "",
+        locale: r.locale ?? "",
+        source: r.source ?? "",
+        createdAt: r.createdAt ?? "",
+        profileComplete: r.profileComplete ?? null,
+        completionPercent,
+        referredByCode: r.referredByCode?.trim() || null,
+        isExpress: isExpressSignup(r),
+        invitationsSent: engagement.invitationsSent,
+        eventsConfirmed: engagement.eventsConfirmed,
+        revenueMxn: engagement.revenueMxn,
+        referralsMade: engagement.referralsMade,
+      };
+    });
 
     const statusCounts = {
       invited: 0,
@@ -99,6 +157,7 @@ export async function GET(request: Request) {
       statusCounts,
       satisfaction: platformSatisfaction,
       events: byEvent,
+      recentRegistrants,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

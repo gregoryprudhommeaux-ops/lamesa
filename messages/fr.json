@@ -47,7 +47,7 @@
     "submitting": "Envoi…",
     "submitHint": "Nous t’enverrons un accès par email pour compléter ton profil quand tu veux.",
     "successTitle": "C’est noté",
-    "successBody": "Vérifie ta boîte mail : tu y trouveras le lien pour te connecter (Google, ou email + mot de passe) et compléter ton profil.",
+    "successBody": "Vérifie ta boîte mail (et les spams) pour le lien de connexion, puis complète ton profil.",
     "successCta": "Aller à la connexion",
     "fullFormHint": "Tu préfères le formulaire complet ?",
     "fullFormLink": "Inscription détaillée",

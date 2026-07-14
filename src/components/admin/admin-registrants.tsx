@@ -11,10 +11,10 @@ import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-function uniqueSorted(values: string[]): string[] {
-  return [...new Set(values.map((v) => v.trim()).filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b, "fr", { sensitivity: "base" }),
-  );
+function uniqueSorted(values: Array<string | null | undefined>): string[] {
+  return [
+    ...new Set(values.map((v) => (v ?? "").trim()).filter(Boolean)),
+  ].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 }
 
 type ContextMenuState = { x: number; y: number } | null;
@@ -110,8 +110,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       if (referralFilter === "without_referrer" && r.referredByCode?.trim()) return false;
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
-      if (city && r.city.trim().toLowerCase() !== city.trim().toLowerCase()) return false;
-      if (company && r.company.trim().toLowerCase() !== company.trim().toLowerCase()) return false;
+      if (city && (r.city ?? "").trim().toLowerCase() !== city.trim().toLowerCase()) return false;
+      if (company && (r.company ?? "").trim().toLowerCase() !== company.trim().toLowerCase())
+        return false;
       if (!needle) return true;
       const haystack = [
         r.fullName,
@@ -130,7 +131,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     });
   }, [rows, q, sector, position, city, company, referralFilter]);
 
-  const active = filtered.find((r) => r.id === activeId) ?? null;
+  const active = activeId ? (rows.find((r) => r.id === activeId) ?? null) : null;
   const selectedRows = useMemo(
     () => rows.filter((r) => selectedIds.has(r.id)),
     [rows, selectedIds],
@@ -161,6 +162,8 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       else next.add(id);
       return next;
     });
+    // Checkbox selection also opens the detail panel (expected UX).
+    setActiveId(id);
   }
 
   function toggleAllFiltered() {
@@ -499,25 +502,36 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             {filtered.map((r) => (
               <li key={r.id}>
                 <div
-                  className={`grid w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActiveId(r.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setActiveId(r.id);
+                    }
+                  }}
+                  className={`grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
                 >
                   <input
                     type="checkbox"
                     checked={selectedIds.has(r.id)}
                     onChange={() => toggleOne(r.id)}
+                    onClick={(e) => e.stopPropagation()}
                     className="mt-1 h-4 w-4 shrink-0 accent-ns-primary"
                     aria-label={`Sélectionner ${r.fullName}`}
                   />
-                  <button
-                    type="button"
-                    className="min-w-0 text-left"
-                    onClick={() => setActiveId(r.id)}
-                  >
+                  <div className="min-w-0 text-left">
                     <span className="inline-flex flex-wrap items-center gap-2 font-semibold text-ns-tertiary">
                       {r.fullName}
                       {isSoftDeleted(r) ? (
                         <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
                           Désactivé
+                        </span>
+                      ) : null}
+                      {r.profileComplete === false ? (
+                        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                          Express
                         </span>
                       ) : null}
                     </span>
@@ -528,7 +542,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                     <span className="mt-1 block text-xs text-ns-secondary sm:hidden">
                       Parrain : {r.referredByCode?.trim() || "—"}
                     </span>
-                  </button>
+                  </div>
                   <div className="hidden text-right text-xs text-ns-secondary sm:block">
                     <span className="font-medium text-ns-tertiary">
                       {r.referredByCode?.trim() || "—"}
