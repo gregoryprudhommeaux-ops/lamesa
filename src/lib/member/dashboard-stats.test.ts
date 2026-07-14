@@ -7,7 +7,7 @@ describe("dashboard-stats", () => {
   it("computes all four counters from mixed invitations", () => {
     const invitations = [
       {
-        status: "present",
+        status: "confirmed",
         event: { startsAt: "2026-01-10T18:00:00.000Z" },
       },
       {
@@ -15,7 +15,7 @@ describe("dashboard-stats", () => {
         event: { startsAt: "2026-03-01T18:00:00.000Z" },
       },
       {
-        status: "declined",
+        status: "not_attending",
         event: { startsAt: "2026-02-01T18:00:00.000Z" },
       },
       {
@@ -23,7 +23,7 @@ describe("dashboard-stats", () => {
         event: { startsAt: "2026-08-01T18:00:00.000Z" },
       },
       {
-        status: "present",
+        status: "attending",
         event: { startsAt: "2026-09-15T18:00:00.000Z" },
       },
     ];

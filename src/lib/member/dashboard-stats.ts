@@ -1,3 +1,5 @@
+import { isPastParticipationStatus } from "@/lib/events/capacity";
+
 export type InvitationLike = {
   status: string;
   event: { startsAt: string };
@@ -25,7 +27,7 @@ export function computeDashboardStats(input: {
     if (Number.isNaN(starts)) continue;
     if (starts >= now) {
       upcomingInvitations += 1;
-    } else if (inv.status === "present" || inv.status === "invited") {
+    } else if (isPastParticipationStatus(inv.status)) {
       pastParticipations += 1;
     }
   }

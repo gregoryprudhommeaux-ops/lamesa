@@ -1,6 +1,8 @@
 "use client";
 
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
+import { AdminEventFunnel } from "@/components/admin/admin-event-funnel";
+import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { consumePendingInvitees } from "@/lib/admin/pending-invitees";
 import { DRESS_CODES, PARKING_OPTIONS } from "@/lib/constants/form-options";
@@ -13,7 +15,6 @@ import {
   LABEL_CLASS,
 } from "@/lib/ui/nextstep";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
-import { buildDefaultEventInviteTemplate } from "@/lib/email/build-event-invite-template";
 import {
   buildEmailTemplate,
   buildWhatsappInviteMessage,
@@ -26,8 +27,12 @@ import {
 import { applyInviteTemplateVars } from "@/lib/email/build-event-invite-template";
 import {
   countSeatedParticipations,
+  DEFAULT_TOTAL_COVERS,
+  guestCapacityFromTotalCovers,
+  totalCoversFromGuestCapacity,
   totalCoversWithAdmin,
 } from "@/lib/events/capacity";
+import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { Copy, Mail, MessageCircle, Plus, Save, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -99,18 +104,17 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [eventDate, setEventDate] = useState("");
   const [startTime, setStartTime] = useState("19:30");
   const [endTime, setEndTime] = useState("22:30");
-  const [capacity, setCapacity] = useState(15);
+  const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
+  const [priceMxn, setPriceMxn] = useState<string>("");
+  const [menuIncluded, setMenuIncluded] = useState("");
   const [dressCode, setDressCode] = useState<DressCode>("none_specified");
   const [parking, setParking] = useState<Parking>("unknown");
   const [registrationFormUrl, setRegistrationFormUrl] = useState("");
   const [flyerUrl, setFlyerUrl] = useState("");
   const [status, setStatus] = useState<"draft" | "published" | "closed">("draft");
-  const [eventLanguage, setEventLanguage] = useState<"fr" | "en" | "es">(locale);
+  const [eventLanguage, setEventLanguage] = useState<"fr" | "en" | "es">("es");
   const [selectedInvitees, setSelectedInvitees] = useState<SelectedInvitee[]>([]);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteSubject, setInviteSubject] = useState("");
-  const [inviteBody, setInviteBody] = useState("");
-  const [includeWaitlist, setIncludeWaitlist] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
 
@@ -157,6 +161,22 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     void loadAll();
   }, [loadAll]);
 
+  /** Open event from ?id= (calendar deep-link) once list is loaded. */
+  useEffect(() => {
+    if (loading || events.length === 0) return;
+    if (typeof window === "undefined") return;
+    const id = new URLSearchParams(window.location.search).get("id");
+    if (!id) return;
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+    if (activeId === id) return;
+    openEdit(event);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("id");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
+  }, [loading, events]);
+
   function resetForm(invitees: SelectedInvitee[] = []) {
     const now = splitLocal(new Date().toISOString());
     setActiveId(null);
@@ -170,13 +190,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setEventDate(now.date);
     setStartTime("19:30");
     setEndTime("22:30");
-    setCapacity(Math.max(15, invitees.length || 15));
+    setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
+    setPriceMxn("");
+    setMenuIncluded("");
     setDressCode("none_specified");
     setParking("unknown");
     setRegistrationFormUrl("");
     setFlyerUrl("");
     setStatus("draft");
-    setEventLanguage(locale);
+    setEventLanguage("es");
     setSelectedInvitees(invitees);
   }
 
@@ -219,13 +241,17 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setEventDate(start.date);
     setStartTime(start.time || "19:30");
     setEndTime(end.time || "");
-    setCapacity(event.capacity ?? 15);
+    setCapacity(totalCoversFromGuestCapacity(event.capacity));
+    setPriceMxn(
+      event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
+    );
+    setMenuIncluded(event.menuIncluded ?? "");
     setDressCode(event.dressCode ?? "none_specified");
     setParking(event.parking ?? "unknown");
     setRegistrationFormUrl(event.registrationFormUrl ?? "");
     setFlyerUrl(event.flyerUrl ?? "");
     setStatus(event.status ?? "draft");
-    setEventLanguage(event.eventLanguage ?? locale);
+    setEventLanguage(event.eventLanguage ?? "es");
     setSelectedInvitees([]);
   }
 
@@ -243,7 +269,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       flyerUrl: flyerUrl.trim(),
       startsAt: startsAtIso,
       endsAt: endsAtIso,
-      capacity,
+      capacity: guestCapacityFromTotalCovers(capacity),
+      priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
+      menuIncluded: menuIncluded.trim(),
       status,
       eventLanguage,
       dressCode,
@@ -337,29 +365,24 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     }
   }
 
-  function openInviteModal() {
-    if (!activeEvent) return;
-    const defaults = buildDefaultEventInviteTemplate({
-      event: activeEvent,
-      publicBaseUrl,
-      lang: eventLanguage,
-    });
-    setInviteSubject(activeEvent.inviteEmailSubject?.trim() || defaults.subject);
-    setInviteBody(activeEvent.inviteEmailBody?.trim() || defaults.body);
-    setIncludeWaitlist(false);
-    setInviteSendResult(null);
-    setInviteModalOpen(true);
+  async function inviteFromWaitlist(partId: string) {
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/participations/${partId}/invite`, {
+        method: "POST",
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "invite_failed");
+      await loadAll();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }
 
-  function resetInviteTemplate() {
+  function openInviteModal() {
     if (!activeEvent) return;
-    const defaults = buildDefaultEventInviteTemplate({
-      event: activeEvent,
-      publicBaseUrl,
-      lang: eventLanguage,
-    });
-    setInviteSubject(defaults.subject);
-    setInviteBody(defaults.body);
+    setInviteSendResult(null);
+    setInviteModalOpen(true);
   }
 
   async function sendInvitations() {
@@ -370,11 +393,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     try {
       const res = await authFetch(`/api/admin/events/${activeId}/send-invitations`, {
         method: "POST",
-        body: JSON.stringify({
-          subject: inviteSubject,
-          body: inviteBody,
-          includeWaitlist,
-        }),
+        body: JSON.stringify({}),
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -399,9 +418,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   }
 
   const invitedRecipientCount = useMemo(() => {
-    const statuses = includeWaitlist ? new Set(["invited", "waitlist"]) : new Set(["invited"]);
-    return activeParticipations.filter((p) => statuses.has(p.status)).length;
-  }, [activeParticipations, includeWaitlist]);
+    return activeParticipations.filter((p) => p.status === "invited").length;
+  }, [activeParticipations]);
 
   const publicUrl = activeEvent
     ? eventPublicUrl(publicBaseUrl, activeEvent.slug, eventLanguage)
@@ -459,7 +477,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
   async function openWhatsAppForAll() {
     const targets = activeParticipations.filter(
-      (p) => p.status === "invited" || p.status === "waitlist" || p.status === "present",
+      (p) =>
+        p.status === "invited" ||
+        p.status === "attending" ||
+        p.status === "confirmed" ||
+        p.status === "waitlist" ||
+        p.status === "present",
     );
     if (targets.length === 0) return;
     const withPhone = targets.filter((p) => toWhatsAppDigits(p.phone));
@@ -490,20 +513,39 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           <Plus className="h-4 w-4" /> {labels.newEvent}
         </button>
         <ul className="space-y-1">
-          {events.map((e) => (
-            <li key={e.id}>
-              <button
-                type="button"
-                onClick={() => openEdit(e)}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${activeId === e.id ? "bg-ns-primary/15 font-semibold text-ns-primary" : "hover:bg-ns-brand-light"}`}
-              >
-                {e.title}
-                <span className="block text-xs text-ns-secondary">
-                  {labels[`eventStatus.${e.status ?? "draft"}`] ?? e.status}
-                </span>
-              </button>
-            </li>
-          ))}
+          {events.map((e) => {
+            const when = (() => {
+              try {
+                return new Date(e.startsAt).toLocaleDateString("fr-FR", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                });
+              } catch {
+                return "";
+              }
+            })();
+            const place = e.venueName?.trim() || e.address?.trim() || "";
+            return (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => openEdit(e)}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${activeId === e.id ? "bg-ns-primary/15 font-semibold text-ns-primary" : "hover:bg-ns-brand-light"}`}
+                >
+                  <span className="block truncate font-semibold">{e.title}</span>
+                  {place ? (
+                    <span className="mt-0.5 block truncate text-xs text-ns-secondary">{place}</span>
+                  ) : null}
+                  <span className="mt-0.5 block text-xs text-ns-secondary">
+                    {when}
+                    {when ? " · " : ""}
+                    {labels[`eventStatus.${e.status ?? "draft"}`] ?? e.status}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </aside>
 
@@ -513,7 +555,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
         <section className="space-y-4 rounded-2xl border border-gray-100 bg-ns-surface p-5">
           <div>
-            <h3 className={FORM_SECTION_TITLE}>{labels.newEvent}</h3>
+            <h3 className={FORM_SECTION_TITLE}>
+              {activeId
+                ? (labels.editEvent ?? "Modifier le dîner")
+                : labels.newEvent}
+            </h3>
             <p className="mt-1 text-sm text-ns-secondary">
               {labels.formHint ?? "Renseigne les infos, puis compose un groupe d’invités."}
             </p>
@@ -538,23 +584,22 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 placeholder="LA MESA"
               />
             </div>
-            <div className="sm:col-span-2">
-              <label className="flex cursor-pointer items-start gap-3 text-sm text-ns-tertiary">
-                <input
-                  type="checkbox"
-                  checked={shareEnabled}
-                  onChange={(e) => setShareEnabled(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-ns-primary"
-                />
-                <span>
-                  <span className="font-semibold">
-                    {labels["fields.shareEnabled"] ??
-                      "Autoriser le partage de l'invitation par les membres"}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-ns-secondary">
-                    {labels["fields.shareEnabledHint"] ??
-                      "Affiche un bouton “Partager” côté membres (lien /e/…)."}
-                  </span>
+            <div className="sm:col-span-2 flex items-start gap-3">
+              <input
+                id="event-share-enabled"
+                type="checkbox"
+                checked={shareEnabled}
+                onChange={(e) => setShareEnabled(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-ns-primary"
+              />
+              <label htmlFor="event-share-enabled" className="cursor-pointer text-sm text-ns-tertiary">
+                <span className="font-semibold">
+                  {labels["fields.shareEnabled"] ??
+                    "Autoriser le partage de l'invitation par les membres"}
+                </span>
+                <span className="mt-0.5 block text-xs text-ns-secondary">
+                  {labels["fields.shareEnabledHint"] ??
+                    "Affiche un bouton “Partager” côté membres (lien /e/…)."}
                 </span>
               </label>
             </div>
@@ -596,7 +641,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               <label className={LABEL_CLASS}>{labels["fields.capacity"]}</label>
               <input
                 type="number"
-                min={1}
+                min={2}
                 max={100}
                 value={capacity}
                 onChange={(e) => setCapacity(Number(e.target.value))}
@@ -604,7 +649,58 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               />
               <p className="mt-1 text-xs text-ns-secondary">
                 {labels["fields.capacityHint"] ??
-                  `${capacity} invités + toi (admin) = ${totalCoversWithAdmin(capacity)} couverts. Au-delà → liste d'attente.`}
+                  `Défaut ${DEFAULT_TOTAL_COVERS} personnes dont Gregory (admin). ${guestCapacityFromTotalCovers(capacity)} places invités — au-delà → liste d’attente.`}
+              </p>
+            </div>
+
+            <div>
+              <label className={LABEL_CLASS}>{labels["fields.priceMxn"] ?? "Prix (MXN, hors IVA)"}</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={priceMxn}
+                onChange={(e) => setPriceMxn(e.target.value)}
+                className={INPUT_CLASS}
+                placeholder="2500"
+              />
+              <p className="mt-1 text-xs text-ns-secondary">
+                {labels["fields.priceMxnHint"] ??
+                  "Montant editable. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+              </p>
+              {(() => {
+                const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                if (!Number.isFinite(n) || n <= 0) return null;
+                const { iva, totalWithIva } = computeEventIva(n);
+                return (
+                  <div className="mt-2 rounded-lg border border-ns-alternate bg-ns-brand-light/40 px-3 py-2 text-xs text-ns-tertiary">
+                    <p>
+                      {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
+                      <strong>{formatMxn(iva, "es")}</strong>
+                    </p>
+                    <p className="mt-0.5">
+                      {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
+                      <strong>{formatMxn(totalWithIva, "es")}</strong>
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className={LABEL_CLASS}>
+                {labels["fields.menuIncluded"] ?? "Menu & inclus dans le prix"}
+              </label>
+              <textarea
+                value={menuIncluded}
+                onChange={(e) => setMenuIncluded(e.target.value)}
+                rows={4}
+                className={INPUT_CLASS}
+                placeholder="Entrée, plat, postre · bebidas · servicio…"
+              />
+              <p className="mt-1 text-xs text-ns-secondary">
+                {labels["fields.menuIncludedHint"] ??
+                  "Décris le menu et ce qui est inclus (boissons, service, etc.)."}
               </p>
             </div>
 
@@ -763,12 +859,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               <button
                 type="button"
                 onClick={openInviteModal}
-                disabled={
-                  activeParticipations.filter((p) => p.status === "invited").length === 0 &&
-                  activeParticipations.filter((p) => p.status === "waitlist").length === 0
-                }
+                disabled={activeParticipations.filter((p) => p.status === "invited").length === 0}
                 className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
-                title="Envoie un email à tous les invités (template éditable)"
+                title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
               >
                 <Mail className="h-4 w-4" /> Lancer les invitations
               </button>
@@ -801,8 +894,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 <div>
                   <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
                   <p className="mt-1 text-xs text-ns-secondary">
-                    Template par défaut généré depuis l’événement. Tu peux le modifier avant l’envoi.
-                    Variable utile : {"{{fullName}}"}.
+                    Envoie l’invitation calendrier (.ics) avec boutons YES/NO aux invités (statut
+                    Invité). Les templates sont éditables dans Admin → Templates. La Waiting List
+                    n’est pas contactée ici — utilise INVITER sur une ligne.
                   </p>
                 </div>
                 <button
@@ -816,34 +910,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </div>
 
               <div className="space-y-4 overflow-y-auto px-5 py-4">
-                <div>
-                  <label className={LABEL_CLASS}>Objet</label>
-                  <input
-                    className={INPUT_CLASS}
-                    value={inviteSubject}
-                    onChange={(e) => setInviteSubject(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className={LABEL_CLASS}>Message</label>
-                  <textarea
-                    className={`${INPUT_CLASS} min-h-[260px] font-mono text-sm`}
-                    value={inviteBody}
-                    onChange={(e) => setInviteBody(e.target.value)}
-                  />
-                </div>
-                <label className="flex cursor-pointer items-center gap-2 text-sm text-ns-tertiary">
-                  <input
-                    type="checkbox"
-                    className="accent-ns-primary"
-                    checked={includeWaitlist}
-                    onChange={(e) => setIncludeWaitlist(e.target.checked)}
-                  />
-                  Inclure aussi la Waiting List
-                </label>
-                <p className="text-xs text-ns-secondary">
-                  Destinataires : {invitedRecipientCount} personne
-                  {invitedRecipientCount > 1 ? "s" : ""}
+                <p className="text-sm text-ns-tertiary">
+                  Destinataires : <strong>{invitedRecipientCount}</strong> personne
+                  {invitedRecipientCount > 1 ? "s" : ""} en statut Invité
                   {activeEvent.inviteEmailSentAt
                     ? ` · dernier envoi : ${new Date(activeEvent.inviteEmailSentAt).toLocaleString("fr-FR")}`
                     : ""}
@@ -853,29 +922,22 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 )}
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 px-5 py-4">
-                <button type="button" className={BTN_SECONDARY} onClick={resetInviteTemplate}>
-                  Réinitialiser le template
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
+                <button
+                  type="button"
+                  className={BTN_SECONDARY}
+                  onClick={() => setInviteModalOpen(false)}
+                >
+                  Fermer
                 </button>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className={BTN_SECONDARY}
-                    onClick={() => setInviteModalOpen(false)}
-                  >
-                    Fermer
-                  </button>
-                  <button
-                    type="button"
-                    className={BTN_PRIMARY}
-                    disabled={sendingInvites || invitedRecipientCount === 0}
-                    onClick={() => void sendInvitations()}
-                  >
-                    {sendingInvites
-                      ? "Envoi…"
-                      : `Envoyer à ${invitedRecipientCount}`}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
+                  disabled={sendingInvites || invitedRecipientCount === 0}
+                  onClick={() => void sendInvitations()}
+                >
+                  {sendingInvites ? "Envoi…" : `Envoyer à ${invitedRecipientCount}`}
+                </button>
               </div>
             </div>
           </div>
@@ -911,6 +973,14 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </div>
             </section>
 
+            <AdminEventFunnel
+              event={activeEvent}
+              participations={activeParticipations}
+              onEventUpdated={() => void loadAll()}
+            />
+
+            <AdminEventSatisfactionResults participations={activeParticipations} />
+
             <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
@@ -925,7 +995,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </button>
               </div>
               {(() => {
-                const seatCap = activeEvent.capacity ?? capacity ?? 15;
+                const seatCap =
+                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
                 const seated = countSeatedParticipations(activeParticipations);
                 const waitlistCount = activeParticipations.filter(
                   (p) => p.status === "waitlist",
@@ -936,7 +1007,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     .replace("{capacity}", String(seatCap))
                     .replace("{waitlist}", String(waitlistCount))
                     .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
-                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts avec toi`;
+                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
                 return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
               })()}
               <ul className="mt-3 space-y-2">
@@ -957,6 +1028,16 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       )}
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
+                      {p.status === "waitlist" && (
+                        <button
+                          type="button"
+                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
+                          onClick={() => void inviteFromWaitlist(p.id)}
+                          title="Passer en Invité et envoyer l’invitation calendrier"
+                        >
+                          INVITER
+                        </button>
+                      )}
                       <button
                         type="button"
                         className={`${BTN_SECONDARY} inline-flex items-center gap-1 px-2 py-1 text-xs`}
@@ -967,7 +1048,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         WhatsApp
                       </button>
                       <select
-                        value={p.status}
+                        value={
+                          p.status === "present"
+                            ? "confirmed"
+                            : p.status === "declined"
+                              ? "not_attending"
+                              : p.status
+                        }
                         onChange={(e) =>
                           void setParticipationStatus(
                             p.id,
@@ -976,10 +1063,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         }
                         className="rounded border border-ns-alternate px-2 py-1 text-xs"
                       >
-                        <option value="invited">{labels["statuses.invited"]}</option>
-                        <option value="present">{labels["statuses.present"]}</option>
-                        <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                        <option value="declined">{labels["statuses.declined"]}</option>
+                      <option value="invited">{labels["statuses.invited"]}</option>
+                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
+                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
+                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
+                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
                       </select>
                     </div>
                   </li>

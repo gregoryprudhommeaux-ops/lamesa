@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { requireVerifiedUser } from "@/lib/auth/member.server";
+import { isFellowVisibleStatus } from "@/lib/events/capacity";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
@@ -19,7 +21,7 @@ type CalendarEventDto = {
   mapsUrl?: string;
   invited: boolean;
   participationStatus?: string;
-  fellows?: Array<{ fullName?: string; companyName?: string; status: "present" }>;
+  fellows?: Array<{ fullName?: string; companyName?: string; status: "attending" | "confirmed" }>;
 };
 
 async function loadPublishedEvents(db: ReturnType<typeof getAdminFirestore>): Promise<AdminEvent[]> {
@@ -87,12 +89,15 @@ export async function GET(request: Request) {
     return snap.docs
       .map((d) => d.data())
       .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
-      .filter((d) => String(d.status ?? "invited") === "present")
-      .map((d) => ({
-        fullName: d.fullName ? String(d.fullName) : undefined,
-        companyName: d.companyName ? String(d.companyName) : undefined,
-        status: "present" as const,
-      }));
+      .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
+      .map((d) => {
+        const status = normalizeParticipationStatus(String(d.status ?? ""));
+        return {
+          fullName: d.fullName ? String(d.fullName) : undefined,
+          companyName: d.companyName ? String(d.companyName) : undefined,
+          status: (status === "attending" ? "attending" : "confirmed") as "attending" | "confirmed",
+        };
+      });
   }
 
   const events: CalendarEventDto[] = [];

@@ -1,6 +1,52 @@
-export type EventParticipationStatus = "invited" | "present" | "declined" | "waitlist";
+export type EventParticipationStatus =
+  | "invited"
+  | "attending"
+  | "confirmed"
+  | "not_attending"
+  | "waitlist"
+  /** @deprecated legacy — normalized to confirmed */
+  | "present"
+  /** @deprecated legacy — normalized to not_attending */
+  | "declined";
+
 export type EventStatusSource = "admin" | "guest";
 export type EventRespondentAttendance = "yes" | "no" | "maybe";
+
+export type EmailTemplateKey =
+  | "calendar_invite"
+  | "participation_confirmed"
+  | "reminder_7d"
+  | "reminder_36h"
+  | "reminder_90m"
+  | "satisfaction_survey";
+
+export type TemplateLocale = "es" | "fr" | "en";
+
+export type EmailTemplateLocaleContent = {
+  subject: string;
+  body: string;
+};
+
+export interface EmailTemplateDoc {
+  key: EmailTemplateKey;
+  /** Resolved locale content (after getEmailTemplate) */
+  subject: string;
+  body: string;
+  locale?: TemplateLocale;
+  /** All locales when loaded from store / defaults */
+  locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>>;
+  updatedAt?: string;
+}
+
+export type SatisfactionSurveyAnswers = {
+  venueQuality: number;
+  menuQuality: number;
+  guestsQuality: number;
+  wouldReturn: number;
+  wantInviteOther: boolean;
+  invitedEmail?: string;
+  submittedAt: string;
+};
 
 export interface AdminEvent {
   id: string;
@@ -27,6 +73,10 @@ export interface AdminEvent {
   mapsUrl?: string;
   parking?: "secure_nearby" | "valet" | "on_site" | "unknown";
   capacity?: number;
+  /** Price before IVA (MXN), editable by admin */
+  priceMxn?: number | null;
+  /** Menu + what’s included in the price */
+  menuIncluded?: string;
   status?: "draft" | "published" | "closed";
   createdAt?: string;
   updatedAt?: string;
@@ -35,6 +85,14 @@ export interface AdminEvent {
   inviteEmailSubject?: string;
   inviteEmailBody?: string;
   inviteEmailSentAt?: string;
+  /** Per-event overrides of global email templates (per locale) */
+  emailTemplateOverrides?: Partial<
+    Record<
+      EmailTemplateKey,
+      | EmailTemplateLocaleContent
+      | { locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> }
+    >
+  >;
 }
 
 export interface AdminEventParticipation {
@@ -49,11 +107,23 @@ export interface AdminEventParticipation {
   phone?: string | null;
   status: EventParticipationStatus;
   statusSource: EventStatusSource;
+  /** Organizing admin seat — excluded from guest capacity. */
+  isOrganizer?: boolean;
   declineReason?: string;
   adminNote?: string;
   createdAt?: string;
   updatedAt?: string;
+  calendarInviteSentAt?: string;
+  confirmationEmailSentAt?: string;
+  reminder7dSentAt?: string;
+  reminder36hSentAt?: string;
+  reminder90mSentAt?: string;
+  rsvpAt?: string;
+  /** Thank-you + satisfaction survey email sent (~12h after start) */
+  satisfactionSurveySentAt?: string;
+  satisfactionSurvey?: SatisfactionSurveyAnswers;
 }
+
 
 export interface EventRespondent {
   id: string;

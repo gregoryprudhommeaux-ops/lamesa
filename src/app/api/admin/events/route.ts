@@ -6,7 +6,8 @@ import {
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { slugify } from "@/lib/events/utils";
-import { nextInviteStatus } from "@/lib/events/capacity";
+import { nextInviteStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { eventSchema } from "@/lib/validation";
 
 export async function GET(request: Request) {
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
   const slug = slugify(data.title);
 
   try {
-    const capacity = data.capacity ?? 15;
+    const capacity = data.capacity ?? DEFAULT_GUEST_CAPACITY;
     const ref = await db.collection(COLLECTIONS.events).add({
       slug,
       title: data.title,
@@ -88,6 +89,8 @@ export async function POST(request: Request) {
       startsAt: data.startsAt,
       endsAt: data.endsAt ?? null,
       capacity,
+      priceMxn: data.priceMxn ?? null,
+      menuIncluded: data.menuIncluded ?? "",
       status: data.status ?? "draft",
       eventLanguage: data.eventLanguage ?? "es",
       dressCode: data.dressCode ?? "none_specified",
@@ -123,7 +126,10 @@ export async function POST(request: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true, id: ref.id, slug });  } catch (error) {
+    await ensureOrganizerParticipation(db, ref.id, now);
+
+    return NextResponse.json({ ok: true, id: ref.id, slug });
+  } catch (error) {
     console.error("[admin/events POST]", error);
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 502 });
   }

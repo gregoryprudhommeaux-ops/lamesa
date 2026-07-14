@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { countSeatedParticipations } from "@/lib/events/capacity";
+import { countSeatedParticipations, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -216,12 +216,12 @@ export function AdminCalendarPanel({ title }: { title: string }) {
                 </div>
                 <ul className="space-y-1">
                   {dayEvents.map((ev) => {
-                    const cap = ev.capacity ?? 15;
+                    const cap = ev.capacity ?? DEFAULT_GUEST_CAPACITY;
                     const filled = filledByEvent.get(ev.id) ?? 0;
                     return (
                       <li key={ev.id}>
                         <Link
-                          href="/admin/evenements"
+                          href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
                           className="block rounded-lg border border-ns-primary/20 bg-ns-primary/10 px-1.5 py-1 text-left transition hover:bg-ns-primary/20"
                           title={ev.title}
                         >
@@ -255,32 +255,37 @@ export function AdminCalendarPanel({ title }: { title: string }) {
         ) : (
           <ul className="divide-y divide-gray-100 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface">
             {monthEvents.map((ev) => {
-              const cap = ev.capacity ?? 15;
+              const cap = ev.capacity ?? DEFAULT_GUEST_CAPACITY;
               const filled = filledByEvent.get(ev.id) ?? 0;
               const d = new Date(ev.startsAt);
               return (
-                <li key={ev.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                  <div>
-                    <p className="font-semibold text-ns-tertiary">{ev.title}</p>
-                    <p className="text-sm text-ns-secondary">
-                      {d.toLocaleDateString("fr-FR", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}{" "}
-                      · {formatTime(ev.startsAt)}
-                      {ev.venueName ? ` · ${ev.venueName}` : ""}
-                      {!ev.venueName && ev.address ? ` · ${ev.address}` : ""}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-ns-primary">
-                      {filled}/{cap} places
-                    </p>
-                    <p className="text-xs text-ns-secondary">
-                      {labelsStatus(ev.status)}
-                    </p>
-                  </div>
+                <li key={ev.id}>
+                  <Link
+                    href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 transition hover:bg-ns-brand-light/50"
+                  >
+                    <div>
+                      <p className="font-semibold text-ns-tertiary">{ev.title}</p>
+                      <p className="text-sm text-ns-secondary">
+                        {d.toLocaleDateString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {formatTime(ev.startsAt)}
+                        {ev.venueName ? ` · ${ev.venueName}` : ""}
+                        {!ev.venueName && ev.address ? ` · ${ev.address}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-ns-primary">
+                        {filled}/{cap} places
+                      </p>
+                      <p className="text-xs text-ns-secondary">
+                        {labelsStatus(ev.status)}
+                      </p>
+                    </div>
+                  </Link>
                 </li>
               );
             })}

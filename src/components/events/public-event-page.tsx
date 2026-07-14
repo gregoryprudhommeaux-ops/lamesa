@@ -11,6 +11,7 @@ import {
 } from "@/lib/ui/nextstep";
 import type { AdminEvent } from "@/lib/types/events";
 import { fmtDateTime } from "@/lib/events/utils";
+import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { getClientFirestore, isFirebaseClientConfigured } from "@/lib/firebase/client";
 import { addDoc, collection, getDocs, limit, query, where } from "firebase/firestore";
 import { useTranslations } from "next-intl";
@@ -20,6 +21,28 @@ type PublicEventPageProps = {
   slug: string;
   locale: "fr" | "en" | "es";
 };
+
+function PriceBlock({
+  priceMxn,
+  locale,
+}: {
+  priceMxn: number;
+  locale: "fr" | "en" | "es";
+}) {
+  const t = useTranslations("publicEvent");
+  const { priceBeforeTax, iva, totalWithIva } = computeEventIva(priceMxn);
+  return (
+    <div className="mt-4 rounded-xl border border-ns-alternate bg-ns-brand-light/30 px-4 py-3 text-sm">
+      <p className="font-semibold text-ns-tertiary">
+        {t("price")} · {formatMxn(priceBeforeTax, locale)}
+      </p>
+      <p className="mt-1 text-xs text-ns-secondary">
+        {t("iva")}: {formatMxn(iva, locale)} · {t("totalWithIva")}:{" "}
+        <strong>{formatMxn(totalWithIva, locale)}</strong>
+      </p>
+    </div>
+  );
+}
 
 export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
   const t = useTranslations("publicEvent");
@@ -64,6 +87,8 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
           startsAt: String(data.startsAt ?? ""),
           endsAt: data.endsAt ? String(data.endsAt) : undefined,
           capacity: typeof data.capacity === "number" ? data.capacity : undefined,
+          priceMxn: typeof data.priceMxn === "number" ? data.priceMxn : undefined,
+          menuIncluded: data.menuIncluded ? String(data.menuIncluded) : undefined,
           status: "published",
         });
       } catch (e) {
@@ -150,6 +175,17 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
       {event.introText && (
         <p className="mt-4 text-sm leading-relaxed text-ns-secondary">{event.introText}</p>
       )}
+      {typeof event.priceMxn === "number" && event.priceMxn > 0 ? (
+        <PriceBlock priceMxn={event.priceMxn} locale={locale} />
+      ) : null}
+      {event.menuIncluded ? (
+        <div className="mt-4">
+          <h2 className={FORM_SECTION_TITLE}>{t("menuIncluded")}</h2>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ns-secondary">
+            {event.menuIncluded}
+          </p>
+        </div>
+      ) : null}
 
       {success ? (
         <p className="mt-8 text-sm font-medium text-ns-primary">{t("rsvpSuccess")}</p>

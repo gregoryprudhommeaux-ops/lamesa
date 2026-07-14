@@ -1,3 +1,5 @@
+import { eventMailAddressing } from "@/lib/email/event-mail-addressing";
+
 const RESEND_API = "https://api.resend.com/emails";
 
 function fromAddress(): string {
@@ -53,7 +55,7 @@ export async function sendEventInvitationEmail(input: {
       },
       body: JSON.stringify({
         from: fromAddress(),
-        to: [input.to],
+        ...eventMailAddressing(input.to),
         subject: input.subject,
         html,
         text: input.bodyText,

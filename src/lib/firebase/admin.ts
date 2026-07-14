@@ -43,4 +43,5 @@ export const COLLECTIONS = {
   events: "events",
   participations: "event_participations",
   respondents: "event_respondents",
+  emailTemplates: "email_templates",
 } as const;

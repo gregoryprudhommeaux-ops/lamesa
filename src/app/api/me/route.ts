@@ -6,6 +6,8 @@ import {
   requireVerifiedUser,
 } from "@/lib/auth/member.server";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { isFellowVisibleStatus } from "@/lib/events/capacity";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { computeDashboardStats } from "@/lib/member/dashboard-stats";
 import { withoutSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
@@ -107,12 +109,15 @@ export async function GET(request: Request) {
     return snap.docs
       .map((d) => d.data())
       .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
-      .filter((d) => String(d.status ?? "invited") === "present")
-      .map((d) => ({
-        fullName: d.fullName ? String(d.fullName) : undefined,
-        companyName: d.companyName ? String(d.companyName) : undefined,
-        status: String(d.status ?? "invited"),
-      }));
+      .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
+      .map((d) => {
+        const status = normalizeParticipationStatus(String(d.status ?? ""));
+        return {
+          fullName: d.fullName ? String(d.fullName) : undefined,
+          companyName: d.companyName ? String(d.companyName) : undefined,
+          status: status === "attending" ? "attending" : "confirmed",
+        };
+      });
   }
 
   const pastInvitations = [];

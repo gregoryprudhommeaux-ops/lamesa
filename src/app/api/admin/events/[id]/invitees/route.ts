@@ -5,7 +5,8 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { nextInviteStatus } from "@/lib/events/capacity";
+import { nextInviteStatus, isOrganizerParticipation, isSeatedStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { z } from "zod";
 
 const inviteesSchema = z.object({
@@ -54,7 +55,7 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const now = new Date().toISOString();
-  const capacity = Number(eventSnap.data()?.capacity ?? 15);
+  const capacity = Number(eventSnap.data()?.capacity ?? DEFAULT_GUEST_CAPACITY);
   const existing = await db
     .collection(COLLECTIONS.participations)
     .where("eventId", "==", eventId)
@@ -63,8 +64,11 @@ export async function POST(request: Request, { params }: Params) {
     existing.docs.map((d) => normalizeEmail(String(d.data().email ?? ""))),
   );
   let seated = existing.docs.filter((d) => {
-    const s = String(d.data().status ?? "");
-    return s === "invited" || s === "present";
+    const data = d.data();
+    if (isOrganizerParticipation({ email: String(data.email ?? ""), isOrganizer: data.isOrganizer })) {
+      return false;
+    }
+    return isSeatedStatus(String(data.status ?? ""));
   }).length;
 
   let added = 0;
@@ -72,9 +76,15 @@ export async function POST(request: Request, { params }: Params) {
   let waitlisted = 0;
 
   try {
+    await ensureOrganizerParticipation(db, eventId, now);
+
     for (const inv of parsed.data.inviteEmails) {
       const email = normalizeEmail(inv.email);
       if (!email || existingEmails.has(email)) {
+        skipped += 1;
+        continue;
+      }
+      if (isOrganizerParticipation({ email })) {
         skipped += 1;
         continue;
       }

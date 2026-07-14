@@ -27,33 +27,39 @@ function buildContent(
   sponsorFullName: string,
   inviteUrl: string,
 ): { subject: string; html: string; text: string } {
-  const sponsor = sponsorFullName.trim();
+  const sponsor = sponsorFullName.trim() || (locale === "en" ? "A friend" : locale === "fr" ? "Un ami" : "Un amigo");
 
   const copy =
     locale === "en"
       ? {
-          subject: `${sponsor || "A LA MESA member"} invites you to join LA MESA`,
+          subject: `${sponsor} invited you to join LA MESA`,
           greeting: "Hello,",
-          intro: `${sponsor || "A LA MESA member"} thinks you'd be a great fit for LA MESA — exclusive private professional dinners in Guadalajara.`,
-          body: "Join the waitlist with their referral link. We'll review your profile and contact you when a seat opens at a curated dinner.",
-          cta: "Join the waitlist",
+          concept:
+            "LA MESA is a private network of curated professional dinners — small tables, high-signal conversations, no cold networking.",
+          invite: `${sponsor} invited you to join LA MESA.`,
+          body: "Sign up for free here. You’ll soon receive an invitation to attend a dinner.",
+          cta: "Sign up for free",
           footer: "LA MESA — exclusive private dinners.",
         }
       : locale === "es"
         ? {
-            subject: `${sponsor || "Un miembro de LA MESA"} te invita a unirte a LA MESA`,
+            subject: `${sponsor} te ha invitado a unirte a LA MESA`,
             greeting: "Hola,",
-            intro: `${sponsor || "Un miembro de LA MESA"} cree que encajarías muy bien en LA MESA — cenas privadas profesionales exclusivas en Guadalajara.`,
-            body: "Únete a la lista de espera con su enlace de referido. Revisaremos tu perfil y te contactaremos cuando haya un lugar en una cena seleccionada.",
-            cta: "Unirme a la lista de espera",
+            concept:
+              "LA MESA es una red privada de cenas profesionales seleccionadas: mesas pequeñas, conversaciones de alto valor, sin networking frío.",
+            invite: `${sponsor} te ha invitado a unirte a LA MESA.`,
+            body: "Inscríbete gratis aquí y recibe próximamente una invitación para participar en una cena.",
+            cta: "Inscribirme gratis",
             footer: "LA MESA — cenas privadas exclusivas.",
           }
         : {
-            subject: `${sponsor || "Un membre LA MESA"} t'invite à rejoindre LA MESA`,
+            subject: `${sponsor} vous a invité à rejoindre LA MESA`,
             greeting: "Bonjour,",
-            intro: `${sponsor || "Un membre LA MESA"} pense que tu serais un excellent profil pour LA MESA — dîners professionnels privés exclusifs à Guadalajara.`,
-            body: "Rejoins la liste d'attente avec son lien de parrainage. Nous examinerons ton profil et te contacterons dès qu'une place se libère à un dîner sélectionné.",
-            cta: "Rejoindre la liste d'attente",
+            concept:
+              "LA MESA est un réseau privé de dîners professionnels sélectionnés — petites tables, conversations à forte valeur, sans networking froid.",
+            invite: `${sponsor} vous a invité à rejoindre LA MESA.`,
+            body: "Inscrivez-vous gratuitement ici et recevez prochainement une invitation à participer à un dîner.",
+            cta: "S’inscrire gratuitement",
             footer: "LA MESA — dîners privés exclusifs.",
           };
 
@@ -66,7 +72,8 @@ function buildContent(
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
           <tr><td style="padding-top:16px;font-size:18px;font-weight:700;color:#111;">${escapeHtml(copy.greeting)}</td></tr>
-          <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${escapeHtml(copy.intro)}</td></tr>
+          <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${escapeHtml(copy.concept)}</td></tr>
+          <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;"><strong>${escapeHtml(copy.invite)}</strong></td></tr>
           <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${escapeHtml(copy.body)}</td></tr>
           <tr>
             <td style="padding-top:24px;">
@@ -86,7 +93,9 @@ function buildContent(
   const text = [
     copy.greeting,
     "",
-    copy.intro,
+    copy.concept,
+    "",
+    copy.invite,
     copy.body,
     "",
     `${copy.cta}: ${inviteUrl}`,

@@ -11,6 +11,8 @@ type AdminShellProps = {
   navEvents: string;
   navRegistrants: string;
   navCalendar: string;
+  navTemplates?: string;
+  navDashboard?: string;
   logoutLabel: string;
 };
 
@@ -20,6 +22,8 @@ export function AdminShell({
   navEvents,
   navRegistrants,
   navCalendar,
+  navTemplates = "Templates",
+  navDashboard = "Dashboard",
   logoutLabel,
 }: AdminShellProps) {
   const { logout, user } = useAuth();
@@ -38,6 +42,9 @@ export function AdminShell({
               )}
             </div>
             <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold">
+              <Link href="/admin/dashboard" className="text-ns-tertiary hover:text-ns-primary">
+                {navDashboard}
+              </Link>
               <Link href="/admin/evenements" className="text-ns-tertiary hover:text-ns-primary">
                 {navEvents}
               </Link>
@@ -46,6 +53,9 @@ export function AdminShell({
               </Link>
               <Link href="/admin/inscrits" className="text-ns-tertiary hover:text-ns-primary">
                 {navRegistrants}
+              </Link>
+              <Link href="/admin/templates" className="text-ns-tertiary hover:text-ns-primary">
+                {navTemplates}
               </Link>
               <button
                 type="button"

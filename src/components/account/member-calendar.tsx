@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-type CalendarFellow = { fullName?: string; companyName?: string; status: "present" };
+type CalendarFellow = { fullName?: string; companyName?: string; status: "attending" | "confirmed" };
 
 type CalendarEvent = {
   id: string;

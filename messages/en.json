@@ -162,10 +162,15 @@
     "copyWhatsapp": "Copy WhatsApp",
     "statuses": {
       "invited": "Invited",
-      "present": "Present",
-      "declined": "Declined",
-      "waitlist": "Waitlist"
+      "attending": "Attending",
+      "confirmed": "Confirmed",
+      "not_attending": "Not attending",
+      "waitlist": "Waiting list",
+      "present": "Confirmed",
+      "declined": "Not attending"
     },
+    "templatesTitle": "Email templates",
+    "inviteFromWaitlist": "Invite",
     "eventStatus": {
       "draft": "Draft",
       "published": "Published",
@@ -180,8 +185,14 @@
       "venueName": "Venue name",
       "address": "Full address",
       "mapsUrl": "Google Maps link (optional)",
-      "capacity": "Guest seats",
-      "capacityHint": "E.g. 15 guests + you (admin) = 16 covers. Overflow goes to the waitlist.",
+      "capacity": "People at the table",
+      "capacityHint": "Default 16 including Gregory (admin). 15 guest seats — overflow goes to the waitlist.",
+      "priceMxn": "Price (MXN, before tax)",
+      "priceMxnHint": "Editable amount. IVA (16%) and total are calculated automatically.",
+      "ivaLabel": "IVA (16%)",
+      "totalWithIva": "Total with IVA",
+      "menuIncluded": "Menu & what’s included",
+      "menuIncludedHint": "Describe the menu and what’s included (drinks, service, etc.).",
       "intro": "Introduction text",
       "status": "Status",
       "eventLanguage": "Event language",
@@ -221,6 +232,10 @@
     "rsvpTitle": "Confirm your attendance",
     "submitRsvp": "Submit",
     "rsvpSuccess": "Thank you — your response has been recorded.",
+    "price": "Price",
+    "iva": "IVA (16%)",
+    "totalWithIva": "Total with IVA",
+    "menuIncluded": "Menu & included",
     "fields": {
       "firstName": "First name",
       "lastName": "Last name",
@@ -317,9 +332,12 @@
     },
     "status": {
       "invited": "Invited",
-      "present": "Present",
-      "declined": "Declined",
-      "waitlist": "Waitlist"
+      "attending": "Attending",
+      "confirmed": "Confirmed",
+      "not_attending": "Not attending",
+      "waitlist": "Waitlist",
+      "present": "Confirmed",
+      "declined": "Not attending"
     }
   }
 }
