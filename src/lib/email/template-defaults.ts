@@ -1,5 +1,5 @@
 import type { EmailTemplateDoc, EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
-import { paymentBankBlock } from "@/lib/events/payment-details";
+import { paymentBankBlock, paymentDeadlineBlock } from "@/lib/events/payment-details";
 
 export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "calendar_invite",
@@ -52,6 +52,8 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "IVA (16%): {{ivaAmount}}",
         "Total: {{totalWithIva}}",
         "",
+        paymentDeadlineBlock("es"),
+        "",
         paymentBankBlock("es"),
         "",
         "Confirma tu asistencia:",
@@ -84,6 +86,8 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "IVA (16%) : {{ivaAmount}}",
         "Total : {{totalWithIva}}",
         "",
+        paymentDeadlineBlock("fr"),
+        "",
         paymentBankBlock("fr"),
         "",
         "Confirme ta présence :",
@@ -115,6 +119,8 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "Price: {{priceBeforeTax}}",
         "IVA (16%): {{ivaAmount}}",
         "Total: {{totalWithIva}}",
+        "",
+        paymentDeadlineBlock("en"),
         "",
         paymentBankBlock("en"),
         "",
