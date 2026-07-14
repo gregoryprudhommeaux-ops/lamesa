@@ -2,12 +2,12 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { setPendingInvitees } from "@/lib/admin/pending-invitees";
+import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -23,7 +23,6 @@ type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivate
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
   const router = useRouter();
-  const tForm = useTranslations("registration");
   const [rows, setRows] = useState<WaitlistRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,16 +139,10 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
-  function labelSector(value: string) {
-    if (!value?.trim()) return "—";
-    const key = `sectors.${value}` as Parameters<typeof tForm>[0];
-    return tForm.has(key) ? tForm(key) : value;
-  }
-
-  function labelPosition(value: string) {
-    if (!value?.trim()) return "—";
-    const key = `positions.${value}` as Parameters<typeof tForm>[0];
-    return tForm.has(key) ? tForm(key) : value;
+  function memberSubtitle(r: WaitlistRegistration): string {
+    return [labelPositionFr(r.position), labelSectorFr(r.sector), r.company?.trim(), r.city?.trim()]
+      .filter((part) => Boolean(part) && part !== "—")
+      .join(" · ");
   }
 
   function clearFilters() {
@@ -362,7 +355,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <option value="">Toutes</option>
               {positionOptions.map((p) => (
                 <option key={p} value={p}>
-                  {labelPosition(p)}
+                  {labelPositionFr(p)}
                 </option>
               ))}
             </select>
@@ -380,7 +373,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <option value="">Tous</option>
               {sectorOptions.map((s) => (
                 <option key={s} value={s}>
-                  {labelSector(s)}
+                  {labelSectorFr(s)}
                 </option>
               ))}
             </select>
@@ -529,8 +522,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                       ) : null}
                     </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary">
-                      {labelPosition(r.position)} · {labelSector(r.sector)} · {r.company} ·{" "}
-                      {r.city}
+                      {memberSubtitle(r) || "—"}
                     </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary/80">{r.email}</span>
                     <span className="mt-1 block text-xs text-ns-secondary sm:hidden">
@@ -581,11 +573,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Secteur</dt>
-                <dd>{labelSector(active.sector)}</dd>
+                <dd>{labelSectorFr(active.sector)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Position</dt>
-                <dd>{labelPosition(active.position)}</dd>
+                <dd>{labelPositionFr(active.position)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Ville</dt>
