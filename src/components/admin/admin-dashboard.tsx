@@ -120,15 +120,20 @@ export function AdminDashboardPanel() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
-        <p className="mt-1 text-sm text-ns-secondary">
-          Vue plateforme : volumes, funnel, satisfaction cumulée et par dîner.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
+          <p className="mt-1 text-sm text-ns-secondary">
+            Vue plateforme : volumes, funnel, satisfaction cumulée et par dîner.
+          </p>
+        </div>
+        <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
+          Templates email
+        </Link>
       </div>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Inscrits waitlist" value={kpis.waitlistUsers} />
+        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
         <KpiCard
           label="Événements"
           value={kpis.eventsTotal}

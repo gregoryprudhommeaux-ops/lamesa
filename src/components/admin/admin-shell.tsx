@@ -3,30 +3,24 @@
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 type AdminShellProps = {
   children: ReactNode;
-  title: string;
-  navEvents: string;
-  navRegistrants: string;
-  navCalendar: string;
-  navTemplates?: string;
-  navDashboard?: string;
-  logoutLabel: string;
+  title?: string;
 };
 
-export function AdminShell({
-  children,
-  title,
-  navEvents,
-  navRegistrants,
-  navCalendar,
-  navTemplates = "Templates",
-  navDashboard = "Dashboard",
-  logoutLabel,
-}: AdminShellProps) {
+const NAV_ITEMS = [
+  { href: "/admin/inscrits", label: "Membres" },
+  { href: "/admin/calendrier", label: "Calendrier" },
+  { href: "/admin/evenements", label: "Événements" },
+  { href: "/admin/dashboard", label: "Dashboard" },
+] as const;
+
+export function AdminShell({ children, title = "LA MESA — Admin" }: AdminShellProps) {
   const { logout, user } = useAuth();
+  const pathname = usePathname() ?? "";
 
   return (
     <RequireAuth admin loginHref="/admin/login">
@@ -42,29 +36,34 @@ export function AdminShell({
               )}
             </div>
             <nav className="flex flex-wrap items-center gap-3 text-sm font-semibold">
-              <Link href="/admin/dashboard" className="text-ns-tertiary hover:text-ns-primary">
-                {navDashboard}
-              </Link>
-              <Link href="/admin/evenements" className="text-ns-tertiary hover:text-ns-primary">
-                {navEvents}
-              </Link>
-              <Link href="/admin/calendrier" className="text-ns-tertiary hover:text-ns-primary">
-                {navCalendar}
-              </Link>
-              <Link href="/admin/inscrits" className="text-ns-tertiary hover:text-ns-primary">
-                {navRegistrants}
-              </Link>
-              <Link href="/admin/templates" className="text-ns-tertiary hover:text-ns-primary">
-                {navTemplates}
-              </Link>
+              {NAV_ITEMS.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={
+                      active
+                        ? "text-ns-primary"
+                        : "text-ns-tertiary hover:text-ns-primary"
+                    }
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
               <button
                 type="button"
-                onClick={() => void logout().then(() => {
-                  window.location.href = "/admin/login";
-                })}
+                onClick={() =>
+                  void logout().then(() => {
+                    window.location.href = "/admin/login";
+                  })
+                }
                 className="text-ns-secondary hover:text-ns-tertiary"
               >
-                {logoutLabel}
+                Déconnexion
               </button>
             </nav>
           </div>

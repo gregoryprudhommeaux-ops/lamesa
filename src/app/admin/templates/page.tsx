@@ -3,14 +3,7 @@ import { AdminShell } from "@/components/admin/admin-shell";
 
 export default function AdminTemplatesPage() {
   return (
-    <AdminShell
-      title="LA MESA — Admin"
-      navEvents="Dîners"
-      navCalendar="Calendrier"
-      navRegistrants="Inscrits"
-      navTemplates="Templates"
-      logoutLabel="Déconnexion"
-    >
+    <AdminShell>
       <AdminEmailTemplatesPanel />
     </AdminShell>
   );

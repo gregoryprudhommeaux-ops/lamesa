@@ -23,13 +23,7 @@ export default async function AdminEventsPage() {
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ?? "http://127.0.0.1:3000";
 
   return (
-    <AdminShell
-      title="LA MESA — Admin"
-      navEvents={labels.eventsTitle ?? "Événements"}
-      navCalendar={labels.calendarTitle ?? "Calendrier"}
-      navRegistrants={labels.registrantsTitle ?? "Inscrits"}
-      logoutLabel={labels.logout ?? "Déconnexion"}
-    >
+    <AdminShell>
       <AdminEventsPanel labels={labels} locale="fr" publicBaseUrl={publicBaseUrl} />
     </AdminShell>
   );
