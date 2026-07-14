@@ -81,11 +81,16 @@ export async function POST(request: Request, { params }: Params) {
 
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   const errors: string[] = [];
   const now = new Date().toISOString();
 
   for (const p of recipients) {
     const result = await sendCalendarInviteEmail({ event, participation: p });
+    if (result.ok && "skipped" in result && result.skipped) {
+      skipped += 1;
+      continue;
+    }
     if (result.ok) {
       sent += 1;
       await db.collection(COLLECTIONS.participations).doc(p.id).set(
@@ -98,18 +103,35 @@ export async function POST(request: Request, { params }: Params) {
     }
   }
 
-  await db.collection(COLLECTIONS.events).doc(eventId).set(
-    {
-      inviteEmailSentAt: now,
-      updatedAt: now,
-    },
-    { merge: true },
-  );
+  if (sent > 0 || skipped === recipients.length) {
+    await db.collection(COLLECTIONS.events).doc(eventId).set(
+      {
+        ...(sent > 0 ? { inviteEmailSentAt: now } : {}),
+        updatedAt: now,
+      },
+      { merge: true },
+    );
+  }
+
+  if (sent === 0 && failed === 0 && skipped > 0) {
+    return NextResponse.json({
+      ok: false,
+      error: "template_disabled",
+      sent: 0,
+      failed: 0,
+      skipped,
+      recipientCount: recipients.length,
+      errors: [
+        "Le template « Invitation calendrier » est désactivé (Dashboard → Templates). Réactive-le pour envoyer.",
+      ],
+    });
+  }
 
   return NextResponse.json({
     ok: true,
     sent,
     failed,
+    skipped,
     recipientCount: recipients.length,
     errors: errors.slice(0, 10),
   });

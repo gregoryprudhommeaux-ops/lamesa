@@ -117,6 +117,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
+  const [inviteSendOk, setInviteSendOk] = useState(false);
 
   const activeEvent = useMemo(
     () => events.find((e) => e.id === activeId) ?? null,
@@ -387,13 +388,21 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   function openInviteModal() {
     if (!activeEvent) return;
     setInviteSendResult(null);
+    setInviteSendOk(false);
     setInviteModalOpen(true);
+  }
+
+  function closeInviteModal() {
+    setInviteModalOpen(false);
+    setInviteSendResult(null);
+    setInviteSendOk(false);
   }
 
   async function sendInvitations() {
     if (!activeId) return;
     setSendingInvites(true);
     setInviteSendResult(null);
+    setInviteSendOk(false);
     setError(null);
     try {
       const res = await authFetch(`/api/admin/events/${activeId}/send-invitations`, {
@@ -404,24 +413,34 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         ok?: boolean;
         sent?: number;
         failed?: number;
+        skipped?: number;
         recipientCount?: number;
         error?: string;
         errors?: string[];
       };
       if (!res.ok || !json.ok) {
-        throw new Error(json.error ?? "send_failed");
+        const detail =
+          json.errors && json.errors.length > 0 ? `\n${json.errors.join("\n")}` : "";
+        throw new Error((json.error ?? "send_failed") + detail);
       }
       const detail =
         json.errors && json.errors.length > 0
           ? `\n${json.errors.join("\n")}`
           : "";
+      const failed = json.failed ?? 0;
+      const sent = json.sent ?? 0;
+      setInviteSendOk(failed === 0 && sent > 0);
       setInviteSendResult(
-        `Envoyé : ${json.sent ?? 0} / ${json.recipientCount ?? 0}` +
-          ((json.failed ?? 0) > 0 ? ` · échecs : ${json.failed}` : "") +
+        (failed === 0 && sent > 0
+          ? `Invitations envoyées avec succès (${sent}/${json.recipientCount ?? sent}).`
+          : `Envoyé : ${sent} / ${json.recipientCount ?? 0}`) +
+          (failed > 0 ? ` · échecs : ${failed}` : "") +
           detail,
       );
       await loadAll();
     } catch (e) {
+      setInviteSendOk(false);
+      setInviteSendResult(e instanceof Error ? e.message : String(e));
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSendingInvites(false);
@@ -903,7 +922,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             role="dialog"
             aria-modal="true"
             aria-label="Lancer les invitations"
-            onClick={() => setInviteModalOpen(false)}
+            onClick={closeInviteModal}
           >
             <div
               className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
@@ -922,7 +941,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 <button
                   type="button"
                   className="text-ns-secondary hover:text-ns-tertiary"
-                  onClick={() => setInviteModalOpen(false)}
+                  onClick={closeInviteModal}
                   aria-label="Fermer"
                 >
                   <X className="h-5 w-5" />
@@ -938,33 +957,50 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     : ""}
                 </p>
                 {inviteSendResult && (
-                  <pre className="whitespace-pre-wrap rounded-lg border border-ns-alternate bg-ns-brand-light/50 px-3 py-2 text-xs text-ns-tertiary">
+                  <div
+                    className={`whitespace-pre-wrap rounded-lg border px-3 py-3 text-sm ${
+                      inviteSendOk
+                        ? "border-ns-primary/40 bg-ns-primary/15 font-semibold text-ns-hero"
+                        : "border-red-200 bg-red-50 text-red-800"
+                    }`}
+                  >
                     {inviteSendResult}
-                  </pre>
+                    {inviteSendOk ? (
+                      <p className="mt-2 text-xs font-normal text-ns-secondary">
+                        Vérifie ta boîte mail (et celle de l’invité) — l’envoi est terminé. Tu
+                        peux fermer cette fenêtre.
+                      </p>
+                    ) : null}
+                  </div>
                 )}
-                <p className="text-xs text-ns-secondary">
-                  Si un envoi échoue : vérifie que Brevo est configuré (`BREVO_API_KEY` +
-                  `BREVO_FROM_EMAIL`) et que le domaine d’envoi est validé dans Brevo
-                  (Senders &amp; IP / Domains).
-                </p>
+                {!inviteSendOk && (
+                  <p className="text-xs text-ns-secondary">
+                    Si un envoi échoue : vérifie que Brevo est configuré (`BREVO_API_KEY` +
+                    `BREVO_FROM_EMAIL`) et que le domaine d’envoi est validé dans Brevo
+                    (Senders &amp; IP / Domains). Le template « Invitation calendrier » doit
+                    aussi être <strong>activé</strong> dans Dashboard → Templates.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
-                <button
-                  type="button"
-                  className={BTN_SECONDARY}
-                  onClick={() => setInviteModalOpen(false)}
-                >
+                <button type="button" className={BTN_SECONDARY} onClick={closeInviteModal}>
                   Fermer
                 </button>
-                <button
-                  type="button"
-                  className={BTN_PRIMARY}
-                  disabled={sendingInvites || invitedRecipientCount === 0}
-                  onClick={() => void sendInvitations()}
-                >
-                  {sendingInvites ? "Envoi…" : `Envoyer à ${invitedRecipientCount}`}
-                </button>
+                {inviteSendOk ? (
+                  <button type="button" className={BTN_PRIMARY} onClick={closeInviteModal}>
+                    Terminé
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    disabled={sendingInvites || invitedRecipientCount === 0}
+                    onClick={() => void sendInvitations()}
+                  >
+                    {sendingInvites ? "Envoi…" : `Envoyer à ${invitedRecipientCount}`}
+                  </button>
+                )}
               </div>
             </div>
           </div>
