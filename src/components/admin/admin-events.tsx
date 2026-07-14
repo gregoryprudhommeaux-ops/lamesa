@@ -401,13 +401,19 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         failed?: number;
         recipientCount?: number;
         error?: string;
+        errors?: string[];
       };
       if (!res.ok || !json.ok) {
         throw new Error(json.error ?? "send_failed");
       }
+      const detail =
+        json.errors && json.errors.length > 0
+          ? `\n${json.errors.join("\n")}`
+          : "";
       setInviteSendResult(
         `Envoyé : ${json.sent ?? 0} / ${json.recipientCount ?? 0}` +
-          ((json.failed ?? 0) > 0 ? ` · échecs : ${json.failed}` : ""),
+          ((json.failed ?? 0) > 0 ? ` · échecs : ${json.failed}` : "") +
+          detail,
       );
       await loadAll();
     } catch (e) {
@@ -653,55 +659,63 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </p>
             </div>
 
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.priceMxn"] ?? "Prix (MXN, hors IVA)"}</label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={priceMxn}
-                onChange={(e) => setPriceMxn(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="2500"
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.priceMxnHint"] ??
-                  "Montant editable. L’IVA (16%) et le total TTC sont calculés automatiquement."}
-              </p>
-              {(() => {
-                const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
-                if (!Number.isFinite(n) || n <= 0) return null;
-                const { iva, totalWithIva } = computeEventIva(n);
-                return (
-                  <div className="mt-2 rounded-lg border border-ns-alternate bg-ns-brand-light/40 px-3 py-2 text-xs text-ns-tertiary">
-                    <p>
-                      {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                      <strong>{formatMxn(iva, "es")}</strong>
-                    </p>
-                    <p className="mt-0.5">
-                      {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                      <strong>{formatMxn(totalWithIva, "es")}</strong>
-                    </p>
-                  </div>
-                );
-              })()}
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>
-                {labels["fields.menuIncluded"] ?? "Menu & inclus dans le prix"}
-              </label>
-              <textarea
-                value={menuIncluded}
-                onChange={(e) => setMenuIncluded(e.target.value)}
-                rows={4}
-                className={INPUT_CLASS}
-                placeholder="Entrée, plat, postre · bebidas · servicio…"
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.menuIncludedHint"] ??
-                  "Décris le menu et ce qui est inclus (boissons, service, etc.)."}
-              </p>
+            <div className="sm:col-span-2 rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                Prix & menu
+              </h3>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL_CLASS}>
+                    {labels["fields.priceMxn"] ?? "Prix (MXN, hors IVA)"}
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={priceMxn}
+                    onChange={(e) => setPriceMxn(e.target.value)}
+                    className={INPUT_CLASS}
+                    placeholder="2500"
+                  />
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {labels["fields.priceMxnHint"] ??
+                      "Montant editable. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                  </p>
+                  {(() => {
+                    const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                    if (!Number.isFinite(n) || n <= 0) return null;
+                    const { iva, totalWithIva } = computeEventIva(n);
+                    return (
+                      <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                        <p>
+                          {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
+                          <strong>{formatMxn(iva, "es")}</strong>
+                        </p>
+                        <p className="mt-0.5">
+                          {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
+                          <strong>{formatMxn(totalWithIva, "es")}</strong>
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>
+                    {labels["fields.menuIncluded"] ?? "Menu & inclus dans le prix"}
+                  </label>
+                  <textarea
+                    value={menuIncluded}
+                    onChange={(e) => setMenuIncluded(e.target.value)}
+                    rows={5}
+                    className={INPUT_CLASS}
+                    placeholder="Entrée, plat, postre · bebidas · servicio…"
+                  />
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {labels["fields.menuIncludedHint"] ??
+                      "Décris le menu et ce qui est inclus (boissons, service, etc.)."}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="sm:col-span-2">
@@ -895,8 +909,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
                   <p className="mt-1 text-xs text-ns-secondary">
                     Envoie l’invitation calendrier (.ics) avec boutons YES/NO aux invités (statut
-                    Invité). Les templates sont éditables dans Admin → Templates. La Waiting List
-                    n’est pas contactée ici — utilise INVITER sur une ligne.
+                    Invité), plus une copie organisateur (Gregory). Les templates sont éditables
+                    dans Dashboard → Templates email. La Waiting List n’est pas contactée ici —
+                    utilise INVITER sur une ligne.
                   </p>
                 </div>
                 <button
@@ -911,15 +926,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
               <div className="space-y-4 overflow-y-auto px-5 py-4">
                 <p className="text-sm text-ns-tertiary">
-                  Destinataires : <strong>{invitedRecipientCount}</strong> personne
-                  {invitedRecipientCount > 1 ? "s" : ""} en statut Invité
+                  Destinataires : <strong>{invitedRecipientCount}</strong> invité
+                  {invitedRecipientCount > 1 ? "s" : ""} + organisateur
                   {activeEvent.inviteEmailSentAt
                     ? ` · dernier envoi : ${new Date(activeEvent.inviteEmailSentAt).toLocaleString("fr-FR")}`
                     : ""}
                 </p>
                 {inviteSendResult && (
-                  <p className="text-sm font-medium text-ns-primary">{inviteSendResult}</p>
+                  <pre className="whitespace-pre-wrap rounded-lg border border-ns-alternate bg-ns-brand-light/50 px-3 py-2 text-xs text-ns-tertiary">
+                    {inviteSendResult}
+                  </pre>
                 )}
+                <p className="text-xs text-ns-secondary">
+                  Si un envoi échoue vers un autre email que le tien : Resend est probablement
+                  encore en mode test (<code>onboarding@resend.dev</code>) — seuls les mails vers
+                  ton adresse admin passent. Vérifie un domaine d’envoi sur resend.com et mets à
+                  jour <code>RESEND_FROM_EMAIL</code>.
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
