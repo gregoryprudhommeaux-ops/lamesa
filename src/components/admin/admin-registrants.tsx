@@ -6,7 +6,7 @@ import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { CalendarPlus, UserPlus } from "lucide-react";
+import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,11 +23,12 @@ type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivate
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
   const router = useRouter();
-  const tForm = useTranslations("form");
+  const tForm = useTranslations("registration");
   const [rows, setRows] = useState<WaitlistRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [q, setQ] = useState("");
   const [sector, setSector] = useState("");
   const [position, setPosition] = useState("");
@@ -101,9 +102,13 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
+      if (referralFilter === "deactivated") {
+        if (!isSoftDeleted(r)) return false;
+      } else if (isSoftDeleted(r)) {
+        return false;
+      }
       if (referralFilter === "with_referrer" && !r.referredByCode?.trim()) return false;
       if (referralFilter === "without_referrer" && r.referredByCode?.trim()) return false;
-      if (referralFilter === "deactivated" && !isSoftDeleted(r)) return false;
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && r.city.trim().toLowerCase() !== city.trim().toLowerCase()) return false;
@@ -136,19 +141,15 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
   function labelSector(value: string) {
-    try {
-      return tForm(`sectors.${value}`);
-    } catch {
-      return value;
-    }
+    if (!value?.trim()) return "—";
+    const key = `sectors.${value}` as Parameters<typeof tForm>[0];
+    return tForm.has(key) ? tForm(key) : value;
   }
 
   function labelPosition(value: string) {
-    try {
-      return tForm(`positions.${value}`);
-    } catch {
-      return value;
-    }
+    if (!value?.trim()) return "—";
+    const key = `positions.${value}` as Parameters<typeof tForm>[0];
+    return tForm.has(key) ? tForm(key) : value;
   }
 
   function clearFilters() {
@@ -218,6 +219,48 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setEventsLoading(false);
+    }
+  }
+
+  async function deleteContacts(ids: string[]) {
+    const unique = [...new Set(ids.filter(Boolean))];
+    if (unique.length === 0) return;
+    const label =
+      unique.length === 1
+        ? "Supprimer ce contact de la waitlist ?"
+        : `Supprimer ${unique.length} contacts de la waitlist ?`;
+    if (!window.confirm(`${label}\n\nIls passeront en « Désactivés » (soft delete).`)) {
+      return;
+    }
+
+    setDeleting(true);
+    setError(null);
+    setActionMsg(null);
+    setContextMenu(null);
+    try {
+      const res = await authFetch("/api/admin/waitlist/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: unique }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        deleted?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "delete_failed");
+      setActionMsg(`${json.deleted ?? unique.length} contact(s) supprimé(s).`);
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        for (const id of unique) next.delete(id);
+        return next;
+      });
+      if (activeId && unique.includes(activeId)) setActiveId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -577,6 +620,19 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
                 <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
               </div>
+              {!isSoftDeleted(active) ? (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    className={`${BTN_SECONDARY} inline-flex w-full items-center justify-center gap-2 text-red-700`}
+                    disabled={deleting}
+                    onClick={() => void deleteContacts([active.id])}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    {deleting ? "Suppression…" : "Supprimer ce contact"}
+                  </button>
+                </div>
+              ) : null}
             </dl>
           ) : (
             <p className="text-ns-secondary">Sélectionne un inscrit pour voir le détail.</p>
@@ -605,6 +661,15 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           >
             <UserPlus className="h-4 w-4" />
             Ajouter à un événement
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"
+            disabled={deleting}
+            onClick={() => void deleteContacts([...selectedIds])}
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleting ? "Suppression…" : "Supprimer"}
           </button>
         </div>
       )}
