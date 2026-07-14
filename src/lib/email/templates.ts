@@ -33,6 +33,8 @@ export {
 export type TemplateVars = {
   fullName: string;
   email?: string;
+  firstName?: string;
+  loginUrl?: string;
   eventTitle: string;
   when: string;
   where: string;
@@ -48,12 +50,16 @@ export type TemplateVars = {
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
-  const fallbackName =
-    vars.fullName?.trim() ||
-    "amigo/a";
+  const fallbackName = vars.fullName?.trim() || "amigo/a";
+  const firstName =
+    vars.firstName?.trim() ||
+    fallbackName.split(/\s+/)[0] ||
+    fallbackName;
   return text
     .replaceAll("{{fullName}}", fallbackName)
+    .replaceAll("{{firstName}}", firstName)
     .replaceAll("{{email}}", vars.email ?? "")
+    .replaceAll("{{loginUrl}}", vars.loginUrl ?? "")
     .replaceAll("{{eventTitle}}", vars.eventTitle)
     .replaceAll("{{when}}", vars.when)
     .replaceAll("{{where}}", vars.where)

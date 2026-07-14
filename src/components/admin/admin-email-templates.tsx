@@ -142,9 +142,14 @@ export function AdminEmailTemplatesPanel() {
             <strong>Español</strong>).
           </p>
           <p className="mt-1 text-xs text-ns-secondary">
-            Variables : {"{{fullName}}"}, {"{{eventTitle}}"}, {"{{when}}"}, {"{{where}}"},{" "}
-            {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"}, {"{{surveyUrl}}"},{" "}
-            {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"}, {"{{menuIncluded}}"}
+            Variables événement : {"{{fullName}}"}, {"{{email}}"}, {"{{eventTitle}}"},{" "}
+            {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"},{" "}
+            {"{{surveyUrl}}"}, {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
+            {"{{menuIncluded}}"}
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Variables inscription /light : {"{{fullName}}"}, {"{{firstName}}"}, {"{{email}}"},{" "}
+            {"{{loginUrl}}"}
           </p>
         </div>
         {error && <p className={ERROR_TEXT}>{error}</p>}

@@ -18,7 +18,8 @@ export type EmailTemplateKey =
   | "reminder_7d"
   | "reminder_36h"
   | "reminder_90m"
-  | "satisfaction_survey";
+  | "satisfaction_survey"
+  | "light_signup";
 
 export type TemplateLocale = "es" | "fr" | "en";
 

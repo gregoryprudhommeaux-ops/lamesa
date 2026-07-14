@@ -8,6 +8,7 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "reminder_36h",
   "reminder_90m",
   "satisfaction_survey",
+  "light_signup",
 ];
 
 export const TEMPLATE_LOCALES: TemplateLocale[] = ["es", "fr", "en"];
@@ -22,6 +23,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
   reminder_36h: "Rappel H-36 (legacy email — préférer VALARM ICS)",
   reminder_90m: "Rappel H-1h30 (legacy email — préférer VALARM ICS)",
   satisfaction_survey: "Questionnaire satisfaction (+12h, cron 1×/jour)",
+  light_signup: "Inscription express (/light) — compléter le profil",
 };
 
 export const TEMPLATE_LOCALE_LABELS: Record<TemplateLocale, string> = {
@@ -374,6 +376,50 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "",
         "See you soon,",
         "LA MESA",
+      ].join("\n"),
+    },
+  },
+  light_signup: {
+    es: {
+      subject: "Gracias por tu registro — LA MESA Secreta",
+      body: [
+        "Gracias {{fullName}} por tu inscripción a LA MESA Secreta.",
+        "",
+        "Para poder invitarte a futuros eventos y cenas de alto nivel, necesitamos que completes tu perfil en cuanto puedas.",
+        "",
+        "Inicia sesión con el correo usado al registrarte ({{email}}) — Google, o crea una contraseña en la página de acceso — para abrir tu perfil:",
+        "{{loginUrl}}",
+        "",
+        "Quedamos a tus órdenes,",
+        "LA MESA Secreta",
+      ].join("\n"),
+    },
+    fr: {
+      subject: "Merci pour ton inscription — LA MESA Secreta",
+      body: [
+        "Merci {{fullName}} pour ton inscription à LA MESA Secreta.",
+        "",
+        "Pour pouvoir t’inviter à participer à de futurs événements et dîners qualifiés, nous avons besoin que tu complètes rapidement ton profil dès que tu auras le temps.",
+        "",
+        "Connecte-toi avec l’email utilisé à l’inscription ({{email}}) — Google, ou crée un mot de passe sur la page de connexion — pour accéder à ton profil :",
+        "{{loginUrl}}",
+        "",
+        "À bientôt,",
+        "LA MESA Secreta",
+      ].join("\n"),
+    },
+    en: {
+      subject: "Thanks for signing up — LA MESA Secreta",
+      body: [
+        "Thank you {{fullName}} for signing up to LA MESA Secreta.",
+        "",
+        "To invite you to future events and curated dinners, we need you to complete your profile as soon as you can.",
+        "",
+        "Sign in with the email you used to register ({{email}}) — Google, or create a password on the sign-in page — to open your profile:",
+        "{{loginUrl}}",
+        "",
+        "See you soon,",
+        "LA MESA Secreta",
       ].join("\n"),
     },
   },
