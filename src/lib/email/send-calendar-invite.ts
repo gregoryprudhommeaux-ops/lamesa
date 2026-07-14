@@ -7,6 +7,7 @@ import {
   getEmailTemplate,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
+import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
 const RESEND_API = "https://api.resend.com/emails";
@@ -22,14 +23,6 @@ function organizerEmail(): string {
   const from = fromAddress();
   const m = from.match(/<([^>]+)>/);
   return m?.[1] ?? "onboarding@resend.dev";
-}
-
-function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:3000";
 }
 
 function escapeHtml(value: string): string {
@@ -96,7 +89,7 @@ export async function sendCalendarInviteEmail(input: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { ok: false, error: "resend_not_configured" };
 
-  const base = siteUrl();
+  const base = getSiteUrl();
   const token = signRsvpToken({
     participationId: input.participation.id,
     eventId: input.event.id,
@@ -195,7 +188,7 @@ export async function sendTemplatedEventEmail(input: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { ok: false, error: "resend_not_configured" };
 
-  const base = siteUrl();
+  const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const template = await getEmailTemplate(input.key, input.event, locale);
   const vars = buildEventTemplateVars({

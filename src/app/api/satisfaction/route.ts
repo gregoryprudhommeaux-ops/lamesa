@@ -15,6 +15,7 @@ import type {
   SatisfactionSurveyAnswers,
   WaitlistRegistration,
 } from "@/lib/types/events";
+import { getSiteUrl } from "@/lib/site-url";
 import { z } from "zod";
 
 const score = z.number().int().min(0).max(5);
@@ -28,14 +29,6 @@ const submitSchema = z.object({
   wantInviteOther: z.boolean(),
   invitedEmail: z.union([z.string().trim().email().max(254), z.literal("")]).optional(),
 });
-
-function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:3000";
-}
 
 async function ensureReferralCode(
   profile: WaitlistRegistration & { id: string },
@@ -129,13 +122,13 @@ export async function POST(request: Request) {
   let inviteSent = false;
   if (invitedEmail && invitedEmail !== normalizeEmail(participation.email)) {
     const sponsorName = participation.fullName?.trim() || "Un amigo";
-    let inviteUrl = `${siteUrl()}/es/inscription`;
+    let inviteUrl = `${getSiteUrl()}/es/inscription`;
 
     const profile = await findWaitlistByEmail(normalizeEmail(participation.email));
     if (profile) {
       const code = await ensureReferralCode(profile);
       if (code) {
-        inviteUrl = `${siteUrl()}/es/inscription?ref=${encodeURIComponent(code)}`;
+        inviteUrl = `${getSiteUrl()}/es/inscription?ref=${encodeURIComponent(code)}`;
       }
     }
 

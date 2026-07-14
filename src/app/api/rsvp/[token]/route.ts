@@ -3,21 +3,10 @@ import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { fmtDateTime } from "@/lib/events/utils";
+import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent } from "@/lib/types/events";
 
 type Params = { params: Promise<{ token: string }> };
-
-function siteUrl(request: Request): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  try {
-    return new URL(request.url).origin;
-  } catch {
-    return "http://127.0.0.1:3000";
-  }
-}
 
 function rsvpOkRedirect(input: {
   base: string;
@@ -40,7 +29,7 @@ export async function GET(request: Request, { params }: Params) {
   const url = new URL(request.url);
   const response = String(url.searchParams.get("response") ?? "").toLowerCase();
   const locale = String(url.searchParams.get("locale") ?? "fr").slice(0, 2);
-  const base = siteUrl(request);
+  const base = getSiteUrl(request.url);
 
   const redirect = (status: string, rsvp?: string) => {
     const q = new URLSearchParams({ status });

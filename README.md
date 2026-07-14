@@ -45,4 +45,6 @@ L'endpoint `POST /api/public/contacts/upsert` est documenté dans [docs/database
 
 ## Déploiement
 
-Vercel — configurer les mêmes variables d'environnement + `NEXT_PUBLIC_APP_URL`.
+Vercel — configurer les mêmes variables d'environnement + `NEXT_PUBLIC_APP_URL=https://lamesasecreta.com`.
+
+Production : [https://lamesasecreta.com](https://lamesasecreta.com)

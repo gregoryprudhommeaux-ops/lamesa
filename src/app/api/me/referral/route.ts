@@ -14,6 +14,7 @@ import {
   randomSuffix,
 } from "@/lib/member/referral-code";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
+import { getSiteUrl } from "@/lib/site-url";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 function isNextResponse(value: unknown): value is NextResponse {
@@ -21,14 +22,6 @@ function isNextResponse(value: unknown): value is NextResponse {
 }
 
 type AppLocale = "fr" | "en" | "es";
-
-function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:3000";
-}
 
 function resolveLocaleFromRequest(request: Request, queryLocale?: string | null): AppLocale {
   if (queryLocale === "en" || queryLocale === "es" || queryLocale === "fr") return queryLocale;
@@ -39,7 +32,7 @@ function resolveLocaleFromRequest(request: Request, queryLocale?: string | null)
 }
 
 function buildInviteUrl(locale: AppLocale, referralCode: string): string {
-  return `${siteUrl()}/${locale}/inscription?ref=${encodeURIComponent(referralCode)}`;
+  return `${getSiteUrl()}/${locale}/inscription?ref=${encodeURIComponent(referralCode)}`;
 }
 
 const referralPostSchema = z.discriminatedUnion("action", [

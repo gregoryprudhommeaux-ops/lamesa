@@ -1,5 +1,6 @@
 import { AdminEventsPanel } from "@/components/admin/admin-events";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { getSiteUrl } from "@/lib/site-url";
 
 function flattenAdminLabels(messages: Record<string, unknown>, prefix = ""): Record<string, string> {
   const out: Record<string, string> = {};
@@ -19,8 +20,7 @@ export default async function AdminEventsPage() {
   const adminMessages = messages.admin as Record<string, unknown>;
   const labels = flattenAdminLabels(adminMessages);
 
-  const publicBaseUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ?? "http://127.0.0.1:3000";
+  const publicBaseUrl = getSiteUrl();
 
   return (
     <AdminShell>

@@ -8,19 +8,12 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
+import { getSiteUrl } from "@/lib/site-url";
 
 const RESEND_API = "https://api.resend.com/emails";
 
 function fromAddress(): string {
   return process.env.RESEND_FROM_EMAIL?.trim() || "LA MESA <onboarding@resend.dev>";
-}
-
-function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:3000";
 }
 
 function escapeHtml(value: string): string {
@@ -42,7 +35,7 @@ export async function sendSatisfactionSurveyEmail(input: {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) return { ok: false, error: "resend_not_configured" };
 
-  const base = siteUrl();
+  const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
   const token = signSurveyToken({
     participationId: input.participation.id,

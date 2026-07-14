@@ -1,6 +1,7 @@
 import { Providers } from "@/components/providers";
 import { routing, type AppLocale } from "@/i18n/routing";
 import { laMesaDisplayFallback } from "@/lib/fonts/la-mesa-display";
+import { PRODUCTION_SITE_URL, getSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
@@ -29,8 +30,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
   return {
+    metadataBase: new URL(getSiteUrl() || PRODUCTION_SITE_URL),
     title: t("title"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}`,
+    },
   };
 }
 

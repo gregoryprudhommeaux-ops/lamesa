@@ -1,3 +1,5 @@
+import { getSiteUrl } from "@/lib/site-url";
+
 const RESEND_API = "https://api.resend.com/emails";
 
 type MailLocale = "fr" | "en" | "es";
@@ -7,14 +9,6 @@ function fromAddress(): string {
     process.env.RESEND_FROM_EMAIL?.trim() ||
     "LA MESA <onboarding@resend.dev>"
   );
-}
-
-function siteUrl(): string {
-  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (explicit) return explicit.replace(/\/$/, "");
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/^https?:\/\//, "")}`;
-  return "http://127.0.0.1:3000";
 }
 
 function resolveLocale(raw?: string | null): MailLocale {
@@ -35,7 +29,7 @@ function buildContent(locale: MailLocale, fullName: string): {
   html: string;
   text: string;
 } {
-  const base = siteUrl();
+  const base = getSiteUrl();
   const name = fullName.trim();
   const loginUrl = `${base}/${locale}/connexion`;
 
