@@ -384,9 +384,9 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
   },
   light_signup: {
     es: {
-      subject: "Gracias por tu registro — LA MESA Secreta",
+      subject: "Gracias por tu registro — LA MESA",
       body: [
-        "Gracias {{fullName}} por tu inscripción a LA MESA Secreta.",
+        "Gracias {{fullName}} por tu inscripción a LA MESA.",
         "",
         "Para poder invitarte a futuros eventos y cenas de alto nivel, necesitamos que completes tu perfil en cuanto puedas.",
         "",
@@ -394,13 +394,13 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "{{loginUrl}}",
         "",
         "Quedamos a tus órdenes,",
-        "LA MESA Secreta",
+        "LA MESA",
       ].join("\n"),
     },
     fr: {
-      subject: "Merci pour ton inscription — LA MESA Secreta",
+      subject: "Merci pour ton inscription — LA MESA",
       body: [
-        "Merci {{fullName}} pour ton inscription à LA MESA Secreta.",
+        "Merci {{fullName}} pour ton inscription à LA MESA.",
         "",
         "Pour pouvoir t’inviter à participer à de futurs événements et dîners qualifiés, nous avons besoin que tu complètes rapidement ton profil dès que tu auras le temps.",
         "",
@@ -408,13 +408,13 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "{{loginUrl}}",
         "",
         "À bientôt,",
-        "LA MESA Secreta",
+        "LA MESA",
       ].join("\n"),
     },
     en: {
-      subject: "Thanks for signing up — LA MESA Secreta",
+      subject: "Thanks for signing up — LA MESA",
       body: [
-        "Thank you {{fullName}} for signing up to LA MESA Secreta.",
+        "Thank you {{fullName}} for signing up to LA MESA.",
         "",
         "To invite you to future events and curated dinners, we need you to complete your profile as soon as you can.",
         "",
@@ -422,7 +422,7 @@ const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
         "{{loginUrl}}",
         "",
         "See you soon,",
-        "LA MESA Secreta",
+        "LA MESA",
       ].join("\n"),
     },
   },

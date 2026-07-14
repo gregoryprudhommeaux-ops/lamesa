@@ -14,10 +14,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "LA MESA Secreta",
-    template: "%s · LA MESA Secreta",
+    default: "LA MESA",
+    template: "%s · LA MESA",
   },
-  description: "Administration LA MESA Secreta — cenas privadas exclusivas en Guadalajara.",
+  description: "Administration LA MESA — cenas privadas exclusivas en Guadalajara.",
 };
 
 export default async function AdminRootLayout({ children }: { children: React.ReactNode }) {

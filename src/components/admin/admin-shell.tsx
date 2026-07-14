@@ -45,7 +45,7 @@ export function AdminShell({ children, title = "LA MESA — Admin" }: AdminShell
               >
                 <NsMark size="sm" />
                 <span className="font-display text-xl leading-none tracking-wide text-white sm:text-2xl">
-                  LA MESA Secreta
+                  LA MESA
                 </span>
               </LocaleLink>
               <nav
