@@ -1,5 +1,6 @@
 "use client";
 
+import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import {
   BTN_PRIMARY,
@@ -150,7 +151,7 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
 
   return (
     <LaMesaShell card cardClassName="max-w-xl">
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-ns-primary">LA MESA</p>
+      <LaMesaLogo size="sm" className="mx-auto" />
       <h1 className={`${PAGE_TITLE} mt-2 text-ns-hero`}>{event.title}</h1>
       <p className="mt-2 text-sm text-ns-secondary">
         {fmtDateTime(event.startsAt, locale)}

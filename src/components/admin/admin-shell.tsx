@@ -4,6 +4,7 @@ import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppFooter } from "@/components/layout/app-footer";
 import { Link as LocaleLink } from "@/i18n/navigation";
+import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { NsMark } from "@ns-suite/ui/brand";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -44,9 +45,7 @@ export function AdminShell({ children, title = "LA MESA — Admin" }: AdminShell
                 aria-label="LA MESA — retour à l'accueil"
               >
                 <NsMark size="sm" />
-                <span className="font-display text-xl leading-none tracking-wide text-white sm:text-2xl">
-                  LA MESA
-                </span>
+                <LaMesaLogo size="sm" />
               </LocaleLink>
               <nav
                 className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-white/55"

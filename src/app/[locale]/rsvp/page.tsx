@@ -1,3 +1,4 @@
+import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -127,7 +128,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
 
   return (
     <LaMesaShell card cardClassName="max-w-lg text-center">
-      <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b4e600]">LA MESA</p>
+      <LaMesaLogo size="sm" className="mx-auto" />
       <h1 className="mt-4 text-2xl font-bold text-ns-primary">{copy.title}</h1>
       <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ns-secondary">
         {copy.body}

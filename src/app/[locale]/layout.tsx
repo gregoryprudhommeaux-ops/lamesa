@@ -35,10 +35,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: t("description"),
     icons: {
       icon: [
-        { url: "/icon", type: "image/png" },
-        { url: "/favicon.svg", type: "image/svg+xml" },
+        { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+        { url: "/icon", type: "image/png", sizes: "32x32" },
       ],
-      apple: [{ url: "/apple-icon", type: "image/png" }],
+      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
     },
     alternates: {
       canonical: `/${locale}`,
