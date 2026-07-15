@@ -59,6 +59,31 @@ export const expressRegistrationSchema = z.object({
 
 export type ExpressRegistrationInput = z.infer<typeof expressRegistrationSchema>;
 
+/** Public contact — questions & partnerships */
+export const contactInquirySchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  email: z.string().trim().email().max(254),
+  phone: z
+    .string()
+    .trim()
+    .refine((v) => {
+      const digits = v.replace(/\D/g, "");
+      return digits.length >= 10 && digits.length <= 15;
+    }, { message: "invalid_phone" }),
+  company: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((v) => (v === "" ? undefined : v)),
+  topic: z.enum(["question", "partnership"]),
+  message: z.string().trim().min(20).max(4000),
+  locale: z.enum(["fr", "en", "es"]),
+  website: z.string().optional(),
+});
+
+export type ContactInquiryInput = z.infer<typeof contactInquirySchema>;
+
 export const eventSchema = z.object({
   title: z.string().trim().min(3).max(200),
   organizerName: z.string().trim().max(120).optional(),

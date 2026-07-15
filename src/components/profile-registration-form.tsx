@@ -119,6 +119,7 @@ export function ProfileRegistrationForm({
       <div>
         <h2 className="text-xl font-bold text-ns-hero">{t("title")}</h2>
         <p className="mt-1 text-sm font-medium text-ns-secondary">{t("subtitle")}</p>
+        <p className="mt-3 text-sm leading-relaxed text-ns-secondary">{t("funnelNote")}</p>
       </div>
 
       <section className="space-y-4">
@@ -217,7 +218,7 @@ export function ProfileRegistrationForm({
         </p>
       )}
 
-      <div>
+      <div className="flex flex-col items-center text-center">
         <button type="submit" className={BTN_PRIMARY} disabled={state === "sending"}>
           {state === "sending" ? t("submitting") : t("submit")}
         </button>

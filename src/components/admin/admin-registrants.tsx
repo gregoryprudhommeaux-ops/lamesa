@@ -4,13 +4,16 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { setPendingInvitees } from "@/lib/admin/pending-invitees";
 import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
+import {
+  computeProfileCompletionPercent,
+  isExpressSignup,
+} from "@/lib/member/profile-completion";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-
 function uniqueSorted(values: Array<string | null | undefined>): string[] {
   return [
     ...new Set(values.map((v) => (v ?? "").trim()).filter(Boolean)),
@@ -19,10 +22,12 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
 
 type ContextMenuState = { x: number; y: number } | null;
 type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
+type ProfileFilter = "all" | "incomplete";
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [rows, setRows] = useState<WaitlistRegistration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +39,10 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [city, setCity] = useState("");
   const [company, setCompany] = useState("");
   const [referralFilter, setReferralFilter] = useState<ReferralFilter>("all");
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>(() =>
+    searchParams.get("profile") === "incomplete" ? "incomplete" : "all",
+  );
+  const [activeId, setActiveId] = useState<string | null>(() => searchParams.get("id"));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [addToEventOpen, setAddToEventOpen] = useState(false);
@@ -108,6 +116,10 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       }
       if (referralFilter === "with_referrer" && !r.referredByCode?.trim()) return false;
       if (referralFilter === "without_referrer" && r.referredByCode?.trim()) return false;
+      if (profileFilter === "incomplete") {
+        const percent = computeProfileCompletionPercent(r);
+        if (!(isExpressSignup(r) || percent < 50)) return false;
+      }
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && (r.city ?? "").trim().toLowerCase() !== city.trim().toLowerCase()) return false;
@@ -129,14 +141,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, q, sector, position, city, company, referralFilter]);
+  }, [rows, q, sector, position, city, company, referralFilter, profileFilter]);
 
   const active = activeId ? (rows.find((r) => r.id === activeId) ?? null) : null;
   const selectedRows = useMemo(
     () => rows.filter((r) => selectedIds.has(r.id)),
     [rows, selectedIds],
   );
-  const hasFilters = Boolean(q || sector || position || city || company || referralFilter !== "all");
+  const hasFilters = Boolean(
+    q || sector || position || city || company || referralFilter !== "all" || profileFilter !== "all",
+  );
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
@@ -153,6 +167,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     setCity("");
     setCompany("");
     setReferralFilter("all");
+    setProfileFilter("all");
   }
 
   function toggleOne(id: string) {
@@ -328,7 +343,21 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div>
+            <label className={LABEL_CLASS} htmlFor="filter-profile">
+              Profil
+            </label>
+            <select
+              id="filter-profile"
+              value={profileFilter}
+              onChange={(e) => setProfileFilter(e.target.value as ProfileFilter)}
+              className={INPUT_CLASS}
+            >
+              <option value="all">Tous</option>
+              <option value="incomplete">À compléter</option>
+            </select>
+          </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="filter-referral">
               Parrainage

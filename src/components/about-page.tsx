@@ -4,7 +4,8 @@ import { Link } from "@/i18n/navigation";
 import { BTN_PRIMARY, BTN_GHOST, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 import { useTranslations } from "next-intl";
 
-const FAQ_KEYS = ["seats", "payment", "price", "absence", "themes", "sponsors", "speakers", "join"] as const;
+const STEP_KEYS = ["1", "2", "3", "4"] as const;
+const FAQ_KEYS = ["seats", "themes", "payment", "price", "absence", "guests"] as const;
 
 export function AboutPageContent() {
   const t = useTranslations("about");
@@ -12,11 +13,29 @@ export function AboutPageContent() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-ns-primary">{t("eyebrow")}</p>
-        <h2 className="mt-3 text-2xl font-black uppercase tracking-[0.04em] text-ns-hero">{t("title")}</h2>
+        <h2 className="text-2xl font-black uppercase tracking-[0.04em] text-ns-hero">{t("title")}</h2>
         <p className="mt-4 text-base font-semibold leading-relaxed text-ns-tertiary">{t("introLead")}</p>
         <p className="mt-3 text-sm leading-relaxed text-ns-secondary">{t("introBody")}</p>
+        <p className="mt-5 border-t border-gray-100 pt-4 text-sm leading-relaxed text-ns-secondary">
+          {t("forWho")}
+        </p>
       </header>
+
+      <section className="space-y-4">
+        <h3 className={FORM_SECTION_TITLE}>{t("stepsTitle")}</h3>
+        <ol className="space-y-3">
+          {STEP_KEYS.map((key) => (
+            <li
+              key={key}
+              className="flex gap-3 rounded-xl border border-gray-100 bg-ns-brand-light/40 p-4 text-[15px] leading-relaxed text-ns-secondary"
+            >
+              <span className="font-display text-2xl leading-none text-ns-primary">{key}</span>
+              <span>{t(`steps.${key}`)}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="text-sm font-medium leading-relaxed text-ns-tertiary">{t("eligibilityNote")}</p>
+      </section>
 
       <section className="space-y-5">
         <h3 className={FORM_SECTION_TITLE}>{t("faqTitle")}</h3>
@@ -28,6 +47,14 @@ export function AboutPageContent() {
             </div>
           ))}
         </dl>
+        <p className="pt-1 text-center">
+          <Link
+            href="/questions-partenariats"
+            className="text-xs font-medium text-ns-secondary/70 transition hover:text-ns-tertiary"
+          >
+            {t("contactLink")}
+          </Link>
+        </p>
       </section>
 
       <div className="flex flex-col gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">

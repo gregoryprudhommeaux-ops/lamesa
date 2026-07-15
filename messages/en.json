@@ -1,14 +1,14 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Exclusive themed dinners in Guadalajara. Qualified network, confidential access."
+    "description": "Private dinners in Guadalajara. Selective list, access by invitation."
   },
   "nav": {
     "languageAria": "Language"
   },
   "brand": {
     "name": "LA MESA",
-    "tagline": "A series of exclusive private dinners around one table, sharing the same theme for one evening.",
+    "tagline": "By invitation",
     "nsMarkAria": "LA MESA — back to home"
   },
   "footer": {
@@ -19,6 +19,7 @@
     "taglineLead": "LA MESA: exclusive themed dinners in Guadalajara, ",
     "rights": "© {year} NextStep Services",
     "about": "How it works & FAQ",
+    "contact": "Questions & partnerships",
     "login": "Sign in",
     "admin": "Admin",
     "navAria": "Footer",
@@ -27,15 +28,19 @@
     "companyAria": "NextStep Services — open website"
   },
   "landing": {
-    "cta": "Join the waitlist",
+    "headline": "One table. One theme. Selected guests.",
+    "supportLine1": "Sign up free.",
+    "supportLine2": "You get an invitation when an evening matches your profile.",
+    "cta": "Request access to the list",
+    "seasonNote": "First dinners in Guadalajara from September 2026.",
     "aboutLink": "How it works & FAQ",
     "loginLink": "Already registered? Sign in",
     "myAccountLink": "My space"
   },
   "light": {
     "title": "Join LA MESA",
-    "brandTagline": "Join the waiting list, and soon receive an invitation to take part.",
-    "subtitle": "Share your details. We’ll email you access to complete your profile whenever you’re ready.",
+    "brandTagline": "Join the list — you’ll soon be able to get an invitation.",
+    "subtitle": "Share your details. We’ll email you access to finish your profile whenever you’re ready.",
     "fields": {
       "fullName": "Full name",
       "fullNamePlaceholder": "Ana García",
@@ -45,9 +50,9 @@
     },
     "submit": "Sign up",
     "submitting": "Sending…",
-    "submitHint": "We’ll email you access to complete your profile whenever you’re ready.",
+    "submitHint": "We’ll email you access to finish your profile whenever you’re ready.",
     "successTitle": "You’re in",
-    "successBody": "Check your inbox (and your spam) for the link to sign in and complete your profile",
+    "successBody": "Check your inbox (and spam) for the link, then sign in and finish your profile.",
     "successCta": "Go to sign-in",
     "fullFormHint": "Prefer the full form?",
     "fullFormLink": "Detailed registration",
@@ -58,56 +63,88 @@
   },
   "about": {
     "metaTitle": "How it works — LA MESA",
-    "metaDescription": "How LA MESA dinners work: limited seats, advance payment to confirm, themes, sponsors, and guest speakers.",
-    "eyebrow": "About",
+    "metaDescription": "How LA MESA works: sign up free, invitation when an evening matches your profile, payment to confirm.",
     "title": "How it works",
-    "introLead": "LA MESA brings together a small group of qualified professionals around one theme, for one dinner in Guadalajara.",
-    "introBody": "Access is by invitation, after joining the waitlist. Each evening is designed for meaningful conversation — not surface-level networking.",
+    "introLead": "One table. One theme. Selected guests — by invitation.",
+    "introBody": "Sign up free. You get an invitation when an evening matches your profile. Once invited, you confirm your seat by paying for the meal.",
+    "forWho": "For decision-makers, founders, investors, and experts who bring something to that evening’s theme. Tables stay small; we compose them carefully.",
+    "stepsTitle": "How it works",
+    "steps": {
+      "1": "Sign up free — you request access to the list.",
+      "2": "Complete your profile so we can propose a table suited to your experience, industry, and the evening’s theme.",
+      "3": "You get an invitation when an evening matches your profile.",
+      "4": "Confirm your seat by paying for the meal within the stated deadline."
+    },
+    "eligibilityNote": "Being on the list doesn’t mean a seat at every dinner.",
     "faqTitle": "Frequently asked questions",
     "faq": {
       "seats": {
         "q": "Why are seats limited?",
-        "a": "By design. A smaller table ensures everyone takes part in the conversation. LA MESA prioritizes quality of exchange over headcount."
-      },
-      "payment": {
-        "q": "How do I confirm my seat?",
-        "a": "Once invited, you must pay for your meal in advance to secure your place. If payment is not received within the stated deadline, the seat is released and offered to someone else."
-      },
-      "price": {
-        "q": "How much does it cost — and who pays?",
-        "a": "The price varies from one event to another and is stated at invitation time. On average, expect between MXN $700 and $1,500. It generally includes starter, main course, and dessert; drinks are usually not included and are settled on site. Each guest pays for their own seat (except special cases, such as a complimentary dinner under a sponsorship)."
-      },
-      "absence": {
-        "q": "What if I can’t make it at the last minute?",
-        "a": "Let us know as soon as you can. If you cancel more than 48 hours before the event, your payment is refunded or kept as credit toward a future event. If you cancel within 48 hours, the payment is retained in full."
+        "a": "On purpose. A smaller table means everyone actually joins the conversation. We care more about the quality of the exchange than the headcount."
       },
       "themes": {
         "q": "Do themes change?",
-        "a": "Yes. Dinner topics are shaped from waitlist profiles — especially industry, role in a company, and expertise. That’s why completing your profile matters: the fuller it is, the better we can invite you to a table aligned with your background and interests."
+        "a": "Yes. Each evening has its own theme. Invitations come from people on the list — industry, role, experience, interests. The fuller your profile, the more an evening can fit."
       },
-      "sponsors": {
-        "q": "Are some dinners sponsored?",
-        "a": "Yes, sometimes — and it is clearly stated at invitation time. Sponsorship is designed to benefit members (complimentary dinners, gifts, and similar), while preserving the quality of the moment for everyone at the table."
+      "payment": {
+        "q": "How do I confirm my seat?",
+        "a": "Once you get the invitation, you pay for the meal in advance within the stated deadline. If not, the seat is released and offered to someone else."
       },
-      "speakers": {
-        "q": "Is there sometimes a guest speaker?",
-        "a": "Sometimes. Certain dinners feature a guest aligned with the theme. Their profile is shared when you register for that specific evening."
+      "price": {
+        "q": "How much does it cost — and who pays?",
+        "a": "The meal ticket varies by evening and is stated with the invitation. On average, MXN $700–$1,500: usually starter, main, and dessert; drinks are often settled on site. Each guest pays for their seat, except special cases (e.g. a complimentary evening under sponsorship)."
       },
-      "join": {
-        "q": "How do I join the list?",
-        "a": "Sign up via the waitlist form. We contact you when a dinner matches your profile and interests."
+      "absence": {
+        "q": "What if I can’t make it at the last minute?",
+        "a": "Let us know as soon as you can. Cancel more than 48 hours ahead: refund or credit toward a future evening. Within 48 hours: the payment is kept."
+      },
+      "guests": {
+        "q": "Is there sometimes a guest speaker or a sponsor?",
+        "a": "Sometimes. There may be a guest tied to that evening’s theme, or a sponsorship. It’s stated clearly with the invitation."
       }
     },
     "backHome": "Back to home",
-    "cta": "Join the waitlist"
+    "cta": "Request access to the list",
+    "contactLink": "Another question, or a partnership?"
+  },
+  "contact": {
+    "metaTitle": "Questions & partnerships — LA MESA",
+    "metaDescription": "Write to us with a question about LA MESA, or to talk about a partnership (host, sponsor, private edition).",
+    "title": "Questions & partnerships",
+    "intro": "A question that isn’t in the FAQ, or a partnership idea? Write to us — we read every message.",
+    "fields": {
+      "topic": "Topic",
+      "topicPlaceholder": "Choose…",
+      "fullName": "Full name",
+      "email": "Email",
+      "phone": "Phone / WhatsApp",
+      "company": "Company",
+      "optional": "optional",
+      "message": "Message",
+      "messagePlaceholder": "Context, what you’re after, any timing…"
+    },
+    "topics": {
+      "question": "Question",
+      "partnership": "Partnership"
+    },
+    "submit": "Send",
+    "submitting": "Sending…",
+    "successTitle": "Message received",
+    "successBody": "Thank you. We’ll get back to you as soon as we can.",
+    "successCta": "Back to home",
+    "errors": {
+      "validation": "Check the fields and try again.",
+      "generic": "Couldn’t send right now. Please try again shortly."
+    }
   },
   "registration": {
-    "title": "Join the waitlist",
-    "subtitle": "Professional profile — selection by application.",
+    "title": "Request access to the list",
+    "subtitle": "A few details so we can propose a table that fits you.",
+    "funnelNote": "Being on the list doesn’t mean an invite to every dinner — only when a table fits.",
     "sections": {
       "identity": "Identity",
       "professional": "Professional",
-      "interests": "Extra-professional interests",
+      "interests": "Interests outside work",
       "contact": "Contact"
     },
     "fields": {
@@ -115,11 +152,11 @@
       "linkedinUrl": "LinkedIn profile",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
       "email": "Email",
-      "emailHint": "Email to use to receive invitations to upcoming dinners",
+      "emailHint": "Email where you want to receive invitations",
       "company": "Company",
-      "sector": "Industry sector",
-      "position": "Position in company",
-      "extraActivitiesIntro": "Let's break the ice and discover other interests",
+      "sector": "Industry",
+      "position": "Role",
+      "extraActivitiesIntro": "Other interests (outside work)",
       "extraActivitiesPlaceholder": "e.g. golf, natural wine, hiking, jazz, philanthropy…",
       "city": "City",
       "cityPlaceholder": "Guadalajara",
@@ -127,8 +164,8 @@
       "phonePlaceholder": "555 123 4567",
       "phoneCountryAria": "Country code",
       "phoneIncomplete": "Incomplete number — check country code and local number.",
-      "invitationMotivation": "Why would you like to be invited to a future dinner?",
-      "invitationMotivationPlaceholder": "In a few sentences — what draws you to the LA MESA experience…"
+      "invitationMotivation": "Why does LA MESA interest you?",
+      "invitationMotivationPlaceholder": "A few sentences — what draws you here."
     },
     "sectors": {
       "tech": "Tech & digital",
@@ -139,7 +176,7 @@
       "hospitality": "Hospitality & dining",
       "legal": "Legal",
       "marketing": "Marketing & communications",
-      "manufacturing": "Manufacturing",
+      "manufacturing": "Industry",
       "other": "Other"
     },
     "positions": {
@@ -162,9 +199,9 @@
       "philanthropy": "Philanthropy",
       "other": "Other"
     },
-    "submit": "Join the waitlist",
+    "submit": "Request access to the list",
     "submitting": "Sending…",
-    "success": "Thank you. You have been added to the waitlist. We will contact you soon to invite you to a qualified professional dinner.",
+    "success": "Thank you — you’re on the list. You’ll get an invitation when an evening matches your profile.",
     "successLoginHint": "To update your profile anytime, sign in with the same Google email.",
     "successLoginCta": "Sign in and edit my profile",
     "error": "Could not submit. Please try again.",

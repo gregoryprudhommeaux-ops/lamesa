@@ -1,14 +1,14 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Cenas temáticas exclusivas en Guadalajara. Red selecta, acceso confidencial."
+    "description": "Cenas privadas en Guadalajara. Lista selecta, acceso por invitación."
   },
   "nav": {
     "languageAria": "Idioma"
   },
   "brand": {
     "name": "LA MESA",
-    "tagline": "Serie de cenas privadas exclusivas en torno a una mesa, reunidas por una misma temática a lo largo de una velada.",
+    "tagline": "Por invitación",
     "nsMarkAria": "LA MESA — volver al inicio"
   },
   "footer": {
@@ -18,7 +18,8 @@
     "taglineAfter": " para emprendedores.",
     "taglineLead": "LA MESA: cenas temáticas exclusivas en Guadalajara, ",
     "rights": "© {year} NextStep Services",
-    "about": "Funcionamiento y preguntas frecuentes",
+    "about": "Cómo funciona y preguntas frecuentes",
+    "contact": "Preguntas y alianzas",
     "login": "Acceso",
     "admin": "Administración",
     "navAria": "Pie de página",
@@ -27,15 +28,19 @@
     "companyAria": "NextStep Services — abrir el sitio"
   },
   "landing": {
-    "cta": "Unirme a la lista de espera",
-    "aboutLink": "Funcionamiento y preguntas frecuentes",
+    "headline": "Una mesa. Un tema. Perfiles elegidos.",
+    "supportLine1": "Regístrate gratis.",
+    "supportLine2": "Recibes una invitación cuando una noche encaja con tu perfil.",
+    "cta": "Pedir acceso a la lista",
+    "seasonNote": "Primeras cenas en Guadalajara a partir de septiembre 2026.",
+    "aboutLink": "Cómo funciona y preguntas frecuentes",
     "loginLink": "¿Ya estás registrado? Ingresar",
     "myAccountLink": "Mi espacio"
   },
   "light": {
     "title": "Únete a LA MESA",
-    "brandTagline": "Únete a la lista de espera y recibe pronto una invitación a participar.",
-    "subtitle": "Déjanos tus datos. Te enviamos un acceso para completar tu perfil cuando quieras.",
+    "brandTagline": "Entra a la lista y pronto puedes recibir una invitación.",
+    "subtitle": "Déjanos tus datos. Te mandamos un acceso para completar tu perfil cuando quieras.",
     "fields": {
       "fullName": "Nombre completo",
       "fullNamePlaceholder": "Ana García",
@@ -45,69 +50,101 @@
     },
     "submit": "Registrarme",
     "submitting": "Enviando…",
-    "submitHint": "Te enviaremos un acceso por correo para completar tu perfil cuando quieras.",
+    "submitHint": "Te mandamos un acceso por correo para completar tu perfil cuando quieras.",
     "successTitle": "Listo",
-    "successBody": "Revisa tu correo (y la carpeta de spam) para el enlace e inicia sesión y completa tu perfil.",
+    "successBody": "Revisa tu correo (y spam) para el enlace, inicia sesión y completa tu perfil.",
     "successCta": "Ir al acceso",
     "fullFormHint": "¿Prefieres el formulario completo?",
-    "fullFormLink": "Inscripción detallada",
+    "fullFormLink": "Registro detallado",
     "errors": {
       "alreadyRegistered": "Este correo ya está registrado. Inicia sesión para editar tu perfil.",
-      "generic": "No fue posible enviar el formulario. Inténtalo de nuevo."
+      "generic": "No se pudo enviar. Inténtalo de nuevo."
     }
   },
   "about": {
-    "metaTitle": "Funcionamiento — LA MESA",
-    "metaDescription": "Cómo funcionan las cenas LA MESA: cupos limitados, pago anticipado, temáticas, patrocinios e invitados especiales.",
-    "eyebrow": "Acerca de",
-    "title": "Funcionamiento",
-    "introLead": "LA MESA reúne a un grupo reducido de profesionales de alto nivel alrededor de una misma temática, en una cena en Guadalajara.",
-    "introBody": "El acceso es por invitación, tras registrarse en la lista de espera. Cada velada está diseñada para favorecer conversaciones de valor — no networking superficial.",
+    "metaTitle": "Cómo funciona — LA MESA",
+    "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación cuando una noche encaja con tu perfil, confirmación con el pago.",
+    "title": "Cómo funciona",
+    "introLead": "Una mesa. Un tema. Perfiles elegidos — por invitación.",
+    "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando la comida.",
+    "forWho": "Para decisores, fundadores, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; las armamos con cuidado.",
+    "stepsTitle": "Cómo funciona",
+    "steps": {
+      "1": "Te registras gratis — pides acceso a la lista.",
+      "2": "Completas tu perfil para proponerte una mesa según tu experiencia, industria y la temática de la noche.",
+      "3": "Recibes una invitación cuando una noche encaja con tu perfil.",
+      "4": "Confirmas tu lugar pagando la comida dentro del plazo indicado."
+    },
+    "eligibilityNote": "Estar en la lista no es estar en cada cena.",
     "faqTitle": "Preguntas frecuentes",
     "faq": {
       "seats": {
-        "q": "¿Por qué el número de lugares es limitado?",
-        "a": "De forma deliberada. Una mesa reducida garantiza que cada persona participe realmente en la conversación. LA MESA privilegia la calidad del intercambio por encima del número de comensales."
+        "q": "¿Por qué hay pocos lugares?",
+        "a": "A propósito. Una mesa chica hace que todos participen de verdad en la plática. Preferimos la calidad del intercambio al número de personas."
+      },
+      "themes": {
+        "q": "¿Cambian las temáticas?",
+        "a": "Sí. Cada noche tiene su tema. Las invitaciones salen de los perfiles inscritos — sector, puesto, experiencia, intereses. Mientras más completo tu perfil, más fácil que una noche te encaje."
       },
       "payment": {
-        "q": "¿Cómo confirmo mi lugar en la mesa?",
-        "a": "Una vez invitado, debes pagar tu comida por adelantado para asegurar tu lugar. Si el pago no se recibe dentro del plazo indicado, el lugar se libera y se ofrece a otra persona."
+        "q": "¿Cómo confirmo mi lugar?",
+        "a": "Cuando llega la invitación, pagas la comida por adelantado en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
       },
       "price": {
         "q": "¿Cuánto cuesta y quién paga?",
-        "a": "El precio varía de un evento a otro y se indica al momento de la invitación. En promedio, oscila entre $700 y $1,500 MXN. Por lo general incluye entrada, plato fuerte y postre; las bebidas no suelen estar incluidas y se pagan en el lugar. Cada participante paga su lugar (salvo casos particulares, por ejemplo una cena cortesía por patrocinio)."
+        "a": "El ticket de la comida varía según la noche y se indica en la invitación. En promedio, entre $700 y $1,500 MXN: suele incluir entrada, plato fuerte y postre; las bebidas a menudo se pagan en el lugar. Cada quien paga su lugar, salvo casos especiales (p. ej. noche cortesía por patrocinio)."
       },
       "absence": {
-        "q": "¿Qué hago si no puedo asistir a última hora?",
-        "a": "Avísanos lo antes posible. Si cancelas con más de 48 h de anticipación, el pago se reembolsa o se conserva a cuenta para un próximo evento. Si cancelas con menos de 48 h, el pago se retiene por completo."
+        "q": "¿Qué pasa si no puedo ir a última hora?",
+        "a": "Avísanos lo antes posible. Cancelación con más de 48 h: reembolso o saldo a favor para una próxima noche. Con menos de 48 h: se retiene el pago."
       },
-      "themes": {
-        "q": "¿Las temáticas cambian?",
-        "a": "Sí. Los temas de las cenas se arman a partir de los perfiles de la lista de espera — en particular el sector, el puesto en la empresa y la experiencia. Por eso es importante completar tu perfil: cuanto más completo esté, mejor podremos invitarte a una mesa alineada con tu trayectoria e intereses."
-      },
-      "sponsors": {
-        "q": "¿Algunas cenas están patrocinadas?",
-        "a": "Sí, en ocasiones — y se indica con claridad al momento de la invitación. El patrocinio está pensado para beneficiar a los miembros (cenas cortesía, obsequios, etc.), sin perder de vista la calidad del momento para quienes están a la mesa."
-      },
-      "speakers": {
-        "q": "¿Hay invitados especiales?",
-        "a": "En ocasiones. Algunas cenas reciben a un invitado vinculado a la temática. Su perfil se presenta al confirmar la asistencia a esa velada."
-      },
-      "join": {
-        "q": "¿Cómo unirme a la lista de espera?",
-        "a": "Regístrate mediante el formulario de lista de espera. Te contactaremos cuando una cena coincida con tu perfil e intereses."
+      "guests": {
+        "q": "¿A veces hay un invitado o un patrocinio?",
+        "a": "A veces. Puede haber un invitado ligado a la temática, o un patrocinio. Se indica claro en la invitación."
       }
     },
     "backHome": "Volver al inicio",
-    "cta": "Unirme a la lista de espera"
+    "cta": "Pedir acceso a la lista",
+    "contactLink": "¿Otra duda, o una alianza?"
+  },
+  "contact": {
+    "metaTitle": "Preguntas y alianzas — LA MESA",
+    "metaDescription": "Escríbenos con una duda sobre LA MESA o para platicar de una alianza (anfitrión, patrocinio, edición privada).",
+    "title": "Preguntas y alianzas",
+    "intro": "¿Una duda que no está en las preguntas frecuentes, o una idea de alianza? Escríbenos — leemos cada mensaje.",
+    "fields": {
+      "topic": "Asunto",
+      "topicPlaceholder": "Elegir…",
+      "fullName": "Nombre completo",
+      "email": "Correo electrónico",
+      "phone": "Teléfono / WhatsApp",
+      "company": "Empresa",
+      "optional": "opcional",
+      "message": "Mensaje",
+      "messagePlaceholder": "Contexto, qué buscas, plazos si aplica…"
+    },
+    "topics": {
+      "question": "Pregunta",
+      "partnership": "Alianza / patrocinio"
+    },
+    "submit": "Enviar",
+    "submitting": "Enviando…",
+    "successTitle": "Mensaje recibido",
+    "successBody": "Gracias. Te respondemos lo antes posible.",
+    "successCta": "Volver al inicio",
+    "errors": {
+      "validation": "Revisa los campos e inténtalo de nuevo.",
+      "generic": "No se pudo enviar por ahora. Inténtalo un poco más tarde."
+    }
   },
   "registration": {
-    "title": "Unirme a la lista de espera",
-    "subtitle": "Perfil profesional — selección por expediente.",
+    "title": "Pedir acceso a la lista",
+    "subtitle": "Algunos datos para armarte una mesa a tu medida.",
+    "funnelNote": "Estar en la lista no es estar invitado a cada cena — solo cuando una mesa encaja contigo.",
     "sections": {
       "identity": "Identidad",
-      "professional": "Información profesional",
-      "interests": "Intereses fuera del ámbito profesional",
+      "professional": "Lo profesional",
+      "interests": "Intereses fuera del trabajo",
       "contact": "Contacto"
     },
     "fields": {
@@ -115,23 +152,23 @@
       "linkedinUrl": "Perfil de LinkedIn",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
       "email": "Correo electrónico",
-      "emailHint": "Correo para recibir invitaciones a próximas cenas",
+      "emailHint": "Correo donde quieres recibir las invitaciones",
       "company": "Empresa",
-      "sector": "Sector de actividad",
-      "position": "Puesto en la empresa",
-      "extraActivitiesIntro": "Romper el hielo y descubrir otros intereses en común",
+      "sector": "Sector",
+      "position": "Puesto",
+      "extraActivitiesIntro": "Otros intereses (fuera del trabajo)",
       "extraActivitiesPlaceholder": "Ej. golf, vino natural, senderismo, jazz, filantropía…",
       "city": "Ciudad",
       "cityPlaceholder": "Guadalajara",
       "phone": "Teléfono / WhatsApp",
       "phonePlaceholder": "33 1234 5678",
       "phoneCountryAria": "Código de país",
-      "phoneIncomplete": "Número incompleto: verifica el código de país y el número local.",
-      "invitationMotivation": "¿Por qué te gustaría ser invitado a una próxima cena?",
-      "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de la experiencia LA MESA…"
+      "phoneIncomplete": "Número incompleto: revisa el código de país y el número local.",
+      "invitationMotivation": "¿Por qué te interesa LA MESA?",
+      "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de esto."
     },
     "sectors": {
-      "tech": "Tecnología y digital",
+      "tech": "Tech y digital",
       "finance": "Finanzas e inversión",
       "real_estate": "Bienes raíces",
       "consulting": "Consultoría",
@@ -158,19 +195,19 @@
       "art_culture": "Arte y cultura",
       "travel": "Viajes",
       "gastronomy": "Gastronomía",
-      "tech_innovation": "Tecnología e innovación",
+      "tech_innovation": "Tech e innovación",
       "philanthropy": "Filantropía",
       "other": "Otro"
     },
-    "submit": "Unirme a la lista de espera",
+    "submit": "Pedir acceso a la lista",
     "submitting": "Enviando…",
-    "success": "Gracias. Tu registro en la lista de espera ha sido recibido. Te contactaremos próximamente para invitarte a una cena profesional de alto nivel.",
-    "successLoginHint": "Para editar tu perfil cuando lo desees, inicia sesión con el mismo correo de Google.",
+    "success": "Gracias — ya estás en la lista. Recibirás una invitación cuando una noche encaje con tu perfil.",
+    "successLoginHint": "Para editar tu perfil cuando quieras, inicia sesión con el mismo correo de Google.",
     "successLoginCta": "Iniciar sesión y editar mi perfil",
-    "error": "No fue posible enviar el formulario. Inténtalo de nuevo.",
+    "error": "No se pudo enviar. Inténtalo de nuevo.",
     "errors": {
       "invalid_linkedin": "URL de LinkedIn no válida (linkedin.com/in/…)",
-      "invalid_phone": "Número de teléfono no válido: se requieren el código de país y el número local.",
+      "invalid_phone": "Número no válido: se necesitan código de país y número local.",
       "validation": "Revisa los campos del formulario."
     }
   },

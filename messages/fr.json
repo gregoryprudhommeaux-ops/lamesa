@@ -1,14 +1,14 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Dîners thématiques exclusifs à Guadalajara. Réseau qualifié, accès confidentiel."
+    "description": "Dîners privés à Guadalajara. Liste sélective, accès sur invitation."
   },
   "nav": {
     "languageAria": "Langue"
   },
   "brand": {
     "name": "LA MESA",
-    "tagline": "Série de dîners privés exclusifs autour d'une table s'intéressant à la même thématique le temps d'une soirée.",
+    "tagline": "Sur invitation",
     "nsMarkAria": "LA MESA — retour à l'accueil"
   },
   "footer": {
@@ -19,6 +19,7 @@
     "taglineLead": "LA MESA : dîners thématiques exclusifs à Guadalajara, ",
     "rights": "© {year} NextStep Services",
     "about": "Fonctionnement & FAQ",
+    "contact": "Questions & partenariats",
     "login": "Connexion",
     "admin": "Administration",
     "navAria": "Pied de page",
@@ -27,14 +28,18 @@
     "companyAria": "NextStep Services — ouvrir le site"
   },
   "landing": {
-    "cta": "S'inscrire à la liste",
+    "headline": "Une table. Un thème. Des profils choisis.",
+    "supportLine1": "Inscris-toi gratuitement.",
+    "supportLine2": "Tu reçois une invitation quand une soirée correspond à ton profil.",
+    "cta": "Demander l’accès à la liste",
+    "seasonNote": "Premiers dîners à Guadalajara à partir de septembre 2026.",
     "aboutLink": "Fonctionnement & FAQ",
     "loginLink": "Déjà inscrit ? Connexion",
     "myAccountLink": "Mon espace"
   },
   "light": {
     "title": "Rejoindre LA MESA",
-    "brandTagline": "Rejoignez la waiting list, et recevez bientôt une invitation à participer.",
+    "brandTagline": "Rejoins la liste — tu pourras bientôt recevoir une invitation.",
     "subtitle": "Laisse tes coordonnées. Tu recevras un accès pour compléter ton profil quand tu veux.",
     "fields": {
       "fullName": "Nom complet",
@@ -45,7 +50,7 @@
     },
     "submit": "S'inscrire",
     "submitting": "Envoi…",
-    "submitHint": "Nous t’enverrons un accès par email pour compléter ton profil quand tu veux.",
+    "submitHint": "On t’envoie un accès par email pour compléter ton profil quand tu veux.",
     "successTitle": "C’est noté",
     "successBody": "Vérifie ta boîte mail (et les spams) pour le lien de connexion, puis complète ton profil.",
     "successCta": "Aller à la connexion",
@@ -58,52 +63,84 @@
   },
   "about": {
     "metaTitle": "Fonctionnement — LA MESA",
-    "metaDescription": "Comment fonctionnent les dîners LA MESA : places limitées, confirmation par paiement, thématiques, sponsors et intervenants.",
-    "eyebrow": "À propos",
+    "metaDescription": "Comment fonctionne LA MESA : inscription gratuite, invitation quand une soirée correspond à ton profil, confirmation par paiement.",
     "title": "Fonctionnement",
-    "introLead": "LA MESA réunit un petit groupe de professionnels qualifiés autour d'une même thématique, le temps d'un dîner à Guadalajara.",
-    "introBody": "L'accès se fait sur invitation, après inscription à la liste d'attente. Chaque soirée est pensée pour favoriser des échanges utiles — pas du networking de surface.",
+    "introLead": "Une table. Un thème. Des profils choisis — sur invitation.",
+    "introBody": "Inscris-toi gratuitement. Tu reçois une invitation quand une soirée correspond à ton profil. Une fois invité, tu confirmes ta place en réglant le repas.",
+    "forWho": "Pour des décideurs, fondateurs, investisseurs et experts qui ont quelque chose à apporter à la thématique de la soirée. Les tables restent petites ; on les compose avec soin.",
+    "stepsTitle": "Comment ça marche",
+    "steps": {
+      "1": "Inscris-toi gratuitement — tu demandes l’accès à la liste.",
+      "2": "Tu complètes ton profil pour qu’on puisse te proposer une table adaptée à ton expérience, ton industrie et à la thématique de l’événement.",
+      "3": "Tu reçois une invitation quand une soirée correspond à ton profil.",
+      "4": "Tu confirmes ta place en réglant le repas dans le délai indiqué."
+    },
+    "eligibilityNote": "Être sur la liste, ce n’est pas être à chaque soirée.",
     "faqTitle": "Questions fréquentes",
     "faq": {
       "seats": {
         "q": "Pourquoi les places sont-elles limitées ?",
-        "a": "Volontairement. Une table réduite garantit que chacun participe vraiment à la conversation. LA MESA privilégie la qualité des échanges à la quantité de convives."
-      },
-      "payment": {
-        "q": "Comment confirmer sa place à table ?",
-        "a": "Une fois invité, tu dois régler ton repas en amont pour valider ta place. Si le paiement n'est pas reçu dans le délai indiqué, la place est libérée et proposée à une autre personne."
-      },
-      "price": {
-        "q": "Combien ça coûte — et qui paie ?",
-        "a": "Le prix varie d’un événement à l’autre et est indiqué au moment de l’invitation. En moyenne, compte entre 700 $ et 1 500 $ MXN. Il inclut généralement entrée, plat et dessert ; les boissons ne sont en principe pas incluses et se règlent sur place. Chaque participant paie sa place (sauf cas particulier, par exemple un dîner offert dans le cadre d’un sponsoring)."
-      },
-      "absence": {
-        "q": "Que faire en cas d’absence de dernière minute ?",
-        "a": "Préviens-nous dès que possible. Si tu annules plus de 48 h avant l’événement, le paiement est remboursé ou conservé en acompte pour un prochain événement. Si l’annulation intervient à moins de 48 h, le règlement est conservé en totalité."
+        "a": "Volontairement. Une table réduite garantit que chacun participe vraiment à la conversation. On privilégie la qualité des échanges à la quantité de convives."
       },
       "themes": {
         "q": "Les thématiques changent-elles ?",
-        "a": "Oui. Les sujets des dîners sont composés à partir des profils de la liste d’attente — notamment le secteur d’activité, le poste en entreprise et l’expertise. C’est pour cela qu’il est important de remplir son profil : plus il est complet, plus nous pouvons te proposer une table alignée avec ton parcours et tes intérêts."
+        "a": "Oui. Chaque soirée a sa thématique. Les invitations partent des profils inscrits — secteur, poste, expérience, intérêts. Plus ton profil est complet, plus une soirée peut correspondre."
       },
-      "sponsors": {
-        "q": "Certains dîners sont-ils sponsorisés ?",
-        "a": "Oui, parfois — et c’est indiqué clairement au moment de l’invitation. Le sponsoring est pensé pour bénéficier aux membres (dîners offerts, cadeaux, etc.), tout en préservant la qualité du moment pour les personnes assises à table."
+      "payment": {
+        "q": "Comment confirmer sa place ?",
+        "a": "Une fois l’invitation reçue, tu règles ton repas en amont dans le délai indiqué. Sinon, la place est libérée et proposée à quelqu’un d’autre."
       },
-      "speakers": {
-        "q": "Y a-t-il parfois un intervenant ?",
-        "a": "Parfois. Certains dîners accueillent un invité en lien avec la thématique. Son profil est présenté au moment de l'inscription à la soirée concernée."
+      "price": {
+        "q": "Combien ça coûte — et qui paie ?",
+        "a": "Le ticket repas varie selon la soirée et est indiqué à l’invitation. En moyenne, compte entre 700 $ et 1 500 $ MXN : généralement entrée, plat et dessert ; les boissons se règlent souvent sur place. Chaque participant paie sa place, sauf cas particulier (ex. soirée offerte via sponsoring)."
       },
-      "join": {
-        "q": "Comment rejoindre la liste ?",
-        "a": "Inscris-toi via le formulaire de liste d'attente. Nous te contactons lorsqu'un dîner correspond à ton profil et à tes centres d'intérêt."
+      "absence": {
+        "q": "Que faire en cas d’absence de dernière minute ?",
+        "a": "Préviens-nous dès que possible. Annulation plus de 48 h avant : remboursement ou acompte pour une prochaine soirée. Moins de 48 h : le règlement est conservé."
+      },
+      "guests": {
+        "q": "Y a-t-il parfois un intervenant ou un sponsor ?",
+        "a": "Parfois. Un invité peut être lié à la thématique de la soirée ; un sponsoring peut exister. C’est indiqué clairement à l’invitation."
       }
     },
     "backHome": "Retour à l'accueil",
-    "cta": "Rejoindre la liste d'attente"
+    "cta": "Demander l’accès à la liste",
+    "contactLink": "Une autre question, ou un partenariat ?"
+  },
+  "contact": {
+    "metaTitle": "Questions & partenariats — LA MESA",
+    "metaDescription": "Écris-nous pour une question sur LA MESA ou pour parler d’un partenariat (hôte, sponsor, édition privée).",
+    "title": "Questions & partenariats",
+    "intro": "Une question qui n’est pas dans la FAQ, ou une idée de partenariat ? Écris-nous — on lit chaque message.",
+    "fields": {
+      "topic": "Sujet",
+      "topicPlaceholder": "Choisir…",
+      "fullName": "Nom complet",
+      "email": "Email",
+      "phone": "Téléphone / WhatsApp",
+      "company": "Entreprise",
+      "optional": "facultatif",
+      "message": "Message",
+      "messagePlaceholder": "Contexte, intention, délais éventuels…"
+    },
+    "topics": {
+      "question": "Question",
+      "partnership": "Partenariat"
+    },
+    "submit": "Envoyer",
+    "submitting": "Envoi…",
+    "successTitle": "Message reçu",
+    "successBody": "Merci. On te répond dès que possible.",
+    "successCta": "Retour à l’accueil",
+    "errors": {
+      "validation": "Vérifie les champs et réessaie.",
+      "generic": "Envoi impossible pour le moment. Réessaie un peu plus tard."
+    }
   },
   "registration": {
-    "title": "Rejoindre la liste d'attente",
-    "subtitle": "Profil professionnel — sélection sur dossier.",
+    "title": "Demander l’accès à la liste",
+    "subtitle": "Quelques infos pour qu’on puisse te proposer une table qui te corresponde.",
+    "funnelNote": "Être sur la liste, ce n’est pas être invité à chaque soirée — seulement quand une table correspond.",
     "sections": {
       "identity": "Identité",
       "professional": "Professionnel",
@@ -119,16 +156,16 @@
       "company": "Entreprise",
       "sector": "Secteur d'activité",
       "position": "Position dans l'entreprise",
-      "extraActivitiesIntro": "Brisons la glace, et trouvons d'autres centres d'intérêts",
-      "extraActivitiesPlaceholder": "Ex. golf, vin naturel, randonnée, jazz, philanthropy…",
+      "extraActivitiesIntro": "Autres centres d’intérêt (hors boulot)",
+      "extraActivitiesPlaceholder": "Ex. golf, vin naturel, randonnée, jazz, philanthropie…",
       "city": "Ville",
       "cityPlaceholder": "Guadalajara",
       "phone": "Téléphone / WhatsApp",
       "phonePlaceholder": "33 1234 5678",
       "phoneCountryAria": "Indicatif pays",
       "phoneIncomplete": "Numéro incomplet — vérifie l'indicatif et le numéro local.",
-      "invitationMotivation": "Pourquoi j'aimerais pouvoir être invité à participer à un futur dîner ?",
-      "invitationMotivationPlaceholder": "En quelques phrases — ce qui t'attire dans l'expérience LA MESA…"
+      "invitationMotivation": "Pourquoi LA MESA t’intéresse ?",
+      "invitationMotivationPlaceholder": "En quelques phrases — ce qui t’attire ici."
     },
     "sectors": {
       "tech": "Tech & digital",
@@ -136,7 +173,7 @@
       "real_estate": "Immobilier",
       "consulting": "Conseil",
       "health": "Santé",
-      "hospitality": "Hospitality & restauration",
+      "hospitality": "Hôtellerie & restauration",
       "legal": "Juridique",
       "marketing": "Marketing & communication",
       "manufacturing": "Industrie",
@@ -162,9 +199,9 @@
       "philanthropy": "Philanthropie",
       "other": "Autre"
     },
-    "submit": "Rejoindre la liste d'attente",
+    "submit": "Demander l’accès à la liste",
     "submitting": "Envoi en cours…",
-    "success": "Merci. Tu as été ajouté à la liste d'attente. Nous te contacterons prochainement pour t'inviter à un dîner professionnel qualifié.",
+    "success": "Merci — tu es inscrit. Tu recevras une invitation quand une soirée correspondra à ton profil.",
     "successLoginHint": "Pour modifier ton profil à tout moment, connecte-toi avec le même email Google.",
     "successLoginCta": "Se connecter et modifier mon profil",
     "error": "Envoi impossible. Réessaie dans un instant.",

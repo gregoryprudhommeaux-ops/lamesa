@@ -3,9 +3,9 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
-import { formatMxn } from "@/lib/events/pricing";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 type EventRow = {
@@ -56,6 +56,7 @@ type DashboardPayload = {
     notAttending: number;
     surveysResponses: number;
     eventsWithSurvey: number;
+    profilesNeedingAttention: number;
   };
   satisfaction?: SatisfactionAverages;
   events?: EventRow[];
@@ -125,7 +126,7 @@ function CompletionCell({ percent }: { percent: number }) {
   const bar =
     percent >= 80 ? "bg-emerald-500" : percent >= 50 ? "bg-amber-400" : "bg-red-400";
   return (
-    <div className="min-w-[7rem]">
+    <div className="min-w-[5.5rem]">
       <div className="mb-1 flex items-baseline justify-between gap-2">
         <span className={`text-sm font-bold tabular-nums ${tone}`}>{percent}%</span>
       </div>
@@ -142,8 +143,73 @@ function registrantSubtitle(r: RecentRegistrant): string {
     .join(" · ");
 }
 
+function FunnelStage({
+  label,
+  value,
+  emphasize,
+}: {
+  label: string;
+  value: number;
+  emphasize?: boolean;
+}) {
+  return (
+    <div className="min-w-0 flex-1 text-center">
+      <p
+        className={`text-2xl font-black tabular-nums ${
+          emphasize ? "text-ns-primary" : "text-ns-tertiary"
+        }`}
+      >
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{label}</p>
+    </div>
+  );
+}
+
+function FunnelArrow() {
+  return (
+    <span
+      className="hidden shrink-0 self-center text-ns-secondary/40 sm:inline"
+      aria-hidden
+    >
+      →
+    </span>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-8" aria-busy="true" aria-label="Chargement du dashboard">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="h-7 w-36 animate-pulse rounded-lg bg-ns-brand-light" />
+          <div className="h-4 w-72 max-w-full animate-pulse rounded bg-ns-brand-light" />
+        </div>
+        <div className="h-9 w-28 animate-pulse rounded-full bg-ns-brand-light" />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="h-3 w-24 animate-pulse rounded bg-ns-brand-light" />
+            <div className="mt-3 h-9 w-16 animate-pulse rounded bg-ns-brand-light" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+        <div className="h-4 w-40 animate-pulse rounded bg-ns-brand-light" />
+        <div className="mt-4 space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-12 animate-pulse rounded-lg bg-ns-brand-light/70" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AdminDashboardPanel() {
   const authFetch = useAuthFetch();
+  const router = useRouter();
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,7 +233,7 @@ export function AdminDashboardPanel() {
     void load();
   }, [load]);
 
-  if (loading) return <p className="text-sm text-ns-secondary">Chargement du dashboard…</p>;
+  if (loading) return <DashboardSkeleton />;
   if (error) {
     return (
       <div className="space-y-3">
@@ -189,6 +255,7 @@ export function AdminDashboardPanel() {
           recentRegistrants.reduce((sum, r) => sum + r.completionPercent, 0) /
             recentRegistrants.length,
         );
+  const needingAttention = kpis.profilesNeedingAttention ?? 0;
 
   return (
     <div className="space-y-8">
@@ -199,10 +266,32 @@ export function AdminDashboardPanel() {
             Vue plateforme : derniers inscrits, volumes, funnel et satisfaction.
           </p>
         </div>
-        <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
-          Templates email
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
+            Rafraîchir
+          </button>
+          <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
+            Nouvel événement
+          </Link>
+        </div>
       </div>
+
+      {needingAttention > 0 ? (
+        <Link
+          href="/admin/inscrits?profile=incomplete"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
+        >
+          <div>
+            <p className="text-sm font-bold text-amber-950">
+              {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
+            </p>
+            <p className="mt-0.5 text-xs text-amber-900/80">
+              Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
+            </p>
+          </div>
+          <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
+        </Link>
+      ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
@@ -228,7 +317,6 @@ export function AdminDashboardPanel() {
             <p className="mt-1 text-xs text-ns-secondary">
               Du plus récent au plus ancien
               {avgCompletion !== null ? ` · complétion moyenne ${avgCompletion}%` : ""}
-              {" · "}CA = somme TTC des dîners confirmés
             </p>
           </div>
           <Link href="/admin/inscrits" className="text-xs font-semibold text-ns-primary hover:underline">
@@ -240,35 +328,39 @@ export function AdminDashboardPanel() {
           <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[640px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
                   <th className="py-2 pr-3 font-semibold">Inscrit</th>
                   <th className="py-2 pr-3 font-semibold">Inscription</th>
                   <th className="py-2 pr-3 font-semibold">Complétion</th>
                   <th className="py-2 pr-3 font-semibold">Type</th>
-                  <th className="py-2 pr-3 font-semibold">Invitations</th>
-                  <th className="py-2 pr-3 font-semibold">Confirmés</th>
-                  <th className="py-2 pr-3 font-semibold">CA</th>
-                  <th className="py-2 pr-3 font-semibold">Parrainages</th>
-                  <th className="py-2 pr-3 font-semibold">Contact</th>
-                  <th className="py-2 font-semibold">Parrain</th>
+                  <th className="py-2 font-semibold">Contact</th>
                 </tr>
               </thead>
               <tbody>
                 {recentRegistrants.map((r) => {
                   const subtitle = registrantSubtitle(r);
                   return (
-                    <tr key={r.id} className="border-b border-gray-50 align-top">
+                    <tr
+                      key={r.id}
+                      className="cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60"
+                      onClick={() => {
+                        router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="link"
+                    >
                       <td className="py-3 pr-3">
                         <p className="font-semibold text-ns-tertiary">{r.fullName || "—"}</p>
                         {subtitle ? (
                           <p className="mt-0.5 text-xs text-ns-secondary">{subtitle}</p>
-                        ) : null}
-                        {r.locale ? (
-                          <p className="mt-0.5 text-[11px] uppercase tracking-wide text-ns-secondary/80">
-                            {r.locale}
-                          </p>
                         ) : null}
                       </td>
                       <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
@@ -288,31 +380,17 @@ export function AdminDashboardPanel() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 pr-3 font-semibold tabular-nums text-ns-tertiary">
-                        {r.invitationsSent}
-                      </td>
-                      <td className="py-3 pr-3 font-semibold tabular-nums text-ns-tertiary">
-                        {r.eventsConfirmed}
-                      </td>
-                      <td className="py-3 pr-3 whitespace-nowrap font-semibold tabular-nums text-ns-tertiary">
-                        {r.revenueMxn > 0 ? formatMxn(r.revenueMxn, "fr") : "—"}
-                      </td>
-                      <td className="py-3 pr-3 font-semibold tabular-nums text-ns-tertiary">
-                        {r.referralsMade}
-                      </td>
-                      <td className="py-3 pr-3">
+                      <td className="py-3">
                         <a
                           href={`mailto:${r.email}`}
                           className="block text-ns-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {r.email || "—"}
                         </a>
                         {r.phone ? (
                           <p className="mt-0.5 text-xs text-ns-secondary">{r.phone}</p>
                         ) : null}
-                      </td>
-                      <td className="py-3 font-medium text-ns-tertiary">
-                        {r.referredByCode ?? "—"}
                       </td>
                     </tr>
                   );
@@ -328,18 +406,28 @@ export function AdminDashboardPanel() {
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
             Funnel participations
           </h3>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <KpiCard label="Invités" value={kpis.invited} />
-            <KpiCard label="Attending" value={kpis.attending} />
-            <KpiCard label="Confirmés" value={kpis.confirmed} />
-            <KpiCard label="Not attending" value={kpis.notAttending} />
-            <KpiCard label="Waiting list" value={kpis.waitlistSeats} />
-            <KpiCard
-              label="Taux invite friend"
-              value={
-                satisfaction.inviteYesRate === null ? "—" : `${satisfaction.inviteYesRate}%`
-              }
-            />
+          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap sm:gap-2">
+            <FunnelStage label="Invités" value={kpis.invited} />
+            <FunnelArrow />
+            <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
+            <FunnelArrow />
+            <FunnelStage label="Présents" value={kpis.attending} />
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
+            <div className="flex justify-between gap-2 sm:block">
+              <span className="text-ns-secondary">Déclinés</span>
+              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.notAttending}</span>
+            </div>
+            <div className="flex justify-between gap-2 sm:block">
+              <span className="text-ns-secondary">Liste d’attente</span>
+              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
+            </div>
+            <div className="col-span-2 flex justify-between gap-2 sm:col-span-1 sm:block">
+              <span className="text-ns-secondary">Taux « inviter un ami »</span>
+              <span className="font-semibold tabular-nums text-ns-tertiary">
+                {satisfaction.inviteYesRate === null ? "—" : `${satisfaction.inviteYesRate}%`}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -429,36 +517,6 @@ export function AdminDashboardPanel() {
             </table>
           </div>
         )}
-
-        {withScores.length > 0 ? (
-          <div className="mt-6 space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-ns-secondary">
-              Classement (moyenne globale)
-            </p>
-            {[...withScores]
-              .sort((a, b) => (b.satisfaction.overall ?? 0) - (a.satisfaction.overall ?? 0))
-              .map((ev) => {
-                const score = ev.satisfaction.overall ?? 0;
-                const pct = (score / 5) * 100;
-                return (
-                  <div key={ev.id} className="flex items-center gap-3">
-                    <Link
-                      href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
-                      className="w-36 truncate text-xs font-semibold text-ns-tertiary hover:text-ns-primary"
-                    >
-                      {ev.title}
-                    </Link>
-                    <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-ns-brand-light">
-                      <div className="h-full rounded-full bg-[#b4e600]" style={{ width: `${pct}%` }} />
-                    </div>
-                    <span className="w-10 text-right text-xs font-bold text-ns-primary">
-                      {formatScore(ev.satisfaction.overall)}
-                    </span>
-                  </div>
-                );
-              })}
-          </div>
-        ) : null}
       </section>
     </div>
   );

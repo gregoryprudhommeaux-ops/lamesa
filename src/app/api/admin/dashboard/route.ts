@@ -138,6 +138,11 @@ export async function GET(request: Request) {
     const published = events.filter((e) => e.status === "published").length;
     const upcoming = events.filter((e) => new Date(e.startsAt).getTime() > Date.now()).length;
 
+    const profilesNeedingAttention = waitlistActive.filter((r) => {
+      const percent = computeProfileCompletionPercent(r);
+      return isExpressSignup(r) || percent < 50;
+    }).length;
+
     return NextResponse.json({
       ok: true,
       kpis: {
@@ -153,6 +158,7 @@ export async function GET(request: Request) {
         notAttending: statusCounts.not_attending,
         surveysResponses: platformSatisfaction.responseCount,
         eventsWithSurvey: eventsWithSurvey.length,
+        profilesNeedingAttention,
       },
       statusCounts,
       satisfaction: platformSatisfaction,
