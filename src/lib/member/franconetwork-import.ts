@@ -237,32 +237,13 @@ export async function upsertFranconetworkWaitlistMember(
         { merge: true },
       );
 
-      void syncWaitlistMemberToDatabasePerso(
+      // Await Perso sync (same as /api/register) — void fire-and-forget is dropped on Vercel after response.
+      const sync = await syncWaitlistMemberToDatabasePerso(
         { ...record, referredByCode: undefined },
         "[franconetwork-import]",
-      ).then(async (sync) => {
-        if (sync.id) {
-          await db.collection(COLLECTIONS.waitlist).doc(existing.id).set(
-            {
-              databasePersoContactId: sync.id,
-              databasePersoSyncedAt: new Date().toISOString(),
-            },
-            { merge: true },
-          );
-        }
-      });
-
-      return { status: "revived", id: existing.id, profileComplete: record.profileComplete };
-    }
-
-    const ref = await db.collection(COLLECTIONS.waitlist).add(record);
-
-    void syncWaitlistMemberToDatabasePerso(
-      { ...record, referredByCode: undefined },
-      "[franconetwork-import]",
-    ).then(async (sync) => {
+      );
       if (sync.id) {
-        await db.collection(COLLECTIONS.waitlist).doc(ref.id).set(
+        await db.collection(COLLECTIONS.waitlist).doc(existing.id).set(
           {
             databasePersoContactId: sync.id,
             databasePersoSyncedAt: new Date().toISOString(),
@@ -270,7 +251,25 @@ export async function upsertFranconetworkWaitlistMember(
           { merge: true },
         );
       }
-    });
+
+      return { status: "revived", id: existing.id, profileComplete: record.profileComplete };
+    }
+
+    const ref = await db.collection(COLLECTIONS.waitlist).add(record);
+
+    const sync = await syncWaitlistMemberToDatabasePerso(
+      { ...record, referredByCode: undefined },
+      "[franconetwork-import]",
+    );
+    if (sync.id) {
+      await db.collection(COLLECTIONS.waitlist).doc(ref.id).set(
+        {
+          databasePersoContactId: sync.id,
+          databasePersoSyncedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    }
 
     return { status: "created", id: ref.id, profileComplete: record.profileComplete };
   } catch (e) {
