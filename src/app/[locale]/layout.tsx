@@ -35,6 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: t("description"),
     icons: {
       icon: [
+        { url: "/favicon.ico", sizes: "48x48" },
         { url: "/favicon.png", type: "image/png", sizes: "512x512" },
         { url: "/icon", type: "image/png", sizes: "32x32" },
       ],

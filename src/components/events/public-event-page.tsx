@@ -151,7 +151,7 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
 
   return (
     <LaMesaShell card cardClassName="max-w-xl">
-      <LaMesaLogo size="sm" className="mx-auto" />
+      <LaMesaLogo size="sm" variant="horizontal" tone="black" className="mx-auto" />
       <h1 className={`${PAGE_TITLE} mt-2 text-ns-hero`}>{event.title}</h1>
       <p className="mt-2 text-sm text-ns-secondary">
         {fmtDateTime(event.startsAt, locale)}

@@ -1,8 +1,8 @@
 "use client";
 
 import { LaMesaLogo } from "@/components/la-mesa-logo";
+import { LaMesaMark } from "@/components/la-mesa-mark";
 import { Link } from "@/i18n/navigation";
-import { NsMark } from "@ns-suite/ui/brand";
 import { useTranslations } from "next-intl";
 
 type LaMesaBrandHeaderProps = {
@@ -22,14 +22,14 @@ export function LaMesaBrandHeader({ tagline }: LaMesaBrandHeaderProps) {
           aria-label={t("nsMarkAria")}
           title={t("nsMarkAria")}
         >
-          <NsMark size="lg" />
+          <LaMesaMark size="lg" priority />
         </Link>
         <Link
           href="/"
           className="transition-opacity hover:opacity-90"
           aria-label={t("name")}
         >
-          <LaMesaLogo size="xl" priority />
+          <LaMesaLogo size="xl" variant="horizontal" priority />
         </Link>
       </div>
       {tagline ? (

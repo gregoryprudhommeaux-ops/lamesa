@@ -18,6 +18,14 @@ export const metadata: Metadata = {
     template: "%s · LA MESA",
   },
   description: "Administration LA MESA — cenas privadas exclusivas en Guadalajara.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+      { url: "/icon", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 export default async function AdminRootLayout({ children }: { children: React.ReactNode }) {

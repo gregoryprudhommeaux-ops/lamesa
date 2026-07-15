@@ -128,7 +128,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
 
   return (
     <LaMesaShell card cardClassName="max-w-lg text-center">
-      <LaMesaLogo size="sm" className="mx-auto" />
+      <LaMesaLogo size="sm" variant="horizontal" tone="black" className="mx-auto" />
       <h1 className="mt-4 text-2xl font-bold text-ns-primary">{copy.title}</h1>
       <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ns-secondary">
         {copy.body}
