@@ -22,14 +22,15 @@ const SIZE_CLASS: Record<
   horizontal: {
     sm: "h-6 w-auto",
     md: "h-8 w-auto",
-    lg: "h-10 w-auto md:h-11",
-    xl: "h-11 w-auto md:h-14",
+    lg: "h-10 w-auto md:h-12",
+    /** Hero wordmark — brand-first scale (Sofia L1) */
+    xl: "h-14 w-auto md:h-20",
   },
 };
 
 const SRC: Record<LogoVariant, Record<LogoTone, string>> = {
   stacked: {
-    white: "/brand/stacked-white.png",
+    white: "/brand/stacked-offset.png",
     black: "/brand/stacked-black.png",
     lime: "/brand/stacked-lime.png",
   },
@@ -39,17 +40,17 @@ const SRC: Record<LogoVariant, Record<LogoTone, string>> = {
     lime: "/brand/monogram-la-lime.png",
   },
   horizontal: {
-    white: "/brand/wordmark-horizontal-white.png",
+    /** Logo 3 — white brush + lime offset */
+    white: "/brand/wordmark-horizontal-offset.png",
     black: "/brand/wordmark-horizontal-black.png",
-    // no horizontal lime asset — fall back to white
-    lime: "/brand/wordmark-horizontal-white.png",
+    lime: "/brand/wordmark-horizontal-offset.png",
   },
 };
 
 const INTRINSIC: Record<LogoVariant, { width: number; height: number }> = {
-  stacked: { width: 1702, height: 1868 },
+  stacked: { width: 656, height: 707 },
   monogram: { width: 711, height: 715 },
-  horizontal: { width: 1870, height: 613 },
+  horizontal: { width: 930, height: 312 },
 };
 
 export type LaMesaLogoSize = "sm" | "md" | "lg" | "xl";

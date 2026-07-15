@@ -9,7 +9,7 @@ export function LandingIntro() {
 
   return (
     <div className="mx-auto max-w-lg text-center">
-      <h1 className="font-display text-xl leading-snug tracking-wide text-white md:text-2xl">
+      <h1 className="text-base font-medium leading-snug tracking-tight text-white/80 md:text-lg">
         {t("headline")}
       </h1>
       <p className="mt-3 text-pretty text-sm leading-relaxed text-white/65 md:text-base">

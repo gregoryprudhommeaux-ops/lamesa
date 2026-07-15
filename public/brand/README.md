@@ -1,18 +1,12 @@
 # LA MESA — brand assets
 
-Source pack: Downloads `LA MESA/*.png` (transparent).
-
 | File | Use |
 |------|-----|
-| `la-mesa-logo.png` | Alias of `stacked-white.png` (legacy) |
-| `wordmark-horizontal-white.png` | **Default UI logo** — single-line brush |
-| `wordmark-horizontal-black.png` | Same on light cards |
-| `stacked-white.png` | Table/monogram + wordmark, white |
-| `stacked-black.png` | Same, black |
-| `stacked-lime.png` | Same, brand lime |
-| `wordmark-horizontal-white.png` | Single-line brush wordmark |
-| `wordmark-horizontal-black.png` | Single-line, black |
-| `wordmark-stacked-*.png` | Brush text only (no monogram) |
-| `la-mesa-mark-green.png` | Monogramme LA sur `#9DC41A` (UI + source favicon) |
-| `favicon-green.png` | Favicon master 512 |
-| `monogram-la-*.png` | Brush « LA » seul |
+| `wordmark-horizontal-offset.png` | **Logo UI (3)** — white + lime offset, horizontal |
+| `stacked-offset.png` | Stacked white + lime offset (transparent) |
+| `favicon-from-4.png` / `public/favicon.*` | **Favicon (4)** — stacked square |
+| `la-mesa-logo.png` | Alias of logo 3 |
+| `wordmark-horizontal-black.png` | Light cards |
+| `wordmark-horizontal-white.png` | Flat white (no offset) |
+| `stacked-*.png` / `monogram-la-*.png` | Older pack variants |
+| `la-mesa-mark-green.png` | Monogram on `#9DC41A` (optional) |

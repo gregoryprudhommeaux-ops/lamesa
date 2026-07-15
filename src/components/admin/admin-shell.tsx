@@ -5,7 +5,6 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { AppFooter } from "@/components/layout/app-footer";
 import { Link as LocaleLink } from "@/i18n/navigation";
 import { LaMesaLogo } from "@/components/la-mesa-logo";
-import { LaMesaMark } from "@/components/la-mesa-mark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -44,7 +43,6 @@ export function AdminShell({ children, title = "LA MESA — Admin" }: AdminShell
                 className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-90"
                 aria-label="LA MESA — retour à l'accueil"
               >
-                <LaMesaMark size="sm" />
                 <LaMesaLogo size="sm" variant="horizontal" />
               </LocaleLink>
               <nav
