@@ -31,7 +31,7 @@
     "headline": "Una mesa. Un tema. Perfiles elegidos.",
     "supportLine1": "Regístrate gratis.",
     "supportLine2": "Recibes una invitación cuando una noche encaja con tu perfil.",
-    "cta": "Pedir acceso a la lista",
+    "cta": "Unirse a la lista",
     "seasonNote": "Primeras cenas en Guadalajara a partir de septiembre 2026.",
     "aboutLink": "Cómo funciona y preguntas frecuentes",
     "loginLink": "¿Ya estás registrado? Ingresar",
@@ -70,7 +70,7 @@
     "forWho": "Para decisores, fundadores, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; las armamos con cuidado.",
     "stepsTitle": "Cómo funciona",
     "steps": {
-      "1": "Te registras gratis — pides acceso a la lista.",
+      "1": "Te registras gratis — te unes a la lista.",
       "2": "Completas tu perfil para proponerte una mesa según tu experiencia, industria y la temática de la noche.",
       "3": "Recibes una invitación cuando una noche encaja con tu perfil.",
       "4": "Confirmas tu lugar pagando la comida dentro del plazo indicado."
@@ -104,7 +104,7 @@
       }
     },
     "backHome": "Volver al inicio",
-    "cta": "Pedir acceso a la lista",
+    "cta": "Unirse a la lista",
     "contactLink": "¿Otra duda, o una alianza?"
   },
   "contact": {
@@ -138,7 +138,7 @@
     }
   },
   "registration": {
-    "title": "Pedir acceso a la lista",
+    "title": "Unirse a la lista",
     "subtitle": "Algunos datos para armarte una mesa a tu medida.",
     "funnelNote": "Estar en la lista no es estar invitado a cada cena — solo cuando una mesa encaja contigo.",
     "sections": {
@@ -199,7 +199,7 @@
       "philanthropy": "Filantropía",
       "other": "Otro"
     },
-    "submit": "Pedir acceso a la lista",
+    "submit": "Unirse a la lista",
     "submitting": "Enviando…",
     "success": "Gracias — ya estás en la lista. Recibirás una invitación cuando una noche encaje con tu perfil.",
     "successLoginHint": "Para editar tu perfil cuando quieras, inicia sesión con el mismo correo de Google.",

@@ -31,7 +31,7 @@
     "headline": "One table. One theme. Selected guests.",
     "supportLine1": "Sign up free.",
     "supportLine2": "You get an invitation when an evening matches your profile.",
-    "cta": "Request access to the list",
+    "cta": "Join the list",
     "seasonNote": "First dinners in Guadalajara from September 2026.",
     "aboutLink": "How it works & FAQ",
     "loginLink": "Already registered? Sign in",
@@ -70,7 +70,7 @@
     "forWho": "For decision-makers, founders, investors, and experts who bring something to that evening’s theme. Tables stay small; we compose them carefully.",
     "stepsTitle": "How it works",
     "steps": {
-      "1": "Sign up free — you request access to the list.",
+      "1": "Sign up free — you join the list.",
       "2": "Complete your profile so we can propose a table suited to your experience, industry, and the evening’s theme.",
       "3": "You get an invitation when an evening matches your profile.",
       "4": "Confirm your seat by paying for the meal within the stated deadline."
@@ -104,7 +104,7 @@
       }
     },
     "backHome": "Back to home",
-    "cta": "Request access to the list",
+    "cta": "Join the list",
     "contactLink": "Another question, or a partnership?"
   },
   "contact": {
@@ -138,7 +138,7 @@
     }
   },
   "registration": {
-    "title": "Request access to the list",
+    "title": "Join the list",
     "subtitle": "A few details so we can propose a table that fits you.",
     "funnelNote": "Being on the list doesn’t mean an invite to every dinner — only when a table fits.",
     "sections": {
@@ -199,7 +199,7 @@
       "philanthropy": "Philanthropy",
       "other": "Other"
     },
-    "submit": "Request access to the list",
+    "submit": "Join the list",
     "submitting": "Sending…",
     "success": "Thank you — you’re on the list. You’ll get an invitation when an evening matches your profile.",
     "successLoginHint": "To update your profile anytime, sign in with the same Google email.",

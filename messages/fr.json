@@ -31,7 +31,7 @@
     "headline": "Une table. Un thème. Des profils choisis.",
     "supportLine1": "Inscris-toi gratuitement.",
     "supportLine2": "Tu reçois une invitation quand une soirée correspond à ton profil.",
-    "cta": "Demander l’accès à la liste",
+    "cta": "Rejoindre la liste",
     "seasonNote": "Premiers dîners à Guadalajara à partir de septembre 2026.",
     "aboutLink": "Fonctionnement & FAQ",
     "loginLink": "Déjà inscrit ? Connexion",
@@ -70,7 +70,7 @@
     "forWho": "Pour des décideurs, fondateurs, investisseurs et experts qui ont quelque chose à apporter à la thématique de la soirée. Les tables restent petites ; on les compose avec soin.",
     "stepsTitle": "Comment ça marche",
     "steps": {
-      "1": "Inscris-toi gratuitement — tu demandes l’accès à la liste.",
+      "1": "Inscris-toi gratuitement — tu rejoins la liste.",
       "2": "Tu complètes ton profil pour qu’on puisse te proposer une table adaptée à ton expérience, ton industrie et à la thématique de l’événement.",
       "3": "Tu reçois une invitation quand une soirée correspond à ton profil.",
       "4": "Tu confirmes ta place en réglant le repas dans le délai indiqué."
@@ -104,7 +104,7 @@
       }
     },
     "backHome": "Retour à l'accueil",
-    "cta": "Demander l’accès à la liste",
+    "cta": "Rejoindre la liste",
     "contactLink": "Une autre question, ou un partenariat ?"
   },
   "contact": {
@@ -138,7 +138,7 @@
     }
   },
   "registration": {
-    "title": "Demander l’accès à la liste",
+    "title": "Rejoindre la liste",
     "subtitle": "Quelques infos pour qu’on puisse te proposer une table qui te corresponde.",
     "funnelNote": "Être sur la liste, ce n’est pas être invité à chaque soirée — seulement quand une table correspond.",
     "sections": {
@@ -199,7 +199,7 @@
       "philanthropy": "Philanthropie",
       "other": "Autre"
     },
-    "submit": "Demander l’accès à la liste",
+    "submit": "Rejoindre la liste",
     "submitting": "Envoi en cours…",
     "success": "Merci — tu es inscrit. Tu recevras une invitation quand une soirée correspondra à ton profil.",
     "successLoginHint": "Pour modifier ton profil à tout moment, connecte-toi avec le même email Google.",
