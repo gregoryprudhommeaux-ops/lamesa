@@ -38,6 +38,21 @@ Voir [.env.example](.env.example).
 - `ADMIN_PASSWORD` — accès back-office
 - `DATABASE_PERSO_*` — API contacts (search + upsert)
 - `FIREBASE_*` / `NEXT_PUBLIC_FIREBASE_*` — Firestore
+- `FRANCONETWORK_IMPORT_SECRET` — sync silencieux FrancoNetwork → waitlist
+
+## FrancoNetwork → waitlist (silencieux)
+
+Les profils FN **validés / visibles annuaire** (`isValidated !== false`) sont importés dans `la_mesa_waitlist` **sans email** aux membres. One-shot + sync auto des nouveaux inscrits FN. Au premier `/connexion` (même email), le profil est déjà pré-rempli.
+
+```bash
+# Dry-run (défaut)
+npm run import:franconetwork
+
+# Écriture
+npm run import:franconetwork:apply
+```
+
+Requiert aussi `FN_FIREBASE_*` (voir `.env.example`). Endpoint runtime : `POST /api/admin/import/franconetwork` (header `x-franconetwork-import-secret`).
 
 ## Database Perso upsert
 

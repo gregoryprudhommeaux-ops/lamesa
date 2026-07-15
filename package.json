@@ -11,7 +11,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "import:franconetwork": "tsx --env-file=.env.local scripts/import-franconetwork-waitlist.ts",
+    "import:franconetwork:apply": "tsx --env-file=.env.local scripts/import-franconetwork-waitlist.ts --apply"
   },
   "dependencies": {
     "@ns-suite/ui": "file:packages/@ns-suite/ui",
@@ -32,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }
