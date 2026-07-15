@@ -48,6 +48,22 @@ Do **not** invent facts when transforming — only reshape what exists.
 >
 > Le filtre que j’applique en premier : est-ce que cette personne tranche sur le même type de yes/no que toi, dans la même fenêtre de temps ? Si non, le café est du bruit. J’aime mieux un cercle court et homogène qu’un carnet qui impressionne.
 
+## FR — polished residual (triade inline après “clean” anti-slop)
+
+**Avant (mieux… mais encore template) :**
+> Un bon contact ne suffit pas.
+>
+> Quand je travaille sur un sujet, je préfère un petit groupe bien qualifié. Même industrie, même fonction, même irritant métier : on gagne en lucidité.
+>
+> Je réfléchis à lancer un nouveau mode de rencontres autour de cette logique…
+
+**Après :**
+> Un bon contact ne suffit pas. Une adresse n’est pas un cercle de confiance.
+>
+> Ce que je filtre en premier, c’est l’irritant métier. Même industrie sans même douleur, ça reste du networking poli — trois intros en AmLat qui ne se parlent pas, et le dossier avance au ralenti.
+>
+> Franchement, dans mes missions, c’est ce tri en amont qui évite les RDV inutiles. Le reste (taille de la liste, “communauté qui grossit”) m’intéresse moins.
+
 ## EN
 
 **Before (slop) :**

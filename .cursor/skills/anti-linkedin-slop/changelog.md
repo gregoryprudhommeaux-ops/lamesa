@@ -1,5 +1,26 @@
 # Changelog · /anti-linkedin-slop · Mr. ANTI-AI-SLOP
 
+## 2026-07-15 (l) — Steven 1.3.2 + Charles/Lucy sync (polished residual)
+
+- NextStep Idea OS Steven prompt bumped `1.3.1` → `1.3.2` with polished residual bans + (k) alignment note.
+- `ANTI_SLOP_PROSE_RULE` and Idea OS `.cursor/rules/anti-linkedin-slop-gate.mdc` updated (hard/soft + polished residual).
+- Charles + Lucy skills: Idea OS / Steven note now requires polished residual bar (`1.3.2+`).
+- Force-synced personal skills → `ns-suite` (was behind); UCM / la-mesa / idea-os skill trees already on (k).
+
+## 2026-07-15 (k) — Polished residual + inline qualification triad
+
+From live UCM post analysis (post soft survey-hook purge):
+- Ban **inline** triad: *Même industrie, même fonction, même irritant…* (not only bullet frameworks)
+- Ban **clean framework arc**: thesis → preference → community analogy → “je réfléchis à lancer un format” → soft CTA with even paragraph lengths
+- Require one sharp qualification criterion + optional friction; no product teaser unless brief asks
+- UCM: stronger prompt/checklist; `qualification_triad` weight ↑; Charles/Lucy gate wording
+
+## 2026-07-15 (j) — Idea OS Steven + Charles/Lucy
+
+- Soft survey-hook (h) mirrored into NextStep Idea OS runtime: Steven `1.3.1` + `ANTI_SLOP_PROSE_RULE`.
+- Charles + Lucy skills note Idea OS / Steven as same quality bar for product/LLM feedback.
+- Project rule + skills README updated; sync to nextstep-idea-os.
+
 ## 2026-07-15 (i) — la-mesa app sync
 
 - Force-synced canonical `~/.cursor/skills/` → `Projects/la-mesa/.cursor/skills/` for `anti-linkedin-slop`, `lucy-community-marketing`, `charles-linkedin-strategist`.

@@ -64,6 +64,13 @@ Packaging beats:
 
 Rewrite: thesis-first → one uneven concrete criterion in prose → consequence → no invented quote → no dig theatre → close without packaging.
 
+### Polished residual (post–anti-slop tell · 2026-07-15)
+When hard/soft survey-hooks are gone, models still leave a **cleaner** cousin:
+
+1. **Inline qualification triad** (not only bullets): *Même industrie, même fonction, même irritant métier* / *Same industry, same role, same pain* / *Misma industria, misma función, mismo irritante* — three symmetric “même/same/mismo” criteria in one sentence. Still ban. Keep **one** filter criterion; drop or demote the other two.
+2. **Clean framework arc**: thèse → préférence → analogie communauté → teaser “nouveau format / je réfléchis à lancer…” → CTA soft. Even paragraph lengths end-to-end. Break with uneven depth, one doubt/friction, and zero bolt-on product tease unless the brief asks for it.
+3. **Uniform polish**: sober lexicon + hedges (*Franchement…*) but no asperity or disagreesable edge → still rewrite for identifiable voice.
+
 ## F. Fake scenes
 
 - *Ce matin / Dimanche soir / Un client m’a appelé en panique*
