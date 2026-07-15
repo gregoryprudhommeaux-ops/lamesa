@@ -6,10 +6,10 @@ import {
   findWaitlistByReferralCode,
 } from "@/lib/auth/member.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
-import { isDatabasePersoConfigured, upsertContact } from "@/lib/database-perso";
 import { sendAdminNewRegistrationEmail } from "@/lib/email/send-admin-new-registration";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/send-waitlist-confirmation";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import {
   isValidReferralCodeFormat,
@@ -107,34 +107,35 @@ export async function POST(request: Request) {
     }
   }
 
-  if (isDatabasePersoConfigured()) {
-    try {
-      const result = await upsertContact({
-        fullName: data.fullName,
-        linkedinUrl: "",
-        emails: [data.email],
-        phones: [data.phone],
-        company: "",
-        sector: "",
-        position: "",
-        extraActivities: [],
-        city: "",
-        tags: record.tags,
-        source: record.source,
-        locale: data.locale,
-        notes: [
-          "Express signup (/light) — profile incomplete",
-          ...(referredByCode ? [`Parrainé via: ${referredByCode}`] : []),
-        ].join("\n"),
-      });
-
-      if (result.id) storedId = result.id;
-    } catch (error) {
-      console.error("[register/light] Database Perso error:", error);
-      if (!storedId && process.env.NODE_ENV === "production") {
-        return NextResponse.json({ ok: false, error: "storage_failed" }, { status: 502 });
+  if (isFirebaseAdminConfigured() && storedId) {
+    const sync = await syncWaitlistMemberToDatabasePerso(
+      {
+        ...record,
+        referredByCode,
+      },
+      "[register/light]",
+    );
+    if (sync.id) {
+      try {
+        await getAdminFirestore()
+          .collection(COLLECTIONS.waitlist)
+          .doc(storedId)
+          .set(
+            {
+              databasePersoContactId: sync.id,
+              databasePersoSyncedAt: new Date().toISOString(),
+            },
+            { merge: true },
+          );
+      } catch (error) {
+        console.warn("[register/light] failed to store databasePersoContactId:", error);
       }
     }
+  } else {
+    await syncWaitlistMemberToDatabasePerso(
+      { ...record, referredByCode },
+      "[register/light]",
+    );
   }
 
   if (!storedId && process.env.NODE_ENV === "development") {

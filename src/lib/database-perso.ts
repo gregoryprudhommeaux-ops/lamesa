@@ -133,13 +133,20 @@ export type UpsertContactPayload = {
   notes?: string;
 };
 
-export async function upsertContact(payload: UpsertContactPayload): Promise<{ ok: boolean; id?: string }> {
+export async function upsertContact(
+  payload: UpsertContactPayload,
+): Promise<{ ok: boolean; id?: string; action?: "created" | "merged" }> {
   try {
-    const data = await fetchDatabasePerso<{ ok?: boolean; id?: string }>(
-      "/api/public/contacts/upsert",
-      { method: "POST", body: payload },
-    );
-    return { ok: data.ok === true, id: data.id };
+    const data = await fetchDatabasePerso<{
+      ok?: boolean;
+      id?: string;
+      action?: "created" | "merged";
+    }>("/api/public/contacts/upsert", { method: "POST", body: payload });
+    return {
+      ok: data.ok === true,
+      id: data.id,
+      action: data.action,
+    };
   } catch (error) {
     if (error instanceof DatabasePersoError && error.status === 404) {
       return { ok: false };

@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/member.server";
 import { isPlatformAdminIdentity } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { z } from "zod";
 
 function isNextResponse(value: unknown): value is NextResponse {
@@ -70,6 +71,9 @@ export async function PATCH(request: Request) {
     Boolean(patch.city?.trim()) ||
     Boolean(patch.invitationMotivation?.trim());
 
+  const nextProfileComplete =
+    completeHint && profile.profileComplete === false ? true : profile.profileComplete;
+
   await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
     {
       ...patch,
@@ -81,6 +85,22 @@ export async function PATCH(request: Request) {
     },
     { merge: true },
   );
+
+  const merged = {
+    ...profile,
+    ...patch,
+    profileComplete: nextProfileComplete,
+  };
+  const sync = await syncWaitlistMemberToDatabasePerso(merged, "[me/profile]");
+  if (sync.id) {
+    await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
+      {
+        databasePersoContactId: sync.id,
+        databasePersoSyncedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+  }
 
   return NextResponse.json({ ok: true, id: profile.id });
 }

@@ -166,6 +166,9 @@ export interface WaitlistRegistration {
   updatedAt?: string;
   /** Soft-delete — present when member deactivated their profile */
   deletedAt?: string;
+  /** Linked Database Perso contact id after upsert sync */
+  databasePersoContactId?: string;
+  databasePersoSyncedAt?: string;
   referralCode?: string;
   referredByCode?: string;
   referredById?: string;
