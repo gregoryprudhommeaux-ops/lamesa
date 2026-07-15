@@ -2,11 +2,24 @@ import { describe, expect, it } from "vitest";
 import {
   computeProfileCompletionPercent,
   isExpressSignup,
+  listMissingProfileFieldsFr,
 } from "./profile-completion";
 
 describe("computeProfileCompletionPercent", () => {
   it("returns 0 for empty profile", () => {
     expect(computeProfileCompletionPercent({})).toBe(0);
+    expect(listMissingProfileFieldsFr({})).toEqual([
+      "nom",
+      "email",
+      "téléphone",
+      "entreprise",
+      "secteur",
+      "poste",
+      "ville",
+      "LinkedIn",
+      "motivation",
+      "activités",
+    ]);
   });
 
   it("scores express signup fields (name, email, phone)", () => {
@@ -20,8 +33,25 @@ describe("computeProfileCompletionPercent", () => {
   });
 
   it("returns 100 when all fields filled", () => {
+    const full = {
+      fullName: "Ada",
+      email: "ada@example.com",
+      phone: "+521111111111",
+      company: "Acme",
+      sector: "tech",
+      position: "founder",
+      city: "GDL",
+      linkedinUrl: "https://linkedin.com/in/ada",
+      invitationMotivation: "Curiosity",
+      extraActivities: ["networking"],
+    };
+    expect(computeProfileCompletionPercent(full)).toBe(100);
+    expect(listMissingProfileFieldsFr(full)).toEqual([]);
+  });
+
+  it("lists only missing fields for a near-complete profile", () => {
     expect(
-      computeProfileCompletionPercent({
+      listMissingProfileFieldsFr({
         fullName: "Ada",
         email: "ada@example.com",
         phone: "+521111111111",
@@ -31,9 +61,8 @@ describe("computeProfileCompletionPercent", () => {
         city: "GDL",
         linkedinUrl: "https://linkedin.com/in/ada",
         invitationMotivation: "Curiosity",
-        extraActivities: ["networking"],
       }),
-    ).toBe(100);
+    ).toEqual(["activités"]);
   });
 });
 

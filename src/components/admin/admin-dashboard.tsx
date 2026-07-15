@@ -32,6 +32,7 @@ type RecentRegistrant = {
   createdAt: string;
   profileComplete: boolean | null;
   completionPercent: number;
+  missingFields: string[];
   referredByCode: string | null;
   isExpress: boolean;
   invitationsSent: number;
@@ -120,15 +121,36 @@ function formatRegistrantDate(iso: string): string {
   });
 }
 
-function CompletionCell({ percent }: { percent: number }) {
+function CompletionCell({
+  percent,
+  missingFields,
+}: {
+  percent: number;
+  missingFields: string[];
+}) {
   const tone =
     percent >= 80 ? "text-emerald-700" : percent >= 50 ? "text-amber-700" : "text-red-700";
   const bar =
     percent >= 80 ? "bg-emerald-500" : percent >= 50 ? "bg-amber-400" : "bg-red-400";
+  const missingHint =
+    missingFields.length > 0
+      ? `Manque : ${missingFields.join(", ")}`
+      : "Profil complet";
+
   return (
     <div className="min-w-[5.5rem]">
-      <div className="mb-1 flex items-baseline justify-between gap-2">
+      <div className="mb-1 flex items-center gap-1.5">
         <span className={`text-sm font-bold tabular-nums ${tone}`}>{percent}%</span>
+        {missingFields.length > 0 ? (
+          <span
+            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-ns-secondary/40 text-[10px] font-bold leading-none text-ns-secondary"
+            title={missingHint}
+            aria-label={missingHint}
+            onClick={(e) => e.stopPropagation()}
+          >
+            ?
+          </span>
+        ) : null}
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light">
         <div className={`h-full rounded-full ${bar}`} style={{ width: `${percent}%` }} />
@@ -328,13 +350,12 @@ export function AdminDashboardPanel() {
           <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
                   <th className="py-2 pr-3 font-semibold">Inscrit</th>
                   <th className="py-2 pr-3 font-semibold">Inscription</th>
                   <th className="py-2 pr-3 font-semibold">Complétion</th>
-                  <th className="py-2 pr-3 font-semibold">Type</th>
                   <th className="py-2 font-semibold">Contact</th>
                 </tr>
               </thead>
@@ -367,18 +388,10 @@ export function AdminDashboardPanel() {
                         {formatRegistrantDate(r.createdAt)}
                       </td>
                       <td className="py-3 pr-3">
-                        <CompletionCell percent={r.completionPercent} />
-                      </td>
-                      <td className="py-3 pr-3">
-                        {r.isExpress ? (
-                          <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            Express
-                          </span>
-                        ) : (
-                          <span className="inline-flex rounded-full bg-ns-brand-light px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ns-tertiary">
-                            Complet
-                          </span>
-                        )}
+                        <CompletionCell
+                          percent={r.completionPercent}
+                          missingFields={r.missingFields ?? []}
+                        />
                       </td>
                       <td className="py-3">
                         <a
@@ -414,15 +427,15 @@ export function AdminDashboardPanel() {
             <FunnelStage label="Présents" value={kpis.attending} />
           </div>
           <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
-            <div className="flex justify-between gap-2 sm:block">
+            <div className="flex items-baseline justify-between gap-2">
               <span className="text-ns-secondary">Déclinés</span>
               <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.notAttending}</span>
             </div>
-            <div className="flex justify-between gap-2 sm:block">
+            <div className="flex items-baseline justify-between gap-2">
               <span className="text-ns-secondary">Liste d’attente</span>
               <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
             </div>
-            <div className="col-span-2 flex justify-between gap-2 sm:col-span-1 sm:block">
+            <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
               <span className="text-ns-secondary">Taux « inviter un ami »</span>
               <span className="font-semibold tabular-nums text-ns-tertiary">
                 {satisfaction.inviteYesRate === null ? "—" : `${satisfaction.inviteYesRate}%`}

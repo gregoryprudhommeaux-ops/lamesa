@@ -15,6 +15,7 @@ import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import {
   computeProfileCompletionPercent,
   isExpressSignup,
+  listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type {
@@ -72,6 +73,7 @@ export async function GET(request: Request) {
 
     const recentRegistrants = recentMembers.map((r) => {
       const completionPercent = computeProfileCompletionPercent(r);
+      const missingFields = listMissingProfileFieldsFr(r);
       const engagement = engagementByMember.get(r.id) ?? {
         invitationsSent: 0,
         eventsConfirmed: 0,
@@ -92,6 +94,7 @@ export async function GET(request: Request) {
         createdAt: r.createdAt ?? "",
         profileComplete: r.profileComplete ?? null,
         completionPercent,
+        missingFields,
         referredByCode: r.referredByCode?.trim() || null,
         isExpress: isExpressSignup(r),
         invitationsSent: engagement.invitationsSent,
