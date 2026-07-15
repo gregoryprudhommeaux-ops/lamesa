@@ -1,0 +1,13 @@
+---
+description: Charles and Lucy must run /anti-linkedin-slop before delivering copy.
+alwaysApply: true
+---
+
+# Anti-slop gate (Charles · Lucy · content)
+
+When using **charles-linkedin-strategist** or **lucy-community-marketing**, or drafting LinkedIn/email/WhatsApp/marketing copy:
+
+1. Before delivery, run skill **anti-linkedin-slop** (Mr. ANTI-AI-SLOP) in ANALYZE mode on the draft.
+2. If slop is detected, HUMANIZE, then deliver only the clean copy.
+3. Never name internal personas in customer-facing output.
+4. Personal skill source of truth: `~/.cursor/skills/anti-linkedin-slop/PROMPT.md`.
