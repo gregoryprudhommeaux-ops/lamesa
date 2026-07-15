@@ -4,6 +4,8 @@ Adapt and personalize. Do not invent named guests, fixed venues, or dinner dates
 
 External drafts are signed **LA MESA** (never Lucy).
 
+**Gate:** shipping any adapted template still requires `/anti-linkedin-slop` (ANALYZE → HUMANIZE if needed) before delivery.
+
 ## Waitlist invite — FR email
 
 **Subjects:**

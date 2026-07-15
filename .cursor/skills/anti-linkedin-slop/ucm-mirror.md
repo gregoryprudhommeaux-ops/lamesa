@@ -16,7 +16,9 @@ When improving the skill, sync these UCM paths:
 | Lint (em dash / not-X-but-Y / triplets) | `src/lib/articles/human-writing/human-writing-lint.ts` |
 | Wired into LinkedIn rules | `src/lib/prompts/linkedin-2026-rules.ts` |
 | Revise path | `src/lib/prompts/article-revise.ts` |
+| Post-gen / post-revise HUMANIZER gate | `src/lib/articles/humanize-article-pass.ts` (wired in `api/articles/generate` + `revise`) |
 | Project skill copy | `.cursor/skills/anti-linkedin-slop/` |
 
-Generation = compact anti-slop + human-writing + generation hints.
+Generation = compact anti-slop + human-writing + generation hints (FR/EN/ES via `contentLanguage`).
+Server gate = `detectSlop` → full HUMANIZER rewrite when score ≥ 4 or blocking flags.
 Humanize / affiner = full humanizer + JSON hook/body/ps.
