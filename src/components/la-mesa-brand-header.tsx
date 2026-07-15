@@ -1,19 +1,16 @@
 "use client";
 
-import { Link, usePathname } from "@/i18n/navigation";
+import { Link } from "@/i18n/navigation";
 import { NsMark } from "@ns-suite/ui/brand";
 import { useTranslations } from "next-intl";
 
 type LaMesaBrandHeaderProps = {
-  /** Override default brand.tagline (e.g. light signup page) */
+  /** Optional line under the wordmark (e.g. light signup page) */
   tagline?: string;
 };
 
 export function LaMesaBrandHeader({ tagline }: LaMesaBrandHeaderProps) {
   const t = useTranslations("brand");
-  const pathname = usePathname();
-  const isLanding = pathname === "/";
-  const displayTagline = tagline ?? (isLanding ? t("tagline") : null);
 
   return (
     <header className="mb-8 flex max-w-2xl flex-col items-center gap-3 px-2 text-center">
@@ -33,9 +30,9 @@ export function LaMesaBrandHeader({ tagline }: LaMesaBrandHeaderProps) {
           {t("name")}
         </Link>
       </div>
-      {displayTagline ? (
+      {tagline ? (
         <p className="text-pretty text-sm leading-relaxed text-white/65 md:text-base">
-          {displayTagline}
+          {tagline}
         </p>
       ) : null}
     </header>
