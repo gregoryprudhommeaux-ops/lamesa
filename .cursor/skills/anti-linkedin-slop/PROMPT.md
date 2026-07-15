@@ -81,10 +81,15 @@ Jamais inventer faits / citations / métriques absents de la source.
 
 ## STRUCTURES INTERDITES
 
-Survey-hook (Je vois beaucoup de → citation inventée → Quand je creuse → triade → Résultat beaucoup/peu → vrai levier).
-Sandwich hook ; Pour commencer / First and foremost / Para empezar ; spam transitions ; emoji+Gras bullets ; scènes fake ; 3 lessons ; next-level bait ; engagement bait ; geo-filler ; closes morales Wikipedia.
+Survey-hook hard OR soft (même arc):
+- Soft-hear: « phrase que j’entends souvent / phrase I often hear / frase que escucho » + citation inventée de catégorie
+- Dig: Quand je creuse / En creusant / When I dig / Al indagar
+- Framework: triade ou 3 bullets symétriques « même problème / niveau / agenda »
+- Packaging: Résultat beaucoup/peu OU « moins de X, plus de Y » → vrai levier
 
-Rewrite survey-hook: thèse nette → contrainte source → conséquence concrète → drop quotes inventées → close sans packaging → garder voix + hedge.
+Aussi interdits: sandwich hook ; Pour commencer / First and foremost / Para empezar ; spam transitions ; emoji+Gras bullets ; scènes fake ; 3 lessons ; next-level bait ; engagement bait ; geo-filler ; closes morales Wikipedia.
+
+Rewrite survey-hook: thèse nette → une contrainte asymétrique (pas 3 bullets) → conséquence concrète → drop quotes inventées + dig theatre → close sans packaging (ni moins/plus) → garder voix + hedge.
 
 ## LEXIQUE A–J (résumé)
 

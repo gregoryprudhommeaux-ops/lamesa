@@ -44,12 +44,25 @@ Prefer low-key: *This actually works* over *This is a game-changing strategy*.
 - EN: *take your business to the next level?*, *at the end of the day, it’s all about…*
 - ES: *¿listo para transformar tu negocio?*, *al final del día, se trata de…*
 
-## E. Survey-hook fingerprints
+## E. Survey-hook fingerprints (hard + soft)
 
+Hard openers:
 - *Je vois beaucoup de* / *I see a lot of* / *Veo a muchos*
 - *On me dit souvent* / *I often hear* / *A menudo escucho*
-- *Quand je creuse* / *When I dig* / *Cuando indago*
-- *Résultat : beaucoup… peu…*
+
+Soft-hear openers (same arc, milder wording — still ban):
+- *La / une phrase que j’entends souvent* / *The phrase I often hear* / *La frase que escucho mucho*
+- *Ce que j’entends souvent* / *What I often hear* / *Lo que más escucho*
+- Fake category quote after any of the above (« On a déjà des contacts… ») without a real attributed speaker in the brief
+
+Theatrical dig (all variants):
+- *Quand je creuse* / *En creusant (un peu)* / *When I dig* / *Digging a bit* / *Cuando indago* / *Al indagar*
+
+Packaging beats:
+- *Résultat : beaucoup… peu…* and soft twin *moins de X, plus de Y* / *less X, more Y* / *menos X, más Y*
+- Qualification triad / neat 3-bullet framework: *même problème / même niveau / même agenda* (or EN/ES *same…*) as symmetric checklist after a hear-hook
+
+Rewrite: thesis-first → one uneven concrete criterion in prose → consequence → no invented quote → no dig theatre → close without packaging.
 
 ## F. Fake scenes
 

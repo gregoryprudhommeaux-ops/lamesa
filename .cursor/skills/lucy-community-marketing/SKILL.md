@@ -34,7 +34,7 @@ Load this skill when the user invokes **Lucy** or works on **LA MESA** community
 Before delivering **any** member-facing or public marketing copy — including **templates** (email subject/body, Brevo/admin email templates, WhatsApp/DM scripts, invite sequences, nurture sequences, LinkedIn/IG posts, RSVP/payment chase, sponsor pitch, FAQ for members):
 
 1. Load and apply **`anti-linkedin-slop`** / Mr. ANTI-AI-SLOP — read `~/.cursor/skills/anti-linkedin-slop/PROMPT.md` (and `reference.md` when needed). For ES targeting Guadalajara, enforce **ES-MX** filter (no vosotros/vale/ordenador; prefer computadora/platicar/coordinar).
-2. Run silently in **ANALYZE** mode on the draft. If score ≥ 4 or any blocking signature (survey-hook, sandwich hook, school openers, loft/corp calques, soft-verb stacks, not-X-but-Y, em-dash spam, uniform density, Wikipedia moral close, engagement bait): rewrite with **HUMANIZE** before delivery.
+2. Run silently in **ANALYZE** mode on the draft. If score ≥ 4 or any blocking signature (survey-hook hard **or soft** — *j’entends souvent / phrase I often hear / frase que escucho / en creusant / Digging a bit / 3-bullet même X·Y·Z / menos X más Y*, sandwich hook, school openers, loft/corp calques, soft-verb stacks, not-X-but-Y, em-dash spam, uniform density, Wikipedia moral close, engagement bait): rewrite with **HUMANIZE** before delivery.
 3. Preserve LA MESA voice: premium, selective, warm-pro — asperities OK; never invent dates, venues, prices, or attendee lists.
 4. Do **not** mention the gate or Lucy in external copy.
 5. ARCHITECT-only docs (JD, scorecard) may skip the full humanize rewrite, but still purge obvious AI-slop phrasing.
