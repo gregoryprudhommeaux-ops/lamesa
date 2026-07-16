@@ -7,9 +7,13 @@ import {
   defaultLocaleContent,
   EMAIL_TEMPLATE_KEYS,
   getEmailTemplate,
+  isCustomEmailTemplateKey,
+  isSystemEmailTemplateKey,
   listEmailTemplates,
   resolveTemplateLocale,
+  slugToCustomTemplateKey,
   TEMPLATE_LOCALES,
+  defaultEmailTemplate,
 } from "@/lib/email/templates";
 import { translateTemplateLocales } from "@/lib/email/translate-template";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -20,16 +24,18 @@ import type {
 } from "@/lib/types/events";
 import { z } from "zod";
 
-const TEMPLATE_KEY_SCHEMA = z.enum([
-  "calendar_invite",
-  "participation_confirmed",
-  "reminder_7d",
-  "reminder_36h",
-  "reminder_90m",
-  "satisfaction_survey",
-  "light_signup",
-  "referral_invite",
-]);
+const TEMPLATE_KEY_SCHEMA = z
+  .string()
+  .min(3)
+  .max(64)
+  .refine((k) => isSystemEmailTemplateKey(k) || isCustomEmailTemplateKey(k), {
+    message: "invalid_template_key",
+  });
+
+const createSchema = z.object({
+  label: z.string().trim().min(2).max(80),
+  slug: z.string().trim().min(2).max(48).optional(),
+});
 
 async function buildSyncedLocales(input: {
   sourceLocale: TemplateLocale;
@@ -62,15 +68,65 @@ export async function GET(request: Request) {
     const event = eventSnap.exists
       ? { id: eventSnap.id, ...(eventSnap.data() as object) }
       : null;
-    const templates = [];
-    for (const key of EMAIL_TEMPLATE_KEYS) {
-      templates.push(await getEmailTemplate(key, event as never, locale));
+    const templates = await listEmailTemplates(locale);
+    // When scoped to an event, re-resolve each key against event overrides
+    const withOverrides = [];
+    for (const t of templates) {
+      withOverrides.push(await getEmailTemplate(t.key, event as never, locale));
     }
-    return NextResponse.json({ ok: true, templates, locale });
+    return NextResponse.json({ ok: true, templates: withOverrides, locale });
   }
 
   const templates = await listEmailTemplates(locale);
   return NextResponse.json({ ok: true, templates, locale });
+}
+
+/** Create a custom template (manual / draft) with LA MESA starter copy in ES/FR/EN. */
+export async function POST(request: Request) {
+  const admin = await requirePlatformAdmin(request);
+  if (isNextResponse(admin)) return admin;
+
+  if (!isFirebaseAdminConfigured()) {
+    return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
+  }
+
+  const parsed = createSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
+  }
+
+  const key = slugToCustomTemplateKey(parsed.data.slug ?? parsed.data.label);
+  if (!key) {
+    return NextResponse.json({ ok: false, error: "invalid_slug" }, { status: 400 });
+  }
+
+  const db = getAdminFirestore();
+  const ref = db.collection(COLLECTIONS.emailTemplates).doc(key);
+  const existing = await ref.get();
+  if (existing.exists) {
+    return NextResponse.json({ ok: false, error: "already_exists", key }, { status: 409 });
+  }
+
+  const starter = defaultEmailTemplate(key, "es", { label: parsed.data.label });
+  const now = new Date().toISOString();
+  await ref.set({
+    key,
+    custom: true,
+    label: parsed.data.label.trim(),
+    locales: starter.locales,
+    enabled: true,
+    updatedAt: now,
+  });
+
+  const template = await getEmailTemplate(key, null, "es");
+  return NextResponse.json({ ok: true, template }, { status: 201 });
 }
 
 const putSchema = z.object({
@@ -82,6 +138,7 @@ const putSchema = z.object({
   eventId: z.string().min(1).optional(),
   /** Toggle send without editing copy */
   enabled: z.boolean().optional(),
+  label: z.string().trim().min(2).max(80).optional(),
 }).superRefine((data, ctx) => {
   if (typeof data.enabled === "boolean" && data.subject === undefined && data.body === undefined && !data.reset) {
     return;
@@ -140,7 +197,7 @@ export async function PUT(request: Request) {
   }
 
   const key = parsed.data.key as EmailTemplateKey;
-  if (!EMAIL_TEMPLATE_KEYS.includes(key)) {
+  if (!isSystemEmailTemplateKey(key) && !isCustomEmailTemplateKey(key)) {
     return NextResponse.json({ ok: false, error: "unknown_key" }, { status: 400 });
   }
 
@@ -305,14 +362,20 @@ export async function PUT(request: Request) {
   const snap = await ref.get();
   let existingLocales: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> = {};
   let existingEnabled = true;
+  let existingLabel: string | undefined;
+  let existingCustom = isCustomEmailTemplateKey(key);
   if (snap.exists) {
     const data = snap.data() as {
       locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>>;
       subject?: string;
       body?: string;
       enabled?: boolean;
+      label?: string;
+      custom?: boolean;
     };
     existingEnabled = data.enabled !== false;
+    existingLabel = data.label?.trim() || undefined;
+    existingCustom = data.custom === true || existingCustom;
     if (data.locales && Object.keys(data.locales).length > 0) {
       existingLocales = { ...data.locales };
     } else if (data.subject && data.body) {
@@ -320,7 +383,30 @@ export async function PUT(request: Request) {
     }
   }
 
+  const label = parsed.data.label?.trim() || existingLabel;
+
   if (parsed.data.reset) {
+    if (isCustomEmailTemplateKey(key)) {
+      const starter = defaultEmailTemplate(key, locale, { label });
+      await ref.set({
+        key,
+        custom: true,
+        label: label ?? starter.label,
+        locales: starter.locales,
+        enabled: existingEnabled,
+        updatedAt: now,
+      });
+      return NextResponse.json({
+        ok: true,
+        template: {
+          ...starter,
+          locale,
+          enabled: existingEnabled,
+          updatedAt: now,
+        },
+        scope: "global",
+      });
+    }
     const nextLocales: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> = {
       ...existingLocales,
     };
@@ -355,7 +441,14 @@ export async function PUT(request: Request) {
   }
   const content = synced.locales[locale];
   await ref.set(
-    { key, locales: synced.locales, enabled: existingEnabled, updatedAt: now },
+    {
+      key,
+      locales: synced.locales,
+      enabled: existingEnabled,
+      updatedAt: now,
+      ...(existingCustom ? { custom: true, label: label ?? key } : {}),
+      ...(label ? { label } : {}),
+    },
     { merge: true },
   );
   return NextResponse.json({
@@ -368,6 +461,7 @@ export async function PUT(request: Request) {
       locales: synced.locales,
       enabled: existingEnabled,
       updatedAt: now,
+      ...(existingCustom ? { custom: true, label: label ?? key } : {}),
     },
     scope: "global",
     translated: true,
@@ -402,7 +496,7 @@ export async function DELETE(request: Request) {
   }
 
   const key = parsed.data.key as EmailTemplateKey;
-  if (!EMAIL_TEMPLATE_KEYS.includes(key)) {
+  if (!isSystemEmailTemplateKey(key) && !isCustomEmailTemplateKey(key)) {
     return NextResponse.json({ ok: false, error: "unknown_key" }, { status: 400 });
   }
 
@@ -411,6 +505,12 @@ export async function DELETE(request: Request) {
   const now = new Date().toISOString();
 
   if (parsed.data.eventId) {
+    if (isCustomEmailTemplateKey(key)) {
+      return NextResponse.json(
+        { ok: false, error: "custom_templates_are_global_only" },
+        { status: 400 },
+      );
+    }
     const eventRef = db.collection(COLLECTIONS.events).doc(parsed.data.eventId);
     const eventSnap = await eventRef.get();
     if (!eventSnap.exists) {
@@ -465,6 +565,19 @@ export async function DELETE(request: Request) {
 
   const ref = db.collection(COLLECTIONS.emailTemplates).doc(key);
   const snap = await ref.get();
+
+  // Custom templates: hard delete the document
+  if (isCustomEmailTemplateKey(key)) {
+    if (snap.exists) await ref.delete();
+    return NextResponse.json({
+      ok: true,
+      deleted: true,
+      key,
+      scope: "global",
+      hardDeleted: true,
+    });
+  }
+
   const enabled = snap.exists
     ? (snap.data() as { enabled?: boolean }).enabled !== false
     : true;

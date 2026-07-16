@@ -20,7 +20,9 @@ export type EmailTemplateKey =
   | "reminder_90m"
   | "satisfaction_survey"
   | "light_signup"
-  | "referral_invite";
+  | "referral_invite"
+  /** Custom admin-created templates: custom_<slug> */
+  | `custom_${string}`;
 
 export type TemplateLocale = "es" | "fr" | "en";
 
@@ -40,6 +42,10 @@ export interface EmailTemplateDoc {
   /** When false, automated / templated sends are skipped. Default true. */
   enabled?: boolean;
   updatedAt?: string;
+  /** Human label for custom templates */
+  label?: string;
+  /** True when created from Admin → Templates (not a system automation key) */
+  custom?: boolean;
 }
 
 export type SatisfactionSurveyAnswers = {

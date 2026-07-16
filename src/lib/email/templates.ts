@@ -14,9 +14,14 @@ import {
   defaultLocaleContent,
   EMAIL_TEMPLATE_KEYS,
   EMAIL_TEMPLATE_LABELS,
+  isCustomEmailTemplateKey,
+  isSystemEmailTemplateKey,
   resolveTemplateLocale,
+  slugToCustomTemplateKey,
+  SYSTEM_EMAIL_TEMPLATE_KEYS,
   TEMPLATE_LOCALE_LABELS,
   TEMPLATE_LOCALES,
+  templateLabel,
 } from "@/lib/email/template-defaults";
 
 export {
@@ -25,9 +30,14 @@ export {
   DEFAULT_SEND_LOCALE,
   EMAIL_TEMPLATE_KEYS,
   EMAIL_TEMPLATE_LABELS,
+  isCustomEmailTemplateKey,
+  isSystemEmailTemplateKey,
   resolveTemplateLocale,
+  slugToCustomTemplateKey,
+  SYSTEM_EMAIL_TEMPLATE_KEYS,
   TEMPLATE_LOCALE_LABELS,
   TEMPLATE_LOCALES,
+  templateLabel,
 };
 
 export type TemplateVars = {
@@ -151,6 +161,7 @@ function normalizeStoredDoc(
     locales?: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>>;
     subject?: string;
     body?: string;
+    label?: string;
   },
 ): Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> {
   if (data.locales && Object.keys(data.locales).length > 0) {
@@ -162,7 +173,7 @@ function normalizeStoredDoc(
       [DEFAULT_SEND_LOCALE]: { subject: data.subject, body: data.body },
     };
   }
-  return defaultEmailTemplate(key).locales ?? {};
+  return defaultEmailTemplate(key, DEFAULT_SEND_LOCALE, { label: data.label }).locales ?? {};
 }
 
 export async function getEmailTemplate(
@@ -171,10 +182,12 @@ export async function getEmailTemplate(
   locale?: TemplateLocale | null,
 ): Promise<EmailTemplateDoc> {
   const lang = resolveTemplateLocale(locale ?? event?.eventLanguage);
+  const custom = isCustomEmailTemplateKey(key);
 
   let enabled = true;
   let storedLocales: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> | null = null;
   let updatedAt: string | undefined;
+  let label: string | undefined;
 
   if (isFirebaseAdminConfigured()) {
     try {
@@ -186,10 +199,16 @@ export async function getEmailTemplate(
           subject?: string;
           body?: string;
           enabled?: boolean;
+          label?: string;
         };
         enabled = data.enabled !== false;
         updatedAt = data.updatedAt;
+        label = data.label?.trim() || undefined;
         storedLocales = normalizeStoredDoc(key, data);
+      } else if (custom) {
+        // Custom key with no Firestore doc yet → starter copy
+        const starter = defaultEmailTemplate(key, lang);
+        return { ...starter, enabled: true };
       }
     } catch {
       /* fall through */
@@ -205,6 +224,11 @@ export async function getEmailTemplate(
     }
   }
 
+  const meta = {
+    ...(custom ? { custom: true as const, label: label ?? templateLabel(key) } : {}),
+    ...(label && !custom ? { label } : {}),
+  };
+
   const override = contentFromStored(eventOverrideRaw, lang);
   if (override) {
     return {
@@ -214,6 +238,7 @@ export async function getEmailTemplate(
       body: override.body,
       enabled,
       updatedAt,
+      ...meta,
     };
   }
 
@@ -228,12 +253,13 @@ export async function getEmailTemplate(
         locales: storedLocales,
         enabled,
         updatedAt,
+        ...meta,
       };
     }
   }
 
-  const fallback = defaultEmailTemplate(key, lang);
-  return { ...fallback, enabled };
+  const fallback = defaultEmailTemplate(key, lang, { label });
+  return { ...fallback, enabled, ...meta };
 }
 
 /** Whether templated email sends for this key should go out. Default: enabled. */
@@ -257,11 +283,33 @@ export async function getEmailTemplateBundle(
   return out;
 }
 
+async function listCustomTemplateKeys(): Promise<EmailTemplateKey[]> {
+  if (!isFirebaseAdminConfigured()) return [];
+  try {
+    const db = getAdminFirestore();
+    const snap = await db.collection(COLLECTIONS.emailTemplates).limit(200).get();
+    const keys: EmailTemplateKey[] = [];
+    for (const doc of snap.docs) {
+      const id = doc.id;
+      if (!isCustomEmailTemplateKey(id)) continue;
+      const data = doc.data() as { custom?: boolean };
+      if (data.custom === false) continue;
+      keys.push(id);
+    }
+    return keys.sort((a, b) => a.localeCompare(b));
+  } catch {
+    return [];
+  }
+}
+
 export async function listEmailTemplates(
   locale: TemplateLocale = DEFAULT_SEND_LOCALE,
 ): Promise<EmailTemplateDoc[]> {
   const out: EmailTemplateDoc[] = [];
-  for (const key of EMAIL_TEMPLATE_KEYS) {
+  for (const key of SYSTEM_EMAIL_TEMPLATE_KEYS) {
+    out.push(await getEmailTemplate(key, null, locale));
+  }
+  for (const key of await listCustomTemplateKeys()) {
     out.push(await getEmailTemplate(key, null, locale));
   }
   return out;

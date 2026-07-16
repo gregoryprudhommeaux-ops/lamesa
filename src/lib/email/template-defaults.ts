@@ -1,7 +1,7 @@
 import type { EmailTemplateDoc, EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
 import { paymentBankBlock, paymentDeadlineBlock } from "@/lib/events/payment-details";
 
-export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
+export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
   "calendar_invite",
   "participation_confirmed",
   "reminder_7d",
@@ -10,14 +10,19 @@ export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [
   "satisfaction_survey",
   "light_signup",
   "referral_invite",
-];
+] as const;
+
+export type SystemEmailTemplateKey = (typeof SYSTEM_EMAIL_TEMPLATE_KEYS)[number];
+
+/** @deprecated Prefer SYSTEM_EMAIL_TEMPLATE_KEYS — kept for existing imports */
+export const EMAIL_TEMPLATE_KEYS: EmailTemplateKey[] = [...SYSTEM_EMAIL_TEMPLATE_KEYS];
 
 export const TEMPLATE_LOCALES: TemplateLocale[] = ["es", "fr", "en"];
 
 /** Default language for email + WhatsApp sends when event has no language. */
 export const DEFAULT_SEND_LOCALE: TemplateLocale = "es";
 
-export const EMAIL_TEMPLATE_LABELS: Record<EmailTemplateKey, string> = {
+export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
   calendar_invite: "Invitation calendrier (ICS + YES/NO)",
   participation_confirmed: "Confirmation après paiement",
   reminder_7d: "Rappel J-7 (legacy email — préférer VALARM ICS)",
@@ -35,9 +40,74 @@ export const TEMPLATE_LOCALE_LABELS: Record<TemplateLocale, string> = {
   en: "English",
 };
 
+export function isSystemEmailTemplateKey(key: string): key is SystemEmailTemplateKey {
+  return (SYSTEM_EMAIL_TEMPLATE_KEYS as readonly string[]).includes(key);
+}
+
+export function isCustomEmailTemplateKey(key: string): key is `custom_${string}` {
+  return /^custom_[a-z0-9]+(?:_[a-z0-9]+)*$/.test(key);
+}
+
+export function slugToCustomTemplateKey(slug: string): `custom_${string}` | null {
+  const normalized = slug
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .replace(/_+/g, "_");
+  if (!normalized || normalized.length < 2 || normalized.length > 48) return null;
+  const key = `custom_${normalized}` as const;
+  return isCustomEmailTemplateKey(key) ? key : null;
+}
+
 type LocalePair = { subject: string; body: string };
 
-const DEFAULTS: Record<EmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
+function customStarterLocales(label: string): Record<TemplateLocale, LocalePair> {
+  const title = label.trim() || "LA MESA";
+  return {
+    es: {
+      subject: `LA MESA — ${title}`,
+      body: [
+        "Hola {{fullName}},",
+        "",
+        "Escribimos desde LA MESA.",
+        "",
+        "(Completa aquí el mensaje.)",
+        "",
+        "Saludos,",
+        "LA MESA",
+      ].join("\n"),
+    },
+    fr: {
+      subject: `LA MESA — ${title}`,
+      body: [
+        "Bonjour {{fullName}},",
+        "",
+        "Un message de LA MESA.",
+        "",
+        "(Complète ici le message.)",
+        "",
+        "À bientôt,",
+        "LA MESA",
+      ].join("\n"),
+    },
+    en: {
+      subject: `LA MESA — ${title}`,
+      body: [
+        "Hi {{fullName}},",
+        "",
+        "A note from LA MESA.",
+        "",
+        "(Add your message here.)",
+        "",
+        "Best,",
+        "LA MESA",
+      ].join("\n"),
+    },
+  };
+}
+
+const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair>> = {
   calendar_invite: {
     es: {
       subject: "Invitación LA MESA — {{eventTitle}}",
@@ -480,10 +550,37 @@ export function resolveTemplateLocale(raw?: string | null): TemplateLocale {
   return DEFAULT_SEND_LOCALE;
 }
 
+export function templateLabel(key: EmailTemplateKey, storedLabel?: string | null): string {
+  if (storedLabel?.trim()) return storedLabel.trim();
+  if (isSystemEmailTemplateKey(key)) return EMAIL_TEMPLATE_LABELS[key];
+  if (isCustomEmailTemplateKey(key)) {
+    return key.replace(/^custom_/, "").replace(/_/g, " ");
+  }
+  return key;
+}
+
 export function defaultEmailTemplate(
   key: EmailTemplateKey,
   locale: TemplateLocale = DEFAULT_SEND_LOCALE,
+  opts?: { label?: string },
 ): EmailTemplateDoc {
+  if (isCustomEmailTemplateKey(key)) {
+    const locales = customStarterLocales(opts?.label ?? templateLabel(key));
+    const pair = locales[locale] ?? locales[DEFAULT_SEND_LOCALE];
+    return {
+      key,
+      locale,
+      subject: pair.subject,
+      body: pair.body,
+      locales,
+      enabled: true,
+      custom: true,
+      label: opts?.label?.trim() || templateLabel(key),
+    };
+  }
+  if (!isSystemEmailTemplateKey(key)) {
+    throw new Error(`unknown_template_key:${key}`);
+  }
   const locales = DEFAULTS[key];
   const pair = locales[locale] ?? locales[DEFAULT_SEND_LOCALE];
   return {
@@ -499,6 +596,14 @@ export function defaultEmailTemplate(
 export function defaultLocaleContent(
   key: EmailTemplateKey,
   locale: TemplateLocale,
+  opts?: { label?: string },
 ): LocalePair {
+  if (isCustomEmailTemplateKey(key)) {
+    const locales = customStarterLocales(opts?.label ?? templateLabel(key));
+    return locales[locale] ?? locales[DEFAULT_SEND_LOCALE];
+  }
+  if (!isSystemEmailTemplateKey(key)) {
+    throw new Error(`unknown_template_key:${key}`);
+  }
   return DEFAULTS[key][locale] ?? DEFAULTS[key][DEFAULT_SEND_LOCALE];
 }

@@ -8,6 +8,7 @@ import {
   isEmailTemplateEnabled,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
+import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
@@ -54,10 +55,6 @@ export function inviteBodyToHtml(
     );
 
   return html;
-}
-
-function textToHtml(text: string): string {
-  return escapeHtml(text).replace(/\n/g, "<br/>");
 }
 
 export async function sendCalendarInviteEmail(input: {
@@ -160,7 +157,7 @@ export async function sendTemplatedEventEmail(input: {
   });
   const subject = applyTemplateVars(template.subject, vars);
   const bodyText = applyTemplateVars(template.body, vars);
-  const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;line-height:1.5">${textToHtml(bodyText)}</body></html>`;
+  const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
 
   return sendTransactionalEmail({
     to: input.participation.email,

@@ -292,6 +292,9 @@ export function AdminDashboardPanel() {
           <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
             Rafraîchir
           </button>
+          <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
+            Templates email
+          </Link>
           <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
             Nouvel événement
           </Link>
