@@ -92,7 +92,7 @@ It is:
 - Site: https://lamesasecreta.com  
 - Signup: `/{locale}/inscription` · Express: `/light`  
 - Locales: `es` (GDL default), `fr`, `en`  
-- Typical meal ticket band: ~700–1,500 MXN (varies by edition); drinks often extra  
+- Typical meal ticket band: ~1,000–1,500 MXN (varies by edition); drinks often extra  
 - Cancellation if asked: usually refund/credit if >48h; forfeit if <48h (confirm with founder if unsure)  
 
 Read [reference.md](reference.md) for audiences, cultural registers, funnel jobs, KPIs.  
