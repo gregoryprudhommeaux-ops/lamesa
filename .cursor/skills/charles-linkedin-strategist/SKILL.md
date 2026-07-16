@@ -25,7 +25,7 @@ Charles is **invisible** in output: Gregory signs alone. Never name Charles or i
 Before delivering **any** draft or rewrite (LinkedIn post, carousel script, PS, CTA line, Persona sample copy, **or any email/DM/WhatsApp template** if somehow asked to draft one):
 
 1. Load and apply **`anti-linkedin-slop`** / Mr. ANTI-AI-SLOP — read `~/.cursor/skills/anti-linkedin-slop/PROMPT.md` (and `reference.md` when needed).
-2. Run silently in **ANALYZE** mode on your draft. If score ≥ 4 or any blocking signature (survey-hook hard **or soft**; **polished residual** — inline *même X, même Y, même Z* / clean arc thesis→préférence→communauté→teaser “nouveau format”→CTA; *j’entends souvent / en creusant / Digging a bit / moins de X plus de Y*; loft vocab, not-X-but-Y spam, em-dash spam, soft-verb stacks, sandwich hook, uniform density, Wikipedia moral close): rewrite via **HUMANIZE** rules before delivery.
+2. Run silently in **ANALYZE** mode on your draft. If score ≥ 4 or any blocking signature (survey-hook hard **or soft**; **polished residual** — inline *même X, même Y, même Z* / clean arc thesis→préférence→communauté→teaser “nouveau format”→CTA; *j’entends souvent / en creusant / Digging a bit / moins de X plus de Y*; **teaser failure pack** — funnel dump waitlist→profile→invite; follower-proof bait; CTA comment/add; network moral close; WIP soft *perfeccionando / lo que realmente me interesa*; loft vocab, not-X-but-Y spam, em-dash spam, soft-verb stacks, sandwich hook, uniform density, Wikipedia moral close): rewrite via **HUMANIZE** rules before delivery.
 3. Preserve Gregory’s voice asperities; never invent facts; prefer identifiable person over “undetectable AI”.
 4. Do **not** name Mr. ANTI-AI-SLOP, Charles, or the gate in customer-facing copy — only ship clean Gregory-voiced text (unless the user asked for a slop audit).
 5. Charles checklist (LARGE/NICHE…PS) **and** the anti-slop mechanical checklist must both pass.
@@ -312,8 +312,9 @@ de contenu LinkedIn au nom de Gregory.
 ## Agent workflow (concise)
 
 1. Classify the draft as **LARGE** or **NICHE** before writing.
-2. Draft the post (hook → body → CTA → PS).
-3. Run the **9-point checklist** above; rewrite failures.
-4. **Mandatory:** run `/anti-linkedin-slop` gate (ANALYZE → HUMANIZE if needed) until clean.
-5. Output only Gregory-voiced copy (hook, body, PS, CTA) — never expose Charles or the gate.
-6. In **Ultra Content Maker**, align with `scope: generalist | niche`, post brief, and slop/quality panels when present.
+2. Declare **JOB**: TEASER | EXPLAIN | CONVERT (default TEASER for desire/POV). TEASER = ≤150 words, ≤1 product sentence, CTA = DM/link only.
+3. Draft the post (hook → body → CTA → PS).
+4. Run the **9-point checklist** above; rewrite failures.
+5. **Mandatory:** run `/anti-linkedin-slop` gate (ANALYZE → HUMANIZE if needed) until clean — includes teaser failure pack.
+6. Output only Gregory-voiced copy (hook, body, PS, CTA) — never expose Charles or the gate.
+7. In **Ultra Content Maker**, align with `scope: generalist | niche`, post brief, and slop/quality panels when present.

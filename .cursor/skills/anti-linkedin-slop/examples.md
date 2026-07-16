@@ -83,3 +83,41 @@ Do **not** invent facts when transforming — only reshape what exists.
 > Tener contactos no es tener pipeline.
 >
 > Si nadie comparte el mismo problema de decisión, acumulas cafés, no cierres. En la práctica, un círculo chico y calificado le gana a una lista larga. Coordina una reunión y trabaja desde la computadora con criterios claros, no con wishful thinking.
+
+## ES (MX) — teaser failure pack (funnel dump + bait + moral)
+
+**Antes (slop · job TEASER mal écrit comme EXPLAIN) :**
+> Una mesa vale más que un congreso porque selecciona…
+>
+> Actualmente estoy perfeccionando un formato: lista de espera, perfil detallado, invitación personalizada y plaza reservada…
+>
+> Una buena red no se mide por la cantidad de contactos, sino por la calidad de las oportunidades.
+>
+> Déjame un comentario y agrégame; te enviaré el enlace. Los que me siguen pueden dar fe de ello.
+
+**Después (TEASER) :**
+> Una mesa de doce puede valer más que un congreso. No por juntar gente: por seleccionar.
+>
+> En Guadalajara veo mucho “networking” que es cóctel: volumen, tarjetas, poco filtro. Si eliges bien quién se sienta, la conversación avanza más rápido.
+>
+> Estoy armando algo simple. Cambia el tema, cambian los perfiles. Sin selección, no hay mesa.
+>
+> Si te interesa, mándame DM y te paso el link.
+
+## Persona paste — Gregory LinkedIn (UCM / Charles)
+
+```
+CHANNEL_OWNER: gregory (Charles — never Lucy for personal LinkedIn)
+JOB: TEASER | EXPLAIN | CONVERT  (declare one; default TEASER for desire posts)
+
+TEASER rules (non-negotiable):
+- Max ~120–150 words
+- ≤1 product sentence (no full funnel waitlist→profile→invite→seat)
+- CTA = DM or link only — ban "comenta y agrégame" / "like if" / follower-vouch
+- Ban network moral closes ("una buena red no se mide…")
+- Ban WIP soft spine ("estoy perfeccionando" / "lo que realmente me interesa")
+- Prefer sharp: "estoy armando" / concrete constraint
+- ≤2 hashtags
+- After draft: anti-linkedin-slop ANALYZE → HUMANIZE if score ≥ 4 or any blocking flag
+- Output language: match brief (ES-MX for GDL audience)
+```

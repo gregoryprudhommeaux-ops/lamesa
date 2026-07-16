@@ -1,5 +1,13 @@
 # Changelog · /anti-linkedin-slop · Mr. ANTI-AI-SLOP
 
+## 2026-07-15 (m) — Teaser failure pack (LA MESA / founder LinkedIn)
+
+From live Lucy critique of a UCM teaser that over-explained product:
+- Ban **funnel dump** in TEASER jobs (waitlist→profile→invite→seat)
+- Ban **follower-proof bait**, **CTA comment/add**, **network moral close**, **WIP soft** (*perfeccionando* / *lo que realmente me interesa*)
+- Job taxonomy TEASER | EXPLAIN | CONVERT (max length + CTA rules)
+- UCM: `slop-detector` + `anti-linkedin-slop` prompts + banned phrases; Charles/Lucy gate lists; Persona paste block in `examples.md`
+
 ## 2026-07-15 (l) — Steven 1.3.2 + Charles/Lucy sync (polished residual)
 
 - NextStep Idea OS Steven prompt bumped `1.3.1` → `1.3.2` with polished residual bans + (k) alignment note.

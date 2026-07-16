@@ -71,6 +71,23 @@ When hard/soft survey-hooks are gone, models still leave a **cleaner** cousin:
 2. **Clean framework arc**: thèse → préférence → analogie communauté → teaser “nouveau format / je réfléchis à lancer…” → CTA soft. Even paragraph lengths end-to-end. Break with uneven depth, one doubt/friction, and zero bolt-on product tease unless the brief asks for it.
 3. **Uniform polish**: sober lexicon + hedges (*Franchement…*) but no asperity or disagreesable edge → still rewrite for identifiable voice.
 
+### Teaser failure pack (LA MESA / founder LinkedIn · 2026-07-15 m)
+
+When the brief is a **TEASER** (desire / POV), not an EXPLAIN, ban these as blocking:
+
+1. **Funnel dump** — teaching the full product path in-post: waitlist → profile → invitation → seat/payment (FR/EN/ES). Max **one** product sentence in a teaser.
+2. **Follower-proof bait** — *los que me siguen pueden dar fe* / *those who follow me can vouch* / *ceux qui me suivent peuvent témoigner* (vague social proof).
+3. **CTA LinkedIn bait** — *comenta y agrégame* / *comment and connect* / *like if* / *déjame un comentario* as conversion (use DM / link instead).
+4. **Network moral close** — *una buena red no se mide por…* / *a good network isn’t measured by…* / *un bon réseau ne se mesure pas par…* (Wikipedia packaging).
+5. **WIP soft stack** — *estoy perfeccionando* / *I’m refining a format* / *je perfectionne* / *lo que realmente me interesa* as the spine (use sharp verbs: *estoy armando / I’m building / j’installe*).
+
+**Job taxonomy (generation must declare one):**
+| Job | Max length | Allowed product | CTA |
+|-----|------------|-----------------|-----|
+| TEASER | ~120–150 words | ≤1 sentence | DM or link |
+| EXPLAIN | longer OK | funnel OK | soft |
+| CONVERT | short | seat/invite clear | DM / link, never comment-bait |
+
 ## F. Fake scenes
 
 - *Ce matin / Dimanche soir / Un client m’a appelé en panique*
@@ -139,9 +156,9 @@ Blacklist when a concrete verb exists:
 
 | Soft (ban/prefer replace) | Sharp direction |
 |---------------------------|-----------------|
-| FR *permettre, favoriser, contribuer à, offrir, garantir, assurer* | *bloque, casse, ralentit, pousse, évite, force, casse le rythme* |
-| EN *enable, foster, facilitate, provide, ensure, allow, help* (vague) | *blocks, breaks, slows, pushes, avoids, forces* |
-| ES *permitir, fomentar, contribuir, ofrecer, garantizar, asegurar* (vago) | *bloquea, frena, empuja, evita, obliga* |
+| FR *permettre, favoriser, contribuer à, offrir, garantir, assurer, perfectionner (WIP)* | *bloque, casse, ralentit, pousse, évite, force* · *j’installe / je construis* |
+| EN *enable, foster, facilitate, provide, ensure, allow, help* (vague), *perfecting / refining a format* | *blocks, breaks, slows, pushes* · *I’m building / I’m installing* |
+| ES *permitir, fomentar, contribuir, ofrecer, garantizar, asegurar* (vago), *perfeccionando*, *lo que realmente me interesa* | *bloquea, frena, empuja* · *estoy armando* |
 
 ## M. Overly clean / academic diction
 

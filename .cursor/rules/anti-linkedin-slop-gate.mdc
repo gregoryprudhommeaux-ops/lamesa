@@ -8,7 +8,7 @@ alwaysApply: true
 When using **charles-linkedin-strategist** or **lucy-community-marketing**, or drafting LinkedIn/email/WhatsApp/marketing copy:
 
 1. Before delivery, run skill **anti-linkedin-slop** (Mr. ANTI-AI-SLOP) in ANALYZE mode on the draft.
-2. If slop is detected — including **soft** survey-hook and **polished residual** (*même X, même Y, même Z* inline, clean arc + “je réfléchis à lancer un format”, *j’entends souvent*, *en creusant*, *moins de X plus de Y*) — HUMANIZE, then deliver only the clean copy.
+2. If slop is detected — including **soft** survey-hook and **polished residual** (*même X, même Y, même Z* inline, clean arc + “je réfléchis à lancer un format”, *j’entends souvent*, *en creusant*, *moins de X plus de Y*) **and teaser failure pack** (funnel dump, follower-proof bait, CTA comment/add, network moral close, WIP soft) — HUMANIZE, then deliver only the clean copy.
 3. Never name internal personas in customer-facing output.
 4. Personal skill source of truth: `~/.cursor/skills/anti-linkedin-slop/PROMPT.md`.
 5. Prefer **Lucy** for LA MESA member templates; **Charles** for Gregory/NextStep LinkedIn — both still require the gate.
