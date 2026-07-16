@@ -169,6 +169,7 @@ export async function POST(request: Request) {
     linkedinUrl: "—",
     locale: record.locale,
     invitationMotivation: "Inscription express (/light) — profil à compléter",
+    variant: "express",
     ...(referredByCode ? { referredByCode } : {}),
   });
   if (!adminMail.ok) {

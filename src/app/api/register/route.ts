@@ -166,6 +166,7 @@ export async function POST(request: Request) {
     linkedinUrl: record.linkedinUrl,
     locale: record.locale,
     invitationMotivation: record.invitationMotivation,
+    variant: "full",
     ...(referredByCode ? { referredByCode } : {}),
   });
   if (!adminMail.ok) {

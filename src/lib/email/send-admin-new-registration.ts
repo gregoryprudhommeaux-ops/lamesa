@@ -1,5 +1,7 @@
-import { configuredAdminEmails } from "@/lib/auth/platform-admin";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
+
+/** Inbox for every new waitlist signup (full + express). */
+export const NEW_REGISTRATION_TO = "greg@nextstep-services.com";
 
 function escapeHtml(value: string): string {
   return value
@@ -27,14 +29,21 @@ export type AdminNewRegistrationInput = {
   linkedinUrl: string;
   locale: string;
   invitationMotivation: string;
+  /** Express (/light) vs full registration form */
+  variant?: "express" | "full";
   referralCode?: string;
   referredByCode?: string;
 };
 
 function buildContent(input: AdminNewRegistrationInput): { subject: string; html: string; text: string } {
-  const subject = `[LA MESA] Nouvel inscrit — ${input.fullName.trim()}`;
+  const isExpress = input.variant === "express";
+  const kindLabel = isExpress ? "Express" : "Complet";
+  const subject = isExpress
+    ? `[LA MESA] Nouvel inscrit (express) — ${input.fullName.trim()}`
+    : `[LA MESA] Nouvel inscrit — ${input.fullName.trim()}`;
 
   const rows: string[] = [
+    fieldRow("Type", kindLabel),
     fieldRow("Nom", input.fullName),
     fieldRow("Email", input.email),
     fieldRow("Entreprise", input.company),
@@ -62,7 +71,7 @@ function buildContent(input: AdminNewRegistrationInput): { subject: string; html
       <td align="center">
         <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
-          <tr><td style="padding-top:16px;font-size:18px;font-weight:700;color:#111;">Nouvelle inscription waitlist</td></tr>
+          <tr><td style="padding-top:16px;font-size:18px;font-weight:700;color:#111;">Nouvelle inscription — ${escapeHtml(kindLabel)}</td></tr>
           <tr><td style="padding-top:8px;font-size:14px;color:#555;">Un nouveau profil vient d'être enregistré.</td></tr>
           <tr>
             <td style="padding-top:20px;">
@@ -79,8 +88,9 @@ function buildContent(input: AdminNewRegistrationInput): { subject: string; html
 </html>`;
 
   const textLines = [
-    "Nouvelle inscription waitlist — LA MESA",
+    `Nouvelle inscription (${kindLabel}) — LA MESA`,
     "",
+    `Type: ${kindLabel}`,
     `Nom: ${input.fullName}`,
     `Email: ${input.email}`,
     `Entreprise: ${input.company}`,
@@ -106,15 +116,10 @@ function buildContent(input: AdminNewRegistrationInput): { subject: string; html
 export async function sendAdminNewRegistrationEmail(
   input: AdminNewRegistrationInput,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const recipients = [...configuredAdminEmails()];
-  if (recipients.length === 0) {
-    return { ok: false, error: "no_recipients" };
-  }
-
   const { subject, html, text } = buildContent(input);
 
   return sendTransactionalEmail({
-    to: recipients,
+    to: [NEW_REGISTRATION_TO],
     subject,
     html,
     text,
