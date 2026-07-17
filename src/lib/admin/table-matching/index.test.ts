@@ -26,6 +26,9 @@ const member = (
 });
 
 function configureEnv() {
+  vi.stubEnv("PERPLEXITY_API_KEY", "");
+  vi.stubEnv("PERPLEXITY_MODEL", "");
+  vi.stubEnv("PERPLEXITY_BASE_URL", "");
   vi.stubEnv("OPENAI_API_KEY", "test-key");
   vi.stubEnv("OPENAI_TABLE_MODEL", "test-model");
   vi.stubEnv("OPENAI_BASE_URL", "https://api.openai.com/v1");
@@ -292,6 +295,7 @@ describe("composeTableIdeas", () => {
   });
 
   it("falls back to a deterministic composition when AI is not configured", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_TABLE_MODEL", "");

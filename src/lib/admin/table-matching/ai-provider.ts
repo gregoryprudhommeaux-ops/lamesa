@@ -17,6 +17,17 @@ type AiTableIdea = AiTableIdeas["ideas"][number];
 type ProviderConfig = { apiKey: string; baseUrl: string; model: string };
 
 function resolveProviderConfig(): ProviderConfig | null {
+  const perplexityKey = process.env.PERPLEXITY_API_KEY?.trim() || "";
+  if (perplexityKey) {
+    return {
+      apiKey: perplexityKey,
+      baseUrl: (
+        process.env.PERPLEXITY_BASE_URL?.trim() || "https://api.perplexity.ai"
+      ).replace(/\/$/, ""),
+      model: process.env.PERPLEXITY_MODEL?.trim() || "sonar-pro",
+    };
+  }
+
   const apiKey =
     process.env.OPENAI_API_KEY?.trim() || process.env.AI_GATEWAY_API_KEY?.trim() || "";
   if (!apiKey) return null;

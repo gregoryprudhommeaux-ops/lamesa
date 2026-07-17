@@ -46,6 +46,9 @@ function chatCompletion(content: string) {
 }
 
 function configureEnv() {
+  vi.stubEnv("PERPLEXITY_API_KEY", "");
+  vi.stubEnv("PERPLEXITY_MODEL", "");
+  vi.stubEnv("PERPLEXITY_BASE_URL", "");
   vi.stubEnv("OPENAI_API_KEY", "test-key");
   vi.stubEnv("OPENAI_TABLE_MODEL", "test-model");
   vi.stubEnv("OPENAI_BASE_URL", "https://api.openai.com/v1");
@@ -60,7 +63,37 @@ afterEach(() => {
 });
 
 describe("generateTableIdeas", () => {
+  it("uses Perplexity when PERPLEXITY_API_KEY is set", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "pplx-test");
+    vi.stubEnv("PERPLEXITY_MODEL", "");
+    vi.stubEnv("PERPLEXITY_BASE_URL", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+
+    let requestedUrl = "";
+    let requestedModel = "";
+    let authHeader = "";
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      requestedUrl = String(url);
+      const body = JSON.parse(String(init?.body ?? "{}")) as { model?: string };
+      requestedModel = body.model ?? "";
+      authHeader = String((init?.headers as Record<string, string>)?.Authorization ?? "");
+      return chatCompletion(JSON.stringify({ ideas: [validIdea()] }));
+    });
+
+    await generateTableIdeas({
+      mode: "spontaneous",
+      candidates: [card()],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(requestedUrl).toBe("https://api.perplexity.ai/chat/completions");
+    expect(requestedModel).toBe("sonar-pro");
+    expect(authHeader).toBe("Bearer pplx-test");
+  });
+
   it("uses a default model when only an API key is configured", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "test-key");
     vi.stubEnv("OPENAI_TABLE_MODEL", "");
     vi.stubEnv("AI_GATEWAY_MODEL", "");
@@ -89,6 +122,7 @@ describe("generateTableIdeas", () => {
   });
 
   it("throws ai_not_configured when no AI key exists", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     vi.stubEnv("OPENAI_TABLE_MODEL", "");
