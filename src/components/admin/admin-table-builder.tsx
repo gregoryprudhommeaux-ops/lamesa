@@ -24,7 +24,7 @@ const CITIES = ["Guadalajara", "Ciudad de México", "Monterrey", "Puebla"] as co
 const GENERATE_ERROR_LABELS_FR: Record<TableIdeasErrorCode | "generate_failed", string> = {
   validation: "Paramètres invalides. Vérifie la ville et le thème.",
   pool_too_small: "Pas assez de profils éligibles pour composer une table.",
-  ai_not_configured: "La génération par IA n'est pas configurée.",
+  ai_not_configured: "IA absente — composition déterministe utilisée.",
   ai_invalid: "Réponse IA invalide. Réessaie.",
   fetch_failed: "Échec du chargement des données.",
   generate_failed: "Échec de la génération des idées.",

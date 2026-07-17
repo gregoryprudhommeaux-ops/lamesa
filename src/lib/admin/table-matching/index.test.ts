@@ -290,4 +290,38 @@ describe("composeTableIdeas", () => {
     const financeCount = ideas[0].primary.filter((s) => s.sector === "Finance").length;
     expect(financeCount).toBeLessThanOrEqual(5); // 4 AI seed + at most soft-capped extras
   });
+
+  it("falls back to a deterministic composition when AI is not configured", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    vi.stubEnv("OPENAI_TABLE_MODEL", "");
+    vi.stubEnv("AI_GATEWAY_MODEL", "");
+    vi.stubEnv("OPENAI_TRANSLATE_MODEL", "");
+
+    const members = Array.from({ length: 20 }, (_, index) =>
+      member({
+        id: `m-${index + 1}`,
+        email: `m${index + 1}@example.com`,
+        company: `Company ${index + 1}`,
+        sector: index % 2 === 0 ? "tech" : "finance",
+      }),
+    );
+
+    const fetchImpl = vi.fn();
+    const { ideas, poolSize } = await composeTableIdeas({
+      mode: "spontaneous",
+      members,
+      participations: [],
+      events: [],
+      city: "Mexico City",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(poolSize).toBe(20);
+    expect(ideas).toHaveLength(1);
+    expect(ideas[0].primary).toHaveLength(15);
+    expect(ideas[0].alternates).toHaveLength(5);
+    expect(ideas[0].warnings.some((w) => /IA non configurée|déterministe/i.test(w))).toBe(true);
+  });
 });

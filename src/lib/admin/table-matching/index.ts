@@ -2,7 +2,7 @@ import type { AdminEvent, AdminEventParticipation, WaitlistRegistration } from "
 import { generateTableIdeas } from "./ai-provider";
 import { buildEligiblePool } from "./pool";
 import { TableIdeasError } from "./schemas";
-import { fillBalancedSeatsAroundSeed, rankCandidates } from "./score";
+import { fillBalancedSeatsAroundSeed, rankCandidates, selectBalancedTable } from "./score";
 import type { AiCandidateCard, TableCandidate, TableIdeaMode } from "./types";
 
 export { TableIdeasError } from "./schemas";
@@ -68,6 +68,68 @@ function mergeWarnings(...groups: string[][]): string[] {
     }
   }
   return merged;
+}
+
+function topLabels(
+  candidates: TableCandidate[],
+  field: "sector" | "position" | "company",
+  limit = 3,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const candidate of candidates) {
+    const value = candidate[field]?.trim();
+    if (!value) continue;
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([value]) => value);
+}
+
+function buildDeterministicIdea(input: {
+  mode: TableIdeaMode;
+  theme?: string;
+  city: string;
+  ranked: ReturnType<typeof rankCandidates>;
+}): RawIdea {
+  const selected = selectBalancedTable(input.ranked, {
+    primarySize: PRIMARY_SEATS,
+    alternateSize: ALTERNATE_SEATS,
+  });
+  const sectors = topLabels(selected.primary, "sector");
+  const positions = topLabels(selected.primary, "position");
+  const theme =
+    input.mode === "admin_theme" && input.theme?.trim()
+      ? input.theme.trim()
+      : sectors.length > 0
+        ? `Table ${sectors.slice(0, 2).join(" × ")} — ${input.city}`
+        : `Table ${input.city}`;
+
+  return {
+    title: theme.slice(0, 120),
+    themeAngle:
+      input.mode === "admin_theme" && input.theme?.trim()
+        ? `Composition autour du thème « ${input.theme.trim()} ».`
+        : `Composition déterministe pour ${input.city}.`,
+    rationale:
+      "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil). Active une clé OpenAI/AI Gateway pour des thèmes et explications plus riches.",
+    commonalities: [
+      ...(sectors.length ? [`Secteurs représentés : ${sectors.join(", ")}`] : []),
+      ...(positions.length ? [`Postes : ${positions.join(", ")}`] : []),
+      `Ville : ${input.city}`,
+    ],
+    complementarities: [
+      "Mix de profils pour éviter une table mono-secteur",
+      "Priorité aux membres non invités à la table précédente",
+    ],
+    warnings: [
+      "Composition déterministe — IA non configurée.",
+      ...selected.warnings,
+    ],
+    primaryMemberIds: selected.primary.map((c) => c.id),
+    alternateMemberIds: selected.alternates.map((c) => c.id),
+  };
 }
 
 function reconcileWithPool(
@@ -139,14 +201,30 @@ export async function composeTableIdeas(input: {
     .map((c) => aiCardsById.get(c.id))
     .filter((aiCard): aiCard is AiCandidateCard => Boolean(aiCard));
 
-  const aiResult = await generateTableIdeas({
-    mode: input.mode,
-    theme: input.theme,
-    candidates: cappedCards,
-    fetchImpl: input.fetchImpl,
-  });
+  let rawIdeas: RawIdea[];
+  try {
+    const aiResult = await generateTableIdeas({
+      mode: input.mode,
+      theme: input.theme,
+      candidates: cappedCards,
+      fetchImpl: input.fetchImpl,
+    });
+    rawIdeas = aiResult.ideas;
+  } catch (error) {
+    if (!(error instanceof TableIdeasError) || error.code !== "ai_not_configured") {
+      throw error;
+    }
+    rawIdeas = [
+      buildDeterministicIdea({
+        mode: input.mode,
+        theme: input.theme,
+        city: input.city,
+        ranked,
+      }),
+    ];
+  }
 
-  const ideas = aiResult.ideas.map((idea) => reconcileWithPool(idea, ranked, candidatesById));
+  const ideas = rawIdeas.map((idea) => reconcileWithPool(idea, ranked, candidatesById));
 
   return { ideas, poolSize: pool.candidates.length };
 }

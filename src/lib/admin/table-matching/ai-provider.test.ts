@@ -60,6 +60,34 @@ afterEach(() => {
 });
 
 describe("generateTableIdeas", () => {
+  it("uses a default model when only an API key is configured", async () => {
+    vi.stubEnv("OPENAI_API_KEY", "test-key");
+    vi.stubEnv("OPENAI_TABLE_MODEL", "");
+    vi.stubEnv("AI_GATEWAY_MODEL", "");
+    vi.stubEnv("OPENAI_TRANSLATE_MODEL", "");
+
+    let requestedModel = "";
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body ?? "{}")) as { model?: string };
+      requestedModel = body.model ?? "";
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          choices: [{ message: { content: JSON.stringify({ ideas: [validIdea()] }) } }],
+        }),
+      };
+    });
+
+    await generateTableIdeas({
+      mode: "spontaneous",
+      candidates: [card()],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(requestedModel).toBe("gpt-4o-mini");
+  });
+
   it("throws ai_not_configured when no AI key exists", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");

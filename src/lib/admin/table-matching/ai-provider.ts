@@ -19,12 +19,13 @@ type ProviderConfig = { apiKey: string; baseUrl: string; model: string };
 function resolveProviderConfig(): ProviderConfig | null {
   const apiKey =
     process.env.OPENAI_API_KEY?.trim() || process.env.AI_GATEWAY_API_KEY?.trim() || "";
+  if (!apiKey) return null;
+
   const model =
     process.env.OPENAI_TABLE_MODEL?.trim() ||
     process.env.AI_GATEWAY_MODEL?.trim() ||
     process.env.OPENAI_TRANSLATE_MODEL?.trim() ||
-    "";
-  if (!apiKey || !model) return null;
+    "gpt-4o-mini";
 
   const baseUrl = (
     process.env.OPENAI_BASE_URL?.trim() ||
@@ -33,6 +34,10 @@ function resolveProviderConfig(): ProviderConfig | null {
   ).replace(/\/$/, "");
 
   return { apiKey, baseUrl, model };
+}
+
+export function isTableAiConfigured(): boolean {
+  return resolveProviderConfig() !== null;
 }
 
 function buildUserPrompt(input: {
