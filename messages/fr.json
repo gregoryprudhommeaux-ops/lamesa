@@ -165,7 +165,9 @@
       "phoneCountryAria": "Indicatif pays",
       "phoneIncomplete": "Numéro incomplet — vérifie l'indicatif et le numéro local.",
       "invitationMotivation": "Pourquoi LA MESA t’intéresse ?",
-      "invitationMotivationPlaceholder": "En quelques phrases — ce qui t’attire ici."
+      "invitationMotivationPlaceholder": "En quelques phrases — ce qui t’attire ici.",
+      "canBring": "Que peux-tu apporter à la table ?",
+      "isSeeking": "Que recherches-tu à LA MESA ?"
     },
     "sectors": {
       "tech": "Tech & digital",
@@ -418,7 +420,9 @@
       "city": "Ville",
       "phone": "Téléphone",
       "extraActivities": "Intérêts extra-pro",
-      "invitationMotivation": "Motivation"
+      "invitationMotivation": "Motivation",
+      "canBring": "Que peux-tu apporter ?",
+      "isSeeking": "Que recherches-tu ?"
     },
     "status": {
       "invited": "Invité",

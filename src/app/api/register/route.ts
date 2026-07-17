@@ -70,6 +70,8 @@ export async function POST(request: Request) {
     city: data.city,
     phone: data.phone,
     invitationMotivation: data.invitationMotivation,
+    canBring: data.canBring,
+    isSeeking: data.isSeeking,
     locale: data.locale,
     source: "la-mesa-registration",
     tags: ["la-mesa", "waitlist", "guadalajara"],

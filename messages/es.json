@@ -165,7 +165,9 @@
       "phoneCountryAria": "Código de país",
       "phoneIncomplete": "Número incompleto: revisa el código de país y el número local.",
       "invitationMotivation": "¿Por qué te interesa LA MESA?",
-      "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de esto."
+      "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de esto.",
+      "canBring": "¿Qué puedes aportar a la mesa?",
+      "isSeeking": "¿Qué buscas en LA MESA?"
     },
     "sectors": {
       "tech": "Tech y digital",
@@ -418,7 +420,9 @@
       "city": "Ciudad",
       "phone": "Teléfono",
       "extraActivities": "Intereses personales",
-      "invitationMotivation": "Motivación"
+      "invitationMotivation": "Motivación",
+      "canBring": "¿Qué puedes aportar?",
+      "isSeeking": "¿Qué buscas?"
     },
     "status": {
       "invited": "Invitado",

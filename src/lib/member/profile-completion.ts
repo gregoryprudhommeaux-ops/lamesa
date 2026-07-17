@@ -10,6 +10,8 @@ export const PROFILE_COMPLETION_FIELDS = [
   "linkedinUrl",
   "invitationMotivation",
   "extraActivities",
+  "canBring",
+  "isSeeking",
 ] as const;
 
 export type ProfileCompletionField = (typeof PROFILE_COMPLETION_FIELDS)[number];
@@ -26,6 +28,8 @@ export const PROFILE_COMPLETION_FIELD_LABELS_FR: Record<ProfileCompletionField, 
   linkedinUrl: "LinkedIn",
   invitationMotivation: "motivation",
   extraActivities: "activités",
+  canBring: "ce qu’il peut apporter",
+  isSeeking: "ce qu’il recherche",
 };
 
 export type ProfileCompletionInput = {
@@ -39,6 +43,8 @@ export type ProfileCompletionInput = {
   linkedinUrl?: string | null;
   invitationMotivation?: string | null;
   extraActivities?: string[] | null;
+  canBring?: string | null;
+  isSeeking?: string | null;
   source?: string | null;
   profileComplete?: boolean | null;
 };

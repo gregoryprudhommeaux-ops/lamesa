@@ -69,6 +69,8 @@ export interface AdminEvent {
   /** Restaurant / venue name */
   venueName?: string;
   address?: string;
+  /** Optional city signal used for city-specific event history. */
+  city?: string;
   registrationFormUrl?: string;
   flyerUrl?: string;
   startsAt: string;
@@ -161,6 +163,8 @@ export interface WaitlistRegistration {
   city: string;
   phone: string;
   invitationMotivation: string;
+  canBring?: string;
+  isSeeking?: string;
   locale: string;
   source: string;
   tags: string[];
@@ -188,4 +192,35 @@ export interface DatabasePersoContact {
   emails: string[];
   phones: string[];
   tags: string[];
+}
+
+export type TableDraftStatus = "draft" | "used" | "archived";
+
+export interface TableDraftMemberSnapshot {
+  id: string;
+  fullName: string;
+  email: string;
+  company: string;
+  sector: string;
+  position: string;
+  city: string;
+}
+
+export interface TableDraft {
+  id: string;
+  title: string;
+  city: string;
+  themeAngle: string;
+  rationale: string;
+  commonalities: string[];
+  complementarities: string[];
+  warnings: string[];
+  primary: TableDraftMemberSnapshot[];
+  alternates: TableDraftMemberSnapshot[];
+  status: TableDraftStatus;
+  linkedEventId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  createdByUid: string;
+  createdByEmail: string;
 }

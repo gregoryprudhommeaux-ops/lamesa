@@ -26,6 +26,8 @@ const profilePatchSchema = z.object({
   city: z.string().trim().max(80).optional(),
   phone: z.string().trim().min(8).max(40).optional(),
   invitationMotivation: z.string().trim().max(2000).optional(),
+  canBring: z.string().trim().max(280).optional(),
+  isSeeking: z.string().trim().max(280).optional(),
 });
 
 export async function PATCH(request: Request) {

@@ -63,6 +63,8 @@ export function ProfileRegistrationForm({
       city: String(data.get("city") ?? "").trim(),
       phone,
       invitationMotivation: String(data.get("invitationMotivation") ?? "").trim(),
+      canBring: String(data.get("canBring") ?? "").trim(),
+      isSeeking: String(data.get("isSeeking") ?? "").trim(),
       locale,
       website: String(data.get("website") ?? ""),
       referralCode: String(data.get("referralCode") ?? "").trim(),
@@ -192,6 +194,34 @@ export function ProfileRegistrationForm({
         </div>
         <PhoneInput disabled={state === "sending"} resetKey={phoneResetKey} />
       </section>
+
+      <div>
+        <label htmlFor="canBring" className={LABEL_CLASS}>{t("fields.canBring")}</label>
+        <textarea
+          id="canBring"
+          name="canBring"
+          required
+          minLength={2}
+          maxLength={280}
+          rows={2}
+          className={`${INPUT_CLASS} mt-1 resize-y`}
+          disabled={state === "sending"}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="isSeeking" className={LABEL_CLASS}>{t("fields.isSeeking")}</label>
+        <textarea
+          id="isSeeking"
+          name="isSeeking"
+          required
+          minLength={2}
+          maxLength={280}
+          rows={2}
+          className={`${INPUT_CLASS} mt-1 resize-y`}
+          disabled={state === "sending"}
+        />
+      </div>
 
       <div>
         <label htmlFor="invitationMotivation" className={LABEL_CLASS}>

@@ -17,6 +17,8 @@ export type WaitlistSyncInput = Pick<
   | "linkedinUrl"
   | "extraActivities"
   | "invitationMotivation"
+  | "canBring"
+  | "isSeeking"
   | "locale"
   | "source"
   | "tags"
@@ -35,6 +37,8 @@ function buildNotes(member: WaitlistSyncInput): string {
     member.invitationMotivation?.trim()
       ? `Motivation: ${member.invitationMotivation.trim()}`
       : null,
+    member.canBring?.trim() ? `Puede aportar: ${member.canBring.trim()}` : null,
+    member.isSeeking?.trim() ? `Busca: ${member.isSeeking.trim()}` : null,
     member.referredByCode?.trim() ? `Parrainé via: ${member.referredByCode.trim()}` : null,
     member.source?.includes("express") || member.source?.includes("light")
       ? "Inscription express (/light)"

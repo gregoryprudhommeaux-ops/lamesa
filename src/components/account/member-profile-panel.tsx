@@ -38,6 +38,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
   const [invitationMotivation, setInvitationMotivation] = useState(
     profile.invitationMotivation ?? "",
   );
+  const [canBring, setCanBring] = useState(profile.canBring ?? "");
+  const [isSeeking, setIsSeeking] = useState(profile.isSeeking ?? "");
 
   useEffect(() => {
     setFullName(profile.fullName ?? "");
@@ -47,6 +49,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
     setLinkedinUrl(profile.linkedinUrl ?? "");
     setExtraActivities((profile.extraActivities ?? []).join(", "));
     setInvitationMotivation(profile.invitationMotivation ?? "");
+    setCanBring(profile.canBring ?? "");
+    setIsSeeking(profile.isSeeking ?? "");
   }, [profile]);
 
   async function saveProfile(e: React.FormEvent) {
@@ -65,6 +69,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
           linkedinUrl,
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
+          canBring,
+          isSeeking,
         }),
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
@@ -140,6 +146,28 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
             rows={2}
             value={extraActivities}
             onChange={(e) => setExtraActivities(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS}>{t("fields.canBring")}</label>
+          <textarea
+            className={`${INPUT_CLASS} resize-y`}
+            rows={2}
+            minLength={2}
+            maxLength={280}
+            value={canBring}
+            onChange={(e) => setCanBring(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS}>{t("fields.isSeeking")}</label>
+          <textarea
+            className={`${INPUT_CLASS} resize-y`}
+            rows={2}
+            minLength={2}
+            maxLength={280}
+            value={isSeeking}
+            onChange={(e) => setIsSeeking(e.target.value)}
           />
         </div>
         <div>

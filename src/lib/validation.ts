@@ -24,6 +24,8 @@ export const registrationSchema = z.object({
       return digits.length >= 10 && digits.length <= 15;
     }, { message: "invalid_phone" }),
   invitationMotivation: z.string().trim().min(10).max(2000),
+  canBring: z.string().trim().min(2).max(280),
+  isSeeking: z.string().trim().min(2).max(280),
   locale: z.enum(["fr", "en", "es"]),
   website: z.string().optional(),
   referralCode: z

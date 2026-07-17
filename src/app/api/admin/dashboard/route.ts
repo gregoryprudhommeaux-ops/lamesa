@@ -17,6 +17,7 @@ import {
   isExpressSignup,
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
+import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type {
   AdminEvent,
@@ -25,6 +26,25 @@ import type {
 } from "@/lib/types/events";
 
 const RECENT_REGISTRANTS_LIMIT = 25;
+
+function normalizeDistributionValue(value: string | null | undefined): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "__missing__";
+}
+
+function buildDistribution(
+  rows: WaitlistRegistration[],
+  field: "sector" | "position" | "city",
+): Array<{ value: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = normalizeDistributionValue(row[field]);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
+}
 
 export async function GET(request: Request) {
   const admin = await requirePlatformAdmin(request);
@@ -36,10 +56,18 @@ export async function GET(request: Request) {
 
   try {
     const db = getAdminFirestore();
-    const [eventsSnap, partsSnap, waitlistSnap] = await Promise.all([
+    const draftsPromise = db
+      .collection(COLLECTIONS.tableDrafts)
+      .get()
+      .catch((error) => {
+        console.error("[admin/dashboard drafts]", error);
+        return null;
+      });
+    const [eventsSnap, partsSnap, waitlistSnap, draftsSnap] = await Promise.all([
       db.collection(COLLECTIONS.events).limit(300).get(),
       db.collection(COLLECTIONS.participations).limit(5000).get(),
       db.collection(COLLECTIONS.waitlist).limit(3000).get(),
+      draftsPromise,
     ]);
 
     const events = eventsSnap.docs.map((d) => ({
@@ -145,6 +173,15 @@ export async function GET(request: Request) {
       const percent = computeProfileCompletionPercent(r);
       return isExpressSignup(r) || percent < 50;
     }).length;
+    const distributions = {
+      sectors: buildDistribution(waitlistActive, "sector"),
+      positions: buildDistribution(waitlistActive, "position"),
+      cities: buildDistribution(waitlistActive, "city"),
+    };
+
+    const recentTableDrafts = draftsSnap
+      ? listRecentTableDraftSummaries(draftsSnap.docs, 3)
+      : [];
 
     return NextResponse.json({
       ok: true,
@@ -167,6 +204,8 @@ export async function GET(request: Request) {
       satisfaction: platformSatisfaction,
       events: byEvent,
       recentRegistrants,
+      distributions,
+      recentTableDrafts,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

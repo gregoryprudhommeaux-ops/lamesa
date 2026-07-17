@@ -19,6 +19,8 @@ describe("computeProfileCompletionPercent", () => {
       "LinkedIn",
       "motivation",
       "activités",
+      "ce qu’il peut apporter",
+      "ce qu’il recherche",
     ]);
   });
 
@@ -29,7 +31,7 @@ describe("computeProfileCompletionPercent", () => {
         email: "a@b.com",
         phone: "+521234567890",
       }),
-    ).toBe(30);
+    ).toBe(25);
   });
 
   it("returns 100 when all fields filled", () => {
@@ -44,9 +46,29 @@ describe("computeProfileCompletionPercent", () => {
       linkedinUrl: "https://linkedin.com/in/ada",
       invitationMotivation: "Curiosity",
       extraActivities: ["networking"],
+      canBring: "B2B product experience",
+      isSeeking: "Distribution partners in Mexico",
     };
     expect(computeProfileCompletionPercent(full)).toBe(100);
     expect(listMissingProfileFieldsFr(full)).toEqual([]);
+  });
+
+  it("counts canBring and isSeeking in profile completion", () => {
+    const complete = {
+      fullName: "Ana García",
+      email: "ana@example.com",
+      phone: "+521234567890",
+      company: "Mesa Labs",
+      sector: "tech",
+      position: "founder",
+      city: "Guadalajara",
+      linkedinUrl: "https://linkedin.com/in/ana",
+      invitationMotivation: "Conocer perfiles complementarios",
+      extraActivities: ["Mentoría"],
+      canBring: "Experiencia en producto B2B",
+      isSeeking: "Socios de distribución en México",
+    };
+    expect(computeProfileCompletionPercent(complete)).toBe(100);
   });
 
   it("lists only missing fields for a near-complete profile", () => {
@@ -61,6 +83,8 @@ describe("computeProfileCompletionPercent", () => {
         city: "GDL",
         linkedinUrl: "https://linkedin.com/in/ada",
         invitationMotivation: "Curiosity",
+        canBring: "B2B product experience",
+        isSeeking: "Distribution partners",
       }),
     ).toEqual(["activités"]);
   });

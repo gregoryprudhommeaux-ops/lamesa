@@ -41,6 +41,20 @@ type RecentRegistrant = {
   referralsMade: number;
 };
 
+type RecentTableDraft = {
+  id: string;
+  title: string;
+  city: string;
+  primaryCount: number;
+  alternateCount: number;
+  updatedAt: string;
+};
+
+type DistributionItem = {
+  value: string;
+  count: number;
+};
+
 type DashboardPayload = {
   ok?: boolean;
   error?: string;
@@ -62,6 +76,12 @@ type DashboardPayload = {
   satisfaction?: SatisfactionAverages;
   events?: EventRow[];
   recentRegistrants?: RecentRegistrant[];
+  distributions?: {
+    sectors: DistributionItem[];
+    positions: DistributionItem[];
+    cities: DistributionItem[];
+  };
+  recentTableDrafts?: RecentTableDraft[];
 };
 
 const CATEGORIES: {
@@ -163,6 +183,65 @@ function registrantSubtitle(r: RecentRegistrant): string {
   return [labelPositionFr(r.position), labelSectorFr(r.sector), r.company.trim(), r.city.trim()]
     .filter((part) => Boolean(part) && part !== "—")
     .join(" · ");
+}
+
+function distributionLabel(kind: "sector" | "position" | "city", value: string): string {
+  if (value === "__missing__") return "Non renseigné";
+  if (kind === "sector") return labelSectorFr(value);
+  if (kind === "position") return labelPositionFr(value);
+  return value;
+}
+
+function DistributionCard({
+  title,
+  items,
+  total,
+  kind,
+}: {
+  title: string;
+  items: DistributionItem[];
+  total: number;
+  kind: "sector" | "position" | "city";
+}) {
+  const visible = items.slice(0, 8);
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">{title}</h3>
+        <span className="text-xs font-semibold text-ns-secondary">{total} membres</span>
+      </div>
+
+      {visible.length === 0 ? (
+        <p className="mt-4 text-sm text-ns-secondary">Aucune donnée.</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {visible.map((item) => {
+            const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+            return (
+              <div key={item.value}>
+                <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+                  <span className="min-w-0 truncate font-medium text-ns-tertiary">
+                    {distributionLabel(kind, item.value)}
+                  </span>
+                  <span className="shrink-0 font-bold tabular-nums text-ns-primary">
+                    {item.count} · {pct}%
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-ns-brand-light">
+                  <div className="h-full rounded-full bg-[#b4e600]" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+          {items.length > visible.length ? (
+            <p className="text-xs text-ns-secondary">
+              +{items.length - visible.length} autre{items.length - visible.length > 1 ? "s" : ""}
+            </p>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function FunnelStage({
@@ -268,7 +347,14 @@ export function AdminDashboardPanel() {
   }
   if (!data?.kpis || !data.satisfaction) return null;
 
-  const { kpis, satisfaction, events = [], recentRegistrants = [] } = data;
+  const {
+    kpis,
+    satisfaction,
+    events = [],
+    recentRegistrants = [],
+    distributions,
+    recentTableDrafts = [],
+  } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
     recentRegistrants.length === 0
@@ -331,6 +417,85 @@ export function AdminDashboardPanel() {
           value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
           hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
         />
+      </section>
+
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Répartition membres
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Sur la waitlist active : secteur, position et ville déclarés dans le profil.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <DistributionCard
+            title="Secteurs"
+            items={distributions?.sectors ?? []}
+            total={kpis.waitlistUsers}
+            kind="sector"
+          />
+          <DistributionCard
+            title="Positions"
+            items={distributions?.positions ?? []}
+            total={kpis.waitlistUsers}
+            kind="position"
+          />
+          <DistributionCard
+            title="Villes"
+            items={distributions?.cities ?? []}
+            total={kpis.waitlistUsers}
+            kind="city"
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+              Intelligence du vivier
+            </h3>
+            <p className="mt-1 text-xs text-ns-secondary">
+              Dernières compositions enregistrées dans le Table Builder
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin/tables" className={`${BTN_SECONDARY} text-sm`}>
+              Ouvrir le Table Builder
+            </Link>
+            <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-sm`}>
+              Générer des idées
+            </Link>
+          </div>
+        </div>
+
+        {recentTableDrafts.length === 0 ? (
+          <p className="mt-4 text-sm text-ns-secondary">
+            Aucun brouillon de table pour le moment.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {recentTableDrafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="rounded-xl border border-gray-100 bg-ns-brand-light/40 p-4"
+              >
+                <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
+                <p className="mt-1 text-xs text-ns-secondary">
+                  {draft.city || "Ville non renseignée"}
+                </p>
+                <p className="mt-3 text-sm text-ns-tertiary">
+                  {draft.primaryCount} titulaire{draft.primaryCount === 1 ? "" : "s"} ·{" "}
+                  {draft.alternateCount} suppléant{draft.alternateCount === 1 ? "" : "s"}
+                </p>
+                <p className="mt-2 text-xs text-ns-secondary">
+                  Mis à jour {formatRegistrantDate(draft.updatedAt)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
