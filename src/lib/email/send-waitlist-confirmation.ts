@@ -48,7 +48,14 @@ function buildLegacyFullContent(
           greeting: name ? `Hello ${name},` : "Hello,",
           thanks:
             "Thank you for joining the LA MESA waitlist. Your profile has been received.",
-          next: "When a night fits your profile, we’ll send an invitation. Sign in with the same email (Google or email + password) anytime to update your profile.",
+          funnel: [
+            "How it works:",
+            "1. You’re on the list.",
+            "2. You complete your profile.",
+            "3. We invite you when a table fits.",
+            "4. You confirm your seat by paying for the meal.",
+          ].join("\n"),
+          next: "Sign in with the same email (Google or email + password) anytime to update your profile.",
           cta: "Sign in and edit my profile",
           footer: "LA MESA · Guadalajara",
         }
@@ -58,7 +65,14 @@ function buildLegacyFullContent(
             greeting: name ? `Hola ${name},` : "Hola,",
             thanks:
               "Gracias por registrarte en la lista de LA MESA. Recibimos tu perfil.",
-            next: "Cuando una noche encaje con tu perfil, te mandamos una invitación. Inicia sesión con el mismo correo (Google, o correo + contraseña) cuando quieras actualizar tu perfil.",
+            funnel: [
+              "Cómo funciona:",
+              "1. Ya estás en la lista.",
+              "2. Completas tu perfil.",
+              "3. Te invitamos si una mesa te encaja.",
+              "4. Confirmas tu lugar pagando la comida.",
+            ].join("\n"),
+            next: "Inicia sesión con el mismo correo (Google, o correo + contraseña) cuando quieras actualizar tu perfil.",
             cta: "Iniciar sesión y editar mi perfil",
             footer: "LA MESA · Guadalajara",
           }
@@ -67,10 +81,19 @@ function buildLegacyFullContent(
             greeting: name ? `Bonjour ${name},` : "Bonjour,",
             thanks:
               "Merci de t'être inscrit(e) à la liste LA MESA. On a bien reçu ton profil.",
-            next: "Quand une soirée colle à ton profil, on t’envoie une invitation. Connecte-toi avec le même email (Google, ou email + mot de passe) quand tu veux modifier ton profil.",
+            funnel: [
+              "Comment ça marche :",
+              "1. Tu es sur la liste.",
+              "2. Tu complètes ton profil.",
+              "3. On t’invite si une table te correspond.",
+              "4. Tu confirmes ta place en payant le repas.",
+            ].join("\n"),
+            next: "Connecte-toi avec le même email (Google, ou email + mot de passe) quand tu veux modifier ton profil.",
             cta: "Se connecter et modifier mon profil",
             footer: "LA MESA · Guadalajara",
           };
+
+  const funnelHtml = escapeHtml(copy.funnel).replace(/\n/g, "<br/>");
 
   const html = `<!DOCTYPE html>
 <html lang="${locale}">
@@ -82,6 +105,7 @@ function buildLegacyFullContent(
           <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
           <tr><td style="padding-top:16px;font-size:18px;font-weight:700;color:#111;">${escapeHtml(copy.greeting)}</td></tr>
           <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${escapeHtml(copy.thanks)}</td></tr>
+          <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${funnelHtml}</td></tr>
           <tr><td style="padding-top:12px;font-size:15px;line-height:1.55;color:#333;">${escapeHtml(copy.next)}</td></tr>
           <tr>
             <td style="padding-top:24px;">
@@ -102,6 +126,9 @@ function buildLegacyFullContent(
     copy.greeting,
     "",
     copy.thanks,
+    "",
+    copy.funnel,
+    "",
     copy.next,
     "",
     `${copy.cta}: ${loginUrl}`,

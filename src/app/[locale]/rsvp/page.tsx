@@ -1,3 +1,4 @@
+import { cancellationPolicyBlock } from "@/lib/events/payment-details";
 import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { setRequestLocale } from "next-intl/server";
@@ -14,6 +15,9 @@ type Props = {
 };
 
 function yesCopy(locale: string, title: string, when: string): { title: string; body: string } {
+  const cancelLocale = locale === "en" || locale === "fr" ? locale : "es";
+  const cancel = cancellationPolicyBlock(cancelLocale);
+
   const eventBit =
     title && when
       ? locale === "en"
@@ -42,6 +46,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
           : "You’re registered for this event.",
         "We’re waiting for payment confirmation within 3 days to confirm your spot.",
         "Once that deadline has passed, we will have to offer this seat to another member.",
+        cancel,
       ].join("\n\n"),
     };
   }
@@ -54,6 +59,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
           : "Has quedado registrado/a para este evento.",
         "Esperamos recibir la confirmación de tu pago en un plazo de 3 días para poder confirmar tu participación.",
         "Transcurrido ese plazo, deberemos ofrecer este lugar a otro miembro.",
+        cancel,
       ].join("\n\n"),
     };
   }
@@ -65,6 +71,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
         : "Tu es bien inscrit(e) à cet événement.",
       "Nous attendons la confirmation du paiement sous 3 jours afin de pouvoir confirmer ta participation.",
       "Une fois ce délai passé, nous devrons proposer cette place à un autre membre.",
+      cancel,
     ].join("\n\n"),
   };
 }

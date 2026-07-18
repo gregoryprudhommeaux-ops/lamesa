@@ -27,6 +27,29 @@ export function paymentDeadlineBlock(locale: "es" | "fr" | "en"): string {
   ].join("\n");
 }
 
+/**
+ * Cancellation / no-show rule — same wording as FAQ (about.faq.absence).
+ * Credit = one future eligible dinner, not open-ended cash.
+ */
+export function cancellationPolicyBlock(locale: "es" | "fr" | "en"): string {
+  if (locale === "fr") {
+    return [
+      "Annulation :",
+      "Si tu ne peux pas venir, préviens-nous dès que possible. Plus de 48 h avant : remboursement ou crédit pour une prochaine soirée. Moins de 48 h : le règlement est conservé.",
+    ].join("\n");
+  }
+  if (locale === "en") {
+    return [
+      "Cancellation:",
+      "If you can’t make it, tell us as soon as you can. More than 48 hours ahead: refund or credit toward one future evening. Within 48 hours: the payment is kept.",
+    ].join("\n");
+  }
+  return [
+    "Cancelación:",
+    "Si no puedes ir, avísanos lo antes posible. Más de 48 h antes: reembolso o saldo a favor para una próxima cena. Menos de 48 h: se retiene el pago.",
+  ].join("\n");
+}
+
 /** Bank details + CSF invoice instructions for email templates (ES / FR / EN). */
 export function paymentBankBlock(locale: "es" | "fr" | "en"): string {
   const b = EVENT_PAYMENT_BANK;
