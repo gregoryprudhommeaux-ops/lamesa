@@ -328,4 +328,44 @@ describe("composeTableIdeas", () => {
     expect(ideas[0].alternates).toHaveLength(5);
     expect(ideas[0].warnings.some((w) => /IA non configurée|déterministe/i.test(w))).toBe(true);
   });
+
+  it("falls back to deterministic when the AI provider times out", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "pplx-test");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+
+    const members = Array.from({ length: 20 }, (_, index) =>
+      member({
+        id: `m-${index + 1}`,
+        email: `m${index + 1}@example.com`,
+        company: `Company ${index + 1}`,
+        sector: index % 2 === 0 ? "tech" : "finance",
+      }),
+    );
+
+    const fetchImpl = vi.fn().mockImplementation(
+      () =>
+        new Promise((_, reject) => {
+          const err = new Error("aborted");
+          err.name = "AbortError";
+          reject(err);
+        }),
+    );
+
+    const { ideas } = await composeTableIdeas({
+      mode: "spontaneous",
+      members,
+      participations: [],
+      events: [],
+      city: "Mexico City",
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(fetchImpl).toHaveBeenCalled();
+    expect(ideas).toHaveLength(1);
+    expect(ideas[0].primary).toHaveLength(15);
+    expect(
+      ideas[0].warnings.some((w) => /IA n’a pas répondu|déterministe/i.test(w)),
+    ).toBe(true);
+  });
 });

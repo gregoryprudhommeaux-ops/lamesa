@@ -308,7 +308,7 @@ describe("generateTableIdeas", () => {
   it("aborts the provider request after the named timeout and maps to fetch_failed", async () => {
     configureEnv();
     const { PROVIDER_FETCH_TIMEOUT_MS } = await import("./ai-provider");
-    expect(PROVIDER_FETCH_TIMEOUT_MS).toBe(20_000);
+    expect(PROVIDER_FETCH_TIMEOUT_MS).toBe(45_000);
 
     const fetchImpl = vi.fn((_url: string, init?: RequestInit) => {
       return new Promise<Response>((_resolve, reject) => {

@@ -2,7 +2,7 @@ import type { z } from "zod";
 import { aiTableIdeasSchema, TableIdeasError } from "./schemas";
 import type { AiCandidateCard, TableIdeaMode } from "./types";
 
-export const PROVIDER_FETCH_TIMEOUT_MS = 20_000;
+export const PROVIDER_FETCH_TIMEOUT_MS = 45_000;
 
 const SYSTEM_PROMPT = `You are a premium dinner-table curator. Return JSON only.
 Use only supplied member ids. Never infer protected or personal traits.

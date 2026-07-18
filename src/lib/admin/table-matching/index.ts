@@ -92,6 +92,7 @@ function buildDeterministicIdea(input: {
   theme?: string;
   city: string;
   ranked: ReturnType<typeof rankCandidates>;
+  aiFallbackReason?: "not_configured" | "provider_failed";
 }): RawIdea {
   const selected = selectBalancedTable(input.ranked, {
     primarySize: PRIMARY_SEATS,
@@ -106,6 +107,11 @@ function buildDeterministicIdea(input: {
         ? `Table ${sectors.slice(0, 2).join(" × ")} — ${input.city}`
         : `Table ${input.city}`;
 
+  const aiWarning =
+    input.aiFallbackReason === "provider_failed"
+      ? "Composition déterministe — l’IA n’a pas répondu (scoring interne utilisé)."
+      : "Composition déterministe — IA non configurée.";
+
   return {
     title: theme.slice(0, 120),
     themeAngle:
@@ -113,7 +119,7 @@ function buildDeterministicIdea(input: {
         ? `Composition autour du thème « ${input.theme.trim()} ».`
         : `Composition déterministe pour ${input.city}.`,
     rationale:
-      "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil). Active une clé OpenAI/AI Gateway pour des thèmes et explications plus riches.",
+      "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil). Une IA configurée enrichit thèmes et explications.",
     commonalities: [
       ...(sectors.length ? [`Secteurs représentés : ${sectors.join(", ")}`] : []),
       ...(positions.length ? [`Postes : ${positions.join(", ")}`] : []),
@@ -123,10 +129,7 @@ function buildDeterministicIdea(input: {
       "Mix de profils pour éviter une table mono-secteur",
       "Priorité aux membres non invités à la table précédente",
     ],
-    warnings: [
-      "Composition déterministe — IA non configurée.",
-      ...selected.warnings,
-    ],
+    warnings: [aiWarning, ...selected.warnings],
     primaryMemberIds: selected.primary.map((c) => c.id),
     alternateMemberIds: selected.alternates.map((c) => c.id),
   };
@@ -211,15 +214,29 @@ export async function composeTableIdeas(input: {
     });
     rawIdeas = aiResult.ideas;
   } catch (error) {
-    if (!(error instanceof TableIdeasError) || error.code !== "ai_not_configured") {
+    const aiError = error instanceof TableIdeasError ? error : null;
+    const canFallback =
+      aiError &&
+      (aiError.code === "ai_not_configured" ||
+        aiError.code === "fetch_failed" ||
+        aiError.code === "ai_invalid");
+
+    if (!canFallback) {
       throw error;
     }
+
+    if (aiError.code !== "ai_not_configured") {
+      console.error("[table-matching] AI fallback:", aiError.code, aiError.message);
+    }
+
     rawIdeas = [
       buildDeterministicIdea({
         mode: input.mode,
         theme: input.theme,
         city: input.city,
         ranked,
+        aiFallbackReason:
+          aiError.code === "ai_not_configured" ? "not_configured" : "provider_failed",
       }),
     ];
   }
