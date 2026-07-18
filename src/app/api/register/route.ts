@@ -172,7 +172,12 @@ export async function POST(request: Request) {
     ...(referredByCode ? { referredByCode } : {}),
   });
   if (!adminMail.ok) {
-    console.warn("[register] admin notify skipped/failed:", adminMail.error);
+    console.error("[register] admin notify FAILED:", adminMail.error, {
+      to: "gregory.prudhommeaux@gmail.com",
+      email: record.email,
+    });
+  } else {
+    console.info("[register] admin notify sent", { email: record.email });
   }
 
   return NextResponse.json({ ok: true, id: storedId, emailSent: mail.ok });
