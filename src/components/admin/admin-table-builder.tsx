@@ -11,7 +11,7 @@ import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
 import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
-import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
+import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { ArrowLeftRight, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -438,25 +438,38 @@ export function AdminTableBuilder() {
             </datalist>
           </div>
           <div>
-            <span className={LABEL_CLASS}>Mode</span>
-            <div className="mt-1 flex gap-2">
+            <span className={LABEL_CLASS} id="table-mode-label">
+              Mode
+            </span>
+            <div
+              className="mt-1 inline-flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-1"
+              role="radiogroup"
+              aria-labelledby="table-mode-label"
+            >
               <button
                 type="button"
-                aria-pressed={mode === "spontaneous"}
-                className={mode === "spontaneous" ? BTN_PRIMARY : BTN_SECONDARY}
+                role="radio"
+                aria-checked={mode === "spontaneous"}
+                className={mode === "spontaneous" ? CHIP_ACTIVE : CHIP}
                 onClick={() => setMode("spontaneous")}
               >
                 Spontané
               </button>
               <button
                 type="button"
-                aria-pressed={mode === "admin_theme"}
-                className={mode === "admin_theme" ? BTN_PRIMARY : BTN_SECONDARY}
+                role="radio"
+                aria-checked={mode === "admin_theme"}
+                className={mode === "admin_theme" ? CHIP_ACTIVE : CHIP}
                 onClick={() => setMode("admin_theme")}
               >
                 Thème imposé
               </button>
             </div>
+            <p className="mt-2 text-xs text-ns-secondary">
+              {mode === "spontaneous"
+                ? "Sans thème fixé : Analyser propose des tables à partir du vivier."
+                : "Saisis un thème, puis clique Analyser."}
+            </p>
           </div>
           {mode === "admin_theme" ? (
             <div className="sm:col-span-2">
@@ -481,7 +494,11 @@ export function AdminTableBuilder() {
             disabled={loadState === "loading" || (mode === "admin_theme" && theme.trim().length < 3)}
             onClick={() => void handleGenerate()}
           >
-            {loadState === "loading" ? "Analyse…" : "Analyser"}
+            {loadState === "loading"
+              ? "Analyse…"
+              : mode === "spontaneous"
+                ? "Analyser le vivier"
+                : "Analyser ce thème"}
           </button>
           {poolSize !== null ? (
             <p className="text-xs text-ns-secondary">{poolSize} profil(s) éligible(s) dans le bassin.</p>
