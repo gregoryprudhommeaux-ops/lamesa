@@ -16,45 +16,40 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 function deliveryBadge(
-  kind: "mail" | "perso",
+  kind: "mail",
   status: string | undefined,
 ): { label: string; className: string } | null {
   if (!status) return null;
-  if (kind === "mail") {
-    if (status === "sent")
-      return {
-        label: "Mail OK",
-        className: "bg-emerald-100 text-emerald-800",
-      };
-    if (status === "failed")
-      return {
-        label: "Mail KO",
-        className: "bg-red-100 text-red-800",
-      };
-    if (status === "skipped")
-      return {
-        label: "Mail off",
-        className: "bg-gray-200 text-gray-600",
-      };
-  }
-  if (kind === "perso") {
-    if (status === "synced")
-      return {
-        label: "Perso OK",
-        className: "bg-emerald-100 text-emerald-800",
-      };
-    if (status === "failed")
-      return {
-        label: "Perso KO",
-        className: "bg-red-100 text-red-800",
-      };
-    if (status === "skipped")
-      return {
-        label: "Perso —",
-        className: "bg-gray-200 text-gray-600",
-      };
-  }
+  if (status === "sent")
+    return {
+      label: "Mail OK",
+      className: "bg-emerald-100 text-emerald-800",
+    };
+  if (status === "failed")
+    return {
+      label: "Mail KO",
+      className: "bg-red-100 text-red-800",
+    };
+  if (status === "skipped")
+    return {
+      label: "Mail off",
+      className: "bg-gray-200 text-gray-600",
+    };
   return null;
+}
+
+function persoSyncStatus(
+  r: Pick<WaitlistRegistration, "databasePersoSyncStatus" | "databasePersoContactId">,
+): "synced" | "failed" | "skipped" | null {
+  if (r.databasePersoSyncStatus) return r.databasePersoSyncStatus;
+  if (r.databasePersoContactId) return "synced";
+  return null;
+}
+
+function truncatePersoId(id: string, max = 10): string {
+  const t = id.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, max)}…`;
 }
 
 function uniqueSorted(values: Array<string | null | undefined>): string[] {
@@ -542,10 +537,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             setContextMenu({ x: e.clientX, y: e.clientY });
           }}
         >
-          <div className="hidden border-b border-gray-100 px-4 py-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_7rem] sm:items-center sm:gap-3">
+          <div className="hidden border-b border-gray-100 px-4 py-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_7rem_9rem] sm:items-center sm:gap-3">
             <span />
             <span className="text-xs font-semibold text-ns-secondary">Inscrit</span>
             <span className="text-right text-xs font-semibold text-ns-secondary">Parrain</span>
+            <span className="text-right text-xs font-semibold text-ns-secondary">Perso</span>
           </div>
           <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary sm:hidden">
             <label className="inline-flex cursor-pointer items-center gap-2">
@@ -583,7 +579,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                       setActiveId(r.id);
                     }
                   }}
-                  className={`grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
+                  className={`grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem_9rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
                 >
                   <input
                     type="checkbox"
@@ -616,19 +612,6 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                           </span>
                         ) : null;
                       })()}
-                      {(() => {
-                        const persoStatus =
-                          r.databasePersoSyncStatus ??
-                          (r.databasePersoContactId ? "synced" : undefined);
-                        const perso = deliveryBadge("perso", persoStatus);
-                        return perso ? (
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${perso.className}`}
-                          >
-                            {perso.label}
-                          </span>
-                        ) : null;
-                      })()}
                     </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary">
                       {memberSubtitle(r) || "—"}
@@ -637,11 +620,55 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                     <span className="mt-1 block text-xs text-ns-secondary sm:hidden">
                       Parrain : {r.referredByCode?.trim() || "—"}
                     </span>
+                    <span className="mt-0.5 block font-mono text-[11px] text-ns-secondary sm:hidden">
+                      Perso :{" "}
+                      {(() => {
+                        const status = persoSyncStatus(r);
+                        const id = r.databasePersoContactId?.trim();
+                        if (status === "synced" && id) return `synced · ${truncatePersoId(id, 14)}`;
+                        if (status === "synced") return "synced";
+                        if (status === "failed") return "failed";
+                        if (status === "skipped") return "skipped";
+                        return "—";
+                      })()}
+                    </span>
                   </div>
                   <div className="hidden text-right text-xs text-ns-secondary sm:block">
                     <span className="font-medium text-ns-tertiary">
                       {r.referredByCode?.trim() || "—"}
                     </span>
+                  </div>
+                  <div className="hidden text-right text-xs sm:block">
+                    {(() => {
+                      const status = persoSyncStatus(r);
+                      const id = r.databasePersoContactId?.trim();
+                      if (!status) {
+                        return <span className="text-ns-secondary/70">—</span>;
+                      }
+                      const statusClass =
+                        status === "synced"
+                          ? "text-emerald-700"
+                          : status === "failed"
+                            ? "text-red-700"
+                            : "text-ns-secondary";
+                      return (
+                        <div className="min-w-0">
+                          <span className={`block font-semibold uppercase tracking-wide ${statusClass}`}>
+                            {status}
+                          </span>
+                          {id ? (
+                            <span
+                              className="mt-0.5 block truncate font-mono text-[11px] text-ns-secondary"
+                              title={id}
+                            >
+                              {truncatePersoId(id)}
+                            </span>
+                          ) : (
+                            <span className="mt-0.5 block text-[11px] text-ns-secondary/70">—</span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </li>

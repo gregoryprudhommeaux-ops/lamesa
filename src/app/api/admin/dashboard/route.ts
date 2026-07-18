@@ -125,6 +125,8 @@ export async function GET(request: Request) {
         missingFields,
         referredByCode: r.referredByCode?.trim() || null,
         isExpress: isExpressSignup(r),
+        welcomeEmailStatus: r.welcomeEmailStatus ?? null,
+        welcomeEmailSentAt: r.welcomeEmailSentAt ?? null,
         invitationsSent: engagement.invitationsSent,
         eventsConfirmed: engagement.eventsConfirmed,
         revenueMxn: engagement.revenueMxn,

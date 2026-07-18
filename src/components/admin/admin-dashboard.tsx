@@ -35,6 +35,8 @@ type RecentRegistrant = {
   missingFields: string[];
   referredByCode: string | null;
   isExpress: boolean;
+  welcomeEmailStatus: "sent" | "failed" | "skipped" | null;
+  welcomeEmailSentAt: string | null;
   invitationsSent: number;
   eventsConfirmed: number;
   revenueMxn: number;
@@ -176,6 +178,62 @@ function CompletionCell({
         <div className={`h-full rounded-full ${bar}`} style={{ width: `${percent}%` }} />
       </div>
     </div>
+  );
+}
+
+/** Welcome / express confirmation email status after signup. */
+function WelcomeEmailCell({
+  status,
+  sentAt,
+  isExpress,
+}: {
+  status: RecentRegistrant["welcomeEmailStatus"];
+  sentAt: string | null;
+  isExpress: boolean;
+}) {
+  const hint = isExpress
+    ? "Mail auto express — invitation à compléter le profil"
+    : "Mail auto — confirmation d’inscription";
+
+  if (!status) {
+    return (
+      <span className="text-xs text-ns-secondary/70" title={`${hint} · pas encore tracké`}>
+        —
+      </span>
+    );
+  }
+
+  if (status === "sent") {
+    return (
+      <div title={hint}>
+        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+          Envoyé
+        </span>
+        {sentAt ? (
+          <p className="mt-1 text-[11px] text-ns-secondary">{formatRegistrantDate(sentAt)}</p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (status === "failed") {
+    return (
+      <span
+        className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-800"
+        title={hint}
+      >
+        Échec
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600"
+      title={`${hint} · template désactivé`}
+    >
+      Off
+    </span>
   );
 }
 
@@ -518,12 +576,18 @@ export function AdminDashboardPanel() {
           <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
         ) : (
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
+            <table className="w-full min-w-[680px] text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
                   <th className="py-2 pr-3 font-semibold">Inscrit</th>
                   <th className="py-2 pr-3 font-semibold">Inscription</th>
                   <th className="py-2 pr-3 font-semibold">Complétion</th>
+                  <th
+                    className="py-2 pr-3 font-semibold"
+                    title="Mail auto après inscription (express = compléter le profil)"
+                  >
+                    Mail auto
+                  </th>
                   <th className="py-2 font-semibold">Contact</th>
                 </tr>
               </thead>
@@ -551,6 +615,11 @@ export function AdminDashboardPanel() {
                         {subtitle ? (
                           <p className="mt-0.5 text-xs text-ns-secondary">{subtitle}</p>
                         ) : null}
+                        {r.isExpress ? (
+                          <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            Express
+                          </span>
+                        ) : null}
                       </td>
                       <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
                         {formatRegistrantDate(r.createdAt)}
@@ -559,6 +628,13 @@ export function AdminDashboardPanel() {
                         <CompletionCell
                           percent={r.completionPercent}
                           missingFields={r.missingFields ?? []}
+                        />
+                      </td>
+                      <td className="py-3 pr-3">
+                        <WelcomeEmailCell
+                          status={r.welcomeEmailStatus}
+                          sentAt={r.welcomeEmailSentAt}
+                          isExpress={r.isExpress}
                         />
                       </td>
                       <td className="py-3">
