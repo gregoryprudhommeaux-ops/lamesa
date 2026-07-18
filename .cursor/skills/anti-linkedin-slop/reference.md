@@ -32,6 +32,10 @@ Prefer low-key: *This actually works* over *This is a game-changing strategy*.
 ### ES
 *potenciar al máximo*, *impulsar tu negocio*, *llevar al siguiente nivel*, *experiencia sin fricciones*, *aprovechar al máximo*, *disruptivo*, *transformación digital*, *la verdadera palanca*
 
+### Obsolete networking metaphors (ban — no longer current)
+FR/EN/ES: *pile / collection de cartes de visite*, *business cards*, *colección / intercambio de tarjetas*, *tarjeta al final*.  
+Prefer 2020s reality: LinkedIn connects, WhatsApp groups, event QR, cocktail pitch rooms, “todos se venden / nadie escucha”, weak first intro, no follow-up.
+
 ## C. Transitions mécaniques / scolaires
 
 - FR: *par ailleurs*, *de plus*, *ainsi*, *en outre*, *premièrement*, *deuxièmement*, *enfin* (systematic)

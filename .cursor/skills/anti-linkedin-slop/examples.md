@@ -98,7 +98,7 @@ Do **not** invent facts when transforming — only reshape what exists.
 **Después (TEASER) :**
 > Una mesa de doce puede valer más que un congreso. No por juntar gente: por seleccionar.
 >
-> En Guadalajara veo mucho “networking” que es cóctel: volumen, tarjetas, poco filtro. Si eliges bien quién se sienta, la conversación avanza más rápido.
+> En Guadalajara veo mucho “networking” que es cóctel: volumen, poco filtro, todos se venden. Si eliges bien quién se sienta, la conversación avanza más rápido.
 >
 > Estoy armando algo simple. Cambia el tema, cambian los perfiles. Sin selección, no hay mesa.
 >

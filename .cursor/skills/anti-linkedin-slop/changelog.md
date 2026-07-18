@@ -1,5 +1,9 @@
 # Changelog · /anti-linkedin-slop · Mr. ANTI-AI-SLOP
 
+## 2026-07-17 — Ban obsolete “business cards pile” metaphor
+
+Founder note: *tarjetas / cartes de visite / business cards* as the anti-networking foil is outdated. Prefer cocktail pitch rooms, LinkedIn connects, weak first intros, “todos se venden”.
+
 ## 2026-07-15 (m) — Teaser failure pack (LA MESA / founder LinkedIn)
 
 From live Lucy critique of a UCM teaser that over-explained product:
