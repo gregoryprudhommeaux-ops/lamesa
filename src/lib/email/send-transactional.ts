@@ -35,7 +35,7 @@ export function brevoFromAddress(): { name?: string; email: string } {
   const raw =
     process.env.BREVO_FROM_EMAIL?.trim() ||
     process.env.RESEND_FROM_EMAIL?.trim() ||
-    "LA MESA <noreply@lamesasecreta.com>";
+    "LA MESA <greg@nextstep-services.com>";
   return parseFromAddress(raw);
 }
 

@@ -2,6 +2,7 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
+import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
@@ -17,11 +18,17 @@ type Profile = WaitlistRegistration & { id: string };
 
 type MemberProfilePanelProps = {
   profile: Profile;
+  completionPercent: number;
   onSaved: () => void | Promise<void>;
 };
 
-export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps) {
+export function MemberProfilePanel({
+  profile,
+  completionPercent,
+  onSaved,
+}: MemberProfilePanelProps) {
   const t = useTranslations("account");
+  const tWaitlist = useTranslations("waitlist");
   const authFetch = useAuthFetch();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -29,6 +36,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
 
   const [fullName, setFullName] = useState(profile.fullName ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
+  const [sector, setSector] = useState(profile.sector ?? "");
+  const [position, setPosition] = useState(profile.position ?? "");
   const [city, setCity] = useState(profile.city ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(profile.linkedinUrl ?? "");
@@ -44,6 +53,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
   useEffect(() => {
     setFullName(profile.fullName ?? "");
     setCompany(profile.company ?? "");
+    setSector(profile.sector ?? "");
+    setPosition(profile.position ?? "");
     setCity(profile.city ?? "");
     setPhone(profile.phone ?? "");
     setLinkedinUrl(profile.linkedinUrl ?? "");
@@ -64,6 +75,8 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
         body: JSON.stringify({
           fullName,
           company,
+          sector,
+          position,
           city,
           phone,
           linkedinUrl,
@@ -87,8 +100,27 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
     }
   }
 
+  const incomplete = completionPercent < 100;
+
   return (
     <div className="space-y-6">
+      {incomplete ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-5">
+          <p className="text-sm font-bold text-ns-tertiary">
+            {t("completionRate", { percent: completionPercent })}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ns-secondary">
+            {t("completionHint")}
+          </p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-amber-100">
+            <div
+              className="h-full rounded-full bg-amber-500 transition-[width]"
+              style={{ width: `${completionPercent}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {error && <p className={ERROR_TEXT}>{error}</p>}
       {saved && <p className="text-sm font-medium text-ns-primary">{t("saved")}</p>}
 
@@ -120,6 +152,44 @@ export function MemberProfilePanel({ profile, onSaved }: MemberProfilePanelProps
             onChange={(e) => setCompany(e.target.value)}
             required
           />
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor="member-sector">
+            {t("fields.sector")}
+          </label>
+          <select
+            id="member-sector"
+            className={INPUT_CLASS}
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+            required
+          >
+            <option value="">{t("fields.selectPlaceholder")}</option>
+            {SECTORS.map((s) => (
+              <option key={s} value={s}>
+                {tWaitlist(`sectors.${s}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor="member-position">
+            {t("fields.position")}
+          </label>
+          <select
+            id="member-position"
+            className={INPUT_CLASS}
+            value={position}
+            onChange={(e) => setPosition(e.target.value)}
+            required
+          >
+            <option value="">{t("fields.selectPlaceholder")}</option>
+            {POSITIONS.map((p) => (
+              <option key={p} value={p}>
+                {tWaitlist(`positions.${p}`)}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={LABEL_CLASS}>{t("fields.city")}</label>

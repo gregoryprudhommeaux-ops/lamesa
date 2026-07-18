@@ -360,6 +360,9 @@
     "logout": "Cerrar sesión",
     "adminLink": "Administración",
     "profileTitle": "Mi perfil",
+    "profileIncompleteBadge": "Perfil incompleto",
+    "completionRate": "Tasa de completado: {percent}%",
+    "completionHint": "Cuanto más completo esté tu perfil, mejor podremos invitarte a una mesa que te encaje.",
     "save": "Guardar",
     "saving": "Guardando…",
     "saved": "Perfil actualizado.",
@@ -421,12 +424,15 @@
       "fullName": "Nombre completo",
       "linkedinUrl": "LinkedIn",
       "company": "Empresa",
+      "sector": "Sector",
+      "position": "Puesto",
       "city": "Ciudad",
       "phone": "Teléfono",
       "extraActivities": "Intereses personales",
       "invitationMotivation": "Motivación",
       "canBring": "¿Qué puedes aportar?",
-      "isSeeking": "¿Qué buscas?"
+      "isSeeking": "¿Qué buscas?",
+      "selectPlaceholder": "Elegir…"
     },
     "status": {
       "invited": "Invitado",

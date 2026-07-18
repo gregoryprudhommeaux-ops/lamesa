@@ -11,19 +11,20 @@ Remplace Resend pour l’envoi transactionnel (invitations calendrier, RSVP, wai
 ## 2. Expéditeur / domaine
 
 1. **Senders, Domains & Dedicated IPs**
-2. Ajoute et vérifie **`lamesasecreta.com`** (DNS SPF / DKIM / DMARC indiqués par Brevo)
-   - Ou, en attendant la vérif domaine, ajoute un **sender email** ponctuel (ex. `greg@nextstep-services.com`) après validation du lien Brevo
+2. Utilise un sender **déjà validé** dans Brevo.
+   - Production actuelle : **`greg@nextstep-services.com`**
+   - Plus tard (optionnel) : vérifier le domaine `lamesasecreta.com` pour envoyer depuis `noreply@lamesasecreta.com`
 3. Définis :
    ```
-   BREVO_FROM_EMAIL=LA MESA <noreply@lamesasecreta.com>
+   BREVO_FROM_EMAIL=LA MESA <greg@nextstep-services.com>
    ```
-   (doit correspondre à un sender/domain validé)
+   (doit correspondre exactement à un sender validé dans Brevo)
 
 ## 3. Variables Vercel (Production + Preview)
 
 ```
 BREVO_API_KEY=xkeysib-...
-BREVO_FROM_EMAIL=LA MESA <noreply@lamesasecreta.com>
+BREVO_FROM_EMAIL=LA MESA <greg@nextstep-services.com>
 ```
 
 Puis redéploie.

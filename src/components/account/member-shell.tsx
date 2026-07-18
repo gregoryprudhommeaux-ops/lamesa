@@ -14,9 +14,15 @@ export const DEFAULT_MEMBER_TAB: MemberTab = "calendrier";
 type MemberShellProps = {
   children: ReactNode;
   title?: string;
+  /** Show red notification dot on "Mon profil" when profile is under 100%. */
+  profileIncomplete?: boolean;
 };
 
-export function MemberShell({ children, title }: MemberShellProps) {
+export function MemberShell({
+  children,
+  title,
+  profileIncomplete = false,
+}: MemberShellProps) {
   const t = useTranslations("account");
   const locale = useLocale();
   const { logout, isAdmin } = useAuth();
@@ -56,17 +62,29 @@ export function MemberShell({ children, title }: MemberShellProps) {
         >
           {TABS.map((id) => {
             const isActive = active === id;
+            const showBadge = id === "profil" && profileIncomplete;
             return (
               <Link
                 key={id}
                 href={`/compte?tab=${id}`}
                 className={
                   isActive
-                    ? "border-b-2 border-ns-primary px-3 py-1 text-ns-primary"
-                    : "px-3 py-1 text-ns-secondary hover:text-ns-tertiary"
+                    ? "relative border-b-2 border-ns-primary px-3 py-1 text-ns-primary"
+                    : "relative px-3 py-1 text-ns-secondary hover:text-ns-tertiary"
+                }
+                aria-label={
+                  showBadge
+                    ? `${t(`tabs.${id}`)} — ${t("profileIncompleteBadge")}`
+                    : undefined
                 }
               >
                 {t(`tabs.${id}`)}
+                {showBadge ? (
+                  <span
+                    className="absolute right-0.5 top-0 h-2 w-2 rounded-full bg-red-500"
+                    aria-hidden
+                  />
+                ) : null}
               </Link>
             );
           })}

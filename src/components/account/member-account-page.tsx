@@ -8,6 +8,7 @@ import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
+import { computeProfileCompletionPercent } from "@/lib/member/profile-completion";
 import type { MePayload } from "@/lib/types/member-me";
 import { BTN_PRIMARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { useLocale, useTranslations } from "next-intl";
@@ -44,6 +45,11 @@ function MemberAccountInner() {
     void load();
   }, [load]);
 
+  const completionPercent = data?.profile
+    ? computeProfileCompletionPercent(data.profile)
+    : 100;
+  const profileIncomplete = Boolean(data?.profile) && completionPercent < 100;
+
   if (loading) return <p className="text-sm text-ns-secondary">{t("loading")}</p>;
 
   if (data?.notOnWaitlist && !isAdmin) {
@@ -66,7 +72,7 @@ function MemberAccountInner() {
   }
 
   return (
-    <MemberShell>
+    <MemberShell profileIncomplete={profileIncomplete}>
       <div className="space-y-8">
         {error && <p className={ERROR_TEXT}>{error}</p>}
 
@@ -75,7 +81,11 @@ function MemberAccountInner() {
         {tab === "calendrier" && <MemberCalendar />}
 
         {tab === "profil" && data?.profile && (
-          <MemberProfilePanel profile={data.profile} onSaved={load} />
+          <MemberProfilePanel
+            profile={data.profile}
+            completionPercent={completionPercent}
+            onSaved={load}
+          />
         )}
       </div>
     </MemberShell>
