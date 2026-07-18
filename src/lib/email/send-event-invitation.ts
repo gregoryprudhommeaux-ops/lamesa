@@ -26,7 +26,7 @@ export async function sendEventInvitationEmail(input: {
         <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
           <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;">${textToHtml(input.bodyText)}</td></tr>
-          <tr><td style="padding-top:28px;font-size:12px;color:#777;">LA MESA — dîners privés exclusifs.</td></tr>
+          <tr><td style="padding-top:28px;font-size:12px;color:#777;">LA MESA · Guadalajara</td></tr>
         </table>
       </td>
     </tr>

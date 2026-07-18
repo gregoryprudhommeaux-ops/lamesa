@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Dîners privés à Guadalajara. Liste sélective, accès sur invitation."
+    "description": "Dîners privés à Guadalajara. Liste sur invitation."
   },
   "nav": {
     "languageAria": "Langue"
@@ -16,7 +16,7 @@
     "taglineBefore": "Un outil ",
     "taglineSuiteLink": "NS Suite",
     "taglineAfter": " pour les entrepreneurs.",
-    "taglineLead": "LA MESA : dîners thématiques exclusifs à Guadalajara, ",
+    "taglineLead": "LA MESA : dîners thématiques à Guadalajara, "
     "rights": "© {year} NextStep Services",
     "about": "Fonctionnement & FAQ",
     "contact": "Questions & partenariats",
@@ -39,7 +39,7 @@
   },
   "light": {
     "title": "Rejoindre LA MESA",
-    "brandTagline": "Rejoins la liste — tu pourras bientôt recevoir une invitation.",
+    "brandTagline": "Rejoins la liste. Les invitations partent quand une soirée colle.",
     "subtitle": "Laisse tes coordonnées. Tu recevras un accès pour compléter ton profil quand tu veux.",
     "fields": {
       "fullName": "Nom complet",
@@ -65,26 +65,26 @@
     "metaTitle": "Fonctionnement — LA MESA",
     "metaDescription": "Comment fonctionne LA MESA : inscription gratuite, invitation quand une soirée correspond à ton profil, confirmation par paiement.",
     "title": "Fonctionnement",
-    "introLead": "Une table. Un thème. Des profils choisis — sur invitation.",
+    "introLead": "Une table. Un thème. Des profils choisis, sur invitation.",
     "introBody": "Inscris-toi gratuitement. Tu reçois une invitation quand une soirée correspond à ton profil. Une fois invité, tu confirmes ta place en réglant le repas.",
-    "forWho": "Pour des décideurs, fondateurs, investisseurs et experts qui ont quelque chose à apporter à la thématique de la soirée. Les tables restent petites ; on les compose avec soin.",
+    "forWho": "Pour des décideurs, fondateurs, investisseurs et experts qui ont quelque chose à apporter à la thématique de la soirée. Les tables restent petites ; on mélange les profils à la main.",
     "stepsTitle": "Comment ça marche",
     "steps": {
-      "1": "Inscris-toi gratuitement — tu rejoins la liste.",
+      "1": "Inscris-toi gratuitement et tu rejoins la liste.",
       "2": "Tu complètes ton profil pour qu’on puisse te proposer une table adaptée à ton expérience, ton industrie et à la thématique de l’événement.",
       "3": "Tu reçois une invitation quand une soirée correspond à ton profil.",
       "4": "Tu confirmes ta place en réglant le repas dans le délai indiqué."
     },
-    "eligibilityNote": "Être sur la liste, ce n’est pas être à chaque soirée.",
+    "eligibilityNote": "La liste, c’est le point de départ. L’invitation arrive seulement si la table te correspond.",
     "faqTitle": "Questions fréquentes",
     "faq": {
       "seats": {
         "q": "Pourquoi les places sont-elles limitées ?",
-        "a": "Volontairement. Une table réduite garantit que chacun participe vraiment à la conversation. On privilégie la qualité des échanges à la quantité de convives."
+        "a": "Petite table volontairement : sinon la moitié de la table ne parle jamais."
       },
       "themes": {
         "q": "Les thématiques changent-elles ?",
-        "a": "Oui. Chaque soirée a sa thématique. Les invitations partent des profils inscrits — secteur, poste, expérience, intérêts. Plus ton profil est complet, plus une soirée peut correspondre."
+        "a": "Oui. Chaque soirée a sa thématique. Les invitations partent des profils inscrits : secteur, poste, expérience, intérêts. Plus ton profil est complet, plus une soirée peut correspondre."
       },
       "payment": {
         "q": "Comment confirmer sa place ?",
@@ -92,10 +92,10 @@
       },
       "composition": {
         "q": "Vais-je savoir qui sera à table avant de payer ?",
-        "a": "On ne partage pas la liste nominative — c’est la discrétion de la table. Dans l’invitation, on avance la composition : thématique, niveau approximatif, secteurs ou rôles. Si ça ne te convient pas, tu ne confirmes pas : aucun engagement."
+        "a": "On ne partage pas la liste nominative : c’est la discrétion de la table. Dans l’invitation, on avance la composition : thématique, niveau approximatif, secteurs ou rôles. Si ça ne te convient pas, tu ne confirmes pas. Aucun engagement."
       },
       "price": {
-        "q": "Combien ça coûte — et qui paie ?",
+        "q": "Combien ça coûte, et qui paie ?",
         "a": "Le ticket repas varie selon la soirée et est indiqué à l’invitation. En moyenne, compte entre 1 000 $ et 1 500 $ MXN : généralement entrée, plat et dessert ; les boissons se règlent souvent sur place. Chaque participant paie sa place, sauf cas particulier (ex. soirée offerte via sponsoring)."
       },
       "absence": {
@@ -115,7 +115,7 @@
     "metaTitle": "Questions & partenariats — LA MESA",
     "metaDescription": "Écris-nous pour une question sur LA MESA ou pour parler d’un partenariat (hôte, sponsor, édition privée).",
     "title": "Questions & partenariats",
-    "intro": "Une question qui n’est pas dans la FAQ, ou une idée de partenariat ? Écris-nous — on lit chaque message.",
+    "intro": "Une question qui n’est pas dans la FAQ, ou une idée de partenariat ? Écris-nous. On répond à la main.",
     "fields": {
       "topic": "Sujet",
       "topicPlaceholder": "Choisir…",
@@ -144,7 +144,7 @@
   "registration": {
     "title": "Rejoindre la liste",
     "subtitle": "Quelques infos pour qu’on puisse te proposer une table qui te corresponde.",
-    "funnelNote": "Être sur la liste, ce n’est pas être invité à chaque soirée — seulement quand une table correspond.",
+    "funnelNote": "La liste, c’est le point de départ. L’invitation arrive seulement quand une table correspond.",
     "sections": {
       "identity": "Identité",
       "professional": "Professionnel",
@@ -207,7 +207,7 @@
     },
     "submit": "Rejoindre la liste",
     "submitting": "Envoi en cours…",
-    "success": "Merci — tu es inscrit. Tu recevras une invitation quand une soirée correspondra à ton profil.",
+    "success": "Merci. Tu es inscrit. Tu recevras une invitation quand une soirée correspondra à ton profil.",
     "successLoginHint": "Pour modifier ton profil à tout moment, connecte-toi avec le même email Google.",
     "successLoginCta": "Se connecter et modifier mon profil",
     "error": "Envoi impossible. Réessaie dans un instant.",
@@ -323,7 +323,7 @@
   },
   "account": {
     "loginTitle": "Connexion membre",
-    "loginHint": "Connecte-toi avec le même email que ton inscription — Google, ou email et mot de passe.",
+    "loginHint": "Connecte-toi avec le même email que ton inscription : Google, ou email et mot de passe.",
     "googleLogin": "Continuer avec Google",
     "googleRedirecting": "Redirection Google…",
     "emailAuth": {
@@ -388,7 +388,7 @@
       "copied": "Copié !",
       "whatsappLabel": "Ou partager sur WhatsApp",
       "whatsappCta": "Partager sur WhatsApp",
-      "whatsappMessage": "Je fais partie d'un groupe privé de dîners thématiques regroupant des personnes sélectionnées et je pense que tu devrais t'inscrire aussi :",
+      "whatsappMessage": "Je suis à LA MESA : petits dîners par thème à Guadalajara. Si ça te parle, inscris-toi ici :",
       "emailLabel": "Ou envoyer par email",
       "emailPlaceholder": "email@exemple.com",
       "sendEmail": "Envoyer",

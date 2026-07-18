@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: "LA MESA",
     template: "%s · LA MESA",
   },
-  description: "Administration LA MESA — cenas privadas exclusivas en Guadalajara.",
+  description: "Administration LA MESA · Guadalajara.",
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "48x48" },

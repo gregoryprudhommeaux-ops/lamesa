@@ -37,7 +37,7 @@ LA MESA
 ```
 Hola {{Nombre}},
 
-LA MESA: cenas privadas en Guadalajara — mesa reducida, una temática, conversaciones de alto valor. Nada de networking superficial.
+LA MESA: cenas chicas en Guadalajara, una temática por noche, perfiles elegidos para esa mesa. No es un cóctel donde todos se venden.
 
 Hoy armamos el vivero. Con masa crítica, primera cena — objetivo fin de agosto / septiembre.
 

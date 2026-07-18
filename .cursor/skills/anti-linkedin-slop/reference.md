@@ -36,6 +36,10 @@ Prefer low-key: *This actually works* over *This is a game-changing strategy*.
 FR/EN/ES: *pile / collection de cartes de visite*, *business cards*, *colección / intercambio de tarjetas*, *tarjeta al final*.  
 Prefer 2020s reality: LinkedIn connects, WhatsApp groups, event QR, cocktail pitch rooms, “todos se venden / nadie escucha”, weak first intro, no follow-up.
 
+### Fake-luxury / community loft (ban in product + member copy)
+FR/EN/ES: *exclusif / exclusive / exclusivas*, *curated*, *selecta / sélective*, *alto valor / high-signal / forte valeur*, *cenas de alto nivel / dîners qualifiés*, *red privada de… seleccionados*, *we'd love your feedback*, *tu opinión nos importa*.  
+Prefer concrete: mesa chica, un tema, invitados cuando hay fit, Guadalajara. Footer: `LA MESA · Guadalajara` not “dîners privés exclusifs”.
+
 ## C. Transitions mécaniques / scolaires
 
 - FR: *par ailleurs*, *de plus*, *ainsi*, *en outre*, *premièrement*, *deuxièmement*, *enfin* (systematic)

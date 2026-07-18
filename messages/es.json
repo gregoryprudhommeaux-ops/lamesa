@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Cenas privadas en Guadalajara. Lista selecta, acceso por invitación."
+    "description": "Cenas privadas en Guadalajara. Lista por invitación."
   },
   "nav": {
     "languageAria": "Idioma"
@@ -16,7 +16,7 @@
     "taglineBefore": "Una herramienta ",
     "taglineSuiteLink": "NS Suite",
     "taglineAfter": " para emprendedores.",
-    "taglineLead": "LA MESA: cenas temáticas exclusivas en Guadalajara, ",
+    "taglineLead": "LA MESA: cenas temáticas en Guadalajara, "
     "rights": "© {year} NextStep Services",
     "about": "Cómo funciona y preguntas frecuentes",
     "contact": "Preguntas y alianzas",
@@ -39,7 +39,7 @@
   },
   "light": {
     "title": "Únete a LA MESA",
-    "brandTagline": "Entra a la lista y pronto puedes recibir una invitación.",
+    "brandTagline": "Entra a la lista. Las invitaciones salen cuando una noche encaja.",
     "subtitle": "Déjanos tus datos. Te mandamos un acceso para completar tu perfil cuando quieras.",
     "fields": {
       "fullName": "Nombre completo",
@@ -65,26 +65,26 @@
     "metaTitle": "Cómo funciona — LA MESA",
     "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación cuando una noche encaja con tu perfil, confirmación con el pago.",
     "title": "Cómo funciona",
-    "introLead": "Una mesa. Un tema. Perfiles elegidos — por invitación.",
+    "introLead": "Una mesa. Un tema. Perfiles elegidos, por invitación.",
     "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando la comida.",
-    "forWho": "Para decisores, fundadores, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; las armamos con cuidado.",
+    "forWho": "Para decisores, fundadores, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; mezclamos perfiles a mano.",
     "stepsTitle": "Cómo funciona",
     "steps": {
-      "1": "Te registras gratis — te unes a la lista.",
+      "1": "Te registras gratis y entras a la lista.",
       "2": "Completas tu perfil para proponerte una mesa según tu experiencia, industria y la temática de la noche.",
       "3": "Recibes una invitación cuando una noche encaja con tu perfil.",
       "4": "Confirmas tu lugar pagando la comida dentro del plazo indicado."
     },
-    "eligibilityNote": "Estar en la lista no es estar en cada cena.",
+    "eligibilityNote": "La lista es el punto de partida. La invitación llega solo si la mesa te encaja.",
     "faqTitle": "Preguntas frecuentes",
     "faq": {
       "seats": {
         "q": "¿Por qué hay pocos lugares?",
-        "a": "A propósito. Una mesa chica hace que todos participen de verdad en la plática. Preferimos la calidad del intercambio al número de personas."
+        "a": "Mesa chica a propósito: si no, la plática se apaga."
       },
       "themes": {
         "q": "¿Cambian las temáticas?",
-        "a": "Sí. Cada noche tiene su tema. Las invitaciones salen de los perfiles inscritos — sector, puesto, experiencia, intereses. Mientras más completo tu perfil, más fácil que una noche te encaje."
+        "a": "Sí. Cada noche tiene su tema. Las invitaciones salen de los perfiles inscritos: sector, puesto, experiencia, intereses. Mientras más completo tu perfil, más fácil que una noche te encaje."
       },
       "payment": {
         "q": "¿Cómo confirmo mi lugar?",
@@ -92,7 +92,7 @@
       },
       "composition": {
         "q": "¿Voy a saber quiénes estarán en la mesa antes de pagar?",
-        "a": "No compartimos la lista nominativa — es parte de la discreción de la mesa. En la invitación sí adelantamos la composición: tema, nivel aproximado, sectores o roles. Si no te convence, no confirmas: sin compromiso."
+        "a": "No compartimos la lista nominativa: es parte de la discreción de la mesa. En la invitación sí adelantamos la composición: tema, nivel aproximado, sectores o roles. Si no te convence, no confirmas. Sin compromiso."
       },
       "price": {
         "q": "¿Cuánto cuesta y quién paga?",
@@ -115,7 +115,7 @@
     "metaTitle": "Preguntas y alianzas — LA MESA",
     "metaDescription": "Escríbenos con una duda sobre LA MESA o para platicar de una alianza (anfitrión, patrocinio, edición privada).",
     "title": "Preguntas y alianzas",
-    "intro": "¿Una duda que no está en las preguntas frecuentes, o una idea de alianza? Escríbenos — leemos cada mensaje.",
+    "intro": "¿Una duda que no está en las preguntas frecuentes, o una idea de alianza? Escríbenos. Respondemos a mano.",
     "fields": {
       "topic": "Asunto",
       "topicPlaceholder": "Elegir…",
@@ -144,7 +144,7 @@
   "registration": {
     "title": "Unirse a la lista",
     "subtitle": "Algunos datos para armarte una mesa a tu medida.",
-    "funnelNote": "Estar en la lista no es estar invitado a cada cena — solo cuando una mesa encaja contigo.",
+    "funnelNote": "La lista es el punto de partida. La invitación llega solo cuando una mesa encaja contigo.",
     "sections": {
       "identity": "Identidad",
       "professional": "Lo profesional",
@@ -207,7 +207,7 @@
     },
     "submit": "Unirse a la lista",
     "submitting": "Enviando…",
-    "success": "Gracias — ya estás en la lista. Recibirás una invitación cuando una noche encaje con tu perfil.",
+    "success": "Gracias. Ya estás en la lista. Recibirás una invitación cuando una noche encaje con tu perfil.",
     "successLoginHint": "Para editar tu perfil cuando quieras, inicia sesión con el mismo correo de Google.",
     "successLoginCta": "Iniciar sesión y editar mi perfil",
     "error": "No se pudo enviar. Inténtalo de nuevo.",
@@ -323,7 +323,7 @@
   },
   "account": {
     "loginTitle": "Acceso de miembro",
-    "loginHint": "Inicia sesión con el mismo correo que usaste al registrarte — Google, o correo y contraseña.",
+    "loginHint": "Inicia sesión con el mismo correo que usaste al registrarte: Google, o correo y contraseña.",
     "googleLogin": "Continuar con Google",
     "googleRedirecting": "Redirigiendo a Google…",
     "emailAuth": {
@@ -388,7 +388,7 @@
       "copied": "¡Copiado!",
       "whatsappLabel": "O compartir por WhatsApp",
       "whatsappCta": "Compartir por WhatsApp",
-      "whatsappMessage": "Formo parte de una red privada de cenas temáticas con profesionales seleccionados. Creo que también te interesaría registrarte:",
+      "whatsappMessage": "Estoy en LA MESA: cenas chicas por tema en Guadalajara. Si te late, regístrate aquí:",
       "emailLabel": "O enviar por correo",
       "emailPlaceholder": "correo@ejemplo.com",
       "sendEmail": "Enviar",

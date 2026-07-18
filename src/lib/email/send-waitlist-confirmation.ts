@@ -48,28 +48,28 @@ function buildLegacyFullContent(
           greeting: name ? `Hello ${name},` : "Hello,",
           thanks:
             "Thank you for joining the LA MESA waitlist. Your profile has been received.",
-          next: "We'll contact you soon to invite you to a curated professional dinner. Sign in with the same email (Google or email + password) anytime to update your profile.",
+          next: "When a night fits your profile, we’ll send an invitation. Sign in with the same email (Google or email + password) anytime to update your profile.",
           cta: "Sign in and edit my profile",
-          footer: "LA MESA — exclusive private dinners.",
+          footer: "LA MESA · Guadalajara",
         }
       : locale === "es"
         ? {
             subject: "Registro en lista de espera — LA MESA",
-            greeting: name ? `Estimado/a ${name}:` : "Estimado/a:",
+            greeting: name ? `Hola ${name},` : "Hola,",
             thanks:
-              "Gracias por registrarte en la lista de espera de LA MESA. Hemos recibido tu perfil.",
-            next: "Te contactaremos pronto para invitarte a una cena profesional selecta. Inicia sesión con el mismo correo (Google, o correo + contraseña) cuando desees actualizar tu perfil.",
+              "Gracias por registrarte en la lista de LA MESA. Recibimos tu perfil.",
+            next: "Cuando una noche encaje con tu perfil, te mandamos una invitación. Inicia sesión con el mismo correo (Google, o correo + contraseña) cuando quieras actualizar tu perfil.",
             cta: "Iniciar sesión y editar mi perfil",
-            footer: "LA MESA — cenas privadas exclusivas.",
+            footer: "LA MESA · Guadalajara",
           }
         : {
             subject: "Tu es sur la liste d'attente LA MESA",
             greeting: name ? `Bonjour ${name},` : "Bonjour,",
             thanks:
-              "Merci de t'être inscrit(e) à la liste d'attente LA MESA. Ton profil a bien été reçu.",
-            next: "Nous te contacterons prochainement pour t'inviter à un dîner professionnel qualifié. Connecte-toi avec le même email (Google, ou email + mot de passe) à tout moment pour modifier ton profil.",
+              "Merci de t'être inscrit(e) à la liste LA MESA. On a bien reçu ton profil.",
+            next: "Quand une soirée colle à ton profil, on t’envoie une invitation. Connecte-toi avec le même email (Google, ou email + mot de passe) quand tu veux modifier ton profil.",
             cta: "Se connecter et modifier mon profil",
-            footer: "LA MESA — dîners privés exclusifs.",
+            footer: "LA MESA · Guadalajara",
           };
 
   const html = `<!DOCTYPE html>

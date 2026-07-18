@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "LA MESA",
-    "description": "Private dinners in Guadalajara. Selective list, access by invitation."
+    "description": "Private dinners in Guadalajara. Invite-only list."
   },
   "nav": {
     "languageAria": "Language"
@@ -16,7 +16,7 @@
     "taglineBefore": "An ",
     "taglineSuiteLink": "NS Suite",
     "taglineAfter": " tool for entrepreneurs.",
-    "taglineLead": "LA MESA: exclusive themed dinners in Guadalajara, ",
+    "taglineLead": "LA MESA: themed dinners in Guadalajara, "
     "rights": "© {year} NextStep Services",
     "about": "How it works & FAQ",
     "contact": "Questions & partnerships",
@@ -39,7 +39,7 @@
   },
   "light": {
     "title": "Join LA MESA",
-    "brandTagline": "Join the list — you’ll soon be able to get an invitation.",
+    "brandTagline": "Join the list. Invitations go out when a night fits."
     "subtitle": "Share your details. We’ll email you access to finish your profile whenever you’re ready.",
     "fields": {
       "fullName": "Full name",
@@ -65,26 +65,26 @@
     "metaTitle": "How it works — LA MESA",
     "metaDescription": "How LA MESA works: sign up free, invitation when an evening matches your profile, payment to confirm.",
     "title": "How it works",
-    "introLead": "One table. One theme. Selected guests — by invitation.",
+    "introLead": "One table. One theme. Selected guests, by invitation.",
     "introBody": "Sign up free. You get an invitation when an evening matches your profile. Once invited, you confirm your seat by paying for the meal.",
-    "forWho": "For decision-makers, founders, investors, and experts who bring something to that evening’s theme. Tables stay small; we compose them carefully.",
+    "forWho": "For decision-makers, founders, investors, and experts who bring something to that evening’s theme. Tables stay small; we mix the room by hand.",
     "stepsTitle": "How it works",
     "steps": {
-      "1": "Sign up free — you join the list.",
+      "1": "Sign up free and join the list.",
       "2": "Complete your profile so we can propose a table suited to your experience, industry, and the evening’s theme.",
       "3": "You get an invitation when an evening matches your profile.",
       "4": "Confirm your seat by paying for the meal within the stated deadline."
     },
-    "eligibilityNote": "Being on the list doesn’t mean a seat at every dinner.",
+    "eligibilityNote": "The list is the starting point. An invite only comes when a table fits.",
     "faqTitle": "Frequently asked questions",
     "faq": {
       "seats": {
         "q": "Why are seats limited?",
-        "a": "On purpose. A smaller table means everyone actually joins the conversation. We care more about the quality of the exchange than the headcount."
+        "a": "Small on purpose. Otherwise half the table never speaks."
       },
       "themes": {
         "q": "Do themes change?",
-        "a": "Yes. Each evening has its own theme. Invitations come from people on the list — industry, role, experience, interests. The fuller your profile, the more an evening can fit."
+        "a": "Yes. Each evening has its own theme. Invitations come from people on the list: industry, role, experience, interests. The fuller your profile, the more an evening can fit."
       },
       "payment": {
         "q": "How do I confirm my seat?",
@@ -92,10 +92,10 @@
       },
       "composition": {
         "q": "Will I know who else is at the table before I pay?",
-        "a": "We don’t share a name list — that discretion is part of the table. With the invitation, we do share the makeup: theme, approximate level, sectors or roles. If it doesn’t fit, you simply don’t confirm — no commitment."
+        "a": "We don’t share a name list: that discretion is part of the table. With the invitation, we do share the makeup: theme, approximate level, sectors or roles. If it doesn’t fit, you simply don’t confirm. No commitment."
       },
       "price": {
-        "q": "How much does it cost — and who pays?",
+        "q": "How much does it cost, and who pays?",
         "a": "The meal ticket varies by evening and is stated with the invitation. On average, MXN $1,000–$1,500: usually starter, main, and dessert; drinks are often settled on site. Each guest pays for their seat, except special cases (e.g. a complimentary evening under sponsorship)."
       },
       "absence": {
@@ -115,7 +115,7 @@
     "metaTitle": "Questions & partnerships — LA MESA",
     "metaDescription": "Write to us with a question about LA MESA, or to talk about a partnership (host, sponsor, private edition).",
     "title": "Questions & partnerships",
-    "intro": "A question that isn’t in the FAQ, or a partnership idea? Write to us — we read every message.",
+    "intro": "A question that isn’t in the FAQ, or a partnership idea? Write to us. We reply by hand.",
     "fields": {
       "topic": "Topic",
       "topicPlaceholder": "Choose…",
@@ -144,7 +144,7 @@
   "registration": {
     "title": "Join the list",
     "subtitle": "A few details so we can propose a table that fits you.",
-    "funnelNote": "Being on the list doesn’t mean an invite to every dinner — only when a table fits.",
+    "funnelNote": "The list is the starting point. An invite only comes when a table fits.",
     "sections": {
       "identity": "Identity",
       "professional": "Professional",
@@ -170,7 +170,7 @@
       "phoneIncomplete": "Incomplete number — check country code and local number.",
       "invitationMotivation": "Why does LA MESA interest you?",
       "invitationMotivationPlaceholder": "A few sentences — what draws you here.",
-      "canBring": "What can you bring to the table?",
+      "canBring": "What do you bring to a dinner like this?",
       "isSeeking": "What are you looking for at LA MESA?"
     },
     "sectors": {
@@ -207,7 +207,7 @@
     },
     "submit": "Join the list",
     "submitting": "Sending…",
-    "success": "Thank you — you’re on the list. You’ll get an invitation when an evening matches your profile.",
+    "success": "Thank you. You’re on the list. You’ll get an invitation when an evening matches your profile.",
     "successLoginHint": "To update your profile anytime, sign in with the same Google email.",
     "successLoginCta": "Sign in and edit my profile",
     "error": "Could not submit. Please try again.",
@@ -323,7 +323,7 @@
   },
   "account": {
     "loginTitle": "Member sign-in",
-    "loginHint": "Sign in with the same email you used to register — Google, or email and password.",
+    "loginHint": "Sign in with the same email you used to register: Google, or email and password.",
     "googleLogin": "Continue with Google",
     "googleRedirecting": "Redirecting to Google…",
     "emailAuth": {
@@ -388,7 +388,7 @@
       "copied": "Copied!",
       "whatsappLabel": "Or share on WhatsApp",
       "whatsappCta": "Share on WhatsApp",
-      "whatsappMessage": "I'm part of a private thematic dinner group with carefully selected people, and I think you should join too:",
+      "whatsappMessage": "I'm on LA MESA: small theme dinners in Guadalajara. If that sounds like you, sign up here:",
       "emailLabel": "Or send by email",
       "emailPlaceholder": "email@example.com",
       "sendEmail": "Send",

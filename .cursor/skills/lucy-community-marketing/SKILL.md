@@ -78,7 +78,7 @@ LA MESA is **not** mass networking, a conference, or a generic club.
 
 It is:
 - **Exclusive** — limited seats; invitation after waitlist / profile fit  
-- **Strategic** — one theme per dinner; high-signal conversation  
+- **Strategic** — one theme per dinner; conversation with filter (not cocktail pitch)  
 - **Experiential** — premium setting; meal; optional speaker/sponsor (labeled)  
 - **Matched** — invite by sector, role, expertise, motivation, chemistry  
 - **Monetized** — guest typically pays seat unless sponsored; larger upside via hosts/sponsors/private editions  

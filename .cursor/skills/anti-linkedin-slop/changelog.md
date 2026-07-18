@@ -1,5 +1,9 @@
 # Changelog · /anti-linkedin-slop · Mr. ANTI-AI-SLOP
 
+## 2026-07-17 (b) — Fake-luxury loft ban (LA MESA product copy)
+
+Ban *exclusivo/curated/selecta/alto valor/high-signal/dîners qualifiés/red privada seleccionados/we'd love your feedback*. Prefer concrete dinner facts + `LA MESA · Guadalajara`. Applied in LA MESA site/emails pass 2026-07-17.
+
 ## 2026-07-17 — Ban obsolete “business cards pile” metaphor
 
 Founder note: *tarjetas / cartes de visite / business cards* as the anti-networking foil is outdated. Prefer cocktail pitch rooms, LinkedIn connects, weak first intros, “todos se venden”.

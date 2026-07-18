@@ -91,7 +91,7 @@ export function SatisfactionSurveyForm() {
       <div className="space-y-3 text-center">
         <h1 className="text-2xl font-bold text-ns-primary">Gracias</h1>
         <p className="text-sm text-ns-secondary">
-          Tus comentarios nos ayudan a mejorar las próximas cenas.
+          Gracias. Lo leemos antes de armar la siguiente mesa.
         </p>
         {inviteSent && (
           <p className="text-sm text-ns-primary">
