@@ -1,7 +1,7 @@
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 
 /** Inbox for every new waitlist signup (full + express). */
-export const NEW_REGISTRATION_TO = "greg@nextstep-services.com";
+export const NEW_REGISTRATION_TO = "gregory.prudhommeaux@gmail.com";
 
 function escapeHtml(value: string): string {
   return value

@@ -5,7 +5,15 @@ import { BTN_PRIMARY, BTN_GHOST, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 import { useTranslations } from "next-intl";
 
 const STEP_KEYS = ["1", "2", "3", "4"] as const;
-const FAQ_KEYS = ["seats", "themes", "payment", "price", "absence", "guests"] as const;
+const FAQ_KEYS = [
+  "seats",
+  "themes",
+  "payment",
+  "composition",
+  "price",
+  "absence",
+  "guests",
+] as const;
 
 export function AboutPageContent() {
   const t = useTranslations("about");

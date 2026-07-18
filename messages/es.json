@@ -90,6 +90,10 @@
         "q": "¿Cómo confirmo mi lugar?",
         "a": "Cuando llega la invitación, pagas la comida por adelantado en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
       },
+      "composition": {
+        "q": "¿Voy a saber quiénes estarán en la mesa antes de pagar?",
+        "a": "No compartimos la lista nominativa — es parte de la discreción de la mesa. En la invitación sí adelantamos la composición: tema, nivel aproximado, sectores o roles. Si no te convence, no confirmas: sin compromiso."
+      },
       "price": {
         "q": "¿Cuánto cuesta y quién paga?",
         "a": "El ticket de la comida varía según la noche y se indica en la invitación. En promedio, entre $1,000 y $1,500 MXN: suele incluir entrada, plato fuerte y postre; las bebidas a menudo se pagan en el lugar. Cada quien paga su lugar, salvo casos especiales (p. ej. noche cortesía por patrocinio)."
