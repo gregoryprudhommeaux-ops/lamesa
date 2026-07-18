@@ -54,14 +54,16 @@ export async function PATCH(request: Request, { params }: Params) {
 
       const isArchiveTransition =
         parsed.data.status === "archived" && current.status !== "archived";
+      const { humanValidatedAt: _ignored, ...patchWithoutValidated } = parsed.data;
       transaction.update(reference, {
-        ...parsed.data,
+        ...patchWithoutValidated,
         ...(isArchiveTransition
           ? {}
           : {
               primary: validated.merged.primary,
               alternates: validated.merged.alternates,
             }),
+        humanValidatedAt: validated.merged.humanValidatedAt ?? null,
         updatedAt: new Date().toISOString(),
       });
     });

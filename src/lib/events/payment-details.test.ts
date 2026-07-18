@@ -37,4 +37,9 @@ describe("P0 email defaults", () => {
     expect(es).toMatch(/1\.\s+Ya estás en la lista/);
     expect(es).toMatch(/4\.\s+Confirmas tu lugar/);
   });
+
+  it("mentions composition discretion on invite", () => {
+    const es = defaultLocaleContent("calendar_invite", "es").body;
+    expect(es).toMatch(/lista de nombres/i);
+  });
 });

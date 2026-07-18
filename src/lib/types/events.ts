@@ -225,6 +225,8 @@ export interface TableDraft {
   alternates: TableDraftMemberSnapshot[];
   status: TableDraftStatus;
   linkedEventId?: string;
+  /** ISO timestamp — admin confirmed human review before invites. */
+  humanValidatedAt?: string;
   createdAt?: string;
   updatedAt?: string;
   createdByUid: string;

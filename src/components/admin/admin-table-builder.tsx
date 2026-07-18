@@ -113,6 +113,8 @@ export function AdminTableBuilder() {
   const [drafts, setDrafts] = useState<TableDraft[]>([]);
   const [draftsLoadState, setDraftsLoadState] = useState<LoadState>("idle");
   const [activeDraftId, setActiveDraftId] = useState<string | null>(null);
+  const [humanValidatedAt, setHumanValidatedAt] = useState<string | null>(null);
+  const [validatingDraft, setValidatingDraft] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
 
@@ -157,6 +159,7 @@ export function AdminTableBuilder() {
     if (!idea) return;
     setSelectedIdeaIndex(index);
     setActiveDraftId(null);
+    setHumanValidatedAt(null);
     setDraftMessage(null);
     setPrimary(idea.primary);
     setAlternates(idea.alternates);
@@ -184,6 +187,7 @@ export function AdminTableBuilder() {
       setPoolSize(json.poolSize ?? null);
       setSelectedIdeaIndex(0);
       setActiveDraftId(null);
+      setHumanValidatedAt(null);
       setDraftMessage(null);
       setPrimary(nextIdeas[0]?.primary ?? []);
       setAlternates(nextIdeas[0]?.alternates ?? []);
@@ -194,12 +198,18 @@ export function AdminTableBuilder() {
     }
   }
 
+  function clearHumanValidation() {
+    setHumanValidatedAt(null);
+  }
+
   function removeFromPrimary(id: string) {
     setPrimary((prev) => prev.filter((m) => m.id !== id));
+    clearHumanValidation();
   }
 
   function removeFromAlternates(id: string) {
     setAlternates((prev) => prev.filter((m) => m.id !== id));
+    clearHumanValidation();
   }
 
   function swapRow(index: number) {
@@ -211,6 +221,41 @@ export function AdminTableBuilder() {
     nextAlternates[index] = temp;
     setPrimary(nextPrimary);
     setAlternates(nextAlternates);
+    clearHumanValidation();
+  }
+
+  function ensureHumanValidationBeforeHandoff(): boolean {
+    if (humanValidatedAt) return true;
+    return window.confirm(
+      "Cette table n’est pas encore marquée « validée humainement ».\n\nChecklist : conflits, équilibre, VIP, no-shows.\n\nContinuer quand même ?",
+    );
+  }
+
+  async function markHumanValidated() {
+    if (!activeDraftId) {
+      setDraftMessage("Enregistre le brouillon avant de valider humainement.");
+      return;
+    }
+    setValidatingDraft(true);
+    setDraftMessage(null);
+    const stamp = new Date().toISOString();
+    try {
+      const res = await authFetch(`/api/admin/table-drafts/${activeDraftId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ humanValidatedAt: stamp }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "save_failed");
+      setHumanValidatedAt(stamp);
+      setDraftMessage("Table validée humainement.");
+      await loadDrafts();
+    } catch (e) {
+      setDraftMessage(
+        describeActionError(e instanceof Error ? e.message : undefined, "Échec de la validation."),
+      );
+    } finally {
+      setValidatingDraft(false);
+    }
   }
 
   async function handleSaveDraft() {
@@ -227,6 +272,7 @@ export function AdminTableBuilder() {
       warnings: selectedIdea.warnings,
       primary,
       alternates,
+      humanValidatedAt: null as null,
     };
     try {
       if (activeDraftId) {
@@ -236,16 +282,28 @@ export function AdminTableBuilder() {
         });
         const json = (await res.json()) as { ok?: boolean; error?: string };
         if (!res.ok || !json.ok) throw new Error(json.error ?? "save_failed");
-        setDraftMessage("Brouillon mis à jour.");
+        setHumanValidatedAt(null);
+        setDraftMessage("Brouillon mis à jour — revalide avant d’inviter.");
       } else {
         const res = await authFetch("/api/admin/table-drafts", {
           method: "POST",
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            title: payload.title,
+            city: payload.city,
+            themeAngle: payload.themeAngle,
+            rationale: payload.rationale,
+            commonalities: payload.commonalities,
+            complementarities: payload.complementarities,
+            warnings: payload.warnings,
+            primary: payload.primary,
+            alternates: payload.alternates,
+          }),
         });
         const json = (await res.json()) as { ok?: boolean; id?: string; error?: string };
         if (!res.ok || !json.ok) throw new Error(json.error ?? "save_failed");
         setActiveDraftId(json.id ?? null);
-        setDraftMessage("Brouillon enregistré.");
+        setHumanValidatedAt(null);
+        setDraftMessage("Brouillon enregistré — valide humainement avant d’inviter.");
       }
       await loadDrafts();
     } catch (e) {
@@ -257,6 +315,7 @@ export function AdminTableBuilder() {
 
   function openDraft(draft: TableDraft) {
     setActiveDraftId(draft.id);
+    setHumanValidatedAt(draft.humanValidatedAt ?? null);
     setCity(
       draft.city ||
         [...draft.primary, ...draft.alternates].find((member) => member.city.trim())?.city ||
@@ -274,7 +333,10 @@ export function AdminTableBuilder() {
       const res = await authFetch(`/api/admin/table-drafts/${id}`, { method: "DELETE" });
       const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "archive_failed");
-      if (activeDraftId === id) setActiveDraftId(null);
+      if (activeDraftId === id) {
+        setActiveDraftId(null);
+        setHumanValidatedAt(null);
+      }
       await loadDrafts();
     } catch (e) {
       setDraftMessage(describeActionError(e instanceof Error ? e.message : undefined, "Échec de l'archivage."));
@@ -283,6 +345,7 @@ export function AdminTableBuilder() {
 
   function createEventFromPrimary() {
     if (primary.length === 0) return;
+    if (!ensureHumanValidationBeforeHandoff()) return;
     const invitees = tableMembersToPendingInvitees(primary);
     if (invitees.length === 0) {
       setDraftMessage("Aucun email valide parmi les titulaires.");
@@ -294,6 +357,7 @@ export function AdminTableBuilder() {
 
   async function openAddToEvent() {
     if (primary.length === 0) return;
+    if (!ensureHumanValidationBeforeHandoff()) return;
     setAddToEventOpen(true);
     setAddResultMsg(null);
     setEventsLoading(true);
@@ -500,6 +564,23 @@ export function AdminTableBuilder() {
                 </button>
                 <button
                   type="button"
+                  className={humanValidatedAt ? BTN_PRIMARY : BTN_SECONDARY}
+                  disabled={validatingDraft || !activeDraftId}
+                  onClick={() => void markHumanValidated()}
+                  title={
+                    activeDraftId
+                      ? "Confirme la revue humaine (conflits, équilibre, VIP, no-shows)"
+                      : "Enregistre d’abord le brouillon"
+                  }
+                >
+                  {validatingDraft
+                    ? "Validation…"
+                    : humanValidatedAt
+                      ? "Validée humainement ✓"
+                      : "Valider humainement"}
+                </button>
+                <button
+                  type="button"
                   className={BTN_PRIMARY}
                   disabled={primary.length === 0}
                   onClick={createEventFromPrimary}
@@ -518,6 +599,10 @@ export function AdminTableBuilder() {
                   <p className="text-xs text-ns-secondary">{describeDraftActionMessage(draftMessage)}</p>
                 ) : null}
               </div>
+              <p className="text-xs text-ns-secondary">
+                Avant d’inviter : enregistre → valide humainement (conflits, équilibre, VIP,
+                no-shows) → crée / ajoute à un événement.
+              </p>
             </div>
           ) : null}
         </div>
@@ -552,6 +637,7 @@ export function AdminTableBuilder() {
                   <p className="text-xs text-ns-secondary">
                     {DRAFT_STATUS_LABELS_FR[draft.status]} · {formatDraftDate(draft.updatedAt)} ·{" "}
                     {draft.primary.length} titulaire(s)
+                    {draft.humanValidatedAt ? " · Validée humainement" : ""}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-2">

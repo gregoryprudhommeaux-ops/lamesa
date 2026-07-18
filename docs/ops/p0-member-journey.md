@@ -32,8 +32,11 @@ Si les templates admin ont été customisés en Firestore, réappliquer le bloc 
 1. Choisir thème + ville.
 2. `/admin/tables` → Analyser → brouillon 15 + 5.
 3. Revue humaine : conflits concurrentiels, déséquilibre de pouvoir, VIP, no-shows passés.
-4. Valider shortlist → handoff invitees / événement.
-5. Envoyer invitations seulement après coche « validé humainement ».
+4. **Enregistrer le brouillon** puis cliquer **Valider humainement**.
+5. Créer un événement / ajouter à un event → envoyer invitations.
+6. Si tu modifies les sièges après validation, la validation tombe : revalide.
+
+Sans validation, un confirm demande quand même confirmation avant handoff.
 
 ## Rituel J+1 (post-cena)
 

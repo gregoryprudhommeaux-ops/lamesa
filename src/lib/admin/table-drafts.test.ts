@@ -122,6 +122,38 @@ describe("tableDraftPatchSchema", () => {
       tableDraftPatchSchema.safeParse({ title: "Valid title here", unexpected: true }).success,
     ).toBe(false);
   });
+
+  it("accepts humanValidatedAt ISO or null", () => {
+    expect(
+      tableDraftPatchSchema.safeParse({ humanValidatedAt: "2026-07-18T16:00:00.000Z" }).success,
+    ).toBe(true);
+    expect(tableDraftPatchSchema.safeParse({ humanValidatedAt: null }).success).toBe(true);
+  });
+});
+
+describe("validateMergedTableDraft human validation", () => {
+  it("clears humanValidatedAt when seats change unless explicitly set", () => {
+    const current = normalizeTableDraft("draft-1", {
+      ...validDraftInput(),
+      status: "draft",
+      humanValidatedAt: "2026-07-18T12:00:00.000Z",
+      createdByUid: "admin-1",
+      createdByEmail: "admin@example.com",
+    });
+
+    const cleared = validateMergedTableDraft(current, {
+      primary: validDraftInput().primary,
+    });
+    expect(cleared.ok).toBe(true);
+    if (cleared.ok) expect(cleared.merged.humanValidatedAt).toBeUndefined();
+
+    const kept = validateMergedTableDraft(current, {
+      primary: validDraftInput().primary,
+      humanValidatedAt: "2026-07-18T16:00:00.000Z",
+    });
+    expect(kept.ok).toBe(true);
+    if (kept.ok) expect(kept.merged.humanValidatedAt).toBe("2026-07-18T16:00:00.000Z");
+  });
 });
 
 describe("validateMergedTableDraft", () => {

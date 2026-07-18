@@ -18,9 +18,10 @@ export type TableDraftCreate = Pick<
   | "alternates"
 >;
 
-export type TableDraftPatch = Partial<
-  TableDraftCreate & Pick<TableDraft, "status" | "linkedEventId">
->;
+export type TableDraftPatch = Partial<TableDraftCreate & Pick<TableDraft, "status" | "linkedEventId">> & {
+  /** ISO stamp, or null to clear human validation (e.g. after seat edits). */
+  humanValidatedAt?: string | null;
+};
 
 const memberSnapshotSchema: z.ZodType<TableDraftMemberSnapshot> = z
   .object({
@@ -68,6 +69,7 @@ export const tableDraftPatchSchema: z.ZodType<TableDraftPatch> = editableFieldsS
   .extend({
     status: z.enum(["draft", "used", "archived"]).optional(),
     linkedEventId: z.string().trim().min(1).max(200).optional(),
+    humanValidatedAt: z.union([z.string().datetime(), z.null()]).optional(),
   })
   .strict()
   .refine(hasUniqueMembers, {
@@ -83,6 +85,14 @@ export function validateMergedTableDraft(
   patch: TableDraftPatch,
   rawCurrent: unknown = current,
 ): MergedValidationResult {
+  const seatsChanged = patch.primary !== undefined || patch.alternates !== undefined;
+  const nextHumanValidatedAt =
+    patch.humanValidatedAt !== undefined
+      ? patch.humanValidatedAt || undefined
+      : seatsChanged
+        ? undefined
+        : current.humanValidatedAt;
+
   const merged: TableDraft = {
     ...current,
     ...patch,
@@ -94,6 +104,7 @@ export function validateMergedTableDraft(
     linkedEventId:
       patch.linkedEventId !== undefined ? patch.linkedEventId : current.linkedEventId,
     status: patch.status ?? current.status,
+    humanValidatedAt: nextHumanValidatedAt,
     createdAt: current.createdAt,
     createdByUid: current.createdByUid,
     createdByEmail: current.createdByEmail,
@@ -228,6 +239,7 @@ export function normalizeTableDraft(id: string, data: unknown): TableDraft {
     ),
     status: normalizedStatus(record.status, linkedEventId),
     linkedEventId,
+    humanValidatedAt: timestampValue(record.humanValidatedAt),
     createdAt: timestampValue(record.createdAt),
     updatedAt: timestampValue(record.updatedAt),
     createdByUid: stringValue(record.createdByUid),
