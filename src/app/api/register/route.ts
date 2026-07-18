@@ -9,6 +9,10 @@ import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendAdminNewRegistrationEmail } from "@/lib/email/send-admin-new-registration";
 import { sendWaitlistConfirmationEmail } from "@/lib/email/send-waitlist-confirmation";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import {
+  persistDatabasePersoSyncStatus,
+  persistWelcomeEmailStatus,
+} from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import {
@@ -116,21 +120,10 @@ export async function POST(request: Request) {
       },
       "[register]",
     );
-    if (sync.id) {
-      try {
-        await getAdminFirestore()
-          .collection(COLLECTIONS.waitlist)
-          .doc(storedId)
-          .set(
-            {
-              databasePersoContactId: sync.id,
-              databasePersoSyncedAt: new Date().toISOString(),
-            },
-            { merge: true },
-          );
-      } catch (error) {
-        console.warn("[register] failed to store databasePersoContactId:", error);
-      }
+    try {
+      await persistDatabasePersoSyncStatus(storedId, sync);
+    } catch (error) {
+      console.warn("[register] failed to store databasePerso sync status:", error);
     }
   } else {
     await syncWaitlistMemberToDatabasePerso(
@@ -153,8 +146,19 @@ export async function POST(request: Request) {
     fullName: record.fullName,
     locale: record.locale,
   });
-  if (!mail.ok) {
-    console.warn("[register] confirmation email skipped/failed:", mail.error);
+  try {
+    const welcomeStatus = await persistWelcomeEmailStatus(storedId, mail);
+    if (welcomeStatus === "sent") {
+      console.info("[register] welcome email sent", { email: record.email });
+    } else if (welcomeStatus === "skipped") {
+      console.info("[register] welcome email skipped", { email: record.email });
+    } else {
+      console.error("[register] welcome email FAILED:", !mail.ok ? mail.error : "unknown", {
+        email: record.email,
+      });
+    }
+  } catch (error) {
+    console.warn("[register] failed to store welcome email status:", error);
   }
 
   const adminMail = await sendAdminNewRegistrationEmail({

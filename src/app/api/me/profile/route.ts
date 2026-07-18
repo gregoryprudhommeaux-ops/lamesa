@@ -7,6 +7,7 @@ import {
 } from "@/lib/auth/member.server";
 import { isPlatformAdminIdentity } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { z } from "zod";
 
@@ -94,14 +95,10 @@ export async function PATCH(request: Request) {
     profileComplete: nextProfileComplete,
   };
   const sync = await syncWaitlistMemberToDatabasePerso(merged, "[me/profile]");
-  if (sync.id) {
-    await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
-      {
-        databasePersoContactId: sync.id,
-        databasePersoSyncedAt: new Date().toISOString(),
-      },
-      { merge: true },
-    );
+  try {
+    await persistDatabasePersoSyncStatus(profile.id, sync);
+  } catch (error) {
+    console.warn("[me/profile] failed to store databasePerso sync status:", error);
   }
 
   return NextResponse.json({ ok: true, id: profile.id });

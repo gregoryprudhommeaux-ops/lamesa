@@ -179,6 +179,12 @@ export interface WaitlistRegistration {
   /** Linked Database Perso contact id after upsert sync */
   databasePersoContactId?: string;
   databasePersoSyncedAt?: string;
+  /** Outcome of Database Perso upsert at signup / profile sync */
+  databasePersoSyncStatus?: "synced" | "failed" | "skipped";
+  /** Welcome / express confirmation email to the member */
+  welcomeEmailStatus?: "sent" | "failed" | "skipped";
+  welcomeEmailSentAt?: string;
+  welcomeEmailError?: string;
   referralCode?: string;
   referredByCode?: string;
   referredById?: string;

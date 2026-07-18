@@ -14,6 +14,49 @@ import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from
 import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+function deliveryBadge(
+  kind: "mail" | "perso",
+  status: string | undefined,
+): { label: string; className: string } | null {
+  if (!status) return null;
+  if (kind === "mail") {
+    if (status === "sent")
+      return {
+        label: "Mail OK",
+        className: "bg-emerald-100 text-emerald-800",
+      };
+    if (status === "failed")
+      return {
+        label: "Mail KO",
+        className: "bg-red-100 text-red-800",
+      };
+    if (status === "skipped")
+      return {
+        label: "Mail off",
+        className: "bg-gray-200 text-gray-600",
+      };
+  }
+  if (kind === "perso") {
+    if (status === "synced")
+      return {
+        label: "Perso OK",
+        className: "bg-emerald-100 text-emerald-800",
+      };
+    if (status === "failed")
+      return {
+        label: "Perso KO",
+        className: "bg-red-100 text-red-800",
+      };
+    if (status === "skipped")
+      return {
+        label: "Perso —",
+        className: "bg-gray-200 text-gray-600",
+      };
+  }
+  return null;
+}
+
 function uniqueSorted(values: Array<string | null | undefined>): string[] {
   return [
     ...new Set(values.map((v) => (v ?? "").trim()).filter(Boolean)),
@@ -563,6 +606,29 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                           Express
                         </span>
                       ) : null}
+                      {(() => {
+                        const mail = deliveryBadge("mail", r.welcomeEmailStatus);
+                        return mail ? (
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${mail.className}`}
+                          >
+                            {mail.label}
+                          </span>
+                        ) : null;
+                      })()}
+                      {(() => {
+                        const persoStatus =
+                          r.databasePersoSyncStatus ??
+                          (r.databasePersoContactId ? "synced" : undefined);
+                        const perso = deliveryBadge("perso", persoStatus);
+                        return perso ? (
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${perso.className}`}
+                          >
+                            {perso.label}
+                          </span>
+                        ) : null;
+                      })()}
                     </span>
                     <span className="mt-0.5 block text-xs text-ns-secondary">
                       {memberSubtitle(r) || "—"}
@@ -650,6 +716,31 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Code parrainage</dt>
                 <dd>{active.referralCode?.trim() || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold uppercase text-ns-secondary">Mail auto</dt>
+                <dd>
+                  {active.welcomeEmailStatus === "sent"
+                    ? `Envoyé${active.welcomeEmailSentAt ? ` · ${new Date(active.welcomeEmailSentAt).toLocaleString("fr-FR")}` : ""}`
+                    : active.welcomeEmailStatus === "failed"
+                      ? `Échec${active.welcomeEmailError ? ` · ${active.welcomeEmailError}` : ""}`
+                      : active.welcomeEmailStatus === "skipped"
+                        ? "Désactivé (template off)"
+                        : "— (avant tracking)"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold uppercase text-ns-secondary">Database Perso</dt>
+                <dd>
+                  {(active.databasePersoSyncStatus ??
+                    (active.databasePersoContactId ? "synced" : undefined)) === "synced"
+                    ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
+                    : active.databasePersoSyncStatus === "failed"
+                      ? "Échec sync"
+                      : active.databasePersoSyncStatus === "skipped"
+                        ? "Non configuré / skip"
+                        : "—"}
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Intérêts</dt>
