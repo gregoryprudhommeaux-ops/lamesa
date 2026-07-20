@@ -49,18 +49,16 @@ export function NsLanguageSwitcher({
   }, [open]);
 
   if (mode === "dropdown") {
-    const shell =
+    const panelShell =
       variant === "dark"
         ? "border-white/20 bg-ns-hero text-white"
         : "border-ns-alternate bg-ns-surface text-ns-tertiary";
+    const trigger =
+      "border-ns-primary bg-ns-primary text-black hover:brightness-95";
     const idle =
       variant === "dark"
         ? "text-white/70 hover:bg-white/10 hover:text-ns-primary"
         : "text-ns-secondary hover:bg-ns-brand-light";
-    const activeRow =
-      variant === "dark"
-        ? "bg-ns-primary text-black"
-        : "bg-ns-brand-light text-ns-hero";
 
     const others = locales.filter((loc) => loc !== activeLocale);
 
@@ -68,7 +66,7 @@ export function NsLanguageSwitcher({
       <div ref={rootRef} className={`relative ${className}`}>
         <button
           type="button"
-          className={`inline-flex min-w-[2.75rem] items-center justify-center gap-1 rounded-sm border px-2 py-1 text-[10px] font-black uppercase tracking-widest transition ${shell}`}
+          className={`inline-flex min-w-[2.75rem] items-center justify-center gap-1 rounded-sm border px-2 py-1 text-[10px] font-black uppercase tracking-widest transition ${trigger}`}
           aria-label="Language"
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -85,7 +83,7 @@ export function NsLanguageSwitcher({
             id={listId}
             role="listbox"
             aria-label="Language"
-            className={`absolute right-0 top-full z-30 mt-1 min-w-full overflow-hidden rounded-sm border py-0.5 shadow-lg ${shell}`}
+            className={`absolute right-0 top-full z-30 mt-1 min-w-full overflow-hidden rounded-sm border py-0.5 shadow-lg ${panelShell}`}
           >
             {others.map((loc) => (
               <li key={loc} role="option" aria-selected={false}>
@@ -101,12 +99,6 @@ export function NsLanguageSwitcher({
                 </button>
               </li>
             ))}
-            {/* Keep current selectable for a11y completeness when only one other */}
-            {others.length === 0 ? (
-              <li role="option" aria-selected className={`px-2 py-1.5 text-[10px] font-black uppercase tracking-widest ${activeRow}`}>
-                {localeLabels[activeLocale] ?? activeLocale.toUpperCase()}
-              </li>
-            ) : null}
           </ul>
         ) : null}
       </div>
