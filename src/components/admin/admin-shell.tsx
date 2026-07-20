@@ -15,11 +15,11 @@ type AdminShellProps = {
 };
 
 const ADMIN_NAV = [
+  { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/inscrits", label: "Membres" },
   { href: "/admin/calendrier", label: "Calendrier" },
   { href: "/admin/evenements", label: "Événements" },
   { href: "/admin/tables", label: "Tables" },
-  { href: "/admin/dashboard", label: "Dashboard" },
   { href: "/admin/templates", label: "Templates" },
 ] as const;
 

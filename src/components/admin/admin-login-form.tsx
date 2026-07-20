@@ -26,7 +26,7 @@ export function AdminLoginForm({ labels }: AdminLoginFormProps) {
         setError(true);
         return;
       }
-      window.location.href = "/admin/evenements";
+      window.location.href = "/admin/dashboard";
     } catch {
       setError(true);
     } finally {

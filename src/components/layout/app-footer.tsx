@@ -71,7 +71,7 @@ export function AppFooter() {
                 ·
               </span>
               <NextLink
-                href="/admin/evenements"
+                href="/admin/dashboard"
                 className="font-medium transition hover:text-white/55"
               >
                 {t("admin")}

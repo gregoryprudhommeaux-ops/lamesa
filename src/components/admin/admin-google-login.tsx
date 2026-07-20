@@ -27,7 +27,7 @@ export function AdminGoogleLogin({
   useEffect(() => {
     if (loading || !user) return;
     if (isAdmin) {
-      router.replace("/admin/evenements");
+      router.replace("/admin/dashboard");
       return;
     }
     router.replace(`/${routing.defaultLocale}/compte`);

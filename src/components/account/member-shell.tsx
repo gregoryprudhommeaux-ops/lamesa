@@ -39,7 +39,7 @@ export function MemberShell({
           <h2 className="text-xl font-bold text-ns-hero">{heading}</h2>
           <div className="mt-2 flex flex-wrap gap-3 text-xs font-semibold">
             {isAdmin && (
-              <a href="/admin/evenements" className="text-ns-primary hover:underline">
+              <a href="/admin/dashboard" className="text-ns-primary hover:underline">
                 {t("adminLink")}
               </a>
             )}

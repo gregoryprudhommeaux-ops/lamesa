@@ -56,7 +56,7 @@ export function MemberLoginPanel() {
   useEffect(() => {
     if (loading || !user) return;
     if (isAdmin) {
-      router.replace("/admin/evenements");
+      router.replace("/admin/dashboard");
       return;
     }
     router.replace(`/${locale}/compte?tab=profil`);
