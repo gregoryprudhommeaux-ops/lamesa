@@ -28,6 +28,7 @@ export function LanguageSwitcher() {
   return (
     <NsLanguageSwitcher
       variant="dark"
+      mode="dropdown"
       locales={routing.locales}
       activeLocale={locale}
       localeLabels={LOCALE_LABELS}
