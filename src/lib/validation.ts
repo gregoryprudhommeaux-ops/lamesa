@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CITY_HUBS } from "./constants/city-hubs";
 import { isValidLinkedInUrl } from "./linkedin";
 
 export const registrationSchema = z.object({
@@ -15,7 +16,7 @@ export const registrationSchema = z.object({
     (val) => (typeof val === "string" ? [val] : val),
     z.array(z.string().trim().min(2).max(500)).min(1),
   ),
-  city: z.string().trim().min(2).max(80),
+  city: z.enum(CITY_HUBS),
   phone: z
     .string()
     .trim()

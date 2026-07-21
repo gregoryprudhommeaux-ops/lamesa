@@ -10,6 +10,7 @@ import type { ComposedTableIdea, TableIdeaSeat } from "@/lib/admin/table-matchin
 import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
 import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { CITY_HUBS, DEFAULT_CITY_HUB, resolveCityHub } from "@/lib/constants/city-hubs";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { ArrowLeftRight, X } from "lucide-react";
@@ -18,8 +19,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 type TableIdea = ComposedTableIdea;
-
-const CITIES = ["Guadalajara", "Ciudad de México", "Monterrey", "Puebla"] as const;
 
 const GENERATE_ERROR_LABELS_FR: Record<TableIdeasErrorCode | "generate_failed", string> = {
   validation: "Paramètres invalides. Vérifie la ville et le thème.",
@@ -97,7 +96,7 @@ export function AdminTableBuilder() {
   const searchParams = useSearchParams();
   const generateSectionRef = useRef<HTMLDivElement>(null);
 
-  const [city, setCity] = useState("Guadalajara");
+  const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
   const [mode, setMode] = useState<TableIdeaMode>("spontaneous");
   const [theme, setTheme] = useState("");
 
@@ -317,9 +316,11 @@ export function AdminTableBuilder() {
     setActiveDraftId(draft.id);
     setHumanValidatedAt(draft.humanValidatedAt ?? null);
     setCity(
-      draft.city ||
-        [...draft.primary, ...draft.alternates].find((member) => member.city.trim())?.city ||
-        "",
+      resolveCityHub(
+        draft.city ||
+          [...draft.primary, ...draft.alternates].find((member) => member.city.trim())?.city ||
+          "",
+      ) ?? DEFAULT_CITY_HUB,
     );
     setIdeas([ideaFromDraft(draft)]);
     setSelectedIdeaIndex(0);
@@ -502,19 +503,18 @@ export function AdminTableBuilder() {
             <label className="sr-only" htmlFor="table-city">
               Ville
             </label>
-            <input
+            <select
               id="table-city"
-              list="table-cities"
               className={`${INPUT_CLASS} text-sm`}
               value={city}
               onChange={(e) => setCity(e.target.value)}
-              placeholder="Guadalajara"
-            />
-            <datalist id="table-cities">
-              {CITIES.map((c) => (
-                <option key={c} value={c} />
+            >
+              {CITY_HUBS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
-            </datalist>
+            </select>
             <p className="mt-1.5 text-xs text-ns-secondary">
               Défaut Guadalajara — à toucher seulement si tu analyses une autre ville.
             </p>

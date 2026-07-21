@@ -1,13 +1,14 @@
 import { z } from "zod";
+import { CITY_HUBS } from "@/lib/constants/city-hubs";
 
 export const tableIdeasRequestSchema = z.discriminatedUnion("mode", [
   z.object({
-    city: z.string().trim().min(2).max(80),
+    city: z.enum(CITY_HUBS),
     mode: z.literal("spontaneous"),
     excludeMemberIds: z.array(z.string().min(1)).max(200).default([]),
   }),
   z.object({
-    city: z.string().trim().min(2).max(80),
+    city: z.enum(CITY_HUBS),
     mode: z.literal("admin_theme"),
     theme: z.string().trim().min(3).max(500),
     excludeMemberIds: z.array(z.string().min(1)).max(200).default([]),

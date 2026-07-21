@@ -3,6 +3,7 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
+import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
@@ -28,7 +29,7 @@ export function MemberProfilePanel({
   onSaved,
 }: MemberProfilePanelProps) {
   const t = useTranslations("account");
-  const tWaitlist = useTranslations("waitlist");
+  const tReg = useTranslations("registration");
   const authFetch = useAuthFetch();
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -38,7 +39,7 @@ export function MemberProfilePanel({
   const [company, setCompany] = useState(profile.company ?? "");
   const [sector, setSector] = useState(profile.sector ?? "");
   const [position, setPosition] = useState(profile.position ?? "");
-  const [city, setCity] = useState(profile.city ?? "");
+  const [city, setCity] = useState(() => resolveCityHub(profile.city) ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
   const [linkedinUrl, setLinkedinUrl] = useState(profile.linkedinUrl ?? "");
   const [extraActivities, setExtraActivities] = useState(
@@ -55,7 +56,7 @@ export function MemberProfilePanel({
     setCompany(profile.company ?? "");
     setSector(profile.sector ?? "");
     setPosition(profile.position ?? "");
-    setCity(profile.city ?? "");
+    setCity(resolveCityHub(profile.city) ?? "");
     setPhone(profile.phone ?? "");
     setLinkedinUrl(profile.linkedinUrl ?? "");
     setExtraActivities((profile.extraActivities ?? []).join(", "));
@@ -167,7 +168,7 @@ export function MemberProfilePanel({
             <option value="">{t("fields.selectPlaceholder")}</option>
             {SECTORS.map((s) => (
               <option key={s} value={s}>
-                {tWaitlist(`sectors.${s}`)}
+                {tReg(`sectors.${s}`)}
               </option>
             ))}
           </select>
@@ -186,19 +187,29 @@ export function MemberProfilePanel({
             <option value="">{t("fields.selectPlaceholder")}</option>
             {POSITIONS.map((p) => (
               <option key={p} value={p}>
-                {tWaitlist(`positions.${p}`)}
+                {tReg(`positions.${p}`)}
               </option>
             ))}
           </select>
         </div>
         <div>
-          <label className={LABEL_CLASS}>{t("fields.city")}</label>
-          <input
+          <label className={LABEL_CLASS} htmlFor="member-city">
+            {t("fields.city")}
+          </label>
+          <select
+            id="member-city"
             className={INPUT_CLASS}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             required
-          />
+          >
+            <option value="">{t("fields.selectPlaceholder")}</option>
+            {CITY_HUBS.map((hub) => (
+              <option key={hub} value={hub}>
+                {tReg(`cityHubs.${hub}`)}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className={LABEL_CLASS}>{t("fields.phone")}</label>

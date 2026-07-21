@@ -49,6 +49,22 @@ const participation = (
 });
 
 describe("buildEligiblePool", () => {
+  it("filters by city hub (aliases like Zapopan → Guadalajara)", () => {
+    const result = buildEligiblePool({
+      members: [
+        member({ id: "member-1", email: "a@example.com", city: "Guadalajara" }),
+        member({ id: "member-2", email: "b@example.com", city: "Zapopan" }),
+        member({ id: "member-3", email: "c@example.com", city: "Monterrey" }),
+        member({ id: "member-4", email: "deleted@example.com", deletedAt: "2026-01-02" }),
+      ],
+      participations: [],
+      events: [],
+      city: "Guadalajara",
+    });
+
+    expect(result.candidates.map(({ id }) => id)).toEqual(["member-1", "member-2"]);
+  });
+
   it("filters by normalized city and soft deletion", () => {
     const result = buildEligiblePool({
       members: [
@@ -59,7 +75,7 @@ describe("buildEligiblePool", () => {
       ],
       participations: [],
       events: [],
-      city: " mexico city ",
+      city: "Ciudad de México",
     });
 
     expect(result.candidates.map(({ id }) => id)).toEqual(["member-1", "member-2"]);

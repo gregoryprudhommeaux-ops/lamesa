@@ -9,6 +9,7 @@ import { isPlatformAdminIdentity } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { CITY_HUBS } from "@/lib/constants/city-hubs";
 import { z } from "zod";
 
 function isNextResponse(value: unknown): value is NextResponse {
@@ -24,7 +25,7 @@ const profilePatchSchema = z.object({
   sector: z.string().trim().max(80).optional(),
   position: z.string().trim().max(80).optional(),
   extraActivities: z.array(z.string().trim().min(1).max(500)).optional(),
-  city: z.string().trim().max(80).optional(),
+  city: z.enum(CITY_HUBS).optional(),
   phone: z.string().trim().min(8).max(40).optional(),
   invitationMotivation: z.string().trim().max(2000).optional(),
   canBring: z.string().trim().max(280).optional(),

@@ -17,19 +17,19 @@ const baseIdea = (overrides: Partial<Record<string, unknown>> = {}) => ({
 describe("tableIdeasRequestSchema", () => {
   it("requires a theme only in admin_theme mode", () => {
     const spontaneous = tableIdeasRequestSchema.safeParse({
-      city: "Mexico City",
+      city: "Ciudad de México",
       mode: "spontaneous",
     });
     expect(spontaneous.success).toBe(true);
 
     const missingTheme = tableIdeasRequestSchema.safeParse({
-      city: "Mexico City",
+      city: "Ciudad de México",
       mode: "admin_theme",
     });
     expect(missingTheme.success).toBe(false);
 
     const withTheme = tableIdeasRequestSchema.safeParse({
-      city: "Mexico City",
+      city: "Ciudad de México",
       mode: "admin_theme",
       theme: "Founders who scaled past seed",
     });
@@ -38,13 +38,21 @@ describe("tableIdeasRequestSchema", () => {
 
   it("defaults excludeMemberIds to an empty array", () => {
     const parsed = tableIdeasRequestSchema.safeParse({
-      city: "Mexico City",
+      city: "Ciudad de México",
       mode: "spontaneous",
     });
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.excludeMemberIds).toEqual([]);
     }
+  });
+
+  it("rejects free-text cities that are not hubs", () => {
+    const parsed = tableIdeasRequestSchema.safeParse({
+      city: "Zapopan",
+      mode: "spontaneous",
+    });
+    expect(parsed.success).toBe(false);
   });
 });
 

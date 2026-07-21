@@ -247,6 +247,11 @@ function distributionLabel(kind: "sector" | "position" | "city", value: string):
   if (value === "__missing__") return "Non renseigné";
   if (kind === "sector") return labelSectorFr(value);
   if (kind === "position") return labelPositionFr(value);
+  if (kind === "city") {
+    if (value === "Guadalajara") return "Guadalajara (ZMG)";
+    if (value === "Otro") return "Autre";
+    return value;
+  }
   return value;
 }
 
@@ -255,13 +260,15 @@ function DistributionCard({
   items,
   total,
   kind,
+  emptyLabel = "Aucune donnée.",
 }: {
   title: string;
   items: DistributionItem[];
   total: number;
   kind: "sector" | "position" | "city";
+  emptyLabel?: string;
 }) {
-  const visible = items.slice(0, 8);
+  const visible = kind === "city" ? items : items.slice(0, 8);
   return (
     <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
       <div className="flex items-baseline justify-between gap-3">
@@ -270,13 +277,14 @@ function DistributionCard({
       </div>
 
       {visible.length === 0 ? (
-        <p className="mt-4 text-sm text-ns-secondary">Aucune donnée.</p>
+        <p className="mt-4 text-sm text-ns-secondary">{emptyLabel}</p>
       ) : (
         <div className="mt-4 space-y-3">
           {visible.map((item) => {
             const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
+            const muted = kind === "city" && item.count === 0;
             return (
-              <div key={item.value}>
+              <div key={item.value} className={muted ? "opacity-45" : undefined}>
                 <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
                   <span className="min-w-0 truncate font-medium text-ns-tertiary">
                     {distributionLabel(kind, item.value)}
@@ -291,7 +299,7 @@ function DistributionCard({
               </div>
             );
           })}
-          {items.length > visible.length ? (
+          {kind !== "city" && items.length > visible.length ? (
             <p className="text-xs text-ns-secondary">
               +{items.length - visible.length} autre{items.length - visible.length > 1 ? "s" : ""}
             </p>
@@ -483,7 +491,7 @@ export function AdminDashboardPanel() {
             Répartition membres
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Sur la waitlist active : secteur, position et ville déclarés dans le profil.
+            Sur la waitlist active : secteur, position et hub ville (ZMG → Guadalajara).
           </p>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
@@ -500,7 +508,7 @@ export function AdminDashboardPanel() {
             kind="position"
           />
           <DistributionCard
-            title="Villes"
+            title="Hubs"
             items={distributions?.cities ?? []}
             total={kpis.waitlistUsers}
             kind="city"

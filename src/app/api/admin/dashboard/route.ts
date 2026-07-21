@@ -18,6 +18,7 @@ import {
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
+import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type {
   AdminEvent,
@@ -34,7 +35,7 @@ function normalizeDistributionValue(value: string | null | undefined): string {
 
 function buildDistribution(
   rows: WaitlistRegistration[],
-  field: "sector" | "position" | "city",
+  field: "sector" | "position",
 ): Array<{ value: string; count: number }> {
   const counts = new Map<string, number>();
   for (const row of rows) {
@@ -44,6 +45,34 @@ function buildDistribution(
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
+}
+
+/** Always expose every hub (+ missing), so the dashboard reads as a hub table. */
+function buildCityHubDistribution(
+  rows: WaitlistRegistration[],
+): Array<{ value: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const hub of CITY_HUBS) counts.set(hub, 0);
+
+  let missing = 0;
+  for (const row of rows) {
+    const hub = resolveCityHub(row.city);
+    if (hub) {
+      counts.set(hub, (counts.get(hub) ?? 0) + 1);
+    } else {
+      missing += 1;
+    }
+  }
+
+  const hubs = CITY_HUBS.map((value) => ({
+    value,
+    count: counts.get(value) ?? 0,
+  })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
+
+  if (missing > 0) {
+    hubs.push({ value: "__missing__", count: missing });
+  }
+  return hubs;
 }
 
 export async function GET(request: Request) {
@@ -178,7 +207,7 @@ export async function GET(request: Request) {
     const distributions = {
       sectors: buildDistribution(waitlistActive, "sector"),
       positions: buildDistribution(waitlistActive, "position"),
-      cities: buildDistribution(waitlistActive, "city"),
+      cities: buildCityHubDistribution(waitlistActive),
     };
 
     const recentTableDrafts = draftsSnap

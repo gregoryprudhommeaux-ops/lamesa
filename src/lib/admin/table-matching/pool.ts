@@ -1,4 +1,5 @@
 import { countsAsInvitation } from "@/lib/admin/member-engagement";
+import { citiesInSameHub, resolveCityHub } from "@/lib/constants/city-hubs";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { computeProfileCompletionPercent } from "@/lib/member/profile-completion";
 import type {
@@ -61,8 +62,8 @@ export function buildEligiblePool(input: {
   aiCards: AiCandidateCard[];
   previousEventId: string | null;
 } {
-  const normalizedCity = normalizeText(input.city);
-  if (!normalizedCity) {
+  const cityHub = resolveCityHub(input.city);
+  if (!cityHub && !(input.city ?? "").trim()) {
     return { candidates: [], aiCards: [], previousEventId: null };
   }
 
@@ -71,7 +72,7 @@ export function buildEligiblePool(input: {
     (member) =>
       !member.deletedAt &&
       !excludedIds.has(member.id) &&
-      normalizeText(member.city) === normalizedCity,
+      citiesInSameHub(member.city, input.city),
   );
 
   const now = Date.now();
@@ -80,7 +81,7 @@ export function buildEligiblePool(input: {
     return Number.isFinite(startsAt) && startsAt < now;
   });
   const matchingCityEvents = pastEvents.filter(
-    (event) => normalizeText(event.city) === normalizedCity && normalizeText(event.city) !== "",
+    (event) => Boolean(event.city?.trim()) && citiesInSameHub(event.city, input.city),
   );
   const previousEvent = latestEvent(
     matchingCityEvents.length > 0 ? matchingCityEvents : pastEvents,

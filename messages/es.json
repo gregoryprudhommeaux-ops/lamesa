@@ -173,6 +173,13 @@
       "canBring": "¿Qué puedes aportar a la mesa?",
       "isSeeking": "¿Qué buscas en LA MESA?"
     },
+    "cityHubs": {
+      "Guadalajara": "Guadalajara (ZMG)",
+      "Ciudad de México": "Ciudad de México",
+      "Monterrey": "Monterrey",
+      "Puebla": "Puebla",
+      "Otro": "Otro"
+    },
     "sectors": {
       "tech": "Tech y digital",
       "finance": "Finanzas e inversión",

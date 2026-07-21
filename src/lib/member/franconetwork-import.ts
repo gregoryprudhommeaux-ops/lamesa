@@ -3,6 +3,7 @@ import {
   findWaitlistByEmail,
   findWaitlistByEmailIncludingDeleted,
 } from "@/lib/auth/member.server";
+import { resolveCityHub } from "@/lib/constants/city-hubs";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
@@ -120,7 +121,8 @@ export function mapFnProfileToWaitlist(
   const company = trimText(input.companyName);
   const sector = trimText(input.activityCategory);
   const position = trimText(input.positionCategory);
-  const city = trimText(input.city);
+  const cityRaw = trimText(input.city);
+  const city = resolveCityHub(cityRaw) ?? cityRaw;
   const linkedinUrl = trimText(input.linkedin);
   const invitationMotivation = pickMotivation(input);
   const locale = normalizeLocale(input.communicationLanguage);

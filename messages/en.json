@@ -173,6 +173,13 @@
       "canBring": "What do you bring to a dinner like this?",
       "isSeeking": "What are you looking for at LA MESA?"
     },
+    "cityHubs": {
+      "Guadalajara": "Guadalajara (ZMG)",
+      "Ciudad de México": "Mexico City",
+      "Monterrey": "Monterrey",
+      "Puebla": "Puebla",
+      "Otro": "Other"
+    },
     "sectors": {
       "tech": "Tech & digital",
       "finance": "Finance & investment",

@@ -8,6 +8,7 @@ import {
   LABEL_CLASS,
 } from "@/lib/ui/nextstep";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
+import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
 import { isValidLinkedInUrl } from "@/lib/linkedin";
 import { PhoneInput, isValidFullPhone } from "@/components/phone-input";
 import { Link } from "@/i18n/navigation";
@@ -190,7 +191,20 @@ export function ProfileRegistrationForm({
         <h3 className={FORM_SECTION_TITLE}>{t("sections.contact")}</h3>
         <div>
           <label htmlFor="city" className={LABEL_CLASS}>{t("fields.city")}</label>
-          <input id="city" name="city" required placeholder={t("fields.cityPlaceholder")} className={INPUT_CLASS} disabled={state === "sending"} />
+          <select
+            id="city"
+            name="city"
+            required
+            defaultValue={DEFAULT_CITY_HUB}
+            className={INPUT_CLASS}
+            disabled={state === "sending"}
+          >
+            {CITY_HUBS.map((hub) => (
+              <option key={hub} value={hub}>
+                {t(`cityHubs.${hub}`)}
+              </option>
+            ))}
+          </select>
         </div>
         <PhoneInput disabled={state === "sending"} resetKey={phoneResetKey} />
       </section>
