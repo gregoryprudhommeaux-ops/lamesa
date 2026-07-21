@@ -118,7 +118,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Estimado/a {{fullName}}:",
         "",
-        "Te invitamos a la cena privada LA MESA: {{eventTitle}}.",
+        "Te invitamos a LA MESA ({{format}}): {{eventTitle}}.",
         "",
         "No compartimos la lista de nombres. En la invitación adelantamos la composición (tema, sectores o roles) cuando está disponible.",
         "",
@@ -156,7 +156,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Tu es invité(e) au dîner privé LA MESA : {{eventTitle}}.",
+        "Tu es invité(e) à LA MESA ({{format}}) : {{eventTitle}}.",
         "",
         "On ne partage pas la liste nominative. L’invitation peut préciser la composition (thème, secteurs ou rôles) quand elle est disponible.",
         "",
@@ -194,7 +194,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Hi {{fullName}},",
         "",
-        "You’re invited to a private LA MESA dinner: {{eventTitle}}.",
+        "You’re invited to LA MESA ({{format}}): {{eventTitle}}.",
         "",
         "We don’t share a name list. The invitation may outline the makeup (theme, sectors or roles) when available.",
         "",
@@ -234,7 +234,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Estimado/a {{fullName}}:",
         "",
-        "Confirmamos tu participación en la cena « {{eventTitle}} ».",
+        "Confirmamos tu participación en « {{eventTitle}} » ({{format}}).",
         "",
         "Fecha y hora: {{when}}",
         "Lugar: {{where}}",
@@ -252,7 +252,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Ta participation au dîner {{eventTitle}} est confirmée.",
+        "Ta participation à {{eventTitle}} ({{format}}) est confirmée.",
         "",
         "Quand : {{when}}",
         "Où : {{where}}",
@@ -270,7 +270,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Hi {{fullName}},",
         "",
-        "Your spot at {{eventTitle}} is confirmed.",
+        "Your spot at {{eventTitle}} ({{format}}) is confirmed.",
         "",
         "When: {{when}}",
         "Where: {{where}}",
@@ -290,7 +290,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Estimado/a {{fullName}}:",
         "",
-        "Te recordamos que la cena LA MESA « {{eventTitle}} » tendrá lugar en una semana.",
+        "Te recordamos que LA MESA « {{eventTitle}} » ({{format}}) tendrá lugar en una semana.",
         "",
         "Fecha y hora: {{when}}",
         "Lugar: {{where}}",
@@ -306,7 +306,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Rappel : le dîner LA MESA « {{eventTitle}} » a lieu dans une semaine.",
+        "Rappel : LA MESA « {{eventTitle}} » ({{format}}) a lieu dans une semaine.",
         "",
         "Quand : {{when}}",
         "Où : {{where}}",
@@ -321,7 +321,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Hi {{fullName}},",
         "",
-        "Reminder: the LA MESA dinner “{{eventTitle}}” is in one week.",
+        "Reminder: LA MESA “{{eventTitle}}” ({{format}}) is in one week.",
         "",
         "When: {{when}}",
         "Where: {{where}}",
@@ -338,7 +338,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Estimado/a {{fullName}}:",
         "",
-        "La cena « {{eventTitle}} » tendrá lugar en aproximadamente 36 horas.",
+        "LA MESA « {{eventTitle}} » ({{format}}) tendrá lugar en aproximadamente 36 horas.",
         "",
         "Fecha y hora: {{when}}",
         "Lugar: {{where}}",
@@ -354,7 +354,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Le dîner « {{eventTitle}} » a lieu dans environ 36 heures.",
+        "LA MESA « {{eventTitle}} » ({{format}}) a lieu dans environ 36 heures.",
         "",
         "Quand : {{when}}",
         "Où : {{where}}",
@@ -369,7 +369,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       body: [
         "Hi {{fullName}},",
         "",
-        "The dinner “{{eventTitle}}” is in about 36 hours.",
+        "LA MESA “{{eventTitle}}” ({{format}}) is in about 36 hours.",
         "",
         "When: {{when}}",
         "Where: {{where}}",
@@ -432,11 +432,11 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
   },
   satisfaction_survey: {
     es: {
-      subject: "Gracias por {{eventTitle}} — 1 minuto sobre la cena",
+      subject: "Gracias por {{eventTitle}} — 1 minuto sobre {{format}}",
       body: [
         "Hola {{fullName}},",
         "",
-        "Gracias por la cena LA MESA « {{eventTitle}} ».",
+        "Gracias por LA MESA « {{eventTitle}} » ({{format}}).",
         "",
         "Cuéntanos cómo estuvo. Nos sirve para armar la siguiente:",
         "{{surveyUrl}}",
@@ -448,11 +448,11 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       ].join("\n"),
     },
     fr: {
-      subject: "Merci pour {{eventTitle}} — 1 minute sur le dîner",
+      subject: "Merci pour {{eventTitle}} — 1 minute sur {{format}}",
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Merci pour le dîner LA MESA « {{eventTitle}} ».",
+        "Merci pour LA MESA « {{eventTitle}} » ({{format}}).",
         "",
         "Dis-nous comment c’était. Ça nous sert pour la prochaine table :",
         "{{surveyUrl}}",
@@ -464,11 +464,11 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       ].join("\n"),
     },
     en: {
-      subject: "Thanks for {{eventTitle}} — 1 minute on the dinner",
+      subject: "Thanks for {{eventTitle}} — 1 minute on {{format}}",
       body: [
         "Hi {{fullName}},",
         "",
-        "Thanks for the LA MESA dinner “{{eventTitle}}”.",
+        "Thanks for LA MESA “{{eventTitle}}” ({{format}}).",
         "",
         "Tell us how it went. We use it when we build the next table:",
         "{{surveyUrl}}",

@@ -71,6 +71,11 @@ export interface AdminEvent {
   address?: string;
   /** Optional city signal used for city-specific event history. */
   city?: string;
+  /**
+   * Gathering format — breakfast / coffee / aperitif / dinner.
+   * Defaults to dinner when omitted (legacy events).
+   */
+  format?: "breakfast" | "coffee" | "aperitif" | "dinner";
   registrationFormUrl?: string;
   flyerUrl?: string;
   startsAt: string;
@@ -216,6 +221,8 @@ export interface TableDraft {
   id: string;
   title: string;
   city: string;
+  /** Gathering format — defaults to dinner for legacy drafts. */
+  format: "breakfast" | "coffee" | "aperitif" | "dinner";
   themeAngle: string;
   rationale: string;
   commonalities: string[];

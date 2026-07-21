@@ -11,6 +11,12 @@ import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { CITY_HUBS, DEFAULT_CITY_HUB, resolveCityHub } from "@/lib/constants/city-hubs";
+import {
+  DEFAULT_EVENT_FORMAT,
+  EVENT_FORMATS,
+  labelEventFormat,
+  type EventFormat,
+} from "@/lib/constants/event-formats";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { ArrowLeftRight, X } from "lucide-react";
@@ -97,6 +103,7 @@ export function AdminTableBuilder() {
   const generateSectionRef = useRef<HTMLDivElement>(null);
 
   const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [format, setFormat] = useState<EventFormat>(DEFAULT_EVENT_FORMAT);
   const [mode, setMode] = useState<TableIdeaMode>("spontaneous");
   const [theme, setTheme] = useState("");
 
@@ -264,6 +271,7 @@ export function AdminTableBuilder() {
     const payload = {
       title: selectedIdea.title,
       city,
+      format,
       themeAngle: selectedIdea.themeAngle,
       rationale: selectedIdea.rationale,
       commonalities: selectedIdea.commonalities,
@@ -322,6 +330,7 @@ export function AdminTableBuilder() {
           "",
       ) ?? DEFAULT_CITY_HUB,
     );
+    setFormat(draft.format ?? DEFAULT_EVENT_FORMAT);
     setIdeas([ideaFromDraft(draft)]);
     setSelectedIdeaIndex(0);
     setPrimary(draft.primary);
@@ -352,7 +361,11 @@ export function AdminTableBuilder() {
       setDraftMessage("Aucun email valide parmi les titulaires.");
       return;
     }
-    setPendingInvitees(invitees);
+    setPendingInvitees(invitees, {
+      format,
+      city,
+      title: selectedIdea?.title ?? "",
+    });
     router.push("/admin/evenements?nouveau=1");
   }
 
@@ -499,26 +512,45 @@ export function AdminTableBuilder() {
 
         <details className="mt-4 border-t border-gray-100 pt-3">
           <summary className="cursor-pointer text-xs font-semibold text-ns-secondary hover:text-ns-tertiary">
-            Changer de ville
+            Ville & format
           </summary>
-          <div className="mt-2 max-w-xs">
-            <label className="sr-only" htmlFor="table-city">
-              Ville
-            </label>
-            <select
-              id="table-city"
-              className={`${INPUT_CLASS} text-sm`}
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-            >
-              {CITY_HUBS.map((c) => (
-                <option key={c} value={c}>
-                  {labelCityHubFr(c)}
-                </option>
-              ))}
-            </select>
-            <p className="mt-1.5 text-xs text-ns-secondary">
-              Défaut Guadalajara — à toucher seulement si tu analyses une autre ville.
+          <div className="mt-2 grid max-w-md gap-3 sm:grid-cols-2">
+            <div>
+              <label className={LABEL_CLASS} htmlFor="table-city">
+                Ville
+              </label>
+              <select
+                id="table-city"
+                className={`${INPUT_CLASS} text-sm`}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              >
+                {CITY_HUBS.map((c) => (
+                  <option key={c} value={c}>
+                    {labelCityHubFr(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={LABEL_CLASS} htmlFor="table-format">
+                Format
+              </label>
+              <select
+                id="table-format"
+                className={`${INPUT_CLASS} text-sm`}
+                value={format}
+                onChange={(e) => setFormat(e.target.value as EventFormat)}
+              >
+                {EVENT_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {labelEventFormat(f, "fr")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-ns-secondary sm:col-span-2">
+              Défaut : Guadalajara · Dîner — à changer seulement si tu analyses un autre hub ou format.
             </p>
           </div>
         </details>
@@ -671,8 +703,8 @@ export function AdminTableBuilder() {
                 <div className="min-w-0">
                   <p className="truncate font-semibold text-ns-tertiary">{draft.title || "—"}</p>
                   <p className="text-xs text-ns-secondary">
-                    {DRAFT_STATUS_LABELS_FR[draft.status]} · {formatDraftDate(draft.updatedAt)} ·{" "}
-                    {draft.primary.length} titulaire(s)
+                    {DRAFT_STATUS_LABELS_FR[draft.status]} · {labelEventFormat(draft.format, "fr")} ·{" "}
+                    {formatDraftDate(draft.updatedAt)} · {draft.primary.length} titulaire(s)
                     {draft.humanValidatedAt ? " · Validée humainement" : ""}
                   </p>
                 </div>

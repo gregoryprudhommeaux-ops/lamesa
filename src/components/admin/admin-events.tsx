@@ -4,8 +4,17 @@ import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-
 import { AdminEventFunnel } from "@/components/admin/admin-event-funnel";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { consumePendingInvitees } from "@/lib/admin/pending-invitees";
+import { consumePendingEventSeed } from "@/lib/admin/pending-invitees";
 import { DRESS_CODES, PARKING_OPTIONS } from "@/lib/constants/form-options";
+import {
+  DEFAULT_EVENT_FORMAT,
+  EVENT_FORMATS,
+  defaultTimesForFormat,
+  labelEventFormat,
+  type EventFormat,
+} from "@/lib/constants/event-formats";
+import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
+import { labelCityHubFr } from "@/lib/admin/waitlist-labels-fr";
 import {
   BTN_PRIMARY,
   BTN_SECONDARY,
@@ -107,6 +116,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
   const [priceMxn, setPriceMxn] = useState<string>("");
   const [menuIncluded, setMenuIncluded] = useState("");
+  const [format, setFormat] = useState<EventFormat>(DEFAULT_EVENT_FORMAT);
+  const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
   const [dressCode, setDressCode] = useState<DressCode>("none_specified");
   const [parking, setParking] = useState<Parking>("unknown");
   const [registrationFormUrl, setRegistrationFormUrl] = useState("");
@@ -178,12 +189,18 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
   }, [loading, events]);
 
-  function resetForm(invitees: SelectedInvitee[] = [], presetDate?: string) {
+  function resetForm(
+    invitees: SelectedInvitee[] = [],
+    presetDate?: string,
+    seed?: { format?: EventFormat; city?: string; title?: string },
+  ) {
     const now = splitLocal(new Date().toISOString());
     const date =
       presetDate && /^\d{4}-\d{2}-\d{2}$/.test(presetDate) ? presetDate : now.date;
+    const nextFormat = seed?.format ?? DEFAULT_EVENT_FORMAT;
+    const times = defaultTimesForFormat(nextFormat);
     setActiveId(null);
-    setTitle("");
+    setTitle(seed?.title?.trim() ?? "");
     setOrganizerName("LA MESA");
     setShareEnabled(false);
     setIntroText("");
@@ -191,11 +208,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setAddress("");
     setMapsUrl("");
     setEventDate(date);
-    setStartTime("19:30");
-    setEndTime("22:30");
+    setStartTime(times.startTime);
+    setEndTime(times.endTime);
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
     setPriceMxn("");
     setMenuIncluded("");
+    setFormat(nextFormat);
+    setCity(seed?.city?.trim() || DEFAULT_CITY_HUB);
     setDressCode("none_specified");
     setParking("unknown");
     setRegistrationFormUrl("");
@@ -206,18 +225,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   }
 
   useEffect(() => {
-    const pending = consumePendingInvitees();
+    const pending = consumePendingEventSeed();
     const params =
       typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const wantsNew = params?.get("nouveau") === "1";
     const dateParam = params?.get("date")?.trim() ?? "";
-    if (pending.length === 0 && !wantsNew) return;
+    if (pending.invitees.length === 0 && !wantsNew) return;
     resetForm(
-      pending.map((p) => ({
+      pending.invitees.map((p) => ({
         ...p,
         inviteAs: "invited" as const,
       })),
       dateParam || undefined,
+      {
+        format: pending.format,
+        city: pending.city,
+        title: pending.title,
+      },
     );
     if (wantsNew && typeof window !== "undefined") {
       const url = new URL(window.location.href);
@@ -252,6 +276,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
     );
     setMenuIncluded(event.menuIncluded ?? "");
+    setFormat((event.format as EventFormat | undefined) ?? DEFAULT_EVENT_FORMAT);
+    setCity(event.city?.trim() || DEFAULT_CITY_HUB);
     setDressCode(event.dressCode ?? "none_specified");
     setParking(event.parking ?? "unknown");
     setRegistrationFormUrl(event.registrationFormUrl ?? "");
@@ -278,6 +304,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
       menuIncluded: menuIncluded.trim(),
+      format,
+      city,
       status,
       eventLanguage,
       dressCode,
@@ -568,8 +596,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     <span className="mt-0.5 block truncate text-xs text-ns-secondary">{place}</span>
                   ) : null}
                   <span className="mt-0.5 block text-xs text-ns-secondary">
-                    {when}
-                    {when ? " · " : ""}
+                    {labelEventFormat(e.format, "fr")}
+                    {when ? ` · ${when}` : ""}
+                    {when || e.format ? " · " : ""}
                     {labels[`eventStatus.${e.status ?? "draft"}`] ?? e.status}
                   </span>
                 </button>
@@ -604,6 +633,48 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 className={INPUT_CLASS}
                 placeholder="Ex. IA & entrepreneurs Guadalajara"
               />
+            </div>
+            <div>
+              <label className={LABEL_CLASS} htmlFor="event-format">
+                {labels["fields.format"] ?? "Format"}
+              </label>
+              <select
+                id="event-format"
+                className={INPUT_CLASS}
+                value={format}
+                onChange={(e) => {
+                  const next = e.target.value as EventFormat;
+                  setFormat(next);
+                  if (!activeId) {
+                    const times = defaultTimesForFormat(next);
+                    setStartTime(times.startTime);
+                    setEndTime(times.endTime);
+                  }
+                }}
+              >
+                {EVENT_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {labels[`format.${f}`] ?? labelEventFormat(f, "fr")}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={LABEL_CLASS} htmlFor="event-city">
+                {labels["fields.city"] ?? "Ville (hub)"}
+              </label>
+              <select
+                id="event-city"
+                className={INPUT_CLASS}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+              >
+                {CITY_HUBS.map((c) => (
+                  <option key={c} value={c}>
+                    {labelCityHubFr(c)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="sm:col-span-2">
               <label className={LABEL_CLASS}>{labels["fields.organizer"]}</label>

@@ -259,8 +259,10 @@
       "closed": "Clôturé"
     },
     "fields": {
-      "title": "Thématique du dîner",
+      "title": "Thématique",
       "organizer": "Organisateur",
+      "format": "Format",
+      "city": "Ville (hub)",
       "date": "Date",
       "startsAt": "Heure de début",
       "endsAt": "Heure de fin estimée",
@@ -286,6 +288,12 @@
       "flyerUrlHint": "Image/PDF/page. Visible depuis la page publique.",
       "dressCode": "Tenue",
       "parking": "Stationnement"
+    },
+    "format": {
+      "breakfast": "Petit-déjeuner",
+      "coffee": "Café",
+      "aperitif": "Apéro",
+      "dinner": "Dîner"
     },
     "dress": {
       "none_specified": "Non précisée",

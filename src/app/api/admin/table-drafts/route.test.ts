@@ -42,6 +42,7 @@ function createBody() {
   return {
     title: "Builders and operators",
     city: "Guadalajara",
+    format: "dinner" as const,
     themeAngle: "Scaling durable companies",
     rationale: "A balanced group of builders with complementary operating experience.",
     commonalities: ["B2B"],

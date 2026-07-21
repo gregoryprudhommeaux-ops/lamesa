@@ -261,6 +261,8 @@
     "fields": {
       "title": "Dinner theme",
       "organizer": "Organizer",
+      "format": "Format",
+      "city": "City (hub)",
       "date": "Date",
       "startsAt": "Start time",
       "endsAt": "Estimated end time",
@@ -286,6 +288,12 @@
       "flyerUrlHint": "Image/PDF/page. Visible on the public page.",
       "dressCode": "Dress code",
       "parking": "Parking"
+    },
+    "format": {
+      "breakfast": "Breakfast",
+      "coffee": "Coffee",
+      "aperitif": "Drinks",
+      "dinner": "Dinner"
     },
     "dress": {
       "none_specified": "Not specified",

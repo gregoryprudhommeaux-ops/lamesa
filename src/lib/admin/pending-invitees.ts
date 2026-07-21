@@ -1,3 +1,6 @@
+import type { EventFormat } from "@/lib/constants/event-formats";
+import { isEventFormat } from "@/lib/constants/event-formats";
+
 const STORAGE_KEY = "la-mesa:pending-invitees";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -28,6 +31,14 @@ export type TableMemberInviteEmail = {
   contactId?: string;
 };
 
+/** Optional event fields seeded when creating an event from Table Builder. */
+export type PendingEventSeed = {
+  invitees: PendingInvitee[];
+  format?: EventFormat;
+  city?: string;
+  title?: string;
+};
+
 /** Converts primary table members into waitlist invitees; never call with alternates. */
 export function tableMembersToPendingInvitees(members: TableIdeaMember[]): PendingInvitee[] {
   return tableMembersToInviteEmails(members).map((inv) => ({
@@ -53,24 +64,56 @@ export function tableMembersToInviteEmails(members: TableIdeaMember[]): TableMem
   return result;
 }
 
-export function setPendingInvitees(invitees: PendingInvitee[]): void {
+export function setPendingInvitees(
+  invitees: PendingInvitee[],
+  seed?: Omit<PendingEventSeed, "invitees">,
+): void {
   if (typeof sessionStorage === "undefined") return;
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(invitees));
+  const payload: PendingEventSeed = {
+    invitees,
+    ...(seed?.format ? { format: seed.format } : {}),
+    ...(seed?.city?.trim() ? { city: seed.city.trim() } : {}),
+    ...(seed?.title?.trim() ? { title: seed.title.trim() } : {}),
+  };
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 
+function isPendingInvitee(item: unknown): item is PendingInvitee {
+  return (
+    !!item &&
+    typeof item === "object" &&
+    typeof (item as PendingInvitee).email === "string"
+  );
+}
+
+/** @deprecated Prefer consumePendingEventSeed — kept for call sites that only need invitees. */
 export function consumePendingInvitees(): PendingInvitee[] {
-  if (typeof sessionStorage === "undefined") return [];
+  return consumePendingEventSeed().invitees;
+}
+
+export function consumePendingEventSeed(): PendingEventSeed {
+  if (typeof sessionStorage === "undefined") return { invitees: [] };
   const raw = sessionStorage.getItem(STORAGE_KEY);
   sessionStorage.removeItem(STORAGE_KEY);
-  if (!raw) return [];
+  if (!raw) return { invitees: [] };
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is PendingInvitee =>
-        !!item && typeof item === "object" && typeof (item as PendingInvitee).email === "string",
-    );
+    // Legacy: bare invitee array
+    if (Array.isArray(parsed)) {
+      return { invitees: parsed.filter(isPendingInvitee) };
+    }
+    if (!parsed || typeof parsed !== "object") return { invitees: [] };
+    const record = parsed as Record<string, unknown>;
+    const invitees = Array.isArray(record.invitees)
+      ? record.invitees.filter(isPendingInvitee)
+      : [];
+    return {
+      invitees,
+      format: isEventFormat(record.format) ? record.format : undefined,
+      city: typeof record.city === "string" ? record.city : undefined,
+      title: typeof record.title === "string" ? record.title : undefined,
+    };
   } catch {
-    return [];
+    return { invitees: [] };
   }
 }

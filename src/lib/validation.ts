@@ -98,6 +98,8 @@ export const eventSchema = z.object({
   capacity: z.number().int().min(1).max(100).optional(),
   priceMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   menuIncluded: z.string().trim().max(4000).optional(),
+  format: z.enum(["breakfast", "coffee", "aperitif", "dinner"]).optional(),
+  city: z.string().trim().max(80).optional(),
   dressCode: z
     .enum(["casual", "smart_casual", "business", "formal", "traditional", "none_specified"])
     .optional(),

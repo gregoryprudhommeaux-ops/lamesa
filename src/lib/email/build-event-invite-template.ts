@@ -1,4 +1,5 @@
 import type { AdminEvent } from "@/lib/types/events";
+import { labelEventFormat } from "@/lib/constants/event-formats";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 
 type Lang = "fr" | "en" | "es";
@@ -76,6 +77,8 @@ export function buildDefaultEventInviteTemplate(input: {
       ? (PARKING_LABELS[lang][event.parking] ?? event.parking)
       : "";
 
+  const formatLabel = labelEventFormat(event.format, lang);
+
   const subject =
     lang === "en"
       ? `LA MESA invitation — ${event.title}`
@@ -88,7 +91,7 @@ export function buildDefaultEventInviteTemplate(input: {
       ? [
           "Hello {{fullName}},",
           "",
-          `You are invited to a private LA MESA dinner: ${event.title}.`,
+          `You’re invited to LA MESA (${formatLabel}): ${event.title}.`,
           "",
           when ? `When: ${when}${ends ? ` → ${ends}` : ""}` : null,
           where ? `Where: ${where}` : null,
@@ -109,7 +112,7 @@ export function buildDefaultEventInviteTemplate(input: {
         ? [
             "Estimado/a {{fullName}}:",
             "",
-            `Te invitamos a la cena privada LA MESA: ${event.title}.`,
+            `Te invitamos a LA MESA (${formatLabel}): ${event.title}.`,
             "",
             when ? `Fecha y hora: ${when}${ends ? ` → ${ends}` : ""}` : null,
             where ? `Lugar: ${where}` : null,
@@ -129,7 +132,7 @@ export function buildDefaultEventInviteTemplate(input: {
         : [
             "Bonjour {{fullName}},",
             "",
-            `Tu es invité(e) à un dîner privé LA MESA : ${event.title}.`,
+            `Tu es invité(e) à LA MESA (${formatLabel}) : ${event.title}.`,
             "",
             when ? `Quand : ${when}${ends ? ` → ${ends}` : ""}` : null,
             where ? `Où : ${where}` : null,

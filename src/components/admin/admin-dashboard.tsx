@@ -2,6 +2,7 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import Link from "next/link";
@@ -47,6 +48,7 @@ type RecentTableDraft = {
   id: string;
   title: string;
   city: string;
+  format?: string;
   primaryCount: number;
   alternateCount: number;
   updatedAt: string;
@@ -549,6 +551,8 @@ export function AdminDashboardPanel() {
               >
                 <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
                 <p className="mt-1 text-xs text-ns-secondary">
+                  {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
+                  {" · "}
                   {draft.city ? labelCityHubFr(draft.city) : "Ville non renseignée"}
                 </p>
                 <p className="mt-3 text-sm text-ns-tertiary">

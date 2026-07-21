@@ -44,6 +44,7 @@ function storedDraft(overrides: Record<string, unknown> = {}) {
   return {
     title: "Builders and operators",
     city: "Guadalajara",
+    format: "dinner",
     themeAngle: "Scaling durable companies",
     rationale: "A balanced group of builders with complementary operating experience.",
     commonalities: ["B2B"],
@@ -322,11 +323,12 @@ describe("/api/admin/table-drafts/[id]", () => {
     expect(response.status).toBe(200);
     expect(update).toHaveBeenCalledWith(
       reference,
-      {
+      expect.objectContaining({
         primary: validPrimary,
         alternates,
+        humanValidatedAt: null,
         updatedAt: expect.any(String),
-      },
+      }),
     );
   });
 

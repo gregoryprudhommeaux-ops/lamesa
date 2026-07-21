@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  DEFAULT_EVENT_FORMAT,
+  EVENT_FORMATS,
+  resolveEventFormat,
+} from "@/lib/constants/event-formats";
 import type {
   TableDraft,
   TableDraftMemberSnapshot,
@@ -9,6 +14,7 @@ export type TableDraftCreate = Pick<
   TableDraft,
   | "title"
   | "city"
+  | "format"
   | "themeAngle"
   | "rationale"
   | "commonalities"
@@ -39,6 +45,7 @@ const editableFieldsSchema = z
   .object({
     title: z.string().trim().min(3).max(120),
     city: z.string().trim().min(1).max(100),
+    format: z.enum(EVENT_FORMATS),
     themeAngle: z.string().trim().min(3).max(300),
     rationale: z.string().trim().min(10).max(1500),
     commonalities: z.array(z.string().trim().min(2).max(240)).max(8),
@@ -123,6 +130,7 @@ export function validateMergedTableDraft(
   const seats = tableDraftCreateSchema.safeParse({
     title: patch.title ?? raw.title,
     city: patch.city ?? raw.city,
+    format: patch.format ?? raw.format ?? DEFAULT_EVENT_FORMAT,
     themeAngle: patch.themeAngle ?? raw.themeAngle,
     rationale: patch.rationale ?? raw.rationale,
     commonalities: patch.commonalities ?? raw.commonalities,
@@ -226,6 +234,7 @@ export function normalizeTableDraft(id: string, data: unknown): TableDraft {
     id,
     title: stringValue(record.title),
     city: stringValue(record.city),
+    format: resolveEventFormat(record.format),
     themeAngle: stringValue(record.themeAngle),
     rationale: stringValue(record.rationale),
     commonalities: stringArray(record.commonalities),
@@ -269,6 +278,7 @@ export type TableDraftSummary = {
   id: string;
   title: string;
   city: string;
+  format: TableDraft["format"];
   primaryCount: number;
   alternateCount: number;
   updatedAt: string;
@@ -284,6 +294,7 @@ export function listRecentTableDraftSummaries(
       id: draft.id,
       title: draft.title,
       city: draft.city,
+      format: draft.format,
       primaryCount: draft.primary.length,
       alternateCount: draft.alternates.length,
       updatedAt: draft.updatedAt ?? draft.createdAt ?? "",

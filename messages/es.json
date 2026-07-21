@@ -261,6 +261,8 @@
     "fields": {
       "title": "Temática de la cena",
       "organizer": "Organizador",
+      "format": "Formato",
+      "city": "Ciudad (hub)",
       "date": "Fecha",
       "startsAt": "Hora de inicio",
       "endsAt": "Hora de fin estimada",
@@ -286,6 +288,12 @@
       "flyerUrlHint": "Imagen, PDF o página. Visible en la página pública.",
       "dressCode": "Código de vestimenta",
       "parking": "Estacionamiento"
+    },
+    "format": {
+      "breakfast": "Desayuno",
+      "coffee": "Café",
+      "aperitif": "Afterwork",
+      "dinner": "Cena"
     },
     "dress": {
       "none_specified": "No especificado",

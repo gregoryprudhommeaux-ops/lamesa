@@ -396,8 +396,9 @@ export function AdminEmailTemplatesPanel() {
             </p>
             <p className="mt-1 text-xs text-ns-secondary">
               Variables : {"{{fullName}}"}, {"{{firstName}}"}, {"{{email}}"}, {"{{eventTitle}}"},{" "}
-              {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"},{" "}
-              {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"}, {"{{inviteUrl}}"}, prix…
+              {"{{format}}"}, {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"},{" "}
+              {"{{noUrl}}"}, {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"},{" "}
+              {"{{inviteUrl}}"}, prix…
             </p>
           </div>
           {error && <p className={ERROR_TEXT}>{error}</p>}

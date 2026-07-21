@@ -5,6 +5,7 @@ import type {
   EmailTemplateLocaleContent,
   TemplateLocale,
 } from "@/lib/types/events";
+import { labelEventFormat } from "@/lib/constants/event-formats";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -61,6 +62,8 @@ export type TemplateVars = {
   ivaAmount?: string;
   totalWithIva?: string;
   menuIncluded?: string;
+  /** Localized gathering format label (Dîner / Cena / Dinner / …) */
+  format?: string;
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
@@ -89,7 +92,8 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{priceBeforeTax}}", vars.priceBeforeTax ?? "")
     .replaceAll("{{ivaAmount}}", vars.ivaAmount ?? "")
     .replaceAll("{{totalWithIva}}", vars.totalWithIva ?? "")
-    .replaceAll("{{menuIncluded}}", vars.menuIncluded ?? "");
+    .replaceAll("{{menuIncluded}}", vars.menuIncluded ?? "")
+    .replaceAll("{{format}}", vars.format ?? "");
 }
 
 /** Language used when sending email / WhatsApp for an event. */
@@ -129,6 +133,7 @@ export function buildEventTemplateVars(input: {
     menuIncluded:
       input.event.menuIncluded?.trim() ||
       (lang === "fr" ? "Voir la page de l’événement" : lang === "en" ? "See the event page" : "Ver la página del evento"),
+    format: labelEventFormat(input.event.format, lang),
   };
 }
 
