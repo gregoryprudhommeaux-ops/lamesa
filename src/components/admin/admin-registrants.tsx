@@ -2,7 +2,7 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { setPendingInvitees } from "@/lib/admin/pending-invitees";
-import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import {
   computeProfileCompletionPercent,
@@ -193,7 +193,12 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
   function memberSubtitle(r: WaitlistRegistration): string {
-    return [labelPositionFr(r.position), labelSectorFr(r.sector), r.company?.trim(), r.city?.trim()]
+    return [
+      labelPositionFr(r.position),
+      labelSectorFr(r.sector),
+      r.company?.trim(),
+      labelCityHubFr(r.city),
+    ]
       .filter((part) => Boolean(part) && part !== "—")
       .join(" · ");
   }
@@ -461,7 +466,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <option value="">Toutes</option>
               {cityOptions.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {labelCityHubFr(c)}
                 </option>
               ))}
             </select>
@@ -717,7 +722,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Ville</dt>
-                <dd>{active.city}</dd>
+                <dd>{labelCityHubFr(active.city)}</dd>
               </div>
               <div>
                 <dt className="text-xs font-bold uppercase text-ns-secondary">LinkedIn</dt>

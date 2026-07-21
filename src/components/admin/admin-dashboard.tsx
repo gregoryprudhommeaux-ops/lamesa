@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import Link from "next/link";
@@ -238,20 +238,20 @@ function WelcomeEmailCell({
 }
 
 function registrantSubtitle(r: RecentRegistrant): string {
-  return [labelPositionFr(r.position), labelSectorFr(r.sector), r.company.trim(), r.city.trim()]
+  return [
+    labelPositionFr(r.position),
+    labelSectorFr(r.sector),
+    r.company.trim(),
+    labelCityHubFr(r.city),
+  ]
     .filter((part) => Boolean(part) && part !== "—")
     .join(" · ");
 }
 
 function distributionLabel(kind: "sector" | "position" | "city", value: string): string {
-  if (value === "__missing__") return "Non renseigné";
   if (kind === "sector") return labelSectorFr(value);
   if (kind === "position") return labelPositionFr(value);
-  if (kind === "city") {
-    if (value === "Guadalajara") return "Guadalajara (ZMG)";
-    if (value === "Otro") return "Autre";
-    return value;
-  }
+  if (kind === "city") return labelCityHubFr(value);
   return value;
 }
 
@@ -549,7 +549,7 @@ export function AdminDashboardPanel() {
               >
                 <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
                 <p className="mt-1 text-xs text-ns-secondary">
-                  {draft.city || "Ville non renseignée"}
+                  {draft.city ? labelCityHubFr(draft.city) : "Ville non renseignée"}
                 </p>
                 <p className="mt-3 text-sm text-ns-tertiary">
                   {draft.primaryCount} titulaire{draft.primaryCount === 1 ? "" : "s"} ·{" "}

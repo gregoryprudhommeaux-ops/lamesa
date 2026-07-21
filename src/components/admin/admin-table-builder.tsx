@@ -9,7 +9,7 @@ import {
 import type { ComposedTableIdea, TableIdeaSeat } from "@/lib/admin/table-matching";
 import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
-import { labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { CITY_HUBS, DEFAULT_CITY_HUB, resolveCityHub } from "@/lib/constants/city-hubs";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
@@ -59,7 +59,7 @@ function describeDraftActionMessage(message: string): string {
 }
 
 function memberSubtitle(member: TableIdeaSeat): string {
-  return [labelPositionFr(member.position), labelSectorFr(member.sector), member.company.trim(), member.city.trim()]
+  return [labelPositionFr(member.position), labelSectorFr(member.sector), member.company.trim(), labelCityHubFr(member.city)]
     .filter((part) => Boolean(part) && part !== "—")
     .join(" · ");
 }
@@ -487,10 +487,12 @@ export function AdminTableBuilder() {
             </button>
             {poolSize !== null ? (
               <p className="text-xs text-ns-secondary">
-                {poolSize} profil(s) éligible(s) · {city.trim() || "—"}
+                {poolSize} profil(s) éligible(s) · {city.trim() ? labelCityHubFr(city) : "—"}
               </p>
             ) : (
-              <p className="text-xs text-ns-secondary">Vivier : {city.trim() || "—"}</p>
+              <p className="text-xs text-ns-secondary">
+                Vivier : {city.trim() ? labelCityHubFr(city) : "—"}
+              </p>
             )}
           </div>
         </div>
@@ -511,7 +513,7 @@ export function AdminTableBuilder() {
             >
               {CITY_HUBS.map((c) => (
                 <option key={c} value={c}>
-                  {c}
+                  {labelCityHubFr(c)}
                 </option>
               ))}
             </select>

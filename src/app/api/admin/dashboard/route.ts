@@ -64,7 +64,7 @@ function buildCityHubDistribution(
     }
   }
 
-  const hubs = CITY_HUBS.map((value) => ({
+  const hubs: Array<{ value: string; count: number }> = CITY_HUBS.map((value) => ({
     value,
     count: counts.get(value) ?? 0,
   })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
