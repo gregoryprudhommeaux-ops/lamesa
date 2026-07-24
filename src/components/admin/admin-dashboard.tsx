@@ -529,6 +529,21 @@ export function AdminDashboardPanel() {
         </div>
       </div>
 
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
+        <KpiCard
+          label="Événements"
+          value={kpis.eventsTotal}
+          hint={`${kpis.eventsPublished} publiés · ${kpis.eventsUpcoming} à venir`}
+        />
+        <KpiCard label="Participations" value={kpis.participationsTotal} />
+        <KpiCard
+          label="Satisfaction globale"
+          value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
+          hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
+        />
+      </section>
+
       {needingAttention > 0 ? (
         <Link
           href="/admin/inscrits?profile=incomplete"
@@ -570,21 +585,6 @@ export function AdminDashboardPanel() {
           <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
           <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
         </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
-        <KpiCard
-          label="Événements"
-          value={kpis.eventsTotal}
-          hint={`${kpis.eventsPublished} publiés · ${kpis.eventsUpcoming} à venir`}
-        />
-        <KpiCard label="Participations" value={kpis.participationsTotal} />
-        <KpiCard
-          label="Satisfaction globale"
-          value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
-          hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
-        />
       </section>
 
       <section>
