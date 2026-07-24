@@ -12,6 +12,7 @@ import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
+import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
   computeProfileCompletionPercent,
   isExpressSignup,
@@ -214,6 +215,11 @@ export async function GET(request: Request) {
       ? listRecentTableDraftSummaries(draftsSnap.docs, 3)
       : [];
 
+    const opsQueues = buildOpsQueues({
+      members: waitlistActive,
+      participations,
+    });
+
     return NextResponse.json({
       ok: true,
       kpis: {
@@ -237,6 +243,7 @@ export async function GET(request: Request) {
       recentRegistrants,
       distributions,
       recentTableDrafts,
+      opsQueues,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

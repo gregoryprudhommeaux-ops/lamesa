@@ -194,6 +194,16 @@ export interface WaitlistRegistration {
   referredByCode?: string;
   referredById?: string;
   referralAcceptedAt?: string;
+  /**
+   * Admin ops notes (post-dinner CRM, curation). Not synced to Database Perso.
+   */
+  opsNotes?: string;
+  /** Admin prioritization band for cockpit queues. */
+  opsPriority?: "priority" | "normal" | "review" | "low";
+  /** Freeform ops tags (e.g. no-show, vip, partner-fit). */
+  opsTags?: string[];
+  /** Last time an admin edited ops fields. */
+  opsTouchedAt?: string;
 }
 
 export interface DatabasePersoContact {

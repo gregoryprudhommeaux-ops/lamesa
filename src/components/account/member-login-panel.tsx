@@ -9,6 +9,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from "firebase/auth";
+import { Eye, EyeOff } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
@@ -41,6 +42,65 @@ function mapAuthError(code: string | undefined, messages: {
   }
 }
 
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  autoComplete,
+  disabled,
+  showPassword,
+  onToggleShow,
+  showLabel,
+  hideLabel,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  disabled: boolean;
+  showPassword: boolean;
+  onToggleShow: () => void;
+  showLabel: string;
+  hideLabel: string;
+}) {
+  return (
+    <div>
+      <label htmlFor={id} className={LABEL_CLASS}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          type={showPassword ? "text" : "password"}
+          autoComplete={autoComplete}
+          required
+          minLength={6}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={`${INPUT_CLASS} pr-11`}
+        />
+        <button
+          type="button"
+          onClick={onToggleShow}
+          disabled={disabled}
+          className="absolute inset-y-0 right-0 flex items-center px-3 text-ns-secondary transition hover:text-ns-tertiary disabled:opacity-50"
+          aria-label={showPassword ? hideLabel : showLabel}
+          aria-pressed={showPassword}
+        >
+          {showPassword ? (
+            <EyeOff className="h-4 w-4" aria-hidden />
+          ) : (
+            <Eye className="h-4 w-4" aria-hidden />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function MemberLoginPanel() {
   const t = useTranslations("account");
   const { user, loading, isAdmin, configured } = useAuth();
@@ -50,6 +110,7 @@ export function MemberLoginPanel() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,40 +203,32 @@ export function MemberLoginPanel() {
             className={INPUT_CLASS}
           />
         </div>
-        <div>
-          <label htmlFor="login-password" className={LABEL_CLASS}>
-            {t("emailAuth.password")}
-          </label>
-          <input
-            id="login-password"
-            type="password"
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+        <PasswordField
+          id="login-password"
+          label={t("emailAuth.password")}
+          value={password}
+          onChange={setPassword}
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          disabled={busy}
+          showPassword={showPassword}
+          onToggleShow={() => setShowPassword((v) => !v)}
+          showLabel={t("emailAuth.showPassword")}
+          hideLabel={t("emailAuth.hidePassword")}
+        />
+        {mode === "signup" ? (
+          <PasswordField
+            id="login-password-confirm"
+            label={t("emailAuth.confirmPassword")}
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            autoComplete="new-password"
             disabled={busy}
-            className={INPUT_CLASS}
+            showPassword={showPassword}
+            onToggleShow={() => setShowPassword((v) => !v)}
+            showLabel={t("emailAuth.showPassword")}
+            hideLabel={t("emailAuth.hidePassword")}
           />
-        </div>
-        {mode === "signup" && (
-          <div>
-            <label htmlFor="login-password-confirm" className={LABEL_CLASS}>
-              {t("emailAuth.confirmPassword")}
-            </label>
-            <input
-              id="login-password-confirm"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={6}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={busy}
-              className={INPUT_CLASS}
-            />
-          </div>
-        )}
+        ) : null}
         {error && <p className={ERROR_TEXT}>{error}</p>}
         <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={busy || !configured}>
           {busy
@@ -192,6 +245,7 @@ export function MemberLoginPanel() {
         onClick={() => {
           setMode((m) => (m === "signin" ? "signup" : "signin"));
           setError(null);
+          setShowPassword(false);
         }}
       >
         {mode === "signin" ? t("emailAuth.switchToSignup") : t("emailAuth.switchToSignin")}

@@ -5,6 +5,14 @@ import { setPendingInvitees } from "@/lib/admin/pending-invitees";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import {
+  OPS_PRIORITIES,
+  OPS_PRIORITY_LABELS_FR,
+  OPS_SUGGESTED_TAGS,
+  normalizeOpsTags,
+  resolveOpsPriority,
+  type OpsPriority,
+} from "@/lib/constants/ops-priority";
+import {
   computeProfileCompletionPercent,
   isExpressSignup,
 } from "@/lib/member/profile-completion";
@@ -50,6 +58,182 @@ function truncatePersoId(id: string, max = 10): string {
   const t = id.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
+}
+
+function OpsMemberEditor({
+  member,
+  onSaved,
+}: {
+  member: WaitlistRegistration;
+  onSaved: (patch: {
+    opsNotes?: string;
+    opsPriority?: OpsPriority;
+    opsTags?: string[];
+    opsTouchedAt?: string;
+  }) => void;
+}) {
+  const authFetch = useAuthFetch();
+  const [notes, setNotes] = useState(member.opsNotes ?? "");
+  const [priority, setPriority] = useState<OpsPriority>(resolveOpsPriority(member.opsPriority));
+  const [tagsText, setTagsText] = useState((member.opsTags ?? []).join(", "));
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNotes(member.opsNotes ?? "");
+    setPriority(resolveOpsPriority(member.opsPriority));
+    setTagsText((member.opsTags ?? []).join(", "));
+    setMsg(null);
+    setErr(null);
+  }, [member.id, member.opsNotes, member.opsPriority, member.opsTags]);
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    setErr(null);
+    try {
+      const opsTags = normalizeOpsTags(
+        tagsText
+          .split(/[,;\n]/)
+          .map((t) => t.trim())
+          .filter(Boolean),
+      );
+      const res = await authFetch(`/api/admin/waitlist/${encodeURIComponent(member.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          opsNotes: notes.trim(),
+          opsPriority: priority,
+          opsTags,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        opsNotes?: string;
+        opsPriority?: OpsPriority;
+        opsTags?: string[];
+        opsTouchedAt?: string;
+      };
+      if (!res.ok || !json.ok) {
+        setErr(json.error ?? "save_failed");
+        return;
+      }
+      onSaved({
+        opsNotes: typeof json.opsNotes === "string" ? json.opsNotes : notes.trim(),
+        opsPriority: resolveOpsPriority(json.opsPriority ?? priority),
+        opsTags: Array.isArray(json.opsTags) ? json.opsTags : opsTags,
+        opsTouchedAt: json.opsTouchedAt,
+      });
+      setTagsText((Array.isArray(json.opsTags) ? json.opsTags : opsTags).join(", "));
+      setMsg("Notes ops enregistrées");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function toggleSuggested(tag: string) {
+    const current = normalizeOpsTags(
+      tagsText
+        .split(/[,;\n]/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+    );
+    const next = current.includes(tag)
+      ? current.filter((t) => t !== tag)
+      : [...current, tag];
+    setTagsText(next.join(", "));
+  }
+
+  return (
+    <div className="space-y-3 border-t border-gray-100 pt-4">
+      <p className="text-xs font-bold uppercase text-ns-secondary">Ops (CRM table)</p>
+      <div>
+        <label className={LABEL_CLASS} htmlFor={`ops-priority-${member.id}`}>
+          Priorité
+        </label>
+        <select
+          id={`ops-priority-${member.id}`}
+          className={INPUT_CLASS}
+          value={priority}
+          onChange={(e) => setPriority(e.target.value as OpsPriority)}
+        >
+          {OPS_PRIORITIES.map((p) => (
+            <option key={p} value={p}>
+              {OPS_PRIORITY_LABELS_FR[p]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={LABEL_CLASS} htmlFor={`ops-notes-${member.id}`}>
+          Notes
+        </label>
+        <textarea
+          id={`ops-notes-${member.id}`}
+          className={`${INPUT_CLASS} min-h-[88px]`}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Bien à table, à revoir, contexte post-dîner…"
+          maxLength={4000}
+        />
+      </div>
+      <div>
+        <label className={LABEL_CLASS} htmlFor={`ops-tags-${member.id}`}>
+          Tags (virgules)
+        </label>
+        <input
+          id={`ops-tags-${member.id}`}
+          className={INPUT_CLASS}
+          value={tagsText}
+          onChange={(e) => setTagsText(e.target.value)}
+          placeholder="no-show, vip…"
+        />
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {OPS_SUGGESTED_TAGS.map((tag) => {
+            const active = normalizeOpsTags(
+              tagsText
+                .split(/[,;\n]/)
+                .map((t) => t.trim())
+                .filter(Boolean),
+            ).includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleSuggested(tag)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  active
+                    ? "bg-ns-primary text-white"
+                    : "bg-ns-brand-light text-ns-secondary hover:bg-ns-brand-light/80"
+                }`}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      {err ? <p className={ERROR_TEXT}>{err}</p> : null}
+      {msg ? <p className="text-xs font-semibold text-emerald-700">{msg}</p> : null}
+      <button
+        type="button"
+        className={`${BTN_PRIMARY} w-full text-sm`}
+        disabled={saving || isSoftDeleted(member)}
+        onClick={() => void save()}
+      >
+        {saving ? "Enregistrement…" : "Enregistrer ops"}
+      </button>
+      {member.opsTouchedAt ? (
+        <p className="text-[11px] text-ns-secondary">
+          Dernière édition {new Date(member.opsTouchedAt).toLocaleString("fr-FR")}
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function uniqueSorted(values: Array<string | null | undefined>): string[] {
@@ -608,6 +792,23 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                         </span>
                       ) : null}
                       {(() => {
+                        const band = resolveOpsPriority(r.opsPriority);
+                        if (band === "normal") return null;
+                        const className =
+                          band === "priority"
+                            ? "bg-rose-100 text-rose-800"
+                            : band === "review"
+                              ? "bg-orange-100 text-orange-800"
+                              : "bg-slate-200 text-slate-700";
+                        return (
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
+                          >
+                            {OPS_PRIORITY_LABELS_FR[band]}
+                          </span>
+                        );
+                      })()}
+                      {(() => {
                         const mail = deliveryBadge("mail", r.welcomeEmailStatus);
                         return mail ? (
                           <span
@@ -782,6 +983,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
                 <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
               </div>
+              {!isSoftDeleted(active) ? (
+                <OpsMemberEditor
+                  member={active}
+                  onSaved={(patch) => {
+                    setRows((prev) =>
+                      prev.map((r) => (r.id === active.id ? { ...r, ...patch } : r)),
+                    );
+                  }}
+                />
+              ) : null}
               {!isSoftDeleted(active) ? (
                 <div className="border-t border-gray-100 pt-4">
                   <button

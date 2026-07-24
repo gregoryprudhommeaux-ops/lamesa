@@ -44,7 +44,7 @@ Sans validation, un confirm demande quand même confirmation avant handoff.
 |--------|--------|-------|
 | ~J+1 | Survey satisfaction (cron existant) | Email auto |
 | J+1 / J+2 | Thanks court si besoin + **1–2 intros max / personne**, seulement si utile | Email / WhatsApp |
-| J+3 | Note CRM : bien à table / à revoir / à prioriser | Admin |
+| J+3 | Note CRM (`opsNotes` / `opsPriority` / tags) : bien-a-table / à revoir / à prioriser | Admin → Inscrits |
 | ~J+7 | Soft unique : « si otra mesa encaja, te escribimos » | Email (pas de série nurture) |
 
 ### Script intro (ES — adapter FR/EN)

@@ -54,6 +54,25 @@ type RecentTableDraft = {
   updatedAt: string;
 };
 
+type OpsQueueMember = {
+  id: string;
+  fullName: string;
+  email: string;
+  company: string;
+  city: string;
+  opsPriority: string;
+  opsTags: string[];
+  reason: string;
+};
+
+type OpsQueues = {
+  incomplete: OpsQueueMember[];
+  neverInvited: OpsQueueMember[];
+  review: OpsQueueMember[];
+  priority: OpsQueueMember[];
+  noShow: OpsQueueMember[];
+};
+
 type DistributionItem = {
   value: string;
   count: number;
@@ -86,6 +105,7 @@ type DashboardPayload = {
     cities: DistributionItem[];
   };
   recentTableDrafts?: RecentTableDraft[];
+  opsQueues?: OpsQueues;
 };
 
 const CATEGORIES: {
@@ -107,6 +127,52 @@ function KpiCard({ label, value, hint }: { label: string; value: string | number
       <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{label}</p>
       <p className="mt-2 text-3xl font-black text-ns-tertiary">{value}</p>
       {hint ? <p className="mt-1 text-xs text-ns-secondary">{hint}</p> : null}
+    </div>
+  );
+}
+
+function OpsQueueCard({
+  title,
+  href,
+  rows,
+}: {
+  title: string;
+  href: string;
+  rows: OpsQueueMember[];
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{title}</p>
+          <p className="mt-1 text-2xl font-black text-ns-tertiary">{rows.length}</p>
+        </div>
+        <Link href={href} className="text-xs font-semibold text-ns-primary hover:underline">
+          Voir →
+        </Link>
+      </div>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-xs text-ns-secondary">Aucune file pour l’instant.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {rows.slice(0, 5).map((row) => (
+            <li key={row.id}>
+              <Link
+                href={`/admin/inscrits?id=${encodeURIComponent(row.id)}`}
+                className="block rounded-lg px-2 py-1.5 hover:bg-ns-brand-light/60"
+              >
+                <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                  {row.fullName || row.email || "Sans nom"}
+                </span>
+                <span className="block truncate text-[11px] text-ns-secondary">
+                  {row.reason}
+                  {row.company ? ` · ${row.company}` : ""}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -422,6 +488,7 @@ export function AdminDashboardPanel() {
     recentRegistrants = [],
     distributions,
     recentTableDrafts = [],
+    opsQueues,
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -432,6 +499,13 @@ export function AdminDashboardPanel() {
             recentRegistrants.length,
         );
   const needingAttention = kpis.profilesNeedingAttention ?? 0;
+  const queues: OpsQueues = opsQueues ?? {
+    incomplete: [],
+    neverInvited: [],
+    review: [],
+    priority: [],
+    noShow: [],
+  };
 
   return (
     <div className="space-y-8">
@@ -471,6 +545,32 @@ export function AdminDashboardPanel() {
           <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
         </Link>
       ) : null}
+
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Files ops
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Priorités cockpit — notes et tags se gèrent dans Inscrits.
+          </p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <OpsQueueCard
+            title="Profils incomplets"
+            href="/admin/inscrits?profile=incomplete"
+            rows={queues.incomplete}
+          />
+          <OpsQueueCard
+            title="Jamais invités"
+            href="/admin/inscrits"
+            rows={queues.neverInvited}
+          />
+          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
+          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
+          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
+        </div>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />

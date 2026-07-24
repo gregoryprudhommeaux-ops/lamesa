@@ -346,6 +346,8 @@
       "email": "Email",
       "password": "Password",
       "confirmPassword": "Confirm password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "signIn": "Sign in",
       "createAccount": "Create password / account",
       "working": "One moment…",
