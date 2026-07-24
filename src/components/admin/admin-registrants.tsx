@@ -16,10 +16,11 @@ import {
   computeProfileCompletionPercent,
   isExpressSignup,
 } from "@/lib/member/profile-completion";
+import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { CalendarPlus, Trash2, UserPlus } from "lucide-react";
+import { CalendarPlus, Mail, Trash2, UserPlus } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -245,6 +246,7 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
 type ContextMenuState = { x: number; y: number } | null;
 type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
 type ProfileFilter = "all" | "incomplete";
+type SourceFilter = "all" | "franconetwork";
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
@@ -255,6 +257,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [error, setError] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sendingFnMail, setSendingFnMail] = useState(false);
   const [q, setQ] = useState("");
   const [sector, setSector] = useState("");
   const [position, setPosition] = useState("");
@@ -263,6 +266,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [referralFilter, setReferralFilter] = useState<ReferralFilter>("all");
   const [profileFilter, setProfileFilter] = useState<ProfileFilter>(() =>
     searchParams.get("profile") === "incomplete" ? "incomplete" : "all",
+  );
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
+    searchParams.get("source") === "franconetwork" ? "franconetwork" : "all",
   );
   const [activeId, setActiveId] = useState<string | null>(() => searchParams.get("id"));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -342,6 +348,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         const percent = computeProfileCompletionPercent(r);
         if (!(isExpressSignup(r) || percent < 50)) return false;
       }
+      if (sourceFilter === "franconetwork" && !isFranconetworkMember(r)) return false;
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && (r.city ?? "").trim().toLowerCase() !== city.trim().toLowerCase()) return false;
@@ -358,12 +365,14 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         r.phone,
         r.referredByCode,
         r.referralCode,
+        ...(r.tags ?? []),
+        r.source,
       ]
         .join(" ")
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, q, sector, position, city, company, referralFilter, profileFilter]);
+  }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter]);
 
   const active = activeId ? (rows.find((r) => r.id === activeId) ?? null) : null;
   const selectedRows = useMemo(
@@ -371,7 +380,14 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     [rows, selectedIds],
   );
   const hasFilters = Boolean(
-    q || sector || position || city || company || referralFilter !== "all" || profileFilter !== "all",
+    q ||
+      sector ||
+      position ||
+      city ||
+      company ||
+      referralFilter !== "all" ||
+      profileFilter !== "all" ||
+      sourceFilter !== "all",
   );
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
@@ -395,6 +411,57 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     setCompany("");
     setReferralFilter("all");
     setProfileFilter("all");
+    setSourceFilter("all");
+  }
+
+  async function sendFnAnnouncement(member: WaitlistRegistration, force = false) {
+    setSendingFnMail(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/waitlist/${encodeURIComponent(member.id)}/send-fn-announcement`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ force }),
+        },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        skipped?: boolean;
+        reason?: string;
+      };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "send_failed");
+        return;
+      }
+      if (json.skipped && json.reason === "already_sent") {
+        setActionMsg("Annonce FN déjà envoyée — utilise « Renvoyer » si besoin.");
+        return;
+      }
+      if (json.skipped) {
+        setActionMsg(`Annonce FN non envoyée (${json.reason ?? "skipped"}).`);
+        return;
+      }
+      setActionMsg(`Annonce FN envoyée à ${member.email}.`);
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === member.id
+            ? {
+                ...r,
+                fnAnnouncementEmailStatus: "sent",
+                fnAnnouncementEmailSentAt: new Date().toISOString(),
+              }
+            : r,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingFnMail(false);
+    }
   }
 
   function toggleOne(id: string) {
@@ -583,6 +650,20 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             >
               <option value="all">Tous</option>
               <option value="incomplete">À compléter</option>
+            </select>
+          </div>
+          <div>
+            <label className={LABEL_CLASS} htmlFor="filter-source">
+              Source
+            </label>
+            <select
+              id="filter-source"
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
+              className={INPUT_CLASS}
+            >
+              <option value="all">Toutes</option>
+              <option value="franconetwork">FrancoNetwork</option>
             </select>
           </div>
           <div>
@@ -791,6 +872,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                           Express
                         </span>
                       ) : null}
+                      {isFranconetworkMember(r) ? (
+                        <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+                          FrancoNetwork
+                        </span>
+                      ) : null}
                       {(() => {
                         const band = resolveOpsPriority(r.opsPriority);
                         if (band === "normal") return null;
@@ -983,6 +1069,40 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
                 <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
               </div>
+              {isFranconetworkMember(active) && !isSoftDeleted(active) ? (
+                <div className="space-y-2 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-bold uppercase text-ns-secondary">
+                    Annonce FrancoNetwork (ES)
+                  </p>
+                  <p className="text-xs text-ns-secondary">
+                    Template{" "}
+                    <span className="font-mono text-[11px]">fn_announcement</span>
+                    {active.fnAnnouncementEmailStatus === "sent"
+                      ? ` · envoyé${active.fnAnnouncementEmailSentAt ? ` ${new Date(active.fnAnnouncementEmailSentAt).toLocaleString("fr-FR")}` : ""}`
+                      : active.fnAnnouncementEmailStatus === "failed"
+                        ? " · échec dernier envoi"
+                        : " · pas encore envoyé"}
+                  </p>
+                  <button
+                    type="button"
+                    className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                    disabled={sendingFnMail}
+                    onClick={() =>
+                      void sendFnAnnouncement(
+                        active,
+                        active.fnAnnouncementEmailStatus === "sent",
+                      )
+                    }
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingFnMail
+                      ? "Envoi…"
+                      : active.fnAnnouncementEmailStatus === "sent"
+                        ? "Renvoyer l’annonce"
+                        : "Envoyer l’annonce"}
+                  </button>
+                </div>
+              ) : null}
               {!isSoftDeleted(active) ? (
                 <OpsMemberEditor
                   member={active}

@@ -21,6 +21,8 @@ export type EmailTemplateKey =
   | "satisfaction_survey"
   | "light_signup"
   | "referral_invite"
+  /** FrancoNetwork → LA MESA announcement (ES send) */
+  | "fn_announcement"
   /** Custom admin-created templates: custom_<slug> */
   | `custom_${string}`;
 
@@ -190,6 +192,10 @@ export interface WaitlistRegistration {
   welcomeEmailStatus?: "sent" | "failed" | "skipped";
   welcomeEmailSentAt?: string;
   welcomeEmailError?: string;
+  /** FrancoNetwork announcement email (manual or auto on import) */
+  fnAnnouncementEmailStatus?: "sent" | "failed" | "skipped";
+  fnAnnouncementEmailSentAt?: string;
+  fnAnnouncementEmailError?: string;
   referralCode?: string;
   referredByCode?: string;
   referredById?: string;

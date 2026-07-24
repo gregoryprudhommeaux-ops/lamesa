@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/member.server";
 import { resolveCityHub } from "@/lib/constants/city-hubs";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { sendFranconetworkAnnouncementEmail } from "@/lib/email/send-fn-announcement";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
@@ -192,10 +193,10 @@ function mergeEmptyOnly(
 }
 
 /**
- * Silent upsert into la_mesa_waitlist. Never sends emails.
- * - Active email → skip
- * - Soft-deleted → revive + fill empty fields only
- * - Missing → create
+ * Upsert into la_mesa_waitlist.
+ * - Active email → skip (no re-send)
+ * - Soft-deleted → revive + fill empty fields; announcement if not already sent
+ * - Missing → create + announcement email (ES)
  */
 export async function upsertFranconetworkWaitlistMember(
   input: FranconetworkProfileInput,
@@ -254,6 +255,13 @@ export async function upsertFranconetworkWaitlistMember(
         );
       }
 
+      await sendFranconetworkAnnouncementEmail({
+        to: record.email,
+        fullName: record.fullName,
+        waitlistId: existing.id,
+        alreadySent: existing.fnAnnouncementEmailStatus === "sent",
+      });
+
       return { status: "revived", id: existing.id, profileComplete: record.profileComplete };
     }
 
@@ -272,6 +280,13 @@ export async function upsertFranconetworkWaitlistMember(
         { merge: true },
       );
     }
+
+    await sendFranconetworkAnnouncementEmail({
+      to: record.email,
+      fullName: record.fullName,
+      waitlistId: ref.id,
+      alreadySent: false,
+    });
 
     return { status: "created", id: ref.id, profileComplete: record.profileComplete };
   } catch (e) {

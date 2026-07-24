@@ -1,5 +1,6 @@
 /**
- * One-shot silent import: FrancoNetwork `users` → LA MESA `la_mesa_waitlist`.
+ * One-shot import: FrancoNetwork `users` → LA MESA `la_mesa_waitlist`.
+ * New creates/revives trigger the ES `fn_announcement` email (skip if already sent).
  *
  * Usage (from la-mesa root, with .env.local loaded):
  *   npx tsx --env-file=.env.local scripts/import-franconetwork-waitlist.ts

@@ -14,6 +14,7 @@ export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
   "satisfaction_survey",
   "light_signup",
   "referral_invite",
+  "fn_announcement",
 ] as const;
 
 export type SystemEmailTemplateKey = (typeof SYSTEM_EMAIL_TEMPLATE_KEYS)[number];
@@ -36,6 +37,8 @@ export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
   light_signup: "Inscription express (/light) — compléter le profil",
   referral_invite:
     "Invitation ami (parrainage / satisfaction « Sí, invitar »)",
+  fn_announcement:
+    "Annonce FrancoNetwork → LA MESA (ES — manuel + auto import)",
 };
 
 export const TEMPLATE_LOCALE_LABELS: Record<TemplateLocale, string> = {
@@ -539,6 +542,68 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "",
         "See you soon,",
         "LA MESA",
+      ].join("\n"),
+    },
+  },
+  fn_announcement: {
+    es: {
+      subject: "Tu perfil en LA MESA (desde FrancoNetwork)",
+      body: [
+        "Hola {{fullName}},",
+        "",
+        "Lanzamos LA MESA Secreta en Guadalajara: cenas y encuentros temáticos, mesas armadas a mano.",
+        "",
+        "Como estabas en FrancoNetwork, dejamos tu perfil listo en la plataforma con este correo ({{email}}). Así puedes entrar al listado y ver qué te parece.",
+        "",
+        "Primera vez: {{loginUrl}}",
+        "Elige crear cuenta con este correo y una contraseña nueva (no es la de FrancoNetwork).",
+        "",
+        "Luego puedes completar o corregir tu perfil. Si no quieres que te escribamos para mesas, desactívalo desde ahí.",
+        "",
+        "Sin compromiso.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
+      ].join("\n"),
+    },
+    fr: {
+      subject: "Ton profil sur LA MESA (depuis FrancoNetwork)",
+      body: [
+        "Bonjour {{fullName}},",
+        "",
+        "On a lancé LA MESA Secreta à Guadalajara : dîners et rencontres thématiques, tables composées à la main.",
+        "",
+        "Comme tu étais sur FrancoNetwork, ton profil est déjà prêt sur la plateforme avec cet email ({{email}}). Tu peux entrer dans le listado et voir ce que tu en penses.",
+        "",
+        "Première fois : {{loginUrl}}",
+        "Crée un compte avec cet email et un nouveau mot de passe (pas celui de FrancoNetwork).",
+        "",
+        "Ensuite tu peux compléter ou corriger ton profil. Si tu ne veux plus être contacté pour les tables, désactive-le depuis là.",
+        "",
+        "Sans engagement.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
+      ].join("\n"),
+    },
+    en: {
+      subject: "Your LA MESA profile (from FrancoNetwork)",
+      body: [
+        "Hi {{fullName}},",
+        "",
+        "We launched LA MESA Secreta in Guadalajara: thematic dinners and gatherings, tables put together by hand.",
+        "",
+        "Because you were on FrancoNetwork, your profile is ready on the platform with this email ({{email}}). You can join the list and see how it feels.",
+        "",
+        "First time: {{loginUrl}}",
+        "Create an account with this email and a new password (not your FrancoNetwork one).",
+        "",
+        "Then you can complete or edit your profile. If you don’t want us to write you about tables, deactivate it there.",
+        "",
+        "No obligation.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
       ].join("\n"),
     },
   },

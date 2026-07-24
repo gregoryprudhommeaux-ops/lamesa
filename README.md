@@ -40,9 +40,13 @@ Voir [.env.example](.env.example).
 - `FIREBASE_*` / `NEXT_PUBLIC_FIREBASE_*` — Firestore
 - `FRANCONETWORK_IMPORT_SECRET` — sync silencieux FrancoNetwork → waitlist
 
-## FrancoNetwork → waitlist (silencieux)
+## FrancoNetwork → waitlist
 
-Les profils FN **validés / visibles annuaire** (`isValidated !== false`) sont importés dans `la_mesa_waitlist` **sans email** aux membres. One-shot + sync auto des nouveaux inscrits FN. Au premier `/connexion` (même email), le profil est déjà pré-rempli.
+Les profils FN **validés / visibles annuaire** (`isValidated !== false`) sont importés dans `la_mesa_waitlist`. Au premier `/connexion` (même email), le profil est déjà pré-rempli.
+
+**Nouveaux imports** (`created` / `revived`) : envoi auto du template système `fn_announcement` (ES). Les membres déjà actifs ne sont pas re-contactés. Désactiver le template dans Admin → Templates coupe l’auto-send.
+
+**Cohorte existante** : filtre Inscrits → Source = FrancoNetwork, bouton « Envoyer l’annonce » sur la fiche (un par un).
 
 ```bash
 # Dry-run (défaut)

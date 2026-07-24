@@ -24,9 +24,9 @@ function authorize(request: Request): boolean {
 }
 
 /**
- * Silent FrancoNetwork → LA MESA waitlist upsert.
+ * FrancoNetwork → LA MESA waitlist upsert.
  * Auth: header `x-franconetwork-import-secret` (or Bearer) matching FRANCONETWORK_IMPORT_SECRET.
- * Never sends member/admin emails.
+ * New creates/revives send `fn_announcement` (ES) when the template is enabled.
  */
 export async function POST(request: Request) {
   if (!authorize(request)) {
