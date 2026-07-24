@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   computeProfileCompletionPercent,
+  currentNudgeMonthKey,
   isExpressSignup,
+  isProfileIncomplete,
   listMissingProfileFieldsFr,
 } from "./profile-completion";
 
@@ -97,5 +99,38 @@ describe("isExpressSignup", () => {
     expect(isExpressSignup({ source: "la-mesa-registration", profileComplete: true })).toBe(
       false,
     );
+  });
+});
+
+describe("isProfileIncomplete", () => {
+  it("is true under 100%", () => {
+    expect(isProfileIncomplete({ fullName: "A", email: "a@b.com" })).toBe(true);
+  });
+
+  it("is false at 100%", () => {
+    expect(
+      isProfileIncomplete({
+        fullName: "Ada",
+        email: "ada@example.com",
+        phone: "+521111111111",
+        company: "Acme",
+        sector: "tech",
+        position: "founder",
+        city: "GDL",
+        linkedinUrl: "https://linkedin.com/in/ada",
+        invitationMotivation: "Curiosity",
+        extraActivities: ["networking"],
+        canBring: "B2B",
+        isSeeking: "Partners",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("currentNudgeMonthKey", () => {
+  it("returns YYYY-MM in Mexico City", () => {
+    expect(currentNudgeMonthKey(new Date("2026-08-01T20:00:00.000Z"))).toBe("2026-08");
+    // Still July evening in GDL when UTC is Aug 1 05:00
+    expect(currentNudgeMonthKey(new Date("2026-08-01T05:00:00.000Z"))).toBe("2026-07");
   });
 });

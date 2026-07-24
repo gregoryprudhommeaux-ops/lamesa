@@ -15,6 +15,7 @@ import {
 import {
   computeProfileCompletionPercent,
   isExpressSignup,
+  isProfileIncomplete,
 } from "@/lib/member/profile-completion";
 import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
@@ -258,6 +259,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [actionMsg, setActionMsg] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [sendingFnMail, setSendingFnMail] = useState(false);
+  const [sendingProfileMail, setSendingProfileMail] = useState(false);
   const [q, setQ] = useState("");
   const [sector, setSector] = useState("");
   const [position, setPosition] = useState("");
@@ -401,6 +403,58 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     ]
       .filter((part) => Boolean(part) && part !== "—")
       .join(" · ");
+  }
+
+  async function sendProfileIncomplete(member: WaitlistRegistration, force = false) {
+    setSendingProfileMail(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/waitlist/${encodeURIComponent(member.id)}/send-profile-incomplete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ force }),
+        },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        skipped?: boolean;
+        reason?: string;
+        month?: string;
+      };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "send_failed");
+        return;
+      }
+      if (json.skipped && json.reason === "already_sent_this_month") {
+        setActionMsg("Rappel profil déjà envoyé ce mois — utilise « Renvoyer » si besoin.");
+        return;
+      }
+      if (json.skipped) {
+        setActionMsg(`Rappel profil non envoyé (${json.reason ?? "skipped"}).`);
+        return;
+      }
+      setActionMsg(`Rappel profil envoyé à ${member.email}.`);
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === member.id
+            ? {
+                ...r,
+                profileIncompleteEmailStatus: "sent",
+                profileIncompleteEmailSentAt: new Date().toISOString(),
+                profileIncompleteNudgeMonth: json.month,
+              }
+            : r,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingProfileMail(false);
+    }
   }
 
   function clearFilters() {
@@ -1100,6 +1154,40 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                       : active.fnAnnouncementEmailStatus === "sent"
                         ? "Renvoyer l’annonce"
                         : "Envoyer l’annonce"}
+                  </button>
+                </div>
+              ) : null}
+              {isProfileIncomplete(active) && !isSoftDeleted(active) ? (
+                <div className="space-y-2 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-bold uppercase text-ns-secondary">
+                    Rappel profil incomplet (ES)
+                  </p>
+                  <p className="text-xs text-ns-secondary">
+                    Template{" "}
+                    <span className="font-mono text-[11px]">profile_incomplete</span>
+                    {" · "}
+                    {computeProfileCompletionPercent(active)}%
+                    {active.profileIncompleteNudgeMonth
+                      ? ` · dernier mois ${active.profileIncompleteNudgeMonth}`
+                      : " · pas encore ce mois"}
+                  </p>
+                  <button
+                    type="button"
+                    className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                    disabled={sendingProfileMail}
+                    onClick={() =>
+                      void sendProfileIncomplete(
+                        active,
+                        Boolean(active.profileIncompleteNudgeMonth),
+                      )
+                    }
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingProfileMail
+                      ? "Envoi…"
+                      : active.profileIncompleteNudgeMonth
+                        ? "Renvoyer le rappel"
+                        : "Envoyer le rappel"}
                   </button>
                 </div>
               ) : null}

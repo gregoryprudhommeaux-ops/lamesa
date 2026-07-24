@@ -32,6 +32,22 @@ export const PROFILE_COMPLETION_FIELD_LABELS_FR: Record<ProfileCompletionField, 
   isSeeking: "ce qu’il recherche",
 };
 
+/** Spanish labels for member-facing emails. */
+export const PROFILE_COMPLETION_FIELD_LABELS_ES: Record<ProfileCompletionField, string> = {
+  fullName: "nombre",
+  email: "correo",
+  phone: "teléfono",
+  company: "empresa",
+  sector: "sector",
+  position: "puesto",
+  city: "ciudad",
+  linkedinUrl: "LinkedIn",
+  invitationMotivation: "motivación",
+  extraActivities: "actividades",
+  canBring: "qué puedes aportar",
+  isSeeking: "qué buscas",
+};
+
 export type ProfileCompletionInput = {
   fullName?: string | null;
   email?: string | null;
@@ -79,6 +95,30 @@ export function listMissingProfileFieldsFr(profile: ProfileCompletionInput): str
   return PROFILE_COMPLETION_FIELDS.filter((field) => !isFieldFilled(profile, field)).map(
     (field) => PROFILE_COMPLETION_FIELD_LABELS_FR[field],
   );
+}
+
+/** Spanish labels of empty fields (member emails). */
+export function listMissingProfileFieldsEs(profile: ProfileCompletionInput): string[] {
+  return PROFILE_COMPLETION_FIELDS.filter((field) => !isFieldFilled(profile, field)).map(
+    (field) => PROFILE_COMPLETION_FIELD_LABELS_ES[field],
+  );
+}
+
+/** True when the profile is not fully filled (cannot be curated at 100%). */
+export function isProfileIncomplete(profile: ProfileCompletionInput): boolean {
+  return computeProfileCompletionPercent(profile) < 100;
+}
+
+/** Calendar month key for monthly nudge idempotency (America/Mexico_City). */
+export function currentNudgeMonthKey(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(now);
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  return `${year}-${month}`;
 }
 
 export function isExpressSignup(profile: Pick<ProfileCompletionInput, "source" | "profileComplete">): boolean {

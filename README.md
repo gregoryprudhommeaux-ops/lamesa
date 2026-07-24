@@ -58,6 +58,15 @@ npm run import:franconetwork:apply
 
 Requiert aussi `FN_FIREBASE_*` (voir `.env.example`). Endpoint runtime : `POST /api/admin/import/franconetwork` (header `x-franconetwork-import-secret`).
 
+## Crons (Vercel)
+
+| Path | Schedule (UTC) | Rôle |
+|------|----------------|------|
+| `/api/cron/event-reminders` | `0 15 * * *` | Survey satisfaction post-dîner |
+| `/api/cron/profile-incomplete-nudge` | `0 15 1 * *` | Rappel ES si profil < 100 % (1er du mois) |
+
+Auth : `Authorization: Bearer $CRON_SECRET` (ou `?secret=`). Désactiver un envoi = template off dans Admin → Templates.
+
 ## Database Perso upsert
 
 L'endpoint `POST /api/public/contacts/upsert` est documenté dans [docs/database-perso-upsert.md](docs/database-perso-upsert.md). En attendant, les inscriptions sont stockées dans Firestore `la_mesa_waitlist`.

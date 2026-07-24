@@ -50,6 +50,8 @@ export type TemplateVars = {
   sponsorName?: string;
   /** Signup / referral invite link */
   inviteUrl?: string;
+  /** Comma-separated missing profile fields (locale of the email) */
+  missingFields?: string;
   eventTitle: string;
   when: string;
   where: string;
@@ -82,6 +84,7 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{loginUrl}}", vars.loginUrl ?? "")
     .replaceAll("{{sponsorName}}", sponsorFallback)
     .replaceAll("{{inviteUrl}}", vars.inviteUrl ?? "")
+    .replaceAll("{{missingFields}}", vars.missingFields ?? "")
     .replaceAll("{{eventTitle}}", vars.eventTitle)
     .replaceAll("{{when}}", vars.when)
     .replaceAll("{{where}}", vars.where)

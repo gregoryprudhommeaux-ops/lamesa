@@ -15,6 +15,7 @@ export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
   "light_signup",
   "referral_invite",
   "fn_announcement",
+  "profile_incomplete",
 ] as const;
 
 export type SystemEmailTemplateKey = (typeof SYSTEM_EMAIL_TEMPLATE_KEYS)[number];
@@ -39,6 +40,8 @@ export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
     "Invitation ami (parrainage / satisfaction « Sí, invitar »)",
   fn_announcement:
     "Annonce FrancoNetwork → LA MESA (ES — manuel + auto import)",
+  profile_incomplete:
+    "Profil incomplet — rappel mensuel (ES, cron 1er du mois)",
 };
 
 export const TEMPLATE_LOCALE_LABELS: Record<TemplateLocale, string> = {
@@ -601,6 +604,62 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "Then you can complete or edit your profile. If you don’t want us to write you about tables, deactivate it there.",
         "",
         "No obligation.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
+      ].join("\n"),
+    },
+  },
+  profile_incomplete: {
+    es: {
+      subject: "Completa tu perfil en LA MESA",
+      body: [
+        "Hola {{fullName}},",
+        "",
+        "Para poder considerarte en próximas mesas, necesitamos tu perfil completo en LA MESA.",
+        "",
+        "Hoy te falta: {{missingFields}}.",
+        "",
+        "Entra aquí, revisa tu cuenta y completa lo que falte:",
+        "{{loginUrl}}",
+        "",
+        "Con el perfil al 100% podemos armar mejor las mesas. Sin compromiso de asistir.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
+      ].join("\n"),
+    },
+    fr: {
+      subject: "Complète ton profil sur LA MESA",
+      body: [
+        "Bonjour {{fullName}},",
+        "",
+        "Pour pouvoir te considérer pour de prochaines tables, il nous faut ton profil complet sur LA MESA.",
+        "",
+        "Il manque encore : {{missingFields}}.",
+        "",
+        "Connecte-toi ici, vérifie ton compte et complète ce qui manque :",
+        "{{loginUrl}}",
+        "",
+        "Avec un profil à 100 %, on compose mieux les tables. Sans engagement de venir.",
+        "",
+        "Gregory",
+        "LA MESA · Guadalajara",
+      ].join("\n"),
+    },
+    en: {
+      subject: "Complete your LA MESA profile",
+      body: [
+        "Hi {{fullName}},",
+        "",
+        "To consider you for upcoming tables, we need your LA MESA profile complete.",
+        "",
+        "Still missing: {{missingFields}}.",
+        "",
+        "Sign in here, review your account, and fill in what’s left:",
+        "{{loginUrl}}",
+        "",
+        "At 100% we can build better tables. No obligation to attend.",
         "",
         "Gregory",
         "LA MESA · Guadalajara",

@@ -23,6 +23,8 @@ export type EmailTemplateKey =
   | "referral_invite"
   /** FrancoNetwork → LA MESA announcement (ES send) */
   | "fn_announcement"
+  /** Monthly nudge: profile not 100% complete */
+  | "profile_incomplete"
   /** Custom admin-created templates: custom_<slug> */
   | `custom_${string}`;
 
@@ -196,6 +198,11 @@ export interface WaitlistRegistration {
   fnAnnouncementEmailStatus?: "sent" | "failed" | "skipped";
   fnAnnouncementEmailSentAt?: string;
   fnAnnouncementEmailError?: string;
+  /** Last month (YYYY-MM) a profile-incomplete nudge was sent */
+  profileIncompleteNudgeMonth?: string;
+  profileIncompleteEmailStatus?: "sent" | "failed" | "skipped";
+  profileIncompleteEmailSentAt?: string;
+  profileIncompleteEmailError?: string;
   referralCode?: string;
   referredByCode?: string;
   referredById?: string;
