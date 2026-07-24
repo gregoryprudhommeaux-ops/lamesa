@@ -1,6 +1,6 @@
-import { getSiteUrl } from "@/lib/site-url";
 import {
   escapeEmailHtml,
+  laMesaSiteFooterText,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
@@ -11,6 +11,7 @@ import {
   type TemplateVars,
 } from "@/lib/email/templates";
 import { COLLECTIONS, getAdminFirestore } from "@/lib/firebase/admin";
+import { getSiteUrl } from "@/lib/site-url";
 import { FieldValue } from "firebase-admin/firestore";
 
 const FN_ANNOUNCEMENT_KEY = "fn_announcement" as const;
@@ -100,7 +101,7 @@ export async function sendFranconetworkAnnouncementEmail(input: {
     to: input.to,
     subject,
     html,
-    text: bodyText,
+    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
     bccAdmins: false,
   });
 

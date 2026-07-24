@@ -8,7 +8,11 @@ import {
   isEmailTemplateEnabled,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
-import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
+import {
+  wrapLaMesaEmailHtml,
+  wrapLaMesaPlainBody,
+  laMesaSiteFooterText,
+} from "@/lib/email/la-mesa-email-shell";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
@@ -105,29 +109,20 @@ export async function sendCalendarInviteEmail(input: {
     url: vars.eventUrl,
   });
 
-  const html = `<!DOCTYPE html>
-<html>
-<body style="margin:0;padding:0;background:#0f1210;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f1210;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;">
-        <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
-        <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;">${inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl)}</td></tr>
-        <tr><td style="padding-top:24px;">
+  const html = wrapLaMesaEmailHtml({
+    lang: locale,
+    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
+    footerHtml: `
           <a href="${escapeHtml(yesUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin-right:10px;">YES</a>
           <a href="${escapeHtml(noUrl)}" style="display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;">NO</a>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
+        `,
+  });
 
   return sendTransactionalEmail({
     to: input.participation.email,
     subject,
     html,
-    text: bodyText,
+    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
     attachments: [
       {
         name: "invite.ics",
@@ -163,6 +158,6 @@ export async function sendTemplatedEventEmail(input: {
     to: input.participation.email,
     subject,
     html,
-    text: bodyText,
+    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
   });
 }

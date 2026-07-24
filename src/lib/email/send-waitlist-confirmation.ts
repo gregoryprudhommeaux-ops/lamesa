@@ -7,6 +7,12 @@ import {
   resolveTemplateLocale,
   type TemplateVars,
 } from "@/lib/email/templates";
+import {
+  escapeEmailHtml,
+  laMesaSiteFooterHtml,
+  laMesaSiteFooterText,
+  wrapLaMesaEmailHtml,
+} from "@/lib/email/la-mesa-email-shell";
 import type { TemplateLocale } from "@/lib/types/events";
 
 type ConfirmVariant = "full" | "express";
@@ -115,6 +121,7 @@ function buildLegacyFullContent(
             </td>
           </tr>
           <tr><td style="padding-top:28px;font-size:12px;color:#777;">${escapeHtml(copy.footer)}</td></tr>
+          ${laMesaSiteFooterHtml()}
         </table>
       </td>
     </tr>
@@ -134,6 +141,8 @@ function buildLegacyFullContent(
     `${copy.cta}: ${loginUrl}`,
     "",
     copy.footer,
+    "",
+    laMesaSiteFooterText(),
   ].join("\n");
 
   return { subject: copy.subject, html, text };
@@ -165,24 +174,12 @@ async function buildExpressFromTemplate(input: {
         ? "Sign in and complete my profile"
         : "Iniciar sesión y completar mi perfil";
   const bodyHtml = textToHtml(bodyText, loginUrl, ctaLabel);
+  const html = wrapLaMesaEmailHtml({
+    lang: locale,
+    bodyHtml,
+  });
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}">
-<body style="margin:0;padding:0;background:#0f1210;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#111;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#0f1210;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" style="max-width:520px;background:#ffffff;border-radius:16px;padding:32px;">
-          <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
-          <tr><td style="padding-top:16px;font-size:15px;line-height:1.55;color:#333;">${bodyHtml}</td></tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-
-  return { subject, html, text: bodyText };
+  return { subject, html, text: `${bodyText}\n\n${laMesaSiteFooterText()}` };
 }
 
 export async function sendWaitlistConfirmationEmail(input: {
