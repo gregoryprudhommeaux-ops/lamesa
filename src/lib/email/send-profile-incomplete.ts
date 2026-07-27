@@ -26,6 +26,35 @@ export type ProfileIncompleteMailResult =
   | { ok: true; skipped?: boolean; reason?: string; month?: string }
   | { ok: false; error: string };
 
+export type ProfileIncompletePreview = {
+  to: string;
+  subject: string;
+  body: string;
+  loginUrl: string;
+  missingFields: string;
+  month: string;
+};
+
+type ProfileIncompleteMember = Pick<
+  WaitlistRegistration,
+  | "id"
+  | "email"
+  | "fullName"
+  | "phone"
+  | "company"
+  | "sector"
+  | "position"
+  | "city"
+  | "linkedinUrl"
+  | "invitationMotivation"
+  | "extraActivities"
+  | "canBring"
+  | "isSeeking"
+  | "source"
+  | "profileComplete"
+  | "profileIncompleteNudgeMonth"
+>;
+
 function loginUrlCtaHtml(loginUrl: string, bodyText: string): string {
   const TOKEN = "__LM_LOGIN__";
   let prepared = bodyText;
@@ -64,52 +93,26 @@ export async function persistProfileIncompleteEmailStatus(
   return status;
 }
 
-/**
- * Send profile-incomplete nudge (always ES).
- * Skips if template off, profile already 100%, or already nudged this month (unless force).
- */
-export async function sendProfileIncompleteEmail(input: {
-  member: Pick<
-    WaitlistRegistration,
-    | "id"
-    | "email"
-    | "fullName"
-    | "phone"
-    | "company"
-    | "sector"
-    | "position"
-    | "city"
-    | "linkedinUrl"
-    | "invitationMotivation"
-    | "extraActivities"
-    | "canBring"
-    | "isSeeking"
-    | "source"
-    | "profileComplete"
-    | "profileIncompleteNudgeMonth"
-  >;
-  force?: boolean;
+/** Build subject/body for the profile-incomplete nudge (always ES). Does not send. */
+export async function buildProfileIncompletePreview(input: {
+  member: ProfileIncompleteMember;
   now?: Date;
-}): Promise<ProfileIncompleteMailResult> {
+}): Promise<
+  | { ok: true; preview: ProfileIncompletePreview }
+  | { ok: false; error: string; month?: string }
+> {
   const month = currentNudgeMonthKey(input.now);
   const email = input.member.email?.trim();
   if (!email) {
-    return { ok: false, error: "missing_email" };
+    return { ok: false, error: "missing_email", month };
   }
 
   if (!isProfileIncomplete(input.member)) {
-    return { ok: true, skipped: true, reason: "profile_complete", month };
-  }
-
-  if (
-    !input.force &&
-    input.member.profileIncompleteNudgeMonth === month
-  ) {
-    return { ok: true, skipped: true, reason: "already_sent_this_month", month };
+    return { ok: false, error: "profile_complete", month };
   }
 
   if (!(await isEmailTemplateEnabled(PROFILE_INCOMPLETE_KEY))) {
-    return { ok: true, skipped: true, reason: "template_disabled", month };
+    return { ok: false, error: "template_disabled", month };
   }
 
   const locale = "es" as const;
@@ -128,10 +131,76 @@ export async function sendProfileIncompleteEmail(input: {
     where: "",
     eventUrl: "",
   };
-  const subject = applyTemplateVars(template.subject, vars);
-  const bodyText = applyTemplateVars(template.body, vars);
+
+  return {
+    ok: true,
+    preview: {
+      to: email,
+      subject: applyTemplateVars(template.subject, vars),
+      body: applyTemplateVars(template.body, vars),
+      loginUrl,
+      missingFields,
+      month,
+    },
+  };
+}
+
+/**
+ * Send profile-incomplete nudge (always ES).
+ * Skips if template off, profile already 100%, or already nudged this month (unless force).
+ * Optional subject/body overrides (admin preview edit) replace the rendered template.
+ */
+export async function sendProfileIncompleteEmail(input: {
+  member: ProfileIncompleteMember;
+  force?: boolean;
+  now?: Date;
+  subject?: string;
+  body?: string;
+}): Promise<ProfileIncompleteMailResult> {
+  const month = currentNudgeMonthKey(input.now);
+  const email = input.member.email?.trim();
+  if (!email) {
+    return { ok: false, error: "missing_email" };
+  }
+
+  if (!isProfileIncomplete(input.member)) {
+    return { ok: true, skipped: true, reason: "profile_complete", month };
+  }
+
+  if (!input.force && input.member.profileIncompleteNudgeMonth === month) {
+    return { ok: true, skipped: true, reason: "already_sent_this_month", month };
+  }
+
+  const customSubject = input.subject?.trim();
+  const customBody = input.body?.trim();
+  const hasCustom = Boolean(customSubject && customBody);
+
+  let subject: string;
+  let bodyText: string;
+  let loginUrl: string;
+
+  if (hasCustom) {
+    loginUrl = `${getSiteUrl()}/es/connexion`;
+    subject = customSubject!;
+    bodyText = customBody!;
+  } else {
+    const preview = await buildProfileIncompletePreview({
+      member: input.member,
+      now: input.now,
+    });
+    if (!preview.ok) {
+      if (preview.error === "template_disabled") {
+        return { ok: true, skipped: true, reason: "template_disabled", month };
+      }
+      return { ok: false, error: preview.error };
+    }
+    subject = preview.preview.subject;
+    bodyText = preview.preview.body;
+    loginUrl = preview.preview.loginUrl;
+  }
+
   const html = wrapLaMesaEmailHtml({
-    lang: locale,
+    lang: "es",
     bodyHtml: loginUrlCtaHtml(loginUrl, bodyText),
   });
 

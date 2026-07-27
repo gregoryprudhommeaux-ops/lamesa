@@ -21,9 +21,19 @@ import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { CalendarPlus, Mail, Trash2, UserPlus } from "lucide-react";
+import { CalendarPlus, Mail, Trash2, UserPlus, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+type ProfileReminderDraft = {
+  memberId: string;
+  memberName: string;
+  to: string;
+  subject: string;
+  body: string;
+  force: boolean;
+  alreadySentThisMonth: boolean;
+};
 
 function deliveryBadge(
   kind: "mail",
@@ -260,6 +270,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [deleting, setDeleting] = useState(false);
   const [sendingFnMail, setSendingFnMail] = useState(false);
   const [sendingProfileMail, setSendingProfileMail] = useState(false);
+  const [loadingProfilePreview, setLoadingProfilePreview] = useState(false);
+  const [profileReminderDraft, setProfileReminderDraft] =
+    useState<ProfileReminderDraft | null>(null);
   const [q, setQ] = useState("");
   const [sector, setSector] = useState("");
   const [position, setPosition] = useState("");
@@ -405,17 +418,64 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       .join(" · ");
   }
 
-  async function sendProfileIncomplete(member: WaitlistRegistration, force = false) {
-    setSendingProfileMail(true);
+  async function openProfileIncompletePreview(
+    member: WaitlistRegistration,
+    force = false,
+  ) {
+    setLoadingProfilePreview(true);
     setActionMsg(null);
     setError(null);
     try {
       const res = await authFetch(
         `/api/admin/waitlist/${encodeURIComponent(member.id)}/send-profile-incomplete`,
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        alreadySentThisMonth?: boolean;
+        preview?: {
+          to: string;
+          subject: string;
+          body: string;
+        };
+      };
+      if (!res.ok || !json.ok || !json.preview) {
+        setError(json.error ?? "preview_failed");
+        return;
+      }
+      setProfileReminderDraft({
+        memberId: member.id,
+        memberName: member.fullName?.trim() || member.email,
+        to: json.preview.to,
+        subject: json.preview.subject,
+        body: json.preview.body,
+        force,
+        alreadySentThisMonth: Boolean(json.alreadySentThisMonth),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoadingProfilePreview(false);
+    }
+  }
+
+  async function confirmSendProfileIncomplete() {
+    if (!profileReminderDraft) return;
+    const draft = profileReminderDraft;
+    setSendingProfileMail(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/waitlist/${encodeURIComponent(draft.memberId)}/send-profile-incomplete`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ force }),
+          body: JSON.stringify({
+            force: draft.force || draft.alreadySentThisMonth,
+            subject: draft.subject.trim(),
+            body: draft.body.trim(),
+          }),
         },
       );
       const json = (await res.json()) as {
@@ -437,10 +497,10 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         setActionMsg(`Rappel profil non envoyé (${json.reason ?? "skipped"}).`);
         return;
       }
-      setActionMsg(`Rappel profil envoyé à ${member.email}.`);
+      setActionMsg(`Rappel profil envoyé à ${draft.to}.`);
       setRows((prev) =>
         prev.map((r) =>
-          r.id === member.id
+          r.id === draft.memberId
             ? {
                 ...r,
                 profileIncompleteEmailStatus: "sent",
@@ -450,6 +510,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             : r,
         ),
       );
+      setProfileReminderDraft(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -1174,20 +1235,22 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   <button
                     type="button"
                     className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
-                    disabled={sendingProfileMail}
+                    disabled={sendingProfileMail || loadingProfilePreview}
                     onClick={() =>
-                      void sendProfileIncomplete(
+                      void openProfileIncompletePreview(
                         active,
                         Boolean(active.profileIncompleteNudgeMonth),
                       )
                     }
                   >
                     <Mail className="h-4 w-4" />
-                    {sendingProfileMail
-                      ? "Envoi…"
-                      : active.profileIncompleteNudgeMonth
-                        ? "Renvoyer le rappel"
-                        : "Envoyer le rappel"}
+                    {loadingProfilePreview
+                      ? "Chargement…"
+                      : sendingProfileMail
+                        ? "Envoi…"
+                        : active.profileIncompleteNudgeMonth
+                          ? "Renvoyer le rappel"
+                          : "Envoyer le rappel"}
                   </button>
                 </div>
               ) : null}
@@ -1302,6 +1365,113 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 onClick={() => void confirmAddToEvent()}
               >
                 {adding ? "Ajout…" : "Ajouter aux invités"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {profileReminderDraft && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Prévisualiser le rappel profil"
+          onClick={() => {
+            if (!sendingProfileMail) setProfileReminderDraft(null);
+          }}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+              <div>
+                <h3 className="text-lg font-bold text-ns-hero">Rappel profil incomplet</h3>
+                <p className="mt-1 text-xs text-ns-secondary">
+                  Relis et modifie le mail avant envoi ·{" "}
+                  <span className="font-medium text-ns-tertiary">
+                    {profileReminderDraft.memberName}
+                  </span>{" "}
+                  · {profileReminderDraft.to}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-ns-secondary hover:text-ns-tertiary"
+                onClick={() => {
+                  if (!sendingProfileMail) setProfileReminderDraft(null);
+                }}
+                aria-label="Fermer"
+                disabled={sendingProfileMail}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto px-5 py-4">
+              {profileReminderDraft.alreadySentThisMonth ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Un rappel a déjà été envoyé ce mois — l’envoi depuis cette fenêtre sera forcé.
+                </p>
+              ) : null}
+              <div>
+                <label className={LABEL_CLASS} htmlFor="profile-reminder-subject">
+                  Objet
+                </label>
+                <input
+                  id="profile-reminder-subject"
+                  className={INPUT_CLASS}
+                  value={profileReminderDraft.subject}
+                  onChange={(e) =>
+                    setProfileReminderDraft((prev) =>
+                      prev ? { ...prev, subject: e.target.value } : prev,
+                    )
+                  }
+                  disabled={sendingProfileMail}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="profile-reminder-body">
+                  Message
+                </label>
+                <textarea
+                  id="profile-reminder-body"
+                  className={`${INPUT_CLASS} min-h-[280px] font-mono text-sm`}
+                  value={profileReminderDraft.body}
+                  onChange={(e) =>
+                    setProfileReminderDraft((prev) =>
+                      prev ? { ...prev, body: e.target.value } : prev,
+                    )
+                  }
+                  disabled={sendingProfileMail}
+                />
+                <p className="mt-1 text-[11px] text-ns-secondary">
+                  Le lien de connexion devient un bouton « Completar mi perfil » dans le mail HTML.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                disabled={sendingProfileMail}
+                onClick={() => setProfileReminderDraft(null)}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={
+                  sendingProfileMail ||
+                  !profileReminderDraft.subject.trim() ||
+                  !profileReminderDraft.body.trim()
+                }
+                onClick={() => void confirmSendProfileIncomplete()}
+              >
+                {sendingProfileMail ? "Envoi…" : "Envoyer"}
               </button>
             </div>
           </div>
