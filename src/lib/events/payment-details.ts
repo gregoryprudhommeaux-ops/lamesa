@@ -11,19 +11,19 @@ export const EVENT_PAYMENT_BANK = {
 export function paymentDeadlineBlock(locale: "es" | "fr" | "en"): string {
   if (locale === "fr") {
     return [
-      "Important — règlement :",
-      "Ta participation ne sera validée que si le règlement est effectué d’ici 3 jours. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.",
+      "Important — règlement ACCESS :",
+      "Ta place ne sera validée que si le ticket ACCESS est réglé d’ici 3 jours. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.",
     ].join("\n");
   }
   if (locale === "en") {
     return [
-      "Important — payment:",
-      "Your spot will only be confirmed once payment is received within 3 days. If not, we will offer your seat to another member.",
+      "Important — ACCESS payment:",
+      "Your spot will only be confirmed once the ACCESS ticket is paid within 3 days. If not, we will offer your seat to another member.",
     ].join("\n");
   }
   return [
-    "Importante — pago:",
-    "Tu participación quedará confirmada únicamente si el pago se realiza dentro de un plazo de 3 días. De lo contrario, ofreceremos tu lugar a otro miembro.",
+    "Importante — pago ACCESS:",
+    "Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga dentro de un plazo de 3 días. De lo contrario, ofreceremos tu lugar a otro miembro.",
   ].join("\n");
 }
 

@@ -268,7 +268,8 @@ export function AdminEventFunnel({
             <p className="mt-1 text-[11px] text-ns-secondary">
               Variables : {"{{fullName}}"}, {"{{eventTitle}}"}, {"{{when}}"}, {"{{where}}"},{" "}
               {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"}, {"{{surveyUrl}}"},{" "}
-              {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"}, {"{{menuIncluded}}"}
+              {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
+              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}
             </p>
           </div>
           {error && <p className={ERROR_TEXT}>{error}</p>}

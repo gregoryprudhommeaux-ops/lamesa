@@ -114,8 +114,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [startTime, setStartTime] = useState("19:30");
   const [endTime, setEndTime] = useState("22:30");
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
-  const [priceMxn, setPriceMxn] = useState<string>("");
+  const [priceMxn, setPriceMxn] = useState<string>("450");
+  const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
+  const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
   const [menuIncluded, setMenuIncluded] = useState("");
+  const [menuPriceMinMxn, setMenuPriceMinMxn] = useState("");
+  const [menuPriceMaxMxn, setMenuPriceMaxMxn] = useState("");
+  const [menuIncludesDrinks, setMenuIncludesDrinks] = useState<"unspecified" | "yes" | "no">(
+    "unspecified",
+  );
   const [format, setFormat] = useState<EventFormat>(DEFAULT_EVENT_FORMAT);
   const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
   const [dressCode, setDressCode] = useState<DressCode>("none_specified");
@@ -211,8 +218,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setStartTime(times.startTime);
     setEndTime(times.endTime);
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
-    setPriceMxn("");
+    setPriceMxn("450");
+    setAccessIncludesWelcomeDrink(true);
+    setAccessIncludesAmuseBouche(false);
     setMenuIncluded("");
+    setMenuPriceMinMxn("");
+    setMenuPriceMaxMxn("");
+    setMenuIncludesDrinks("unspecified");
     setFormat(nextFormat);
     setCity(seed?.city?.trim() || DEFAULT_CITY_HUB);
     setDressCode("none_specified");
@@ -275,7 +287,26 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setPriceMxn(
       event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
     );
+    setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
+    setAccessIncludesAmuseBouche(Boolean(event.accessIncludesAmuseBouche));
     setMenuIncluded(event.menuIncluded ?? "");
+    setMenuPriceMinMxn(
+      event.menuPriceMinMxn != null && Number.isFinite(event.menuPriceMinMxn)
+        ? String(event.menuPriceMinMxn)
+        : "",
+    );
+    setMenuPriceMaxMxn(
+      event.menuPriceMaxMxn != null && Number.isFinite(event.menuPriceMaxMxn)
+        ? String(event.menuPriceMaxMxn)
+        : "",
+    );
+    setMenuIncludesDrinks(
+      event.menuIncludesDrinks === true
+        ? "yes"
+        : event.menuIncludesDrinks === false
+          ? "no"
+          : "unspecified",
+    );
     setFormat((event.format as EventFormat | undefined) ?? DEFAULT_EVENT_FORMAT);
     setCity(event.city?.trim() || DEFAULT_CITY_HUB);
     setDressCode(event.dressCode ?? "none_specified");
@@ -303,7 +334,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       endsAt: endsAtIso,
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
+      accessIncludesWelcomeDrink,
+      accessIncludesAmuseBouche,
       menuIncluded: menuIncluded.trim(),
+      menuPriceMinMxn: menuPriceMinMxn.trim() === "" ? null : Number(menuPriceMinMxn),
+      menuPriceMaxMxn: menuPriceMaxMxn.trim() === "" ? null : Number(menuPriceMaxMxn),
+      menuIncludesDrinks:
+        menuIncludesDrinks === "yes" ? true : menuIncludesDrinks === "no" ? false : null,
       format,
       city,
       status,
@@ -754,61 +791,153 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </p>
             </div>
 
-            <div className="sm:col-span-2 rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
-                Prix & menu
-              </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={LABEL_CLASS}>
-                    {labels["fields.priceMxn"] ?? "Prix (MXN, hors IVA)"}
-                  </label>
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={priceMxn}
-                    onChange={(e) => setPriceMxn(e.target.value)}
-                    className={INPUT_CLASS}
-                    placeholder="2500"
-                  />
-                  <p className="mt-1 text-xs text-ns-secondary">
-                    {labels["fields.priceMxnHint"] ??
-                      "Montant editable. L’IVA (16%) et le total TTC sont calculés automatiquement."}
-                  </p>
-                  {(() => {
-                    const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
-                    if (!Number.isFinite(n) || n <= 0) return null;
-                    const { iva, totalWithIva } = computeEventIva(n);
-                    return (
-                      <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
-                        <p>
-                          {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                          <strong>{formatMxn(iva, "es")}</strong>
-                        </p>
-                        <p className="mt-0.5">
-                          {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                          <strong>{formatMxn(totalWithIva, "es")}</strong>
-                        </p>
-                      </div>
-                    );
-                  })()}
+            <div className="sm:col-span-2 space-y-4">
+              <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                  {labels["fields.accessSection"] ?? "ACCESS — ticket de participation"}
+                </h3>
+                <p className="mb-3 text-xs text-ns-secondary">
+                  {labels["fields.accessSectionHint"] ??
+                    "Montant payé pour confirmer la place (virement). Hors consommations du menu négocié."}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.priceMxn"] ?? "ACCESS (MXN / pers., hors IVA)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={priceMxn}
+                      onChange={(e) => setPriceMxn(e.target.value)}
+                      className={INPUT_CLASS}
+                      placeholder="450"
+                    />
+                    <p className="mt-1 text-xs text-ns-secondary">
+                      {labels["fields.priceMxnHint"] ??
+                        "Typique ~450 MXN. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                    </p>
+                    {(() => {
+                      const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                      if (!Number.isFinite(n) || n <= 0) return null;
+                      const { iva, totalWithIva } = computeEventIva(n);
+                      return (
+                        <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                          <p>
+                            {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
+                            <strong>{formatMxn(iva, "es")}</strong>
+                          </p>
+                          <p className="mt-0.5">
+                            {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
+                            <strong>{formatMxn(totalWithIva, "es")}</strong>
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-3">
+                    <p className={`${LABEL_CLASS} mb-0`}>
+                      {labels["fields.accessIncludes"] ?? "Inclus dans ACCESS"}
+                    </p>
+                    <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                      <input
+                        type="checkbox"
+                        checked={accessIncludesWelcomeDrink}
+                        onChange={(e) => setAccessIncludesWelcomeDrink(e.target.checked)}
+                        className="h-4 w-4 rounded border-ns-alternate"
+                      />
+                      {labels["fields.accessWelcomeDrink"] ?? "Welcome drink"}
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                      <input
+                        type="checkbox"
+                        checked={accessIncludesAmuseBouche}
+                        onChange={(e) => setAccessIncludesAmuseBouche(e.target.checked)}
+                        className="h-4 w-4 rounded border-ns-alternate"
+                      />
+                      {labels["fields.accessAmuseBouche"] ?? "Amuse-bouches"}
+                    </label>
+                  </div>
                 </div>
-                <div>
-                  <label className={LABEL_CLASS}>
-                    {labels["fields.menuIncluded"] ?? "Menu & inclus dans le prix"}
-                  </label>
-                  <textarea
-                    value={menuIncluded}
-                    onChange={(e) => setMenuIncluded(e.target.value)}
-                    rows={5}
-                    className={INPUT_CLASS}
-                    placeholder="Entrée, plat, postre · bebidas · servicio…"
-                  />
-                  <p className="mt-1 text-xs text-ns-secondary">
-                    {labels["fields.menuIncludedHint"] ??
-                      "Décris le menu et ce qui est inclus (boissons, service, etc.)."}
-                  </p>
+              </div>
+
+              <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                  {labels["fields.menuSection"] ?? "MENU NÉGOCIÉ — sur place"}
+                </h3>
+                <p className="mb-3 text-xs text-ns-secondary">
+                  {labels["fields.menuSectionHint"] ??
+                    "Estimation pour le participant (paiement au restaurant). Peut être une fourchette."}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.menuIncluded"] ?? "Description du menu négocié"}
+                    </label>
+                    <textarea
+                      value={menuIncluded}
+                      onChange={(e) => setMenuIncluded(e.target.value)}
+                      rows={4}
+                      className={INPUT_CLASS}
+                      placeholder="Entrée / plato fuerte / postre · opciones…"
+                    />
+                    <p className="mt-1 text-xs text-ns-secondary">
+                      {labels["fields.menuIncludedHint"] ??
+                        "Ce que le restaurant propose (hors ticket ACCESS)."}
+                    </p>
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.menuPriceMinMxn"] ?? "Estimation min (MXN / pers.)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={menuPriceMinMxn}
+                      onChange={(e) => setMenuPriceMinMxn(e.target.value)}
+                      className={INPUT_CLASS}
+                      placeholder="500"
+                    />
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.menuPriceMaxMxn"] ?? "Estimation max (MXN / pers.)"}
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={menuPriceMaxMxn}
+                      onChange={(e) => setMenuPriceMaxMxn(e.target.value)}
+                      className={INPUT_CLASS}
+                      placeholder="1500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.menuIncludesDrinks"] ?? "Boissons dans l’estimation ?"}
+                    </label>
+                    <select
+                      value={menuIncludesDrinks}
+                      onChange={(e) =>
+                        setMenuIncludesDrinks(e.target.value as "unspecified" | "yes" | "no")
+                      }
+                      className={INPUT_CLASS}
+                    >
+                      <option value="unspecified">
+                        {labels["fields.menuIncludesDrinksUnspecified"] ?? "Non précisé"}
+                      </option>
+                      <option value="yes">
+                        {labels["fields.menuIncludesDrinksYes"] ?? "Oui — boissons incluses"}
+                      </option>
+                      <option value="no">
+                        {labels["fields.menuIncludesDrinksNo"] ??
+                          "Non — boissons à part (participant)"}
+                      </option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

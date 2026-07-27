@@ -63,17 +63,17 @@
   },
   "about": {
     "metaTitle": "Cómo funciona — LA MESA",
-    "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación cuando una noche encaja con tu perfil, confirmación con el pago.",
+    "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación, confirmación con ticket ACCESS, menú negociado en el lugar.",
     "title": "Cómo funciona",
     "introLead": "Una mesa. Un tema. Perfiles elegidos, por invitación.",
-    "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando la comida.",
-    "forWho": "Para decisores, fundadores, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; mezclamos perfiles a mano.",
+    "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando el ticket ACCESS (~$450 MXN en promedio; welcome drink / amuse-bouches según la edición). El menú negociado se paga en el lugar.",
+    "forWho": "Para decisores, founders, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; armamos los perfiles a mano.",
     "stepsTitle": "Cómo funciona",
     "steps": {
       "1": "Te registras gratis y entras a la lista.",
-      "2": "Completas tu perfil para proponerte una mesa según tu experiencia, industria y la temática de la noche.",
+      "2": "Completas tu perfil para que podamos proponerte una mesa acorde a tu experiencia, industria y a la temática del evento.",
       "3": "Recibes una invitación cuando una noche encaja con tu perfil.",
-      "4": "Confirmas tu lugar pagando la comida dentro del plazo indicado."
+      "4": "Confirmas tu lugar pagando el ticket ACCESS (~$450 MXN en promedio) dentro del plazo indicado. Inclusiones (welcome drink / amuse-bouches) según la edición. Menú negociado = en el lugar, a tu cargo."
     },
     "eligibilityNote": "La lista es el punto de partida. La invitación llega solo si la mesa te encaja.",
     "faqTitle": "Preguntas frecuentes",
@@ -88,7 +88,7 @@
       },
       "payment": {
         "q": "¿Cómo confirmo mi lugar?",
-        "a": "Cuando llega la invitación, pagas la comida por adelantado en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
+        "a": "Cuando llega la invitación, pagas el ticket ACCESS (en promedio $450 MXN) en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
       },
       "composition": {
         "q": "¿Voy a saber quiénes estarán en la mesa antes de pagar?",
@@ -96,7 +96,7 @@
       },
       "price": {
         "q": "¿Cuánto cuesta y quién paga?",
-        "a": "El ticket de la comida varía según la noche y se indica en la invitación. En promedio, entre $1,000 y $1,500 MXN: suele incluir entrada, plato fuerte y postre; las bebidas a menudo se pagan en el lugar. Cada quien paga su lugar, salvo casos especiales (p. ej. noche cortesía por patrocinio)."
+        "a": "Dos conceptos: (1) ticket ACCESS ~$450 MXN / persona en promedio para confirmar el lugar — monto exacto en la invitación; según la edición puede incluir welcome drink y/o amuse-bouches; (2) menú negociado y demás consumos en el lugar, a tu cargo (estimación típica $500–$1,500 MXN / persona según menú, bebidas incluidas o no, y lo que pidas). Salvo casos especiales (p. ej. noche cortesía por patrocinio)."
       },
       "absence": {
         "q": "¿Qué pasa si no puedo ir a última hora?",
@@ -271,12 +271,25 @@
       "mapsUrl": "Enlace de Google Maps (opcional)",
       "capacity": "Personas en la mesa",
       "capacityHint": "Por defecto 16, incluido Gregory (administrador). 15 lugares para invitados; el resto pasa a lista de espera.",
-      "priceMxn": "Precio (MXN, sin IVA)",
-      "priceMxnHint": "Monto editable. El IVA (16 %) y el total se calculan automáticamente.",
+      "priceMxn": "ACCESS (MXN / pers., sin IVA)",
+      "priceMxnHint": "Ticket ACCESS para confirmar el lugar (ej. ~450). El IVA (16 %) y el total se calculan automáticamente.",
+      "accessSection": "ACCESS — confirmación de lugar",
+      "accessSectionHint": "Monto que se paga para confirmar el lugar (transferencia). Fuera del menú negociado en el lugar.",
+      "accessIncludes": "Incluido en ACCESS",
+      "accessWelcomeDrink": "Welcome drink",
+      "accessAmuseBouche": "Amuse-bouches",
+      "menuSection": "MENÚ NEGOCIADO — en el lugar",
+      "menuSectionHint": "Estimación para el participante (pago en el restaurante). Puede ser un rango.",
       "ivaLabel": "IVA (16 %)",
       "totalWithIva": "Total con IVA",
-      "menuIncluded": "Menú e incluidos en el precio",
-      "menuIncludedHint": "Describe el menú y lo que incluye el precio (bebidas, servicio, etc.).",
+      "menuIncluded": "Descripción del menú negociado",
+      "menuIncludedHint": "Lo que ofrece el restaurante (fuera del ticket ACCESS).",
+      "menuPriceMinMxn": "Estimación mín. (MXN / pers.)",
+      "menuPriceMaxMxn": "Estimación máx. (MXN / pers.)",
+      "menuIncludesDrinks": "¿Bebidas en la estimación?",
+      "menuIncludesDrinksUnspecified": "No precisado",
+      "menuIncludesDrinksYes": "Sí — bebidas incluidas",
+      "menuIncludesDrinksNo": "No — bebidas aparte (participante)",
       "intro": "Texto de introducción",
       "status": "Estado",
       "eventLanguage": "Idioma del evento",
@@ -322,10 +335,14 @@
     "rsvpTitle": "Confirmar asistencia",
     "submitRsvp": "Enviar",
     "rsvpSuccess": "Gracias: tu respuesta ha quedado registrada.",
-    "price": "Precio",
+    "price": "ACCESS",
     "iva": "IVA (16 %)",
     "totalWithIva": "Total con IVA",
-    "menuIncluded": "Menú e incluidos",
+    "accessIncludes": "Incluido en ACCESS",
+    "menuIncluded": "Menú negociado (en el lugar)",
+    "menuEstimate": "Estimación / persona",
+    "menuDrinksIncluded": "Bebidas incluidas en la estimación",
+    "menuDrinksNotIncluded": "Bebidas no incluidas (a tu cargo)",
     "fields": {
       "firstName": "Nombre",
       "lastName": "Apellido",

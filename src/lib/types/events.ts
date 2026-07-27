@@ -94,10 +94,26 @@ export interface AdminEvent {
   mapsUrl?: string;
   parking?: "secure_nearby" | "valet" | "on_site" | "unknown";
   capacity?: number;
-  /** Price before IVA (MXN), editable by admin */
+  /**
+   * ACCESS ticket before IVA (MXN) — amount charged to confirm the seat.
+   * Typical default ~450 MXN.
+   */
   priceMxn?: number | null;
-  /** Menu + what’s included in the price */
+  /** ACCESS includes a welcome drink */
+  accessIncludesWelcomeDrink?: boolean;
+  /** ACCESS includes amuse-bouches */
+  accessIncludesAmuseBouche?: boolean;
+  /** Negotiated menu description (guest pays on site) */
   menuIncluded?: string;
+  /** Negotiated menu estimate — low end (MXN / person, on site) */
+  menuPriceMinMxn?: number | null;
+  /** Negotiated menu estimate — high end (MXN / person, on site) */
+  menuPriceMaxMxn?: number | null;
+  /**
+   * Whether drinks are included in the negotiated-menu estimate.
+   * null/undefined = not specified.
+   */
+  menuIncludesDrinks?: boolean | null;
   status?: "draft" | "published" | "closed";
   createdAt?: string;
   updatedAt?: string;

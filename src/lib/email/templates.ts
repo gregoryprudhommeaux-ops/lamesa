@@ -6,6 +6,10 @@ import type {
   TemplateLocale,
 } from "@/lib/types/events";
 import { labelEventFormat } from "@/lib/constants/event-formats";
+import {
+  formatAccessIncludes,
+  formatNegotiatedMenuBlock,
+} from "@/lib/events/event-pricing-copy";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -64,6 +68,8 @@ export type TemplateVars = {
   ivaAmount?: string;
   totalWithIva?: string;
   menuIncluded?: string;
+  /** ACCESS inclusions (welcome drink / amuse-bouches) */
+  accessIncludes?: string;
   /** Localized gathering format label (Dîner / Cena / Dinner / …) */
   format?: string;
 };
@@ -96,6 +102,7 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{ivaAmount}}", vars.ivaAmount ?? "")
     .replaceAll("{{totalWithIva}}", vars.totalWithIva ?? "")
     .replaceAll("{{menuIncluded}}", vars.menuIncluded ?? "")
+    .replaceAll("{{accessIncludes}}", vars.accessIncludes ?? "")
     .replaceAll("{{format}}", vars.format ?? "");
 }
 
@@ -133,9 +140,8 @@ export function buildEventTemplateVars(input: {
     priceBeforeTax: pricing ? formatMxn(pricing.priceBeforeTax, lang) : pending,
     ivaAmount: pricing ? formatMxn(pricing.iva, lang) : pending,
     totalWithIva: pricing ? formatMxn(pricing.totalWithIva, lang) : pending,
-    menuIncluded:
-      input.event.menuIncluded?.trim() ||
-      (lang === "fr" ? "Voir la page de l’événement" : lang === "en" ? "See the event page" : "Ver la página del evento"),
+    accessIncludes: formatAccessIncludes(input.event, lang),
+    menuIncluded: formatNegotiatedMenuBlock(input.event, lang),
     format: labelEventFormat(input.event.format, lang),
   };
 }

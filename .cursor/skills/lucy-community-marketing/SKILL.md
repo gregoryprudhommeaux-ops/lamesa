@@ -92,7 +92,7 @@ It is:
 - Site: https://lamesasecreta.com  
 - Signup: `/{locale}/inscription` · Express: `/light`  
 - Locales: `es` (GDL default), `fr`, `en`  
-- Typical meal ticket band: ~1,000–1,500 MXN (varies by edition); drinks often extra  
+- ACCESS ticket: ~450 MXN avg to confirm seat; mark welcome drink / amuse-bouches per edition. Negotiated menu on site (estimate range, drinks included or not) paid by guest  
 - Cancellation if asked: usually refund/credit if >48h; forfeit if <48h (confirm with founder if unsure)  
 
 Read [reference.md](reference.md) for audiences, cultural registers, funnel jobs, KPIs.  

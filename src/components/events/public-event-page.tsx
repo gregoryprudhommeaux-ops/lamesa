@@ -12,6 +12,11 @@ import {
 } from "@/lib/ui/nextstep";
 import type { AdminEvent } from "@/lib/types/events";
 import { fmtDateTime } from "@/lib/events/utils";
+import {
+  formatAccessIncludes,
+  formatMenuPriceEstimate,
+  hasNegotiatedMenuInfo,
+} from "@/lib/events/event-pricing-copy";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { getClientFirestore, isFirebaseClientConfigured } from "@/lib/firebase/client";
 import { addDoc, collection, getDocs, limit, query, where } from "firebase/firestore";
@@ -24,23 +29,64 @@ type PublicEventPageProps = {
 };
 
 function PriceBlock({
-  priceMxn,
+  event,
   locale,
 }: {
-  priceMxn: number;
+  event: AdminEvent;
   locale: "fr" | "en" | "es";
 }) {
   const t = useTranslations("publicEvent");
-  const { priceBeforeTax, iva, totalWithIva } = computeEventIva(priceMxn);
+  const priceMxn = event.priceMxn;
+  const hasAccess = typeof priceMxn === "number" && priceMxn > 0;
+  const hasMenu = hasNegotiatedMenuInfo(event);
+  if (!hasAccess && !hasMenu) return null;
+
+  const pricing =
+    hasAccess && typeof priceMxn === "number" ? computeEventIva(priceMxn) : null;
+  const estimate = formatMenuPriceEstimate(event, locale);
+  const accessLine = formatAccessIncludes(event, locale);
+  const showAccessIncludes =
+    event.accessIncludesWelcomeDrink || event.accessIncludesAmuseBouche;
+
   return (
-    <div className="mt-4 rounded-xl border border-ns-alternate bg-ns-brand-light/30 px-4 py-3 text-sm">
-      <p className="font-semibold text-ns-tertiary">
-        {t("price")} · {formatMxn(priceBeforeTax, locale)}
-      </p>
-      <p className="mt-1 text-xs text-ns-secondary">
-        {t("iva")}: {formatMxn(iva, locale)} · {t("totalWithIva")}:{" "}
-        <strong>{formatMxn(totalWithIva, locale)}</strong>
-      </p>
+    <div className="mt-4 space-y-3">
+      {pricing ? (
+        <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/30 px-4 py-3 text-sm">
+          <p className="font-semibold text-ns-tertiary">
+            {t("price")} · {formatMxn(pricing.priceBeforeTax, locale)}
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            {t("iva")}: {formatMxn(pricing.iva, locale)} · {t("totalWithIva")}:{" "}
+            <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
+          </p>
+          {showAccessIncludes ? (
+            <p className="mt-2 text-xs text-ns-secondary">
+              {t("accessIncludes")}: {accessLine}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+      {hasMenu ? (
+        <div className="rounded-xl border border-ns-alternate px-4 py-3 text-sm">
+          <h2 className={FORM_SECTION_TITLE}>{t("menuIncluded")}</h2>
+          {event.menuIncluded?.trim() ? (
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ns-secondary">
+              {event.menuIncluded}
+            </p>
+          ) : null}
+          {estimate ? (
+            <p className="mt-2 text-xs text-ns-secondary">
+              {t("menuEstimate")}: <strong>{estimate}</strong>
+            </p>
+          ) : null}
+          {event.menuIncludesDrinks === true ? (
+            <p className="mt-1 text-xs text-ns-secondary">{t("menuDrinksIncluded")}</p>
+          ) : null}
+          {event.menuIncludesDrinks === false ? (
+            <p className="mt-1 text-xs text-ns-secondary">{t("menuDrinksNotIncluded")}</p>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -89,7 +135,19 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
           endsAt: data.endsAt ? String(data.endsAt) : undefined,
           capacity: typeof data.capacity === "number" ? data.capacity : undefined,
           priceMxn: typeof data.priceMxn === "number" ? data.priceMxn : undefined,
+          accessIncludesWelcomeDrink: Boolean(data.accessIncludesWelcomeDrink),
+          accessIncludesAmuseBouche: Boolean(data.accessIncludesAmuseBouche),
           menuIncluded: data.menuIncluded ? String(data.menuIncluded) : undefined,
+          menuPriceMinMxn:
+            typeof data.menuPriceMinMxn === "number" ? data.menuPriceMinMxn : undefined,
+          menuPriceMaxMxn:
+            typeof data.menuPriceMaxMxn === "number" ? data.menuPriceMaxMxn : undefined,
+          menuIncludesDrinks:
+            data.menuIncludesDrinks === true
+              ? true
+              : data.menuIncludesDrinks === false
+                ? false
+                : null,
           status: "published",
         });
       } catch (e) {
@@ -176,16 +234,9 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
       {event.introText && (
         <p className="mt-4 text-sm leading-relaxed text-ns-secondary">{event.introText}</p>
       )}
-      {typeof event.priceMxn === "number" && event.priceMxn > 0 ? (
-        <PriceBlock priceMxn={event.priceMxn} locale={locale} />
-      ) : null}
-      {event.menuIncluded ? (
-        <div className="mt-4">
-          <h2 className={FORM_SECTION_TITLE}>{t("menuIncluded")}</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ns-secondary">
-            {event.menuIncluded}
-          </p>
-        </div>
+      {(typeof event.priceMxn === "number" && event.priceMxn > 0) ||
+      hasNegotiatedMenuInfo(event) ? (
+        <PriceBlock event={event} locale={locale} />
       ) : null}
 
       {success ? (

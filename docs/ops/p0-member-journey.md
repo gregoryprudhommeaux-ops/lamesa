@@ -1,7 +1,7 @@
 # P0 — Parcours membre LA MESA
 
 Playbook ops avant / autour des premières cenas GDL.  
-Source de vérité produit : waitlist → perfil → invitación → pago = asiento.
+Source de vérité produit : waitlist → perfil → invitación → ticket ACCESS = asiento · menu negociado = sur place.
 
 ## Funnel (mots officiels)
 
@@ -10,7 +10,9 @@ Source de vérité produit : waitlist → perfil → invitación → pago = asie
 | 1 | Lista | Liste | Waitlist |
 | 2 | Perfil completo | Profil complet | Full profile |
 | 3 | Invitación | Invitation | Invitation |
-| 4 | Pago confirma el lugar | Paiement = siège | Payment confirms seat |
+| 4 | Ticket ACCESS confirma el lugar | Ticket ACCESS = siège | ACCESS ticket confirms seat |
+
+**Pricing (public) :** ACCESS ~450 MXN moy. (welcome drink / amuse-bouches selon édition) · menu negociado sur place (fourchette d’estimation, boissons incluses ou non).
 
 **Public :** « Mezclamos perfiles a mano » / curation humaine.  
 **Interne :** Table Builder (scoring ± IA) + **validation humaine obligatoire** avant envoi d’invites.  

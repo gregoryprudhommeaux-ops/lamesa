@@ -398,7 +398,8 @@ export function AdminEmailTemplatesPanel() {
               Variables : {"{{fullName}}"}, {"{{firstName}}"}, {"{{email}}"}, {"{{eventTitle}}"},{" "}
               {"{{format}}"}, {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"},{" "}
               {"{{noUrl}}"}, {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"},{" "}
-              {"{{inviteUrl}}"}, prix…
+              {"{{inviteUrl}}"}, {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
+              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}…
             </p>
           </div>
           {error && <p className={ERROR_TEXT}>{error}</p>}
