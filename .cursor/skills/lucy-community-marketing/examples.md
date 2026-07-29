@@ -83,3 +83,43 @@ In: {{…}}
 Out: hard sell at table, member data without opt-in.
 Ask: {{amount/nature}} for edition {{target}}.
 ```
+
+## Sponsor / info request — ES email (founder-approved · Johan 2026-07-28)
+
+Use when someone asks fechas, formato, agenda, costo, quiénes asisten, sponsorship. Adapt name + close; do not invent guest lists or fixed sponsor prices.
+
+```
+Hola {{Nombre}},
+
+Claro. Te dejo lo concreto:
+
+Formato:
+Cenas temáticas en Guadalajara: mesa chica, un tema por noche, perfiles armados para esa mesa. El objetivo es la conversación. No armamos un cóctel de networking.
+
+Cómo funciona:
+- Registro gratuito en lista de espera
+- Completas tu perfil
+- Si una mesa te encaja, te invitamos, pero si ninguno de los temas coincide con tu perfil, no recibirás una invitación.
+- Confirmas tu lugar con el ticket ACCESS (~$450 MXN en promedio; inclusiones según edición — bienvenida / amuse-bouches). El menú negociado se paga en el lugar
+
+Registro: https://lamesasecreta.com/es/inscription
+
+Fechas y agenda
+Hoy estamos armando el vivero (masa crítica + perfiles). Objetivo de las primeras cenas: septiembre.
+No hay “agenda tipo conferencia”: cada edición tiene su temática; la dinámica es cena + plática alrededor de ese eje.
+
+Quiénes asisten
+No compartimos nombres de invitados. El tipo de perfil: founders, DG/CEO de PyME, directores, inversionistas activos en GDL — según el tema. Evitamos sentar competidores directos cuando eso cierra la conversación.
+
+Sponsorship
+Se diseña con un propósito específico, no como un banner genérico. Algunas estrategias comunes incluyen:
+- Asociar la marca con una edición o temática (con directrices claras: sin tácticas de venta agresivas).
+- Organizar un evento o colaborar con un lugar o proveedor específico. También podemos ayudarle a invitar a las personas adecuadas (según su perfil, sector, experiencia, etc., mediante una investigación de contactos específica).
+
+Monto y entregables los armamos contigo (qué buscan: visibilidad cualificada, deal flow, etc.).
+
+Si me cuentas qué buscan y para qué perfil, te mando una propuesta corta — o planificamos una llamada.
+
+Saludos cordiales,
+{{Firma}}
+```

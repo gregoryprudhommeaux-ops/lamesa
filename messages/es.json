@@ -57,7 +57,7 @@
     "fullFormHint": "¿Prefieres el formulario completo?",
     "fullFormLink": "Registro detallado",
     "errors": {
-      "alreadyRegistered": "Este correo ya está registrado. Inicia sesión para editar tu perfil.",
+      "alreadyRegistered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
       "generic": "No se pudo enviar. Inténtalo de nuevo."
     }
   },
@@ -219,6 +219,7 @@
     "successLoginCta": "Iniciar sesión y editar mi perfil",
     "error": "No se pudo enviar. Inténtalo de nuevo.",
     "errors": {
+      "already_registered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
       "invalid_linkedin": "URL de LinkedIn no válida (linkedin.com/in/…)",
       "invalid_phone": "Número no válido: se necesitan código de país y número local.",
       "validation": "Revisa los campos del formulario."
@@ -373,7 +374,7 @@
       "errors": {
         "invalidEmail": "Correo no válido.",
         "invalidCredentials": "Correo o contraseña incorrectos.",
-        "emailInUse": "Este correo ya tiene una cuenta. Inicia sesión o usa Google.",
+        "emailInUse": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
         "weakPassword": "La contraseña debe tener al menos 6 caracteres.",
         "passwordMismatch": "Las contraseñas no coinciden.",
         "notEnabled": "El acceso por correo no está activado en Firebase. Activa Email/Password en la consola.",

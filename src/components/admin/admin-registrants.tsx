@@ -16,11 +16,18 @@ import {
   computeProfileCompletionPercent,
   isExpressSignup,
   isProfileIncomplete,
+  listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
 import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
+import {
+  CompletionCell,
+  WelcomeEmailCell,
+  formatRegistrantDate,
+  registrantSubtitle as buildRegistrantSubtitle,
+} from "@/components/admin/registrant-table-cells";
 import { CalendarPlus, Mail, Trash2, UserPlus, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -34,29 +41,6 @@ type ProfileReminderDraft = {
   force: boolean;
   alreadySentThisMonth: boolean;
 };
-
-function deliveryBadge(
-  kind: "mail",
-  status: string | undefined,
-): { label: string; className: string } | null {
-  if (!status) return null;
-  if (status === "sent")
-    return {
-      label: "Mail OK",
-      className: "bg-emerald-100 text-emerald-800",
-    };
-  if (status === "failed")
-    return {
-      label: "Mail KO",
-      className: "bg-red-100 text-red-800",
-    };
-  if (status === "skipped")
-    return {
-      label: "Mail off",
-      className: "bg-gray-200 text-gray-600",
-    };
-  return null;
-}
 
 function persoSyncStatus(
   r: Pick<WaitlistRegistration, "databasePersoSyncStatus" | "databasePersoContactId">,
@@ -389,6 +373,15 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     });
   }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter]);
 
+  const filteredSorted = useMemo(
+    () =>
+      [...filtered].sort(
+        (a, b) =>
+          new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime(),
+      ),
+    [filtered],
+  );
+
   const active = activeId ? (rows.find((r) => r.id === activeId) ?? null) : null;
   const selectedRows = useMemo(
     () => rows.filter((r) => selectedIds.has(r.id)),
@@ -408,14 +401,22 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
 
   function memberSubtitle(r: WaitlistRegistration): string {
-    return [
-      labelPositionFr(r.position),
-      labelSectorFr(r.sector),
-      r.company?.trim(),
-      labelCityHubFr(r.city),
-    ]
-      .filter((part) => Boolean(part) && part !== "—")
-      .join(" · ");
+    return buildRegistrantSubtitle(r);
+  }
+
+  function openMember(id: string) {
+    setActiveId(id);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("id", id);
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
+
+  function closeMemberModal() {
+    setActiveId(null);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("id");
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }
 
   async function openProfileIncompletePreview(
@@ -586,8 +587,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       else next.add(id);
       return next;
     });
-    // Checkbox selection also opens the detail panel (expected UX).
-    setActiveId(id);
+    // Multi-select only — open fiche via row click.
   }
 
   function toggleAllFiltered() {
@@ -675,7 +675,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         for (const id of unique) next.delete(id);
         return next;
       });
-      if (activeId && unique.includes(activeId)) setActiveId(null);
+      if (activeId && unique.includes(activeId)) closeMemberModal();
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -913,376 +913,418 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        <div
-          className="overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface"
-          onContextMenu={(e) => {
-            if (selectedIds.size === 0) return;
-            e.preventDefault();
-            setContextMenu({ x: e.clientX, y: e.clientY });
-          }}
-        >
-          <div className="hidden border-b border-gray-100 px-4 py-2 sm:grid sm:grid-cols-[auto_minmax(0,1fr)_7rem_9rem] sm:items-center sm:gap-3">
-            <span />
-            <span className="text-xs font-semibold text-ns-secondary">Inscrit</span>
-            <span className="text-right text-xs font-semibold text-ns-secondary">Parrain</span>
-            <span className="text-right text-xs font-semibold text-ns-secondary">Perso</span>
-          </div>
-          <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary sm:hidden">
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allFilteredSelected}
-                onChange={toggleAllFiltered}
-                className="h-4 w-4 accent-ns-primary"
-              />
-              Tous (filtrés)
-            </label>
-          </div>
-          <div className="hidden items-center gap-3 border-b border-gray-100 px-4 py-2 text-xs font-semibold text-ns-secondary sm:flex">
-            <label className="inline-flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={allFilteredSelected}
-                onChange={toggleAllFiltered}
-                className="h-4 w-4 accent-ns-primary"
-              />
-              Tous (filtrés)
-            </label>
-            <span className="text-ns-secondary/70">Clic droit sur la liste → actions</span>
-          </div>
-          <ul className="divide-y divide-gray-100">
-            {filtered.map((r) => (
-              <li key={r.id}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setActiveId(r.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setActiveId(r.id);
-                    }
-                  }}
-                  className={`grid w-full cursor-pointer grid-cols-[auto_minmax(0,1fr)] items-start gap-3 px-4 py-3 text-left text-sm hover:bg-ns-brand-light sm:grid-cols-[auto_minmax(0,1fr)_7rem_9rem] ${activeId === r.id ? "bg-ns-primary/10" : ""} ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${isSoftDeleted(r) ? "opacity-70" : ""}`}
+      <div
+        className="overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface"
+        onContextMenu={(e) => {
+          if (selectedIds.size === 0) return;
+          e.preventDefault();
+          setContextMenu({ x: e.clientX, y: e.clientY });
+        }}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-xs font-semibold text-ns-secondary">
+            <input
+              type="checkbox"
+              checked={allFilteredSelected}
+              onChange={toggleAllFiltered}
+              className="h-4 w-4 accent-ns-primary"
+            />
+            Tous (filtrés) · {filteredSorted.length}
+          </label>
+          <span className="text-xs text-ns-secondary/70">
+            Clic = fiche · clic droit = actions sélection
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[920px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+                <th className="px-4 py-2 font-semibold w-10" />
+                <th className="py-2 pr-3 font-semibold">Inscrit</th>
+                <th className="py-2 pr-3 font-semibold">Inscription</th>
+                <th className="py-2 pr-3 font-semibold">Complétion</th>
+                <th
+                  className="py-2 pr-3 font-semibold"
+                  title="Mail auto après inscription (express = compléter le profil)"
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.has(r.id)}
-                    onChange={() => toggleOne(r.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="mt-1 h-4 w-4 shrink-0 accent-ns-primary"
-                    aria-label={`Sélectionner ${r.fullName}`}
-                  />
-                  <div className="min-w-0 text-left">
-                    <span className="inline-flex flex-wrap items-center gap-2 font-semibold text-ns-tertiary">
-                      {r.fullName}
-                      {isSoftDeleted(r) ? (
-                        <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
-                          Désactivé
-                        </span>
-                      ) : null}
-                      {r.profileComplete === false ? (
-                        <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                          Express
-                        </span>
-                      ) : null}
-                      {isFranconetworkMember(r) ? (
-                        <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
-                          FrancoNetwork
-                        </span>
-                      ) : null}
-                      {(() => {
-                        const band = resolveOpsPriority(r.opsPriority);
-                        if (band === "normal") return null;
-                        const className =
-                          band === "priority"
-                            ? "bg-rose-100 text-rose-800"
-                            : band === "review"
-                              ? "bg-orange-100 text-orange-800"
-                              : "bg-slate-200 text-slate-700";
-                        return (
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
-                          >
-                            {OPS_PRIORITY_LABELS_FR[band]}
-                          </span>
-                        );
-                      })()}
-                      {(() => {
-                        const mail = deliveryBadge("mail", r.welcomeEmailStatus);
-                        return mail ? (
-                          <span
-                            className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${mail.className}`}
-                          >
-                            {mail.label}
-                          </span>
-                        ) : null;
-                      })()}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-ns-secondary">
-                      {memberSubtitle(r) || "—"}
-                    </span>
-                    <span className="mt-0.5 block text-xs text-ns-secondary/80">{r.email}</span>
-                    <span className="mt-1 block text-xs text-ns-secondary sm:hidden">
-                      Parrain : {r.referredByCode?.trim() || "—"}
-                    </span>
-                    <span className="mt-0.5 block font-mono text-[11px] text-ns-secondary sm:hidden">
-                      Perso :{" "}
-                      {(() => {
-                        const status = persoSyncStatus(r);
-                        const id = r.databasePersoContactId?.trim();
-                        if (status === "synced" && id) return `synced · ${truncatePersoId(id, 14)}`;
-                        if (status === "synced") return "synced";
-                        if (status === "failed") return "failed";
-                        if (status === "skipped") return "skipped";
-                        return "—";
-                      })()}
-                    </span>
-                  </div>
-                  <div className="hidden text-right text-xs text-ns-secondary sm:block">
-                    <span className="font-medium text-ns-tertiary">
-                      {r.referredByCode?.trim() || "—"}
-                    </span>
-                  </div>
-                  <div className="hidden text-right text-xs sm:block">
-                    {(() => {
-                      const status = persoSyncStatus(r);
-                      const id = r.databasePersoContactId?.trim();
-                      if (!status) {
-                        return <span className="text-ns-secondary/70">—</span>;
+                  Mail auto
+                </th>
+                <th className="py-2 pr-3 font-semibold">Contact</th>
+                <th className="py-2 pr-3 font-semibold">Parrain</th>
+                <th className="py-2 pr-4 font-semibold">Perso</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSorted.map((r) => {
+                const percent = computeProfileCompletionPercent(r);
+                const missing = listMissingProfileFieldsFr(r);
+                const express = isExpressSignup(r);
+                const status = persoSyncStatus(r);
+                const persoId = r.databasePersoContactId?.trim();
+                return (
+                  <tr
+                    key={r.id}
+                    className={`cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60 ${
+                      activeId === r.id ? "bg-ns-primary/10" : ""
+                    } ${selectedIds.has(r.id) ? "bg-ns-primary/5" : ""} ${
+                      isSoftDeleted(r) ? "opacity-70" : ""
+                    }`}
+                    onClick={() => openMember(r.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        openMember(r.id);
                       }
-                      const statusClass =
-                        status === "synced"
-                          ? "text-emerald-700"
-                          : status === "failed"
-                            ? "text-red-700"
-                            : "text-ns-secondary";
-                      return (
-                        <div className="min-w-0">
-                          <span className={`block font-semibold uppercase tracking-wide ${statusClass}`}>
+                    }}
+                    tabIndex={0}
+                  >
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(r.id)}
+                        onChange={() => toggleOne(r.id)}
+                        className="mt-1 h-4 w-4 accent-ns-primary"
+                        aria-label={`Sélectionner ${r.fullName}`}
+                      />
+                    </td>
+                    <td className="py-3 pr-3">
+                      <p className="font-semibold text-ns-tertiary">{r.fullName || "—"}</p>
+                      <p className="mt-0.5 text-xs text-ns-secondary">
+                        {memberSubtitle(r) || "—"}
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {isSoftDeleted(r) ? (
+                          <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                            Désactivé
+                          </span>
+                        ) : null}
+                        {express ? (
+                          <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                            Express
+                          </span>
+                        ) : null}
+                        {isFranconetworkMember(r) ? (
+                          <span className="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">
+                            FrancoNetwork
+                          </span>
+                        ) : null}
+                        {(() => {
+                          const band = resolveOpsPriority(r.opsPriority);
+                          if (band === "normal") return null;
+                          const className =
+                            band === "priority"
+                              ? "bg-rose-100 text-rose-800"
+                              : band === "review"
+                                ? "bg-orange-100 text-orange-800"
+                                : "bg-slate-200 text-slate-700";
+                          return (
+                            <span
+                              className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${className}`}
+                            >
+                              {OPS_PRIORITY_LABELS_FR[band]}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </td>
+                    <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
+                      {formatRegistrantDate(r.createdAt ?? "")}
+                    </td>
+                    <td className="py-3 pr-3">
+                      <CompletionCell percent={percent} missingFields={missing} />
+                    </td>
+                    <td className="py-3 pr-3">
+                      <WelcomeEmailCell
+                        status={r.welcomeEmailStatus ?? null}
+                        sentAt={r.welcomeEmailSentAt ?? null}
+                        isExpress={express}
+                      />
+                    </td>
+                    <td className="py-3 pr-3">
+                      <a
+                        href={`mailto:${r.email}`}
+                        className="block text-ns-primary hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {r.email || "—"}
+                      </a>
+                      {r.phone ? (
+                        <p className="mt-0.5 text-xs text-ns-secondary">{r.phone}</p>
+                      ) : null}
+                    </td>
+                    <td className="py-3 pr-3 text-xs text-ns-secondary">
+                      {r.referredByCode?.trim() || "—"}
+                    </td>
+                    <td className="py-3 pr-4 text-xs">
+                      {!status ? (
+                        <span className="text-ns-secondary/70">—</span>
+                      ) : (
+                        <div>
+                          <span
+                            className={`font-semibold uppercase tracking-wide ${
+                              status === "synced"
+                                ? "text-emerald-700"
+                                : status === "failed"
+                                  ? "text-red-700"
+                                  : "text-ns-secondary"
+                            }`}
+                          >
                             {status}
                           </span>
-                          {id ? (
+                          {persoId ? (
                             <span
                               className="mt-0.5 block truncate font-mono text-[11px] text-ns-secondary"
-                              title={id}
+                              title={persoId}
                             >
-                              {truncatePersoId(id)}
+                              {truncatePersoId(persoId)}
                             </span>
-                          ) : (
-                            <span className="mt-0.5 block text-[11px] text-ns-secondary/70">—</span>
-                          )}
+                          ) : null}
                         </div>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </li>
-            ))}
-            {filtered.length === 0 && (
-              <li className="px-4 py-6 text-sm text-ns-secondary">
-                Aucun inscrit{hasFilters ? " pour ces filtres" : ""}.
-              </li>
-            )}
-          </ul>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredSorted.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-6 text-sm text-ns-secondary">
+                    Aucun inscrit{hasFilters ? " pour ces filtres" : ""}.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <aside className="rounded-2xl border border-gray-100 bg-ns-surface p-5 text-sm">
-          {active ? (
-            <dl className="space-y-3">
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Nom</dt>
-                <dd className="flex flex-wrap items-center gap-2 font-semibold text-ns-tertiary">
-                  {active.fullName}
-                  {isSoftDeleted(active) ? (
-                    <span className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600">
-                      Désactivé
-                    </span>
-                  ) : null}
-                </dd>
+      {active ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Fiche membre ${active.fullName}`}
+          onClick={closeMemberModal}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-xl flex-col rounded-2xl bg-white shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+              <div className="min-w-0">
+                <h3 className="text-lg font-bold text-ns-hero">{active.fullName}</h3>
+                <p className="mt-1 text-xs text-ns-secondary">
+                  {memberSubtitle(active) || "—"}
+                  {active.createdAt
+                    ? ` · inscrit ${formatRegistrantDate(active.createdAt)}`
+                    : ""}
+                </p>
               </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Email</dt>
-                <dd>{active.email}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Téléphone</dt>
-                <dd>{active.phone}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Entreprise</dt>
-                <dd>{active.company}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Secteur</dt>
-                <dd>{labelSectorFr(active.sector)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Position</dt>
-                <dd>{labelPositionFr(active.position)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Ville</dt>
-                <dd>{labelCityHubFr(active.city)}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">LinkedIn</dt>
-                <dd>
-                  {active.linkedinUrl?.trim() ? (
+              <button
+                type="button"
+                className="shrink-0 text-ns-secondary hover:text-ns-tertiary"
+                onClick={closeMemberModal}
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-5 py-4 text-sm">
+              <dl className="space-y-3">
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Email</dt>
+                  <dd>
                     <a
-                      href={active.linkedinUrl}
-                      target="_blank"
-                      rel="noreferrer"
+                      href={`mailto:${active.email}`}
                       className="font-semibold text-ns-primary hover:underline"
                     >
-                      LINKEDIN
+                      {active.email}
                     </a>
-                  ) : (
-                    "—"
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Parrain</dt>
-                <dd>{active.referredByCode?.trim() || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Code parrainage</dt>
-                <dd>{active.referralCode?.trim() || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Mail auto</dt>
-                <dd>
-                  {active.welcomeEmailStatus === "sent"
-                    ? `Envoyé${active.welcomeEmailSentAt ? ` · ${new Date(active.welcomeEmailSentAt).toLocaleString("fr-FR")}` : ""}`
-                    : active.welcomeEmailStatus === "failed"
-                      ? `Échec${active.welcomeEmailError ? ` · ${active.welcomeEmailError}` : ""}`
-                      : active.welcomeEmailStatus === "skipped"
-                        ? "Désactivé (template off)"
-                        : "— (avant tracking)"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Database Perso</dt>
-                <dd>
-                  {(active.databasePersoSyncStatus ??
-                    (active.databasePersoContactId ? "synced" : undefined)) === "synced"
-                    ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
-                    : active.databasePersoSyncStatus === "failed"
-                      ? "Échec sync"
-                      : active.databasePersoSyncStatus === "skipped"
-                        ? "Non configuré / skip"
-                        : "—"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Intérêts</dt>
-                <dd>{(active.extraActivities ?? []).join(", ") || "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
-                <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
-              </div>
-              {isFranconetworkMember(active) && !isSoftDeleted(active) ? (
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  <p className="text-xs font-bold uppercase text-ns-secondary">
-                    Annonce FrancoNetwork (ES)
-                  </p>
-                  <p className="text-xs text-ns-secondary">
-                    Template{" "}
-                    <span className="font-mono text-[11px]">fn_announcement</span>
-                    {active.fnAnnouncementEmailStatus === "sent"
-                      ? ` · envoyé${active.fnAnnouncementEmailSentAt ? ` ${new Date(active.fnAnnouncementEmailSentAt).toLocaleString("fr-FR")}` : ""}`
-                      : active.fnAnnouncementEmailStatus === "failed"
-                        ? " · échec dernier envoi"
-                        : " · pas encore envoyé"}
-                  </p>
-                  <button
-                    type="button"
-                    className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
-                    disabled={sendingFnMail}
-                    onClick={() =>
-                      void sendFnAnnouncement(
-                        active,
-                        active.fnAnnouncementEmailStatus === "sent",
-                      )
-                    }
-                  >
-                    <Mail className="h-4 w-4" />
-                    {sendingFnMail
-                      ? "Envoi…"
-                      : active.fnAnnouncementEmailStatus === "sent"
-                        ? "Renvoyer l’annonce"
-                        : "Envoyer l’annonce"}
-                  </button>
+                  </dd>
                 </div>
-              ) : null}
-              {isProfileIncomplete(active) && !isSoftDeleted(active) ? (
-                <div className="space-y-2 border-t border-gray-100 pt-4">
-                  <p className="text-xs font-bold uppercase text-ns-secondary">
-                    Rappel profil incomplet (ES)
-                  </p>
-                  <p className="text-xs text-ns-secondary">
-                    Template{" "}
-                    <span className="font-mono text-[11px]">profile_incomplete</span>
-                    {" · "}
-                    {computeProfileCompletionPercent(active)}%
-                    {active.profileIncompleteNudgeMonth
-                      ? ` · dernier mois ${active.profileIncompleteNudgeMonth}`
-                      : " · pas encore ce mois"}
-                  </p>
-                  <button
-                    type="button"
-                    className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
-                    disabled={sendingProfileMail || loadingProfilePreview}
-                    onClick={() =>
-                      void openProfileIncompletePreview(
-                        active,
-                        Boolean(active.profileIncompleteNudgeMonth),
-                      )
-                    }
-                  >
-                    <Mail className="h-4 w-4" />
-                    {loadingProfilePreview
-                      ? "Chargement…"
-                      : sendingProfileMail
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Téléphone</dt>
+                  <dd>{active.phone || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Entreprise</dt>
+                  <dd>{active.company || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Secteur</dt>
+                  <dd>{labelSectorFr(active.sector)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Position</dt>
+                  <dd>{labelPositionFr(active.position)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Ville</dt>
+                  <dd>{labelCityHubFr(active.city)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">LinkedIn</dt>
+                  <dd>
+                    {active.linkedinUrl?.trim() ? (
+                      <a
+                        href={active.linkedinUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-ns-primary hover:underline"
+                      >
+                        LINKEDIN
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Complétion</dt>
+                  <dd>
+                    <CompletionCell
+                      percent={computeProfileCompletionPercent(active)}
+                      missingFields={listMissingProfileFieldsFr(active)}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Parrain</dt>
+                  <dd>{active.referredByCode?.trim() || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Code parrainage</dt>
+                  <dd>{active.referralCode?.trim() || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Mail auto</dt>
+                  <dd>
+                    <WelcomeEmailCell
+                      status={active.welcomeEmailStatus ?? null}
+                      sentAt={active.welcomeEmailSentAt ?? null}
+                      isExpress={isExpressSignup(active)}
+                    />
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Database Perso</dt>
+                  <dd>
+                    {(active.databasePersoSyncStatus ??
+                      (active.databasePersoContactId ? "synced" : undefined)) === "synced"
+                      ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
+                      : active.databasePersoSyncStatus === "failed"
+                        ? "Échec sync"
+                        : active.databasePersoSyncStatus === "skipped"
+                          ? "Non configuré / skip"
+                          : "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Intérêts</dt>
+                  <dd>{(active.extraActivities ?? []).join(", ") || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
+                  <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
+                </div>
+                {isFranconetworkMember(active) && !isSoftDeleted(active) ? (
+                  <div className="space-y-2 border-t border-gray-100 pt-4">
+                    <p className="text-xs font-bold uppercase text-ns-secondary">
+                      Annonce FrancoNetwork (ES)
+                    </p>
+                    <p className="text-xs text-ns-secondary">
+                      Template{" "}
+                      <span className="font-mono text-[11px]">fn_announcement</span>
+                      {active.fnAnnouncementEmailStatus === "sent"
+                        ? ` · envoyé${active.fnAnnouncementEmailSentAt ? ` ${new Date(active.fnAnnouncementEmailSentAt).toLocaleString("fr-FR")}` : ""}`
+                        : active.fnAnnouncementEmailStatus === "failed"
+                          ? " · échec dernier envoi"
+                          : " · pas encore envoyé"}
+                    </p>
+                    <button
+                      type="button"
+                      className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                      disabled={sendingFnMail}
+                      onClick={() =>
+                        void sendFnAnnouncement(
+                          active,
+                          active.fnAnnouncementEmailStatus === "sent",
+                        )
+                      }
+                    >
+                      <Mail className="h-4 w-4" />
+                      {sendingFnMail
                         ? "Envoi…"
-                        : active.profileIncompleteNudgeMonth
-                          ? "Renvoyer le rappel"
-                          : "Envoyer le rappel"}
-                  </button>
-                </div>
-              ) : null}
-              {!isSoftDeleted(active) ? (
-                <OpsMemberEditor
-                  member={active}
-                  onSaved={(patch) => {
-                    setRows((prev) =>
-                      prev.map((r) => (r.id === active.id ? { ...r, ...patch } : r)),
-                    );
-                  }}
-                />
-              ) : null}
-              {!isSoftDeleted(active) ? (
-                <div className="border-t border-gray-100 pt-4">
-                  <button
-                    type="button"
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-red-700 transition hover:bg-red-100 disabled:opacity-50"
-                    disabled={deleting}
-                    onClick={() => void deleteContacts([active.id])}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {deleting ? "Suppression…" : "Supprimer"}
-                  </button>
-                </div>
-              ) : null}
-            </dl>
-          ) : (
-            <p className="text-ns-secondary">Sélectionne un inscrit pour voir le détail.</p>
-          )}
-        </aside>
-      </div>
+                        : active.fnAnnouncementEmailStatus === "sent"
+                          ? "Renvoyer l’annonce"
+                          : "Envoyer l’annonce"}
+                    </button>
+                  </div>
+                ) : null}
+                {isProfileIncomplete(active) && !isSoftDeleted(active) ? (
+                  <div className="space-y-2 border-t border-gray-100 pt-4">
+                    <p className="text-xs font-bold uppercase text-ns-secondary">
+                      Rappel profil incomplet (ES)
+                    </p>
+                    <p className="text-xs text-ns-secondary">
+                      Template{" "}
+                      <span className="font-mono text-[11px]">profile_incomplete</span>
+                      {" · "}
+                      {computeProfileCompletionPercent(active)}%
+                      {active.profileIncompleteNudgeMonth
+                        ? ` · dernier mois ${active.profileIncompleteNudgeMonth}`
+                        : " · pas encore ce mois"}
+                    </p>
+                    <button
+                      type="button"
+                      className={`${BTN_PRIMARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                      disabled={sendingProfileMail || loadingProfilePreview}
+                      onClick={() =>
+                        void openProfileIncompletePreview(
+                          active,
+                          Boolean(active.profileIncompleteNudgeMonth),
+                        )
+                      }
+                    >
+                      <Mail className="h-4 w-4" />
+                      {loadingProfilePreview
+                        ? "Chargement…"
+                        : sendingProfileMail
+                          ? "Envoi…"
+                          : active.profileIncompleteNudgeMonth
+                            ? "Renvoyer le rappel"
+                            : "Envoyer le rappel"}
+                    </button>
+                  </div>
+                ) : null}
+                {!isSoftDeleted(active) ? (
+                  <OpsMemberEditor
+                    member={active}
+                    onSaved={(patch) => {
+                      setRows((prev) =>
+                        prev.map((r) => (r.id === active.id ? { ...r, ...patch } : r)),
+                      );
+                    }}
+                  />
+                ) : null}
+                {!isSoftDeleted(active) ? (
+                  <div className="border-t border-gray-100 pt-4">
+                    <button
+                      type="button"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-bold uppercase tracking-wide text-red-700 transition hover:bg-red-100 disabled:opacity-50"
+                      disabled={deleting}
+                      onClick={() => void deleteContacts([active.id])}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deleting ? "Suppression…" : "Supprimer"}
+                    </button>
+                  </div>
+                ) : null}
+              </dl>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {contextMenu && selectedIds.size > 0 && (
         <div

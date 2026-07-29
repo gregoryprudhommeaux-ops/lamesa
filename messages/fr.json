@@ -57,7 +57,7 @@
     "fullFormHint": "Tu préfères le formulaire complet ?",
     "fullFormLink": "Inscription détaillée",
     "errors": {
-      "alreadyRegistered": "Cet email est déjà inscrit. Connecte-toi pour modifier ton profil.",
+      "alreadyRegistered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
       "generic": "Impossible d’envoyer le formulaire. Réessaie."
     }
   },
@@ -219,6 +219,7 @@
     "successLoginCta": "Se connecter et modifier mon profil",
     "error": "Envoi impossible. Réessaie dans un instant.",
     "errors": {
+      "already_registered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
       "invalid_linkedin": "URL LinkedIn invalide (linkedin.com/in/…)",
       "invalid_phone": "Numéro de téléphone invalide — indicatif pays + numéro local requis.",
       "validation": "Vérifie les champs du formulaire."
@@ -373,7 +374,7 @@
       "errors": {
         "invalidEmail": "Email invalide.",
         "invalidCredentials": "Email ou mot de passe incorrect.",
-        "emailInUse": "Cet email a déjà un compte. Connecte-toi ou utilise Google.",
+        "emailInUse": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
         "weakPassword": "Le mot de passe doit faire au moins 6 caractères.",
         "passwordMismatch": "Les mots de passe ne correspondent pas.",
         "notEnabled": "La connexion email/mot de passe n’est pas activée dans Firebase. Active Email/Password dans la console.",

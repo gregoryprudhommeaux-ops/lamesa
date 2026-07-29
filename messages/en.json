@@ -57,7 +57,7 @@
     "fullFormHint": "Prefer the full form?",
     "fullFormLink": "Detailed registration",
     "errors": {
-      "alreadyRegistered": "This email is already registered. Sign in to edit your profile.",
+      "alreadyRegistered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
       "generic": "We couldn’t submit the form. Please try again."
     }
   },
@@ -219,6 +219,7 @@
     "successLoginCta": "Sign in and edit my profile",
     "error": "Could not submit. Please try again.",
     "errors": {
+      "already_registered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
       "invalid_linkedin": "Invalid LinkedIn URL (linkedin.com/in/…)",
       "invalid_phone": "Invalid phone number — country code and local number required.",
       "validation": "Please check the form fields."
@@ -373,7 +374,7 @@
       "errors": {
         "invalidEmail": "Invalid email.",
         "invalidCredentials": "Incorrect email or password.",
-        "emailInUse": "This email already has an account. Sign in or use Google.",
+        "emailInUse": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
         "weakPassword": "Password must be at least 6 characters.",
         "passwordMismatch": "Passwords do not match.",
         "notEnabled": "Email/password sign-in is not enabled in Firebase. Enable Email/Password in the console.",

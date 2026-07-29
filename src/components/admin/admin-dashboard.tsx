@@ -4,6 +4,12 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
+import {
+  CompletionCell,
+  WelcomeEmailCell,
+  formatRegistrantDate,
+  registrantSubtitle,
+} from "@/components/admin/registrant-table-cells";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -197,123 +203,6 @@ function CategoryBars({ sat }: { sat: SatisfactionAverages }) {
       })}
     </div>
   );
-}
-
-function formatRegistrantDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("fr-FR", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function CompletionCell({
-  percent,
-  missingFields,
-}: {
-  percent: number;
-  missingFields: string[];
-}) {
-  const tone =
-    percent >= 80 ? "text-emerald-700" : percent >= 50 ? "text-amber-700" : "text-red-700";
-  const bar =
-    percent >= 80 ? "bg-emerald-500" : percent >= 50 ? "bg-amber-400" : "bg-red-400";
-  const missingHint =
-    missingFields.length > 0
-      ? `Manque : ${missingFields.join(", ")}`
-      : "Profil complet";
-
-  return (
-    <div className="min-w-[5.5rem]">
-      <div className="mb-1 flex items-center gap-1.5">
-        <span className={`text-sm font-bold tabular-nums ${tone}`}>{percent}%</span>
-        {missingFields.length > 0 ? (
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-ns-secondary/40 text-[10px] font-bold leading-none text-ns-secondary"
-            title={missingHint}
-            aria-label={missingHint}
-            onClick={(e) => e.stopPropagation()}
-          >
-            ?
-          </span>
-        ) : null}
-      </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light">
-        <div className={`h-full rounded-full ${bar}`} style={{ width: `${percent}%` }} />
-      </div>
-    </div>
-  );
-}
-
-/** Welcome / express confirmation email status after signup. */
-function WelcomeEmailCell({
-  status,
-  sentAt,
-  isExpress,
-}: {
-  status: RecentRegistrant["welcomeEmailStatus"];
-  sentAt: string | null;
-  isExpress: boolean;
-}) {
-  const hint = isExpress
-    ? "Mail auto express — invitation à compléter le profil"
-    : "Mail auto — confirmation d’inscription";
-
-  if (!status) {
-    return (
-      <span className="text-xs text-ns-secondary/70" title={`${hint} · pas encore tracké`}>
-        —
-      </span>
-    );
-  }
-
-  if (status === "sent") {
-    return (
-      <div title={hint}>
-        <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-          Envoyé
-        </span>
-        {sentAt ? (
-          <p className="mt-1 text-[11px] text-ns-secondary">{formatRegistrantDate(sentAt)}</p>
-        ) : null}
-      </div>
-    );
-  }
-
-  if (status === "failed") {
-    return (
-      <span
-        className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-800"
-        title={hint}
-      >
-        Échec
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className="inline-flex rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-600"
-      title={`${hint} · template désactivé`}
-    >
-      Off
-    </span>
-  );
-}
-
-function registrantSubtitle(r: RecentRegistrant): string {
-  return [
-    labelPositionFr(r.position),
-    labelSectorFr(r.sector),
-    r.company.trim(),
-    labelCityHubFr(r.city),
-  ]
-    .filter((part) => Boolean(part) && part !== "—")
-    .join(" · ");
 }
 
 function distributionLabel(kind: "sector" | "position" | "city", value: string): string {

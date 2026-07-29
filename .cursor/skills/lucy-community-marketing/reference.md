@@ -4,8 +4,10 @@
 
 - **Business:** Private thematic dinners; one table; selected professionals; Guadalajara-first.
 - **Prospect:** Join the waitlist free; invited when the table matches; pay only then.
-- **Member confused:** Waitlist = eligibility. Invitation + payment = seat.
+- **Member confused:** Waitlist = eligibility. Invitation + payment = seat. No matching theme → no invitation.
 - **Anti:** Not a cocktail networking night.
+- **Timeline (founder, 2026-07):** first dinners target **septiembre** while the pool is still being built.
+- **Sponsor FAQ:** reuse founder-approved ES reply in examples.md (Johan 2026-07-28).
 
 ## Cultural registers
 

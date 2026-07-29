@@ -45,7 +45,7 @@ export function ExpressSignupForm() {
         }),
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
-      if (res.status === 409) {
+      if (res.status === 409 || json.error === "already_registered") {
         setError(t("errors.alreadyRegistered"));
         return;
       }

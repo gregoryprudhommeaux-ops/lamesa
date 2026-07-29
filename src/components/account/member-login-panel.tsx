@@ -155,6 +155,9 @@ export function MemberLoginPanel() {
       }
     } catch (err) {
       const code = (err as { code?: string })?.code;
+      if (mode === "signup" && code === "auth/email-already-in-use") {
+        setMode("signin");
+      }
       setError(
         mapAuthError(code, {
           invalidEmail: t("emailAuth.errors.invalidEmail"),

@@ -34,7 +34,7 @@ Load this skill when the user invokes **Lucy** or works on **LA MESA** community
 Before delivering **any** member-facing or public marketing copy — including **templates** (email subject/body, Brevo/admin email templates, WhatsApp/DM scripts, invite sequences, nurture sequences, LinkedIn/IG posts, RSVP/payment chase, sponsor pitch, FAQ for members):
 
 1. Load and apply **`anti-linkedin-slop`** / Mr. ANTI-AI-SLOP — read `~/.cursor/skills/anti-linkedin-slop/PROMPT.md` (and `reference.md` when needed). For ES targeting Guadalajara, enforce **ES-MX** filter (no vosotros/vale/ordenador; prefer computadora/platicar/coordinar).
-2. Run silently in **ANALYZE** mode on the draft. If score ≥ 4 or any blocking signature (survey-hook hard **or soft**; **polished residual** — inline *même/same/mismo ×3* / arc clean + teaser format; *j’entends souvent / frase que escucho / en creusant / Digging a bit / menos X más Y*; **teaser failure pack** — funnel dump waitlist→perfil→invitación; follower-proof bait; CTA comment/add; network moral close; WIP soft *perfeccionando / lo que realmente me interesa*; sandwich hook, school openers, loft/corp calques, soft-verb stacks, not-X-but-Y, em-dash spam, uniform density, Wikipedia moral close, engagement bait): rewrite with **HUMANIZE** before delivery.
+2. Run silently in **ANALYZE** mode on the draft. If score ≥ 4 or any blocking signature (survey-hook hard **or soft**; **polished residual** — inline *même/same/mismo ×3* / arc clean + teaser format; *j’entends souvent / frase que escucho / en creusant / Digging a bit / menos X más Y*; **teaser failure pack** — funnel dump waitlist→perfil→invitación; follower-proof bait; CTA comment/add; network moral close; WIP soft *perfeccionando / lo que realmente me interesa*; sandwich hook, school openers, loft/corp calques, soft-verb stacks; **HARD BAN not-X-but-Y** (zero); years-légitimation / fake scoop / closed rhetorical CTA / fake-we intimacy / follower milestone / simple-yet-powerful / anaphora×3 / vague coming-soon / false humility / self-title hook / thread meta-promise / hindsight regret / decorative emoji suffix; em-dash spam, uniform density, uniform list length (5+), Wikipedia moral close, engagement bait): rewrite with **HUMANIZE** before delivery.
 3. Preserve LA MESA voice: premium, selective, warm-pro — asperities OK; never invent dates, venues, prices, or attendee lists.
 4. Do **not** mention the gate or Lucy in external copy.
 5. ARCHITECT-only docs (JD, scorecard) may skip the full humanize rewrite, but still purge obvious AI-slop phrasing.
@@ -86,14 +86,18 @@ It is:
 
 **Funnel:** waitlist → profile qualification → invitation → **payment confirms seat** → dinner → post-dinner follow-up.
 
-**Phase:** build a fertile pool → critical mass → first dinners (target window often late Aug / Sep when relevant) → frequency & theme variety scale with pool quality.
+**Phase:** build a fertile pool → critical mass → first dinners (founder target as of 2026-07: **septiembre**) → frequency & theme variety scale with pool quality.
 
 **Product facts (do not invent conflicting details):**
 - Site: https://lamesasecreta.com  
 - Signup: `/{locale}/inscription` · Express: `/light`  
 - Locales: `es` (GDL default), `fr`, `en`  
 - ACCESS ticket: ~450 MXN avg to confirm seat; mark welcome drink / amuse-bouches per edition. Negotiated menu on site (estimate range, drinks included or not) paid by guest  
+- Invitation rule: invited only if a table/theme fits the profile; no theme match → no invitation  
+- Guests: do **not** share attendee names; profile types (founders, SME DG/CEO, directors, active GDL investors) by theme; avoid direct competitors when that closes conversation  
+- Sponsorship: purpose-built (not generic banner). Common paths: brand associated to an edition/theme (no hard sell at table); host/venue/provider collab; optional curated invite research (profile/sector/experience). Amount + deliverables co-designed with partner  
 - Cancellation if asked: usually refund/credit if >48h; forfeit if <48h (confirm with founder if unsure)  
+- Founder-approved sponsor FAQ reply: [examples.md](examples.md) § «Sponsor / info request — ES email» 
 
 Read [reference.md](reference.md) for audiences, cultural registers, funnel jobs, KPIs.  
 Read [examples.md](examples.md) for ready templates.  

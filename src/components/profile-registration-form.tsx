@@ -255,11 +255,26 @@ export function ProfileRegistrationForm({
       </div>
 
       {state === "error" && (
-        <p className={ERROR_TEXT}>
-          {errorDetail && errorDetail in { invalid_linkedin: 1, validation: 1, invalid_phone: 1 }
-            ? t(`errors.${errorDetail}` as "errors.invalid_linkedin")
-            : t("error")}
-        </p>
+        <div className="space-y-2">
+          <p className={ERROR_TEXT}>
+            {errorDetail &&
+            errorDetail in {
+              invalid_linkedin: 1,
+              validation: 1,
+              invalid_phone: 1,
+              already_registered: 1,
+            }
+              ? t(`errors.${errorDetail}` as "errors.already_registered")
+              : t("error")}
+          </p>
+          {errorDetail === "already_registered" ? (
+            <p className="text-center text-xs text-ns-secondary">
+              <Link href="/connexion" className="font-medium text-ns-tertiary underline-offset-2 hover:underline">
+                {t("successLoginCta")}
+              </Link>
+            </p>
+          ) : null}
+        </div>
       )}
 
       <div className="flex flex-col items-center text-center">
