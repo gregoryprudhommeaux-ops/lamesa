@@ -29,49 +29,94 @@ import type {
 
 const RECENT_REGISTRANTS_LIMIT = 25;
 
+type DistributionMember = {
+  id: string;
+  fullName: string;
+  email: string;
+  company: string;
+};
+
+type DistributionBucket = {
+  value: string;
+  count: number;
+  members: DistributionMember[];
+};
+
 function normalizeDistributionValue(value: string | null | undefined): string {
   const trimmed = value?.trim();
   return trimmed ? trimmed : "__missing__";
 }
 
+function toDistributionMember(row: WaitlistRegistration): DistributionMember {
+  return {
+    id: row.id,
+    fullName: row.fullName?.trim() || row.email || "Sans nom",
+    email: row.email ?? "",
+    company: row.company?.trim() ?? "",
+  };
+}
+
+function sortDistributionMembers(members: DistributionMember[]): DistributionMember[] {
+  return [...members].sort(
+    (a, b) =>
+      a.fullName.localeCompare(b.fullName, "fr", { sensitivity: "base" }) ||
+      a.email.localeCompare(b.email, "fr"),
+  );
+}
+
 function buildDistribution(
   rows: WaitlistRegistration[],
   field: "sector" | "position",
-): Array<{ value: string; count: number }> {
-  const counts = new Map<string, number>();
+): DistributionBucket[] {
+  const buckets = new Map<string, DistributionMember[]>();
   for (const row of rows) {
-    const key = normalizeDistributionValue(row[field]);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    let key = normalizeDistributionValue(row[field]);
+    if (field === "sector" && key === "other") {
+      const detail = row.sectorOther?.trim();
+      key = detail ? `other:${detail}` : "other";
+    }
+    const list = buckets.get(key) ?? [];
+    list.push(toDistributionMember(row));
+    buckets.set(key, list);
   }
-  return [...counts.entries()]
-    .map(([value, count]) => ({ value, count }))
+  return [...buckets.entries()]
+    .map(([value, members]) => ({
+      value,
+      count: members.length,
+      members: sortDistributionMembers(members),
+    }))
     .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
 }
 
 /** Always expose every hub (+ missing), so the dashboard reads as a hub table. */
-function buildCityHubDistribution(
-  rows: WaitlistRegistration[],
-): Array<{ value: string; count: number }> {
-  const counts = new Map<string, number>();
-  for (const hub of CITY_HUBS) counts.set(hub, 0);
+function buildCityHubDistribution(rows: WaitlistRegistration[]): DistributionBucket[] {
+  const buckets = new Map<string, DistributionMember[]>();
+  for (const hub of CITY_HUBS) buckets.set(hub, []);
 
-  let missing = 0;
+  const missing: DistributionMember[] = [];
   for (const row of rows) {
     const hub = resolveCityHub(row.city);
+    const member = toDistributionMember(row);
     if (hub) {
-      counts.set(hub, (counts.get(hub) ?? 0) + 1);
+      const list = buckets.get(hub) ?? [];
+      list.push(member);
+      buckets.set(hub, list);
     } else {
-      missing += 1;
+      missing.push(member);
     }
   }
 
-  const hubs: Array<{ value: string; count: number }> = CITY_HUBS.map((value) => ({
-    value,
-    count: counts.get(value) ?? 0,
-  })).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
+  const hubs: DistributionBucket[] = CITY_HUBS.map((value) => {
+    const members = sortDistributionMembers(buckets.get(value) ?? []);
+    return { value, count: members.length, members };
+  }).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value, "fr"));
 
-  if (missing > 0) {
-    hubs.push({ value: "__missing__", count: missing });
+  if (missing.length > 0) {
+    hubs.push({
+      value: "__missing__",
+      count: missing.length,
+      members: sortDistributionMembers(missing),
+    });
   }
   return hubs;
 }

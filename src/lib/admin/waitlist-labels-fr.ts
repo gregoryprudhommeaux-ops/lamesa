@@ -8,7 +8,18 @@ export const SECTOR_LABELS_FR: Record<string, string> = {
   hospitality: "Hôtellerie & restauration",
   legal: "Juridique",
   marketing: "Marketing & communication",
-  manufacturing: "Industrie",
+  manufacturing: "Industrie & manufacturier",
+  retail: "Commerce & distribution",
+  education: "Éducation & formation",
+  energy: "Énergie",
+  logistics: "Logistique & supply chain",
+  construction: "Construction & infrastructure",
+  agri_food: "Agroalimentaire",
+  media: "Médias & divertissement",
+  automotive: "Automobile & mobilité",
+  trade: "Commerce extérieur / import-export",
+  nonprofit: "ONG / secteur public / associations",
+  hr: "RH & talent",
   other: "Autre",
 };
 
@@ -31,15 +42,26 @@ export const CITY_HUB_LABELS_FR: Record<string, string> = {
   Otro: "Autre",
 };
 
-export function labelSectorFr(value: string | null | undefined): string {
+export function labelSectorFr(
+  value: string | null | undefined,
+  otherDetail?: string | null,
+): string {
   const v = value?.trim() ?? "";
-  if (!v) return "—";
+  if (!v || v === "__missing__") return "Non renseigné";
+  if (v.startsWith("other:")) {
+    const detail = v.slice("other:".length).trim();
+    return detail ? `Autre · ${detail}` : "Autre";
+  }
+  if (v === "other") {
+    const detail = otherDetail?.trim();
+    return detail ? `Autre · ${detail}` : "Autre";
+  }
   return SECTOR_LABELS_FR[v] ?? v;
 }
 
 export function labelPositionFr(value: string | null | undefined): string {
   const v = value?.trim() ?? "";
-  if (!v) return "—";
+  if (!v || v === "__missing__") return "Non renseigné";
   return POSITION_LABELS_FR[v] ?? v;
 }
 

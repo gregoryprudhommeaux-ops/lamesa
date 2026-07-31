@@ -10,27 +10,45 @@ import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { CITY_HUBS } from "@/lib/constants/city-hubs";
+import { isOtherSector } from "@/lib/constants/form-options";
+import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 
 function isNextResponse(value: unknown): value is NextResponse {
   return value instanceof NextResponse;
 }
 
-const profilePatchSchema = z.object({
-  fullName: z.string().trim().min(3).max(120).optional(),
-  linkedinUrl: z
-    .union([z.literal(""), z.string().trim().url()])
-    .optional(),
-  company: z.string().trim().max(120).optional(),
-  sector: z.string().trim().max(80).optional(),
-  position: z.string().trim().max(80).optional(),
-  extraActivities: z.array(z.string().trim().min(1).max(500)).optional(),
-  city: z.enum(CITY_HUBS).optional(),
-  phone: z.string().trim().min(8).max(40).optional(),
-  invitationMotivation: z.string().trim().max(2000).optional(),
-  canBring: z.string().trim().max(280).optional(),
-  isSeeking: z.string().trim().max(280).optional(),
-});
+const profilePatchSchema = z
+  .object({
+    fullName: z.string().trim().min(3).max(120).optional(),
+    linkedinUrl: z
+      .union([z.literal(""), z.string().trim().url()])
+      .optional(),
+    company: z.string().trim().max(120).optional(),
+    sector: z.string().trim().max(80).optional(),
+    sectorOther: z
+      .string()
+      .trim()
+      .max(120)
+      .optional()
+      .transform((v) => (v === "" ? undefined : v)),
+    position: z.string().trim().max(80).optional(),
+    extraActivities: z.array(z.string().trim().min(1).max(500)).optional(),
+    city: z.enum(CITY_HUBS).optional(),
+    phone: z.string().trim().min(8).max(40).optional(),
+    invitationMotivation: z.string().trim().max(2000).optional(),
+    canBring: z.string().trim().max(280).optional(),
+    isSeeking: z.string().trim().max(280).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.sector !== undefined && isOtherSector(data.sector) && !data.sectorOther?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "sector_other_required",
+        path: ["sectorOther"],
+      });
+    }
+  });
 
 export async function PATCH(request: Request) {
   const user = await requireVerifiedUser(request);
@@ -78,9 +96,15 @@ export async function PATCH(request: Request) {
   const nextProfileComplete =
     completeHint && profile.profileComplete === false ? true : profile.profileComplete;
 
+  const clearSectorOther =
+    patch.sector !== undefined && !isOtherSector(patch.sector)
+      ? { sectorOther: FieldValue.delete() }
+      : {};
+
   await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
     {
       ...patch,
+      ...clearSectorOther,
       updatedAt: new Date().toISOString(),
       uid: user.uid,
       ...(completeHint && profile.profileComplete === false

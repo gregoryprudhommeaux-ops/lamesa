@@ -159,6 +159,8 @@
       "emailHint": "Email à utiliser pour recevoir les invitations aux futurs dîners",
       "company": "Entreprise",
       "sector": "Secteur d'activité",
+      "sectorOther": "Précise ton secteur",
+      "sectorOtherPlaceholder": "Ex. commerce extérieur, éducation privée, énergie renouvelable…",
       "position": "Position dans l'entreprise",
       "extraActivitiesIntro": "Autres centres d’intérêt (hors boulot)",
       "extraActivitiesPlaceholder": "Ex. golf, vin naturel, randonnée, jazz, philanthropie…",
@@ -189,7 +191,18 @@
       "hospitality": "Hôtellerie & restauration",
       "legal": "Juridique",
       "marketing": "Marketing & communication",
-      "manufacturing": "Industrie",
+      "manufacturing": "Industrie & manufacturier",
+      "retail": "Commerce & distribution",
+      "education": "Éducation & formation",
+      "energy": "Énergie",
+      "logistics": "Logistique & supply chain",
+      "construction": "Construction & infrastructure",
+      "agri_food": "Agroalimentaire",
+      "media": "Médias & divertissement",
+      "automotive": "Automobile & mobilité",
+      "trade": "Commerce extérieur / import-export",
+      "nonprofit": "ONG / secteur public / associations",
+      "hr": "RH & talent",
       "other": "Autre"
     },
     "positions": {
@@ -220,6 +233,7 @@
     "error": "Envoi impossible. Réessaie dans un instant.",
     "errors": {
       "already_registered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
+      "sector_other_required": "Tu as choisi « Autre » : précise ton secteur dans le champ libre.",
       "invalid_linkedin": "URL LinkedIn invalide (linkedin.com/in/…)",
       "invalid_phone": "Numéro de téléphone invalide — indicatif pays + numéro local requis.",
       "validation": "Vérifie les champs du formulaire."

@@ -11,6 +11,7 @@ import {
   registrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
 import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
@@ -79,9 +80,23 @@ type OpsQueues = {
   noShow: OpsQueueMember[];
 };
 
+type DistributionMember = {
+  id: string;
+  fullName: string;
+  email: string;
+  company: string;
+};
+
 type DistributionItem = {
   value: string;
   count: number;
+  members?: DistributionMember[];
+};
+
+type DistributionSelection = {
+  kind: "sector" | "position" | "city";
+  value: string;
+  members: DistributionMember[];
 };
 
 type DashboardPayload = {
@@ -212,20 +227,102 @@ function distributionLabel(kind: "sector" | "position" | "city", value: string):
   return value;
 }
 
+function kindTitle(kind: "sector" | "position" | "city"): string {
+  if (kind === "sector") return "Secteur";
+  if (kind === "position") return "Position";
+  return "Hub";
+}
+
+function DistributionDetailModal({
+  selection,
+  onClose,
+}: {
+  selection: DistributionSelection;
+  onClose: () => void;
+}) {
+  const label = distributionLabel(selection.kind, selection.value);
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${kindTitle(selection.kind)} : ${label}`}
+      onClick={onClose}
+    >
+      <div
+        className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              {kindTitle(selection.kind)}
+            </p>
+            <h3 className="mt-1 text-lg font-bold text-ns-hero">{label}</h3>
+            <p className="mt-1 text-xs text-ns-secondary">
+              {selection.members.length} membre
+              {selection.members.length === 1 ? "" : "s"}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="shrink-0 text-ns-secondary hover:text-ns-tertiary"
+            onClick={onClose}
+            aria-label="Fermer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-2 py-2">
+          {selection.members.length === 0 ? (
+            <p className="px-3 py-4 text-sm text-ns-secondary">Aucun membre dans cette catégorie.</p>
+          ) : (
+            <ul className="divide-y divide-gray-50">
+              {selection.members.map((m) => (
+                <li key={m.id}>
+                  <Link
+                    href={`/admin/inscrits?id=${encodeURIComponent(m.id)}`}
+                    className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
+                    onClick={onClose}
+                  >
+                    <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                      {m.fullName}
+                    </span>
+                    <span className="block truncate text-[11px] text-ns-secondary">
+                      {[m.company, m.email].filter(Boolean).join(" · ") || "—"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DistributionCard({
   title,
   items,
   total,
   kind,
   emptyLabel = "Aucune donnée.",
+  onSelect,
 }: {
   title: string;
   items: DistributionItem[];
   total: number;
   kind: "sector" | "position" | "city";
   emptyLabel?: string;
+  onSelect: (item: DistributionItem) => void;
 }) {
-  const visible = kind === "city" ? items : items.slice(0, 8);
+  const [expanded, setExpanded] = useState(false);
+  const limit = kind === "city" ? items.length : expanded ? items.length : 8;
+  const visible = items.slice(0, limit);
+  const hiddenCount = items.length - visible.length;
+
   return (
     <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
       <div className="flex items-baseline justify-between gap-3">
@@ -240,9 +337,23 @@ function DistributionCard({
           {visible.map((item) => {
             const pct = total > 0 ? Math.round((item.count / total) * 100) : 0;
             const muted = kind === "city" && item.count === 0;
+            const clickable = item.count > 0;
             return (
-              <div key={item.value} className={muted ? "opacity-45" : undefined}>
-                <div className="mb-1 flex items-baseline justify-between gap-3 text-xs">
+              <button
+                key={item.value}
+                type="button"
+                disabled={!clickable}
+                onClick={() => {
+                  if (clickable) onSelect(item);
+                }}
+                className={`w-full rounded-lg text-left transition ${
+                  muted
+                    ? "cursor-default opacity-45"
+                    : "cursor-pointer hover:bg-ns-brand-light/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ns-primary"
+                }`}
+                aria-label={`Voir les membres : ${distributionLabel(kind, item.value)}`}
+              >
+                <div className="mb-1 flex items-baseline justify-between gap-3 px-1 pt-1 text-xs">
                   <span className="min-w-0 truncate font-medium text-ns-tertiary">
                     {distributionLabel(kind, item.value)}
                   </span>
@@ -250,16 +361,29 @@ function DistributionCard({
                     {item.count} · {pct}%
                   </span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-ns-brand-light">
+                <div className="mx-1 mb-1 h-2 overflow-hidden rounded-full bg-ns-brand-light">
                   <div className="h-full rounded-full bg-[#b4e600]" style={{ width: `${pct}%` }} />
                 </div>
-              </div>
+              </button>
             );
           })}
-          {kind !== "city" && items.length > visible.length ? (
-            <p className="text-xs text-ns-secondary">
-              +{items.length - visible.length} autre{items.length - visible.length > 1 ? "s" : ""}
-            </p>
+          {hiddenCount > 0 ? (
+            <button
+              type="button"
+              className="text-xs font-semibold text-ns-primary hover:underline"
+              onClick={() => setExpanded(true)}
+            >
+              +{hiddenCount} autre{hiddenCount > 1 ? "s" : ""}
+            </button>
+          ) : null}
+          {expanded && kind !== "city" && items.length > 8 ? (
+            <button
+              type="button"
+              className="text-xs text-ns-secondary hover:underline"
+              onClick={() => setExpanded(false)}
+            >
+              Réduire
+            </button>
           ) : null}
         </div>
       )}
@@ -337,6 +461,8 @@ export function AdminDashboardPanel() {
   const [data, setData] = useState<DashboardPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [distributionSelection, setDistributionSelection] =
+    useState<DistributionSelection | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -491,21 +617,49 @@ export function AdminDashboardPanel() {
             items={distributions?.sectors ?? []}
             total={kpis.waitlistUsers}
             kind="sector"
+            onSelect={(item) =>
+              setDistributionSelection({
+                kind: "sector",
+                value: item.value,
+                members: item.members ?? [],
+              })
+            }
           />
           <DistributionCard
             title="Positions"
             items={distributions?.positions ?? []}
             total={kpis.waitlistUsers}
             kind="position"
+            onSelect={(item) =>
+              setDistributionSelection({
+                kind: "position",
+                value: item.value,
+                members: item.members ?? [],
+              })
+            }
           />
           <DistributionCard
             title="Hubs"
             items={distributions?.cities ?? []}
             total={kpis.waitlistUsers}
             kind="city"
+            onSelect={(item) =>
+              setDistributionSelection({
+                kind: "city",
+                value: item.value,
+                members: item.members ?? [],
+              })
+            }
           />
         </div>
       </section>
+
+      {distributionSelection ? (
+        <DistributionDetailModal
+          selection={distributionSelection}
+          onClose={() => setDistributionSelection(null)}
+        />
+      ) : null}
 
       <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">

@@ -9,6 +9,12 @@
 - **Timeline (founder, 2026-07):** first dinners target **septiembre** while the pool is still being built.
 - **Sponsor FAQ:** reuse founder-approved ES reply in examples.md (Johan 2026-07-28).
 
+## Brand naming & copy lead (founder 2026-07-31)
+
+- **Product/brand name = LA MESA** alone. Never write « una mesa LA MESA », « une table LA MESA », « a LA MESA table » — redundant and clumsy.
+- Prefer: *LA MESA*, *una mesa de 14 a 16*, *esta edición*, *la noche*, *cuando organizo LA MESA*.
+- **Public posts (esp. LinkedIn):** lead with the **theme / problem** (e.g. nearshoring), then bring LA MESA in as the format — don’t open on the product concept.
+
 ## Cultural registers
 
 | Persona | Register | Close angle |

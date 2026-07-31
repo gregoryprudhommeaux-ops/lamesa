@@ -111,12 +111,13 @@ export function WelcomeEmailCell({
 export function registrantSubtitle(parts: {
   position?: string | null;
   sector?: string | null;
+  sectorOther?: string | null;
   company?: string | null;
   city?: string | null;
 }): string {
   return [
     labelPositionFr(parts.position),
-    labelSectorFr(parts.sector),
+    labelSectorFr(parts.sector, parts.sectorOther),
     (parts.company ?? "").trim(),
     labelCityHubFr(parts.city),
   ]

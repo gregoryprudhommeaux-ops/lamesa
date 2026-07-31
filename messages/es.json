@@ -159,6 +159,8 @@
       "emailHint": "Correo donde quieres recibir las invitaciones",
       "company": "Empresa",
       "sector": "Sector",
+      "sectorOther": "Precisa tu sector",
+      "sectorOtherPlaceholder": "Ej. comercio exterior, educación privada, energía renovable…",
       "position": "Puesto",
       "extraActivitiesIntro": "Otros intereses (fuera del trabajo)",
       "extraActivitiesPlaceholder": "Ej. golf, vino natural, senderismo, jazz, filantropía…",
@@ -189,7 +191,18 @@
       "hospitality": "Hospitalidad y gastronomía",
       "legal": "Legal",
       "marketing": "Marketing y comunicación",
-      "manufacturing": "Industria",
+      "manufacturing": "Industria y manufactura",
+      "retail": "Comercio y distribución",
+      "education": "Educación y formación",
+      "energy": "Energía",
+      "logistics": "Logística y supply chain",
+      "construction": "Construcción e infraestructura",
+      "agri_food": "Agroalimentario",
+      "media": "Medios y entretenimiento",
+      "automotive": "Automotriz y movilidad",
+      "trade": "Comercio exterior / import-export",
+      "nonprofit": "ONG / sector público / asociaciones",
+      "hr": "RR. HH. y talento",
       "other": "Otro"
     },
     "positions": {
@@ -220,6 +233,7 @@
     "error": "No se pudo enviar. Inténtalo de nuevo.",
     "errors": {
       "already_registered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
+      "sector_other_required": "Elegiste «Otro»: escribe tu sector en el campo libre.",
       "invalid_linkedin": "URL de LinkedIn no válida (linkedin.com/in/…)",
       "invalid_phone": "Número no válido: se necesitan código de país y número local.",
       "validation": "Revisa los campos del formulario."

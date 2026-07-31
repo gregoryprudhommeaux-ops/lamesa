@@ -1,41 +1,58 @@
 import { z } from "zod";
 import { CITY_HUBS } from "./constants/city-hubs";
+import { isOtherSector } from "./constants/form-options";
 import { isValidLinkedInUrl } from "./linkedin";
 
-export const registrationSchema = z.object({
-  fullName: z.string().trim().min(3).max(120),
-  linkedinUrl: z
-    .string()
-    .trim()
-    .refine((v) => isValidLinkedInUrl(v), { message: "invalid_linkedin" }),
-  email: z.string().trim().email().max(254),
-  company: z.string().trim().min(2).max(120),
-  sector: z.string().trim().min(1).max(80),
-  position: z.string().trim().min(1).max(80),
-  extraActivities: z.preprocess(
-    (val) => (typeof val === "string" ? [val] : val),
-    z.array(z.string().trim().min(2).max(500)).min(1),
-  ),
-  city: z.enum(CITY_HUBS),
-  phone: z
-    .string()
-    .trim()
-    .refine((v) => {
-      const digits = v.replace(/\D/g, "");
-      return digits.length >= 10 && digits.length <= 15;
-    }, { message: "invalid_phone" }),
-  invitationMotivation: z.string().trim().min(10).max(2000),
-  canBring: z.string().trim().min(2).max(280),
-  isSeeking: z.string().trim().min(2).max(280),
-  locale: z.enum(["fr", "en", "es"]),
-  website: z.string().optional(),
-  referralCode: z
-    .string()
-    .trim()
-    .max(32)
-    .optional()
-    .transform((v) => (v === "" ? undefined : v)),
-});
+export const registrationSchema = z
+  .object({
+    fullName: z.string().trim().min(3).max(120),
+    linkedinUrl: z
+      .string()
+      .trim()
+      .refine((v) => isValidLinkedInUrl(v), { message: "invalid_linkedin" }),
+    email: z.string().trim().email().max(254),
+    company: z.string().trim().min(2).max(120),
+    sector: z.string().trim().min(1).max(80),
+    sectorOther: z
+      .string()
+      .trim()
+      .max(120)
+      .optional()
+      .transform((v) => (v === "" ? undefined : v)),
+    position: z.string().trim().min(1).max(80),
+    extraActivities: z.preprocess(
+      (val) => (typeof val === "string" ? [val] : val),
+      z.array(z.string().trim().min(2).max(500)).min(1),
+    ),
+    city: z.enum(CITY_HUBS),
+    phone: z
+      .string()
+      .trim()
+      .refine((v) => {
+        const digits = v.replace(/\D/g, "");
+        return digits.length >= 10 && digits.length <= 15;
+      }, { message: "invalid_phone" }),
+    invitationMotivation: z.string().trim().min(10).max(2000),
+    canBring: z.string().trim().min(2).max(280),
+    isSeeking: z.string().trim().min(2).max(280),
+    locale: z.enum(["fr", "en", "es"]),
+    website: z.string().optional(),
+    referralCode: z
+      .string()
+      .trim()
+      .max(32)
+      .optional()
+      .transform((v) => (v === "" ? undefined : v)),
+  })
+  .superRefine((data, ctx) => {
+    if (isOtherSector(data.sector) && !(data.sectorOther?.trim().length ?? 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "sector_other_required",
+        path: ["sectorOther"],
+      });
+    }
+  });
 
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 

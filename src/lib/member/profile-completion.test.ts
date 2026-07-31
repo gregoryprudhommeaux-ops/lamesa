@@ -15,7 +15,7 @@ describe("computeProfileCompletionPercent", () => {
       "email",
       "téléphone",
       "entreprise",
-      "secteur",
+      "secteur (préciser si Autre)",
       "poste",
       "ville",
       "LinkedIn",
@@ -53,6 +53,45 @@ describe("computeProfileCompletionPercent", () => {
     };
     expect(computeProfileCompletionPercent(full)).toBe(100);
     expect(listMissingProfileFieldsFr(full)).toEqual([]);
+  });
+
+  it("does not count sector=other without sectorOther", () => {
+    const profile = {
+      fullName: "Ada",
+      email: "ada@example.com",
+      phone: "+521111111111",
+      company: "Acme",
+      sector: "other",
+      position: "founder",
+      city: "GDL",
+      linkedinUrl: "https://linkedin.com/in/ada",
+      invitationMotivation: "Curiosity",
+      extraActivities: ["networking"],
+      canBring: "B2B",
+      isSeeking: "Partners",
+    };
+    expect(computeProfileCompletionPercent(profile)).toBeLessThan(100);
+    expect(listMissingProfileFieldsFr(profile)).toContain("secteur (préciser si Autre)");
+  });
+
+  it("counts sector=other when sectorOther is filled", () => {
+    expect(
+      computeProfileCompletionPercent({
+        fullName: "Ada",
+        email: "ada@example.com",
+        phone: "+521111111111",
+        company: "Acme",
+        sector: "other",
+        sectorOther: "Energía renovable",
+        position: "founder",
+        city: "GDL",
+        linkedinUrl: "https://linkedin.com/in/ada",
+        invitationMotivation: "Curiosity",
+        extraActivities: ["networking"],
+        canBring: "B2B",
+        isSeeking: "Partners",
+      }),
+    ).toBe(100);
   });
 
   it("counts canBring and isSeeking in profile completion", () => {

@@ -1,3 +1,5 @@
+import { isOtherSector } from "@/lib/constants/form-options";
+
 /** Fields that count toward admin-facing profile completion %. */
 export const PROFILE_COMPLETION_FIELDS = [
   "fullName",
@@ -22,7 +24,7 @@ export const PROFILE_COMPLETION_FIELD_LABELS_FR: Record<ProfileCompletionField, 
   email: "email",
   phone: "téléphone",
   company: "entreprise",
-  sector: "secteur",
+  sector: "secteur (préciser si Autre)",
   position: "poste",
   city: "ville",
   linkedinUrl: "LinkedIn",
@@ -38,7 +40,7 @@ export const PROFILE_COMPLETION_FIELD_LABELS_ES: Record<ProfileCompletionField, 
   email: "correo",
   phone: "teléfono",
   company: "empresa",
-  sector: "sector",
+  sector: "sector (precisa si elegiste Otro)",
   position: "puesto",
   city: "ciudad",
   linkedinUrl: "LinkedIn",
@@ -54,6 +56,7 @@ export type ProfileCompletionInput = {
   phone?: string | null;
   company?: string | null;
   sector?: string | null;
+  sectorOther?: string | null;
   position?: string | null;
   city?: string | null;
   linkedinUrl?: string | null;
@@ -73,12 +76,19 @@ function hasActivities(value: string[] | null | undefined): boolean {
   return Boolean(value?.some((item) => hasText(item)));
 }
 
+function isSectorFilled(profile: ProfileCompletionInput): boolean {
+  if (!hasText(profile.sector)) return false;
+  if (isOtherSector(profile.sector)) return hasText(profile.sectorOther);
+  return true;
+}
+
 function isFieldFilled(
   profile: ProfileCompletionInput,
   field: ProfileCompletionField,
 ): boolean {
   if (field === "extraActivities") return hasActivities(profile.extraActivities);
-  return hasText(profile[field]);
+  if (field === "sector") return isSectorFilled(profile);
+  return hasText(profile[field] as string | null | undefined);
 }
 
 /** 0–100 based on filled profile fields (equal weight). */

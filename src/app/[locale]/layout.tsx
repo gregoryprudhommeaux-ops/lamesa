@@ -29,10 +29,18 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
+  const title = t("title");
+  const description = t("description");
+  const ogImage = {
+    url: "/og-image.jpg",
+    width: 1200,
+    height: 630,
+    alt: "LA MESA",
+  };
   return {
     metadataBase: new URL(getSiteUrl() || PRODUCTION_SITE_URL),
-    title: t("title"),
-    description: t("description"),
+    title,
+    description,
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "48x48" },
@@ -43,6 +51,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     },
     alternates: {
       canonical: `/${locale}`,
+    },
+    openGraph: {
+      type: "website",
+      locale: locale === "es" ? "es_MX" : locale === "fr" ? "fr_FR" : "en_US",
+      siteName: "LA MESA",
+      title,
+      description,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage.url],
     },
   };
 }

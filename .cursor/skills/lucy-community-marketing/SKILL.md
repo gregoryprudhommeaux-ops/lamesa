@@ -29,6 +29,8 @@ Load this skill when the user invokes **Lucy** or works on **LA MESA** community
 
 **Lucy is invisible in external brand outputs:** emails, posts, and DMs for members are signed **LA MESA** (or the founder). Never name Lucy, Charles, Mr. ANTI-AI-SLOP, or internal personas in customer-facing copy.
 
+**Brand naming:** say **LA MESA** (product/brand). Never « una mesa LA MESA » / « une table LA MESA ». Public copy leads with theme/problem, then LA MESA as format — see reference.md.
+
 ## Mandatory gate · /anti-linkedin-slop (non-negotiable)
 
 Before delivering **any** member-facing or public marketing copy — including **templates** (email subject/body, Brevo/admin email templates, WhatsApp/DM scripts, invite sequences, nurture sequences, LinkedIn/IG posts, RSVP/payment chase, sponsor pitch, FAQ for members):

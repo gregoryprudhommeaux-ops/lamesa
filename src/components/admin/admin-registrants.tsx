@@ -1152,7 +1152,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 </div>
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Secteur</dt>
-                  <dd>{labelSectorFr(active.sector)}</dd>
+                  <dd>{labelSectorFr(active.sector, active.sectorOther)}</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Position</dt>

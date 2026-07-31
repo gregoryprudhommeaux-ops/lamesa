@@ -159,6 +159,8 @@
       "emailHint": "Email where you want to receive invitations",
       "company": "Company",
       "sector": "Industry",
+      "sectorOther": "Specify your industry",
+      "sectorOtherPlaceholder": "e.g. foreign trade, private education, renewable energy…",
       "position": "Role",
       "extraActivitiesIntro": "Other interests (outside work)",
       "extraActivitiesPlaceholder": "e.g. golf, natural wine, hiking, jazz, philanthropy…",
@@ -189,7 +191,18 @@
       "hospitality": "Hospitality & dining",
       "legal": "Legal",
       "marketing": "Marketing & communications",
-      "manufacturing": "Industry",
+      "manufacturing": "Industry & manufacturing",
+      "retail": "Retail & distribution",
+      "education": "Education & training",
+      "energy": "Energy",
+      "logistics": "Logistics & supply chain",
+      "construction": "Construction & infrastructure",
+      "agri_food": "Agri-food",
+      "media": "Media & entertainment",
+      "automotive": "Automotive & mobility",
+      "trade": "Foreign trade / import-export",
+      "nonprofit": "Nonprofit / public sector / associations",
+      "hr": "HR & talent",
       "other": "Other"
     },
     "positions": {
@@ -220,6 +233,7 @@
     "error": "Could not submit. Please try again.",
     "errors": {
       "already_registered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
+      "sector_other_required": "You chose “Other”: please specify your industry in the free-text field.",
       "invalid_linkedin": "Invalid LinkedIn URL (linkedin.com/in/…)",
       "invalid_phone": "Invalid phone number — country code and local number required.",
       "validation": "Please check the form fields."

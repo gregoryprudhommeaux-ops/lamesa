@@ -15,6 +15,7 @@ import {
 } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
+import { isOtherSector } from "@/lib/constants/form-options";
 import {
   isValidReferralCodeFormat,
   normalizeReferralCode,
@@ -69,6 +70,9 @@ export async function POST(request: Request) {
     email,
     company: data.company,
     sector: data.sector,
+    ...(isOtherSector(data.sector) && data.sectorOther
+      ? { sectorOther: data.sectorOther }
+      : {}),
     position: data.position,
     extraActivities: data.extraActivities,
     city: data.city,
@@ -99,6 +103,9 @@ export async function POST(request: Request) {
             ...updates,
             deletedAt: FieldValue.delete(),
             updatedAt: now,
+            ...(isOtherSector(data.sector)
+              ? {}
+              : { sectorOther: FieldValue.delete() }),
           },
           { merge: true },
         );

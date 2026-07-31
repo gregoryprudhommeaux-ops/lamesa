@@ -30,6 +30,7 @@ export function ProfileRegistrationForm({
   const [state, setState] = useState<FormState>("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [phoneResetKey, setPhoneResetKey] = useState(0);
+  const [sector, setSector] = useState("");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -53,12 +54,16 @@ export function ProfileRegistrationForm({
       return;
     }
 
+    const sectorValue = String(data.get("sector") ?? "").trim();
+    const sectorOther = String(data.get("sectorOther") ?? "").trim();
+
     const payload = {
       fullName: String(data.get("fullName") ?? "").trim(),
       linkedinUrl,
       email: String(data.get("email") ?? "").trim(),
       company: String(data.get("company") ?? "").trim(),
-      sector: String(data.get("sector") ?? "").trim(),
+      sector: sectorValue,
+      sectorOther: sectorValue === "other" ? sectorOther : undefined,
       position: String(data.get("position") ?? "").trim(),
       extraActivities: [String(data.get("extraActivities") ?? "").trim()],
       city: String(data.get("city") ?? "").trim(),
@@ -87,6 +92,7 @@ export function ProfileRegistrationForm({
 
       setState("success");
       form.reset();
+      setSector("");
       setPhoneResetKey((k) => k + 1);
     } catch {
       setState("error");
@@ -150,13 +156,41 @@ export function ProfileRegistrationForm({
         </div>
         <div>
           <label htmlFor="sector" className={LABEL_CLASS}>{t("fields.sector")}</label>
-          <select id="sector" name="sector" required className={INPUT_CLASS} disabled={state === "sending"}>
+          <select
+            id="sector"
+            name="sector"
+            required
+            className={INPUT_CLASS}
+            disabled={state === "sending"}
+            value={sector}
+            onChange={(e) => setSector(e.target.value)}
+          >
             <option value="">—</option>
             {SECTORS.map((s) => (
               <option key={s} value={s}>{t(`sectors.${s}`)}</option>
             ))}
           </select>
         </div>
+        {sector === "other" ? (
+          <div>
+            <label htmlFor="sectorOther" className={LABEL_CLASS}>
+              {t("fields.sectorOther")}
+            </label>
+            <input
+              id="sectorOther"
+              name="sectorOther"
+              type="text"
+              required
+              minLength={2}
+              maxLength={120}
+              className={INPUT_CLASS}
+              disabled={state === "sending"}
+              placeholder={t("fields.sectorOtherPlaceholder")}
+            />
+          </div>
+        ) : (
+          <input type="hidden" name="sectorOther" value="" />
+        )}
         <div>
           <label htmlFor="position" className={LABEL_CLASS}>{t("fields.position")}</label>
           <select id="position" name="position" required className={INPUT_CLASS} disabled={state === "sending"}>
@@ -263,8 +297,9 @@ export function ProfileRegistrationForm({
               validation: 1,
               invalid_phone: 1,
               already_registered: 1,
+              sector_other_required: 1,
             }
-              ? t(`errors.${errorDetail}` as "errors.already_registered")
+              ? t(`errors.${errorDetail}` as "errors.sector_other_required")
               : t("error")}
           </p>
           {errorDetail === "already_registered" ? (

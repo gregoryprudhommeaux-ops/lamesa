@@ -2,7 +2,7 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
-import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
+import { POSITIONS, SECTORS, isSectorCode } from "@/lib/constants/form-options";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
@@ -23,6 +23,22 @@ type MemberProfilePanelProps = {
   onSaved: () => void | Promise<void>;
 };
 
+function initialSectorState(profile: Profile): { sector: string; sectorOther: string } {
+  const raw = (profile.sector ?? "").trim();
+  if (!raw) return { sector: "", sectorOther: "" };
+  if (isSectorCode(raw)) {
+    return {
+      sector: raw,
+      sectorOther: raw === "other" ? (profile.sectorOther ?? "").trim() : "",
+    };
+  }
+  // Legacy free-text stored as sector value.
+  return {
+    sector: "other",
+    sectorOther: (profile.sectorOther ?? raw).trim(),
+  };
+}
+
 export function MemberProfilePanel({
   profile,
   completionPercent,
@@ -37,7 +53,7 @@ export function MemberProfilePanel({
 
   const [fullName, setFullName] = useState(profile.fullName ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
-  const [sector, setSector] = useState(profile.sector ?? "");
+  const [{ sector, sectorOther }, setSectorState] = useState(() => initialSectorState(profile));
   const [position, setPosition] = useState(profile.position ?? "");
   const [city, setCity] = useState(() => resolveCityHub(profile.city) ?? "");
   const [phone, setPhone] = useState(profile.phone ?? "");
@@ -54,7 +70,7 @@ export function MemberProfilePanel({
   useEffect(() => {
     setFullName(profile.fullName ?? "");
     setCompany(profile.company ?? "");
-    setSector(profile.sector ?? "");
+    setSectorState(initialSectorState(profile));
     setPosition(profile.position ?? "");
     setCity(resolveCityHub(profile.city) ?? "");
     setPhone(profile.phone ?? "");
@@ -70,6 +86,11 @@ export function MemberProfilePanel({
     setSaving(true);
     setSaved(false);
     setError(null);
+    if (sector === "other" && !sectorOther.trim()) {
+      setError(tReg("errors.sector_other_required"));
+      setSaving(false);
+      return;
+    }
     try {
       const res = await authFetch("/api/me/profile", {
         method: "PATCH",
@@ -77,6 +98,7 @@ export function MemberProfilePanel({
           fullName,
           company,
           sector,
+          sectorOther: sector === "other" ? sectorOther.trim() : "",
           position,
           city,
           phone,
@@ -89,7 +111,11 @@ export function MemberProfilePanel({
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
-        setError(json.error ?? "save_failed");
+        setError(
+          json.error === "validation"
+            ? tReg("errors.sector_other_required")
+            : (json.error ?? "save_failed"),
+        );
         return;
       }
       setSaved(true);
@@ -162,7 +188,13 @@ export function MemberProfilePanel({
             id="member-sector"
             className={INPUT_CLASS}
             value={sector}
-            onChange={(e) => setSector(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setSectorState((prev) => ({
+                sector: next,
+                sectorOther: next === "other" ? prev.sectorOther : "",
+              }));
+            }}
             required
           >
             <option value="">{t("fields.selectPlaceholder")}</option>
@@ -173,6 +205,25 @@ export function MemberProfilePanel({
             ))}
           </select>
         </div>
+        {sector === "other" ? (
+          <div>
+            <label className={LABEL_CLASS} htmlFor="member-sector-other">
+              {tReg("fields.sectorOther")}
+            </label>
+            <input
+              id="member-sector-other"
+              className={INPUT_CLASS}
+              value={sectorOther}
+              onChange={(e) =>
+                setSectorState((prev) => ({ ...prev, sectorOther: e.target.value }))
+              }
+              required
+              minLength={2}
+              maxLength={120}
+              placeholder={tReg("fields.sectorOtherPlaceholder")}
+            />
+          </div>
+        ) : null}
         <div>
           <label className={LABEL_CLASS} htmlFor="member-position">
             {t("fields.position")}

@@ -183,6 +183,8 @@ export interface WaitlistRegistration {
   email: string;
   company: string;
   sector: string;
+  /** Free-text detail required when sector === "other" (for matching). */
+  sectorOther?: string;
   position: string;
   extraActivities: string[];
   city: string;

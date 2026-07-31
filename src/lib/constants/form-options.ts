@@ -8,8 +8,29 @@ export const SECTORS = [
   "legal",
   "marketing",
   "manufacturing",
+  "retail",
+  "education",
+  "energy",
+  "logistics",
+  "construction",
+  "agri_food",
+  "media",
+  "automotive",
+  "trade",
+  "nonprofit",
+  "hr",
   "other",
 ] as const;
+
+export type SectorCode = (typeof SECTORS)[number];
+
+export function isSectorCode(value: string | null | undefined): value is SectorCode {
+  return Boolean(value && (SECTORS as readonly string[]).includes(value));
+}
+
+export function isOtherSector(value: string | null | undefined): boolean {
+  return (value ?? "").trim() === "other";
+}
 
 export const POSITIONS = [
   "founder",
