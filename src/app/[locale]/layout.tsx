@@ -32,10 +32,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = t("title");
   const description = t("description");
   const ogImage = {
-    url: "/og-image.jpg",
+    url: "/og-image.png",
     width: 1200,
     height: 630,
     alt: "LA MESA",
+    type: "image/png",
   };
   return {
     metadataBase: new URL(getSiteUrl() || PRODUCTION_SITE_URL),
