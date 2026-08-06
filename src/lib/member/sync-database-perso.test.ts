@@ -27,6 +27,7 @@ describe("toDatabasePersoUpsertPayload", () => {
     expect(payload.company).toBe("Analytical");
     expect(payload.notes).toContain("Parrainé via: GREG01");
     expect(payload.notes).toContain("Motivation: Curious");
+    expect(payload.laMesaRegistered).toBe(true);
   });
 
   it("adds curation answers to Database Perso notes", () => {

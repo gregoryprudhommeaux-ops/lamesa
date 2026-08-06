@@ -131,22 +131,99 @@ export type UpsertContactPayload = {
   source: string;
   locale: string;
   notes?: string;
+  /** After upsert: move to LA MESA - INSCRITS, leave LA MESA - CONTACTER */
+  laMesaRegistered?: boolean;
+};
+
+export type LaMesaOutreachContact = {
+  id: string;
+  fullName: string;
+  company: string | null;
+  emails: string[];
+  phones: string[];
+  tags: string[];
 };
 
 export async function upsertContact(
   payload: UpsertContactPayload,
-): Promise<{ ok: boolean; id?: string; action?: "created" | "merged" }> {
+): Promise<{
+  ok: boolean;
+  id?: string;
+  action?: "created" | "merged";
+  lists?: { ok?: boolean; error?: string };
+}> {
   try {
     const data = await fetchDatabasePerso<{
       ok?: boolean;
       id?: string;
       action?: "created" | "merged";
+      lists?: { ok?: boolean; error?: string };
     }>("/api/public/contacts/upsert", { method: "POST", body: payload });
     return {
       ok: data.ok === true,
       id: data.id,
       action: data.action,
+      lists: data.lists,
     };
+  } catch (error) {
+    if (error instanceof DatabasePersoError && error.status === 404) {
+      return { ok: false };
+    }
+    throw error;
+  }
+}
+
+/** Bootstrap Perso playlists LA MESA - INSCRITS / CONTACTER. */
+export async function ensureLaMesaLists(): Promise<{ ok: boolean }> {
+  try {
+    const data = await fetchDatabasePerso<{ ok?: boolean }>(
+      "/api/public/lists/la-mesa/ensure",
+      { method: "POST", body: {} },
+    );
+    return { ok: data.ok === true };
+  } catch (error) {
+    if (error instanceof DatabasePersoError && error.status === 404) {
+      return { ok: false };
+    }
+    throw error;
+  }
+}
+
+/** Contacts on CONTACTER with action A CONTACTER (not CONTACTÉ). */
+export async function listLaMesaToContact(): Promise<{
+  ok: boolean;
+  contacts: LaMesaOutreachContact[];
+  count: number;
+}> {
+  try {
+    const data = await fetchDatabasePerso<{
+      ok?: boolean;
+      contacts?: LaMesaOutreachContact[];
+      count?: number;
+    }>("/api/public/lists/la-mesa/to-contact");
+    return {
+      ok: data.ok === true,
+      contacts: Array.isArray(data.contacts) ? data.contacts : [],
+      count: typeof data.count === "number" ? data.count : 0,
+    };
+  } catch (error) {
+    if (error instanceof DatabasePersoError && error.status === 404) {
+      return { ok: false, contacts: [], count: 0 };
+    }
+    throw error;
+  }
+}
+
+/** After cold mail: CONTACTÉ on, A CONTACTER off. */
+export async function markLaMesaContacted(
+  contactIds: string[],
+): Promise<{ ok: boolean; updated?: number }> {
+  try {
+    const data = await fetchDatabasePerso<{ ok?: boolean; updated?: number }>(
+      "/api/public/lists/la-mesa/mark-contacted",
+      { method: "POST", body: { contactIds } },
+    );
+    return { ok: data.ok === true, updated: data.updated };
   } catch (error) {
     if (error instanceof DatabasePersoError && error.status === 404) {
       return { ok: false };

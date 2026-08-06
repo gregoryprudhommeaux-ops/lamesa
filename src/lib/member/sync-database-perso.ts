@@ -64,6 +64,8 @@ export function toDatabasePersoUpsertPayload(member: WaitlistSyncInput): UpsertC
     source: member.source?.trim() || "la-mesa-registration",
     locale: member.locale?.trim() || "es",
     notes: buildNotes(member) || undefined,
+    /** Playlist sync: INSCRITS on, CONTACTER off */
+    laMesaRegistered: true,
   };
 }
 
