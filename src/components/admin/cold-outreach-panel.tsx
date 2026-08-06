@@ -1,0 +1,257 @@
+"use client";
+
+import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import type { EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
+import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
+import { useCallback, useEffect, useState } from "react";
+
+type Recipient = {
+  id: string;
+  fullName: string;
+  email: string;
+  company?: string | null;
+};
+
+type Props = {
+  templateKey: EmailTemplateKey;
+  locale: TemplateLocale;
+  enabled: boolean;
+};
+
+export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
+  const authFetch = useAuthFetch();
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [skippedWaitlist, setSkippedWaitlist] = useState<Recipient[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualName, setManualName] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach");
+      const json = (await res.json()) as {
+        ok?: boolean;
+        recipients?: Recipient[];
+        skippedWaitlist?: Recipient[];
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "load_failed");
+      const list = json.recipients ?? [];
+      setRecipients(list);
+      setSkippedWaitlist(json.skippedWaitlist ?? []);
+      setSelected(new Set(list.map((r) => r.id)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function addManual() {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "add",
+          email: manualEmail.trim(),
+          fullName: manualName.trim() || undefined,
+        }),
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "add_failed");
+      }
+      setManualEmail("");
+      setManualName("");
+      setMessage("Contact ajouté à LA MESA - CONTACTER (A CONTACTER).");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendSelected() {
+    if (selected.size === 0) {
+      setError("Aucun destinataire sélectionné.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Envoyer « ${templateKey} » (${locale}) à ${selected.size} contact(s) ? Ils passeront en CONTACTÉ.`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "send",
+          templateKey,
+          locale,
+          contactIds: [...selected],
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        failed?: number;
+        skipped?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "send_failed");
+      setMessage(
+        `Envoyés : ${json.sent ?? 0} · échecs : ${json.failed ?? 0} · skip : ${json.skipped ?? 0}`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border border-dashed border-ns-alternate bg-ns-brand-light/30 p-4">
+      <div>
+        <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+          Envoi cold · Database Perso
+        </h3>
+        <p className="mt-1 text-xs text-ns-secondary">
+          Source : liste <strong>LA MESA - CONTACTER</strong> avec critère{" "}
+          <strong>A CONTACTER</strong>. Les inscrits waitlist sont exclus. Après envoi réussi →{" "}
+          <strong>CONTACTÉ</strong>.
+        </p>
+        {!enabled ? (
+          <p className="mt-2 text-xs font-semibold text-amber-800">
+            Template désactivé — active-le avant d’envoyer.
+          </p>
+        ) : null}
+      </div>
+
+      {error ? <p className={ERROR_TEXT}>{error}</p> : null}
+      {message ? <p className="text-sm font-medium text-ns-primary">{message}</p> : null}
+
+      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+        <div>
+          <label className={LABEL_CLASS} htmlFor="cold-manual-email">
+            Ajouter un email
+          </label>
+          <input
+            id="cold-manual-email"
+            className={INPUT_CLASS}
+            type="email"
+            value={manualEmail}
+            onChange={(e) => setManualEmail(e.target.value)}
+            placeholder="nombre@empresa.com"
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS} htmlFor="cold-manual-name">
+            Nom (optionnel)
+          </label>
+          <input
+            id="cold-manual-name"
+            className={INPUT_CLASS}
+            value={manualName}
+            onChange={(e) => setManualName(e.target.value)}
+            placeholder="Nombre completo"
+          />
+        </div>
+        <div className="flex items-end">
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            disabled={busy || !manualEmail.includes("@")}
+            onClick={() => void addManual()}
+          >
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={BTN_SECONDARY} disabled={busy || loading} onClick={() => void load()}>
+          Rafraîchir la liste
+        </button>
+        <button
+          type="button"
+          className={BTN_PRIMARY}
+          disabled={busy || loading || !enabled || selected.size === 0}
+          onClick={() => void sendSelected()}
+        >
+          {busy ? "Envoi…" : `Envoyer à ${selected.size} contact(s)`}
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="text-sm text-ns-secondary">Chargement Perso…</p>
+      ) : recipients.length === 0 ? (
+        <p className="text-sm text-ns-secondary">
+          Aucun contact « A CONTACTER » (hors waitlist). Ajoute-en dans Database Perso ou via le
+          champ email ci-dessus.
+        </p>
+      ) : (
+        <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
+          {recipients.map((r) => (
+            <li key={r.id}>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-white/70">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={selected.has(r.id)}
+                  onChange={() => toggle(r.id)}
+                />
+                <span className="min-w-0">
+                  <span className="block font-semibold text-ns-tertiary">{r.fullName}</span>
+                  <span className="block truncate text-xs text-ns-secondary">
+                    {r.email}
+                    {r.company ? ` · ${r.company}` : ""}
+                  </span>
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {skippedWaitlist.length > 0 ? (
+        <p className="text-[11px] text-ns-secondary">
+          {skippedWaitlist.length} déjà sur la waitlist (exclus) :{" "}
+          {skippedWaitlist
+            .slice(0, 5)
+            .map((r) => r.email)
+            .join(", ")}
+          {skippedWaitlist.length > 5 ? "…" : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}

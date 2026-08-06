@@ -1,5 +1,6 @@
 "use client";
 
+import { ColdOutreachPanel } from "@/components/admin/cold-outreach-panel";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
 import {
@@ -484,6 +485,14 @@ export function AdminEmailTemplatesPanel() {
                 srcDoc={previewHtml}
               />
             </div>
+          ) : null}
+
+          {isCustom ? (
+            <ColdOutreachPanel
+              templateKey={activeKey}
+              locale={editLocale}
+              enabled={enabled}
+            />
           ) : null}
 
           <div className="flex flex-wrap gap-2">

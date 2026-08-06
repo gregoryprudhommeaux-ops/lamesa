@@ -57,7 +57,10 @@ LA MESA calls this on:
 | `POST /api/public/lists/la-mesa/mark-contacted` | Body `{ contactIds: [] }` après envoi |
 | `POST /api/public/lists/la-mesa/on-registered` | Body `{ contactId }` (aussi via upsert) |
 
-Helpers côté LA MESA : `ensureLaMesaLists`, `listLaMesaToContact`, `markLaMesaContacted` dans `src/lib/database-perso.ts`.
+Helpers côté LA MESA : `ensureLaMesaLists`, `listLaMesaToContact`, `markLaMesaContacted`, `addLaMesaToContacter` dans `src/lib/database-perso.ts`.
+
+Admin UI : Templates → template **custom** → panneau **Envoi cold · Database Perso**
+(`GET/POST /api/admin/cold-outreach`).
 
 ### Ops manuelles (Perso UI)
 

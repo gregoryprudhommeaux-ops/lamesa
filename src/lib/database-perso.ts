@@ -232,6 +232,46 @@ export async function markLaMesaContacted(
   }
 }
 
+/** Manual email → CONTACTER + A CONTACTER. */
+export async function addLaMesaToContacter(input: {
+  email: string;
+  fullName?: string;
+  company?: string;
+  phone?: string;
+}): Promise<{
+  ok: boolean;
+  contactId?: string;
+  email?: string;
+  fullName?: string;
+  error?: string;
+}> {
+  try {
+    const data = await fetchDatabasePerso<{
+      ok?: boolean;
+      contactId?: string;
+      email?: string;
+      fullName?: string;
+      error?: string;
+      message?: string;
+    }>("/api/public/lists/la-mesa/add-to-contacter", {
+      method: "POST",
+      body: input,
+    });
+    return {
+      ok: data.ok === true,
+      contactId: data.contactId,
+      email: data.email,
+      fullName: data.fullName,
+      error: data.error ?? data.message,
+    };
+  } catch (error) {
+    if (error instanceof DatabasePersoError && error.status === 404) {
+      return { ok: false, error: "not_found" };
+    }
+    throw error;
+  }
+}
+
 export function isDatabasePersoConfigured(): boolean {
   return !!(
     process.env.DATABASE_PERSO_BASE_URL?.trim() &&
