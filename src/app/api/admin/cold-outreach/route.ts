@@ -14,9 +14,12 @@ import {
 import { firstEmail, sendColdTemplateEmail } from "@/lib/email/send-cold-template";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { parseContacterImportText } from "@/lib/admin/parse-contacter-import";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { WaitlistRegistration } from "@/lib/types/events";
+
+const BULK_IMPORT_LIMIT = 250;
 
 async function loadWaitlistEmails(): Promise<Set<string>> {
   if (!isFirebaseAdminConfigured()) return new Set();
@@ -154,6 +157,58 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error("[admin/cold-outreach add]", error);
       return NextResponse.json({ ok: false, error: "add_failed" }, { status: 502 });
+    }
+  }
+
+  if (action === "import-contacter") {
+    const text =
+      body && typeof body === "object" && "text" in body
+        ? String((body as { text?: string }).text ?? "")
+        : "";
+    const rows = parseContacterImportText(text);
+    if (rows.length === 0) {
+      return NextResponse.json({ ok: false, error: "no_emails_parsed" }, { status: 400 });
+    }
+    if (rows.length > BULK_IMPORT_LIMIT) {
+      return NextResponse.json(
+        { ok: false, error: "too_many", limit: BULK_IMPORT_LIMIT, count: rows.length },
+        { status: 400 },
+      );
+    }
+    try {
+      await ensureLaMesaLists();
+      const waitlistEmails = await loadWaitlistEmails();
+      let added = 0;
+      let skippedWaitlist = 0;
+      let failed = 0;
+      const errors: Array<{ email: string; error: string }> = [];
+
+      for (const row of rows) {
+        if (waitlistEmails.has(row.email)) {
+          skippedWaitlist += 1;
+          continue;
+        }
+        const result = await addLaMesaToContacter(row);
+        if (result.ok) {
+          added += 1;
+        } else {
+          failed += 1;
+          errors.push({ email: row.email, error: result.error ?? "add_failed" });
+        }
+      }
+
+      return NextResponse.json({
+        ok: true,
+        action: "import-contacter",
+        parsed: rows.length,
+        added,
+        skippedWaitlist,
+        failed,
+        errors: errors.slice(0, 20),
+      });
+    } catch (error) {
+      console.error("[admin/cold-outreach import-contacter]", error);
+      return NextResponse.json({ ok: false, error: "import_failed" }, { status: 502 });
     }
   }
 

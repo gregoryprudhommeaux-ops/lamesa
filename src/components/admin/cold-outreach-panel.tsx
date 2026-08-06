@@ -29,6 +29,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState("");
   const [manualName, setManualName] = useState("");
+  const [importText, setImportText] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -89,6 +90,53 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       setManualEmail("");
       setManualName("");
       setMessage("Contact ajouté à LA MESA - CONTACTER (A CONTACTER).");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importContacter() {
+    if (!importText.trim()) {
+      setError("Colle des emails (un par ligne) ou un CSV name,email.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "import-contacter",
+          text: importText,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        parsed?: number;
+        added?: number;
+        skippedWaitlist?: number;
+        failed?: number;
+        error?: string;
+        limit?: number;
+        count?: number;
+      };
+      if (!res.ok || !json.ok) {
+        if (json.error === "too_many") {
+          throw new Error(`Trop de lignes (${json.count}). Limite : ${json.limit}.`);
+        }
+        if (json.error === "no_emails_parsed") {
+          throw new Error("Aucun email reconnu dans le texte collé.");
+        }
+        throw new Error(json.error ?? "import_failed");
+      }
+      setImportText("");
+      setMessage(
+        `Import CONTACTER — lus: ${json.parsed ?? 0} · ajoutés: ${json.added ?? 0} · déjà waitlist: ${json.skippedWaitlist ?? 0} · échecs: ${json.failed ?? 0}`,
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -232,6 +280,32 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           >
             Ajouter
           </button>
+        </div>
+      </div>
+
+      <div>
+        <label className={LABEL_CLASS} htmlFor="cold-import-text">
+          Import masse → CONTACTER (A CONTACTER)
+        </label>
+        <textarea
+          id="cold-import-text"
+          className={`${INPUT_CLASS} min-h-[120px] font-mono text-xs`}
+          value={importText}
+          onChange={(e) => setImportText(e.target.value)}
+          placeholder={"email@dominio.com\nou CSV :\nNombre,Email,Empresa\nAda,ada@ex.com,Acme"}
+        />
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            disabled={busy || !importText.trim()}
+            onClick={() => void importContacter()}
+          >
+            Importer vers CONTACTER
+          </button>
+          <p className="self-center text-[11px] text-ns-secondary">
+            Max 250 · waitlist exclus auto · colle depuis ton Sheet (colonnes email / nombre)
+          </p>
         </div>
       </div>
 
