@@ -41,8 +41,27 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         recipients?: Recipient[];
         skippedWaitlist?: Recipient[];
         error?: string;
+        detail?: string;
       };
-      if (!res.ok || !json.ok) throw new Error(json.error ?? "load_failed");
+      if (!res.ok || !json.ok) {
+        const code = json.error ?? "load_failed";
+        if (code === "perso_unauthorized") {
+          throw new Error(
+            json.detail ??
+              "Token Database Perso refusé — aligne DATABASE_PERSO_API_TOKEN sur LA MESA et Perso (Vercel).",
+          );
+        }
+        if (code === "database_perso_not_configured") {
+          throw new Error("DATABASE_PERSO_BASE_URL / API_TOKEN manquants sur LA MESA.");
+        }
+        if (code === "perso_ensure_lists_failed" || code === "perso_list_failed") {
+          throw new Error(
+            "API listes Perso indisponible (deploy Perso ou token). Détail: " +
+              (json.detail ?? code),
+          );
+        }
+        throw new Error(json.detail ? `${code}: ${json.detail}` : code);
+      }
       const list = json.recipients ?? [];
       setRecipients(list);
       setSkippedWaitlist(json.skippedWaitlist ?? []);

@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import {
   addLaMesaToContacter,
+  DatabasePersoError,
   ensureLaMesaLists,
   isDatabasePersoConfigured,
   listLaMesaToContact,
@@ -87,7 +88,38 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("[admin/cold-outreach GET]", error);
-    return NextResponse.json({ ok: false, error: "fetch_failed" }, { status: 502 });
+    if (error instanceof DatabasePersoError) {
+      if (error.code === "unauthorized" || error.status === 401) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "perso_unauthorized",
+            detail:
+              "Token Database Perso refusé. Vérifie DATABASE_PERSO_API_TOKEN (LA MESA) = DATABASE_PERSO_API_TOKEN (Perso).",
+          },
+          { status: 502 },
+        );
+      }
+      if (error.code === "timeout") {
+        return NextResponse.json({ ok: false, error: "perso_timeout" }, { status: 504 });
+      }
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "perso_upstream",
+          detail: error.message.slice(0, 200),
+        },
+        { status: 502 },
+      );
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "fetch_failed",
+        detail: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200),
+      },
+      { status: 502 },
+    );
   }
 }
 
