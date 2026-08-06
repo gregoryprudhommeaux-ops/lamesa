@@ -81,11 +81,49 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) {
+        if (json.error === "already_on_waitlist") {
+          throw new Error("Cet email est déjà inscrit sur LA MESA — pas de cold.");
+        }
         throw new Error(json.error ?? "add_failed");
       }
       setManualEmail("");
       setManualName("");
       setMessage("Contact ajouté à LA MESA - CONTACTER (A CONTACTER).");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function backfillInscrits() {
+    if (
+      !window.confirm(
+        "Synchroniser tous les inscrits waitlist vers la liste Perso « LA MESA - INSCRITS » (et les retirer de CONTACTER) ?",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach", {
+        method: "POST",
+        body: JSON.stringify({ action: "backfill-inscrits" }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        synced?: number;
+        failed?: number;
+        skipped?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "backfill_failed");
+      setMessage(
+        `Backfill INSCRITS — sync: ${json.synced ?? 0} · skip: ${json.skipped ?? 0} · échecs: ${json.failed ?? 0}`,
+      );
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -147,7 +185,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         <p className="mt-1 text-xs text-ns-secondary">
           Source : liste <strong>LA MESA - CONTACTER</strong> avec critère{" "}
           <strong>A CONTACTER</strong>. Les inscrits waitlist sont exclus. Après envoi réussi →{" "}
-          <strong>CONTACTÉ</strong>.
+          <strong>CONTACTÉ</strong>. Au chargement, les listes Perso sont créées si besoin.
         </p>
         {!enabled ? (
           <p className="mt-2 text-xs font-semibold text-amber-800">
@@ -200,6 +238,15 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       <div className="flex flex-wrap gap-2">
         <button type="button" className={BTN_SECONDARY} disabled={busy || loading} onClick={() => void load()}>
           Rafraîchir la liste
+        </button>
+        <button
+          type="button"
+          className={BTN_SECONDARY}
+          disabled={busy || loading}
+          onClick={() => void backfillInscrits()}
+          title="Pousse tous les inscrits waitlist vers LA MESA - INSCRITS sur Database Perso"
+        >
+          Sync inscrits → INSCRITS
         </button>
         <button
           type="button"

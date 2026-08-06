@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import {
   addLaMesaToContacter,
+  ensureLaMesaLists,
   isDatabasePersoConfigured,
   listLaMesaToContact,
   markLaMesaContacted,
@@ -13,6 +14,7 @@ import {
 import { firstEmail, sendColdTemplateEmail } from "@/lib/email/send-cold-template";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
@@ -39,6 +41,14 @@ export async function GET(request: Request) {
   }
 
   try {
+    const ensured = await ensureLaMesaLists();
+    if (!ensured.ok) {
+      return NextResponse.json(
+        { ok: false, error: "perso_ensure_lists_failed" },
+        { status: 502 },
+      );
+    }
+
     const [listed, waitlistEmails] = await Promise.all([
       listLaMesaToContact(),
       loadWaitlistEmails(),
@@ -144,6 +154,48 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error("[admin/cold-outreach add]", error);
       return NextResponse.json({ ok: false, error: "add_failed" }, { status: 502 });
+    }
+  }
+
+  if (action === "backfill-inscrits") {
+    try {
+      await ensureLaMesaLists();
+      if (!isFirebaseAdminConfigured()) {
+        return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
+      }
+      const snap = await getAdminFirestore().collection(COLLECTIONS.waitlist).limit(3000).get();
+      let synced = 0;
+      let failed = 0;
+      let skipped = 0;
+      for (const doc of snap.docs) {
+        const row = {
+          id: doc.id,
+          ...(doc.data() as Omit<WaitlistRegistration, "id">),
+        };
+        if (isSoftDeleted(row)) {
+          skipped += 1;
+          continue;
+        }
+        if (!row.email?.trim() && !row.phone?.trim()) {
+          skipped += 1;
+          continue;
+        }
+        const result = await syncWaitlistMemberToDatabasePerso(row, "[cold-outreach/backfill]");
+        if (result.ok) synced += 1;
+        else if (result.skipped) skipped += 1;
+        else failed += 1;
+      }
+      return NextResponse.json({
+        ok: true,
+        action: "backfill-inscrits",
+        synced,
+        failed,
+        skipped,
+        total: snap.size,
+      });
+    } catch (error) {
+      console.error("[admin/cold-outreach backfill]", error);
+      return NextResponse.json({ ok: false, error: "backfill_failed" }, { status: 502 });
     }
   }
 
