@@ -118,6 +118,22 @@ export async function GET(request: Request, { params }: Params) {
       { merge: true },
     );
 
+    const guestEmail = String(data.email ?? "").trim();
+    if (guestEmail.includes("@")) {
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: guestEmail,
+          type: response === "yes" ? "rsvp_yes" : "rsvp_no",
+          source: "guest",
+          summary: response === "yes" ? `RSVP oui · ${eventTitle || payload.eventId}` : `Refus · ${eventTitle || payload.eventId}`,
+          refs: {
+            eventId: payload.eventId,
+            participationId: payload.participationId,
+          },
+        }),
+      );
+    }
+
     return okRedirect();
   } catch (error) {
     console.error("[rsvp]", error);

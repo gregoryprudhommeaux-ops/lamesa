@@ -25,6 +25,10 @@ export function normalizeProspectStatus(raw: unknown): ProspectStatus {
   return "to_contact";
 }
 
+function uniqStrings(values: string[]): string[] {
+  return [...new Set(values.map((t) => t.trim()).filter(Boolean))];
+}
+
 export function prospectFromInput(
   input: ProspectInput,
   opts?: { id?: string; now?: string; existing?: Prospect },
@@ -36,12 +40,8 @@ export function prospectFromInput(
   const existing = opts?.existing;
 
   if (existing) {
-    const tags = [
-      ...new Set([
-        ...(existing.tags ?? []),
-        ...((input.tags ?? []).map((t) => t.trim()).filter(Boolean)),
-      ]),
-    ];
+    const tags = uniqStrings([...(existing.tags ?? []), ...(input.tags ?? [])]);
+    const lists = uniqStrings([...(existing.lists ?? []), ...(input.lists ?? [])]);
     return {
       ...existing,
       email,
@@ -54,7 +54,9 @@ export function prospectFromInput(
       phone: fillEmpty(existing.phone, input.phone),
       notes: fillEmpty(existing.notes, input.notes),
       tags,
+      lists,
       status: input.status ? normalizeProspectStatus(input.status) : existing.status,
+      seen: input.seen !== undefined ? Boolean(input.seen) : existing.seen,
       source: fillEmpty(existing.source, input.source) || existing.source || "manual",
       updatedAt: now,
     };
@@ -71,8 +73,10 @@ export function prospectFromInput(
     linkedin: (input.linkedin ?? "").trim(),
     phone: (input.phone ?? "").trim(),
     notes: (input.notes ?? "").trim(),
-    tags: [...new Set((input.tags ?? []).map((t) => t.trim()).filter(Boolean))],
+    tags: uniqStrings(input.tags ?? []),
+    lists: uniqStrings(input.lists ?? []),
     status: normalizeProspectStatus(input.status),
+    seen: Boolean(input.seen),
     source: (input.source ?? "manual").trim() || "manual",
     createdAt: now,
     updatedAt: now,
@@ -81,7 +85,6 @@ export function prospectFromInput(
   };
 }
 
-/** Prefer non-empty; for status prefer "more advanced" contacted over to_contact. */
 const STATUS_RANK: Record<ProspectStatus, number> = {
   to_contact: 0,
   nurture: 1,
@@ -95,12 +98,14 @@ export function mergeProspects(a: Prospect, b: Prospect, survivorId: string): Pr
   const pick = (x: string, y: string) => (x.trim() ? x.trim() : y.trim());
   const status =
     STATUS_RANK[a.status] >= STATUS_RANK[b.status] ? a.status : b.status;
-  const tags = [...new Set([...(a.tags ?? []), ...(b.tags ?? [])])];
+  const tags = uniqStrings([...(a.tags ?? []), ...(b.tags ?? [])]);
+  const lists = uniqStrings([...(a.lists ?? []), ...(b.lists ?? [])]);
   const createdAt = [a.createdAt, b.createdAt].filter(Boolean).sort()[0] ?? now;
-  const lastContactedAt = [a.lastContactedAt, b.lastContactedAt]
-    .filter((x): x is string => Boolean(x && String(x).trim()))
-    .sort()
-    .at(-1) ?? null;
+  const lastContactedAt =
+    [a.lastContactedAt, b.lastContactedAt]
+      .filter((x): x is string => Boolean(x && String(x).trim()))
+      .sort()
+      .at(-1) ?? null;
 
   return {
     id: survivorId,
@@ -114,7 +119,9 @@ export function mergeProspects(a: Prospect, b: Prospect, survivorId: string): Pr
     phone: pick(a.phone, b.phone),
     notes: [a.notes, b.notes].map((n) => n.trim()).filter(Boolean).join("\n\n"),
     tags,
+    lists,
     status,
+    seen: Boolean(a.seen || b.seen),
     source: pick(a.source, b.source) || "merge",
     createdAt,
     updatedAt: now,

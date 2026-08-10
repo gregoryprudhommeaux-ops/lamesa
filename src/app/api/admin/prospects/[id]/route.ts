@@ -25,7 +25,9 @@ const patchSchema = z.object({
   phone: z.string().trim().max(40).optional(),
   notes: z.string().trim().max(4000).optional(),
   tags: z.array(z.string().trim().max(40)).max(20).optional(),
+  lists: z.array(z.string().trim().max(60)).max(30).optional(),
   status: z.enum(PROSPECT_STATUSES).optional(),
+  seen: z.boolean().optional(),
 });
 
 export async function GET(request: Request, ctx: Ctx) {

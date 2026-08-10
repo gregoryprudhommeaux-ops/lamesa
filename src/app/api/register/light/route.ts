@@ -140,6 +140,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "storage_not_configured" }, { status: 503 });
   }
 
+  void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+    recordContactActivity({
+      email: record.email,
+      type: "registered_platform",
+      source: "system",
+      summary: "Inscription express (/light)",
+      refs: { waitlistId: storedId },
+    }),
+  );
+
   const mail = await sendWaitlistConfirmationEmail({
     to: record.email,
     fullName: record.fullName,

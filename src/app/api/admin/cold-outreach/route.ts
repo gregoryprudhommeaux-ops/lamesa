@@ -225,10 +225,33 @@ export async function POST(request: Request) {
       }
       results.push({ contactId: t.id, email: t.email, ok: true });
       succeededIds.push(t.id);
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: t.email,
+          type: "email_sent",
+          source: "admin",
+          summary: `Cold email · ${templateKey}`,
+          refs: { prospectId: t.id, templateKey },
+        }),
+      );
     }
 
     if (succeededIds.length > 0) {
       await markProspectsContacted(succeededIds);
+      for (const id of succeededIds) {
+        const p = targets.find((t) => t.id === id);
+        if (!p) continue;
+        void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+          recordContactActivity({
+            email: p.email,
+            type: "status_changed",
+            source: "admin",
+            summary: "Statut → Contacté (cold)",
+            refs: { prospectId: id },
+            meta: { status: "contacted" },
+          }),
+        );
+      }
     }
 
     return NextResponse.json({

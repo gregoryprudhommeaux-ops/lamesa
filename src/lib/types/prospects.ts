@@ -20,8 +20,13 @@ export type Prospect = {
   linkedin: string;
   phone: string;
   notes: string;
+  /** Free tags (relances, segments…). */
   tags: string[];
+  /** Named playlists (sélection → ajouter à une liste). */
+  lists: string[];
   status: ProspectStatus;
+  /** Vu! */
+  seen: boolean;
   source: string;
   createdAt: string;
   updatedAt: string;
@@ -40,7 +45,9 @@ export type ProspectInput = {
   phone?: string;
   notes?: string;
   tags?: string[];
+  lists?: string[];
   status?: ProspectStatus;
+  seen?: boolean;
   source?: string;
 };
 

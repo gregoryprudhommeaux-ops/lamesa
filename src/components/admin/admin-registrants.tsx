@@ -29,6 +29,7 @@ import {
   registrantSubtitle as buildRegistrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
 import { CalendarPlus, Mail, Trash2, UserPlus, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -1133,13 +1134,21 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
               <dl className="space-y-3">
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Email</dt>
-                  <dd>
+                  <dd className="flex flex-wrap items-center gap-2">
                     <a
                       href={`mailto:${active.email}`}
                       className="font-semibold text-ns-primary hover:underline"
                     >
                       {active.email}
                     </a>
+                    {active.email?.includes("@") ? (
+                      <Link
+                        href={`/admin/contacts?email=${encodeURIComponent(active.email)}`}
+                        className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100"
+                      >
+                        Mémoire contact
+                      </Link>
+                    ) : null}
                   </dd>
                 </div>
                 <div>

@@ -70,6 +70,29 @@ export async function PATCH(request: Request, { params }: Params) {
       { merge: true },
     );
 
+    if (nextStatus === "confirmed" && prevStatus !== "confirmed" && prev.email) {
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: prev.email,
+          type: "confirmed_seat",
+          source: "admin",
+          summary: "Place confirmée",
+          refs: { eventId: prev.eventId, participationId: id },
+        }),
+      );
+    }
+    if (nextStatus === "not_attending" && prevStatus !== "not_attending" && prev.email) {
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: prev.email,
+          type: "rsvp_no",
+          source: "admin",
+          summary: "Marqué non-participant",
+          refs: { eventId: prev.eventId, participationId: id },
+        }),
+      );
+    }
+
     if (nextStatus === "confirmed" && prevStatus !== "confirmed") {
       void (async () => {
         try {

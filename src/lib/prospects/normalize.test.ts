@@ -57,6 +57,19 @@ describe("mergeProspects", () => {
     expect(m.status).toBe("contacted");
     expect(m.tags.sort()).toEqual(["x", "y"]);
   });
+it("unions lists and seen on merge", () => {
+    const a = prospectFromInput(
+      { email: "a@b.com", lists: ["A"], seen: true },
+      { id: "1", now: "t0" },
+    ) as Prospect;
+    const b = prospectFromInput(
+      { email: "a@b.com", lists: ["B"], seen: false },
+      { id: "2", now: "t1" },
+    ) as Prospect;
+    const m = mergeProspects(a, b, "1");
+    expect(m.lists.sort()).toEqual(["A", "B"]);
+    expect(m.seen).toBe(true);
+  });
 });
 
 describe("parseProspectImportText", () => {

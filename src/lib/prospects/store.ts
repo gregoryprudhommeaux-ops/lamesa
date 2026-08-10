@@ -20,7 +20,9 @@ function docToProspect(id: string, data: Record<string, unknown>): Prospect {
     phone: String(data.phone ?? ""),
     notes: String(data.notes ?? ""),
     tags: Array.isArray(data.tags) ? data.tags.map(String).filter(Boolean) : [],
+    lists: Array.isArray(data.lists) ? data.lists.map(String).filter(Boolean) : [],
     status: (data.status as Prospect["status"]) || "to_contact",
+    seen: Boolean(data.seen),
     source: String(data.source ?? "manual"),
     createdAt: String(data.createdAt ?? ""),
     updatedAt: String(data.updatedAt ?? ""),
@@ -48,17 +50,21 @@ export async function findProspectByEmail(email: string): Promise<Prospect | nul
 
 export async function listProspects(opts?: {
   status?: Prospect["status"];
+  list?: string;
   limit?: number;
 }): Promise<Prospect[]> {
   const db = getAdminFirestore();
   const limit = Math.min(opts?.limit ?? 2000, 5000);
   const query = db.collection(COLLECTIONS.prospects).orderBy("updatedAt", "desc").limit(limit);
-  // status filter done in memory to avoid composite index requirement for MVP
   const snap = await query.get();
   let rows = snap.docs
     .map((d) => docToProspect(d.id, d.data() as Record<string, unknown>))
     .filter((p) => !isSoftDeleted(p));
   if (opts?.status) rows = rows.filter((p) => p.status === opts.status);
+  if (opts?.list?.trim()) {
+    const name = opts.list.trim().toLowerCase();
+    rows = rows.filter((p) => p.lists.some((l) => l.toLowerCase() === name));
+  }
   return rows;
 }
 
@@ -119,13 +125,14 @@ export async function updateProspect(
       phone: patch.phone !== undefined ? patch.phone : existing.phone,
       notes: patch.notes !== undefined ? patch.notes : existing.notes,
       tags: patch.tags ?? existing.tags,
+      lists: patch.lists ?? existing.lists,
       status: patch.status ?? existing.status,
+      seen: patch.seen !== undefined ? patch.seen : existing.seen,
       source: existing.source,
     },
     { existing, now },
   );
   if ("error" in next) return null;
-  // For explicit patch, overwrite provided fields instead of fillEmpty-only
   const overwritten: Prospect = {
     ...existing,
     ...next,
@@ -137,7 +144,10 @@ export async function updateProspect(
     linkedin: patch.linkedin !== undefined ? String(patch.linkedin).trim() : next.linkedin,
     phone: patch.phone !== undefined ? String(patch.phone).trim() : next.phone,
     notes: patch.notes !== undefined ? String(patch.notes).trim() : next.notes,
+    tags: patch.tags !== undefined ? patch.tags : existing.tags,
+    lists: patch.lists !== undefined ? patch.lists : existing.lists,
     status: patch.status ?? existing.status,
+    seen: patch.seen !== undefined ? Boolean(patch.seen) : existing.seen,
     email: patch.email ? normalizeProspectEmail(patch.email) : existing.email,
     updatedAt: now,
   };
@@ -172,6 +182,52 @@ export async function markProspectsContacted(ids: string[]): Promise<number> {
     n += 1;
   }
   if (n > 0) await batch.commit();
+  return n;
+}
+
+/** Bulk update status / tags / lists / seen for selected prospects. */
+export async function bulkUpdateProspects(input: {
+  ids: string[];
+  status?: Prospect["status"];
+  addTags?: string[];
+  addLists?: string[];
+  seen?: boolean;
+}): Promise<number> {
+  const ids = [...new Set(input.ids.filter(Boolean))];
+  if (ids.length === 0) return 0;
+  const db = getAdminFirestore();
+  const now = new Date().toISOString();
+  const addTags = (input.addTags ?? []).map((t) => t.trim()).filter(Boolean);
+  const addLists = (input.addLists ?? []).map((t) => t.trim()).filter(Boolean);
+  let n = 0;
+
+  // Firestore batches max 500
+  for (let i = 0; i < ids.length; i += 400) {
+    const chunk = ids.slice(i, i + 400);
+    const snaps = await Promise.all(
+      chunk.map((id) => db.collection(COLLECTIONS.prospects).doc(id).get()),
+    );
+    const batch = db.batch();
+    let batchOps = 0;
+    for (const snap of snaps) {
+      if (!snap.exists) continue;
+      const existing = docToProspect(snap.id, snap.data() as Record<string, unknown>);
+      if (isSoftDeleted(existing)) continue;
+      const patch: Record<string, unknown> = { updatedAt: now };
+      if (input.status) patch.status = input.status;
+      if (input.seen !== undefined) patch.seen = input.seen;
+      if (addTags.length) {
+        patch.tags = [...new Set([...(existing.tags ?? []), ...addTags])];
+      }
+      if (addLists.length) {
+        patch.lists = [...new Set([...(existing.lists ?? []), ...addLists])];
+      }
+      batch.set(snap.ref, patch, { merge: true });
+      batchOps += 1;
+      n += 1;
+    }
+    if (batchOps > 0) await batch.commit();
+  }
   return n;
 }
 

@@ -108,6 +108,21 @@ export async function POST(request: Request, { params }: Params) {
       });
       existingEmails.add(email);
       added += 1;
+      if (status === "invited" || status === "waitlist") {
+        void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+          recordContactActivity({
+            email,
+            type: "invited_event",
+            source: "admin",
+            summary:
+              status === "waitlist"
+                ? "Ajouté en waitlist événement"
+                : "Invité à un événement LA MESA",
+            refs: { eventId },
+            meta: { status },
+          }),
+        );
+      }
     }
 
     await eventRef.set({ updatedAt: now }, { merge: true });

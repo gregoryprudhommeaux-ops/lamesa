@@ -9,7 +9,12 @@ import {
   googleSheetToCsvExportUrl,
   parseProspectImportText,
 } from "@/lib/prospects/parse-import";
-import { listProspects, upsertProspect } from "@/lib/prospects/store";
+import {
+  bulkUpdateProspects,
+  listProspects,
+  upsertProspect,
+} from "@/lib/prospects/store";
+import { softDeleteProspects } from "@/lib/prospects/lists-store";
 import { PROSPECT_STATUSES } from "@/lib/types/prospects";
 
 const IMPORT_LIMIT = 500;
@@ -26,8 +31,20 @@ const createSchema = z.object({
   phone: z.string().trim().max(40).optional(),
   notes: z.string().trim().max(4000).optional(),
   tags: z.array(z.string().trim().max(40)).max(20).optional(),
+  lists: z.array(z.string().trim().max(60)).max(30).optional(),
   status: z.enum(PROSPECT_STATUSES).optional(),
+  seen: z.boolean().optional(),
   source: z.string().trim().max(80).optional(),
+});
+
+const bulkSchema = z.object({
+  action: z.literal("bulk"),
+  ids: z.array(z.string().trim().min(1)).min(1).max(500),
+  status: z.enum(PROSPECT_STATUSES).optional(),
+  addTags: z.array(z.string().trim().max(40)).max(20).optional(),
+  addLists: z.array(z.string().trim().max(60)).max(10).optional(),
+  seen: z.boolean().optional(),
+  softDelete: z.boolean().optional(),
 });
 
 export async function GET(request: Request) {
@@ -43,13 +60,18 @@ export async function GET(request: Request) {
     statusRaw && (PROSPECT_STATUSES as readonly string[]).includes(statusRaw)
       ? (statusRaw as (typeof PROSPECT_STATUSES)[number])
       : undefined;
+  const list = url.searchParams.get("list")?.trim() || undefined;
 
   try {
-    const prospects = await listProspects({ status, limit: 3000 });
+    const prospects = await listProspects({ status, list, limit: 3000 });
+    const listNames = [
+      ...new Set(prospects.flatMap((p) => p.lists ?? []).map((l) => l.trim()).filter(Boolean)),
+    ].sort((a, b) => a.localeCompare(b, "fr"));
     return NextResponse.json({
       ok: true,
       count: prospects.length,
       prospects,
+      listNames,
       batchSizeHint: BATCH_SEND_HINT,
     });
   } catch (error) {
@@ -76,6 +98,74 @@ export async function POST(request: Request) {
     body && typeof body === "object" && "action" in body
       ? String((body as { action?: string }).action ?? "create")
       : "create";
+
+  if (action === "bulk") {
+    const parsed = bulkSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
+    }
+    const { ids, status, addTags, addLists, seen, softDelete } = parsed.data;
+    if (
+      !softDelete &&
+      !status &&
+      seen === undefined &&
+      !(addTags?.length) &&
+      !(addLists?.length)
+    ) {
+      return NextResponse.json({ ok: false, error: "nothing_to_update" }, { status: 400 });
+    }
+    try {
+      if (softDelete) {
+        const updated = await softDeleteProspects(ids);
+        return NextResponse.json({ ok: true, action: "bulk", updated });
+      }
+      // Ensure list registry exists when adding to lists
+      if (addLists?.length) {
+        const { createProspectList } = await import("@/lib/prospects/lists-store");
+        for (const name of addLists) {
+          await createProspectList(name);
+        }
+      }
+      const updated = await bulkUpdateProspects({ ids, status, addTags, addLists, seen });
+      if (addLists?.length) {
+        for (const id of ids) {
+          void import("@/lib/contacts/activities-store").then(async ({ recordContactActivity }) => {
+            const p = await import("@/lib/prospects/store").then((m) => m.getProspectById(id));
+            if (!p) return;
+            for (const listName of addLists) {
+              await recordContactActivity({
+                email: p.email,
+                type: "list_added",
+                source: "admin",
+                summary: `Ajouté à la liste « ${listName} »`,
+                refs: { prospectId: id, listName },
+              });
+            }
+          });
+        }
+      }
+      if (status) {
+        for (const id of ids.slice(0, 50)) {
+          void import("@/lib/contacts/activities-store").then(async ({ recordContactActivity }) => {
+            const p = await import("@/lib/prospects/store").then((m) => m.getProspectById(id));
+            if (!p) return;
+            await recordContactActivity({
+              email: p.email,
+              type: "status_changed",
+              source: "admin",
+              summary: `Statut → ${status}`,
+              refs: { prospectId: id },
+              meta: { status },
+            });
+          });
+        }
+      }
+      return NextResponse.json({ ok: true, action: "bulk", updated });
+    } catch (error) {
+      console.error("[admin/prospects bulk]", error);
+      return NextResponse.json({ ok: false, error: "bulk_failed" }, { status: 502 });
+    }
+  }
 
   if (action === "import") {
     const text =
@@ -165,6 +255,17 @@ export async function POST(request: Request) {
     const result = await upsertProspect(parsed.data, { source: parsed.data.source ?? "manual" });
     if (!result.ok) {
       return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    }
+    if (result.action === "created") {
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: result.prospect.email,
+          type: "added_prospect",
+          source: "admin",
+          summary: "Ajouté au CRM Prospects",
+          refs: { prospectId: result.prospect.id },
+        }),
+      );
     }
     return NextResponse.json({
       ok: true,
