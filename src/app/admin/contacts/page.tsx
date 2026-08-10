@@ -15,7 +15,7 @@ export default async function AdminContactPage({
   const email = String(sp.email ?? "").trim();
 
   return (
-    <AdminShell title="Mémoire contact">
+    <AdminShell title="Mémoire contact" density="workspace">
       {!email.includes("@") ? (
         <p className="text-sm text-ns-secondary">
           Ouvre une fiche depuis Prospects ou Membres (paramètre{" "}

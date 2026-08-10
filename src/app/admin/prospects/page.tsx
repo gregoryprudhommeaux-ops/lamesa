@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function AdminProspectsPage() {
   return (
-    <AdminShell title="Prospects">
+    <AdminShell title="Prospects" density="workspace">
       <AdminProspectsPanel />
     </AdminShell>
   );

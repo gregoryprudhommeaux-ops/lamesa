@@ -8,11 +8,9 @@ import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from
 import {
   CheckSquare,
   Download,
-  ExternalLink,
   Link2,
   ListMusic,
   ListPlus,
-  MoreVertical,
   Plus,
   Trash2,
   Upload,
@@ -28,12 +26,6 @@ const STATUS_LABEL: Record<ProspectStatus, string> = {
   won: "Gagné / inscrit",
   do_not_contact: "Ne pas contacter",
 };
-
-const CRITERIA: Array<{ status: ProspectStatus; label: string }> = [
-  { status: "to_contact", label: "À CONTACTER" },
-  { status: "contacted", label: "CONTACTÉ" },
-  { status: "nurture", label: "NURTURE" },
-];
 
 const emptyDraft = {
   email: "",
@@ -55,19 +47,6 @@ type Draft = typeof emptyDraft;
 
 function parseCsvField(raw: string): string[] {
   return [...new Set(raw.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean))];
-}
-
-function formatShortDate(iso: string): string {
-  if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleDateString("fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return iso;
-  }
 }
 
 export function AdminProspectsPanel() {
@@ -535,27 +514,19 @@ export function AdminProspectsPanel() {
   }
 
   return (
-    <div className={`space-y-4 ${someSelected ? "pb-36" : ""}`}>
-      <p className="text-sm text-ns-secondary">
-        CRM outreach interne style Database Perso : listes à gauche, sélection → bandeau jaune
-        (listes / critères / suppressions). Cold Mail = statut « À contacter », batch 50.
-      </p>
-
+    <div className={`space-y-2 ${someSelected ? "pb-28" : ""}`}>
       {error && !importOpen && !contactOpen && !listFormOpen && !addToListOpen ? (
         <p className={ERROR_TEXT}>{error}</p>
       ) : null}
-      {message ? <p className="text-sm font-medium text-ns-primary">{message}</p> : null}
+      {message ? <p className="text-xs font-medium text-ns-primary">{message}</p> : null}
 
-      <div className="flex min-h-[70vh] flex-col gap-4 lg:flex-row">
-        {/* Sidebar listes */}
-        <aside className="flex w-full shrink-0 flex-col rounded-2xl border border-gray-100 bg-white shadow-sm lg:w-64">
-          <div className="flex items-center justify-between border-b border-gray-100 px-3 py-3">
-            <p className="text-xs font-bold uppercase tracking-wide text-ns-secondary">
-              Vos listes
-            </p>
+      <div className="flex h-[calc(100vh-5.5rem)] min-h-[28rem] flex-col gap-2 lg:flex-row">
+        <aside className="flex max-h-40 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white lg:max-h-none lg:w-44 xl:w-52">
+          <div className="flex items-center justify-between border-b border-gray-100 px-2 py-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">Listes</p>
             <button
               type="button"
-              className="rounded-lg p-1.5 text-ns-secondary hover:bg-ns-brand-light"
+              className="rounded-md p-1 text-ns-secondary hover:bg-ns-brand-light"
               aria-label="Nouvelle liste"
               title="Nouvelle liste"
               onClick={() => {
@@ -565,404 +536,180 @@ export function AdminProspectsPanel() {
                 setListFormOpen(true);
               }}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="max-h-[50vh] flex-1 overflow-y-auto p-2 lg:max-h-none">
+          <div className="flex-1 overflow-y-auto p-1">
             <button
               type="button"
               onClick={() => setActiveListName(null)}
-              className={`mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm transition ${
+              className={`mb-0.5 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left text-xs transition ${
                 !activeListName
                   ? "bg-ns-primary/15 font-semibold text-ns-tertiary"
                   : "text-ns-secondary hover:bg-gray-50"
               }`}
             >
-              <ListMusic className="h-4 w-4 shrink-0" />
-              <span className="flex-1 truncate">Tous les contacts</span>
-              <span className="text-[11px] text-ns-secondary/80">{prospects.length}</span>
+              <ListMusic className="h-3.5 w-3.5 shrink-0" />
+              <span className="min-w-0 flex-1 truncate">Tous</span>
+              <span className="tabular-nums text-[10px] text-ns-secondary/80">{prospects.length}</span>
             </button>
             {lists.map((l) => (
               <button
                 key={l.id}
                 type="button"
                 onClick={() => setActiveListName(l.name)}
-                className={`mb-0.5 flex w-full flex-col rounded-xl px-3 py-2 text-left transition ${
+                className={`mb-0.5 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition ${
                   activeListName?.toLowerCase() === l.name.toLowerCase()
                     ? "bg-ns-primary/15 text-ns-tertiary"
                     : "text-ns-secondary hover:bg-gray-50"
                 }`}
+                title={`${l.contactCount} contacts`}
               >
-                <span className="truncate text-sm font-semibold">{l.name}</span>
-                <span className="text-[10px] text-ns-secondary/80">
-                  {l.contactCount} contact{l.contactCount > 1 ? "s" : ""}
-                  {l.updatedAt ? ` · ${formatShortDate(l.updatedAt)}` : ""}
-                </span>
+                <span className="min-w-0 flex-1 truncate text-xs font-semibold">{l.name}</span>
+                <span className="shrink-0 tabular-nums text-[10px] text-ns-secondary/80">{l.contactCount}</span>
               </button>
             ))}
             {lists.length === 0 ? (
-              <p className="px-2 py-4 text-xs text-ns-secondary">
-                Aucune liste. Crée-en une avec + ou via le bandeau jaune.
-              </p>
+              <p className="px-2 py-2 text-[10px] leading-snug text-ns-secondary">+ pour créer une liste</p>
             ) : null}
           </div>
         </aside>
 
-        {/* Main */}
-        <div className="min-w-0 flex-1 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-ns-tertiary">
-                {activeListName ?? "Tous les contacts"}
-              </h2>
-              <p className="text-xs text-ns-secondary">
-                {filtered.length} contact{filtered.length > 1 ? "s" : ""}
-                {activeList ? ` · liste` : ""}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={openImport}
-                className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-ns-tertiary shadow-sm hover:bg-ns-brand-light"
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="min-w-0 truncate text-sm font-bold text-ns-tertiary">
+              {activeListName ?? "Tous les contacts"}
+              <span className="ml-1.5 font-medium text-ns-secondary">· {filtered.length}</span>
+            </h2>
+            <div className="ml-auto flex flex-wrap items-center gap-1.5">
+              <input
+                id="prospect-search"
+                className="h-8 min-w-[10rem] flex-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs text-ns-tertiary placeholder:text-ns-secondary/60 focus:border-ns-primary focus:outline-none sm:min-w-[14rem] sm:flex-none"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher…"
+                aria-label="Recherche"
+              />
+              <select
+                id="prospect-status-filter"
+                className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-ns-tertiary"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as ProspectStatus | "all")}
+                aria-label="Statut"
               >
-                <Link2 className="h-4 w-4" />
-                Lien Feuille
+                <option value="all">Tous statuts</option>
+                {PROSPECT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                ))}
+              </select>
+              <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light" onClick={openImport}>
+                <Link2 className="h-3.5 w-3.5" /> Feuille
               </button>
-              <button
-                type="button"
-                onClick={openCreate}
-                className="inline-flex items-center gap-2 rounded-xl bg-ns-primary px-3 py-2 text-sm font-semibold text-black shadow-sm hover:brightness-95"
-              >
-                <Plus className="h-4 w-4" />
-                Ajouter des contacts
+              <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg bg-ns-primary px-2.5 text-xs font-semibold text-black hover:brightness-95" onClick={openCreate}>
+                <Plus className="h-3.5 w-3.5" /> Ajouter
               </button>
               {activeList ? (
                 <>
-                  <button
-                    type="button"
-                    className={BTN_SECONDARY}
-                    onClick={() => {
-                      setListFormMode("rename");
-                      setListFormId(activeList.id);
-                      setListFormName(activeList.name);
-                      setListFormOpen(true);
-                    }}
-                  >
-                    Renommer
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
-                    disabled={busy}
-                    onClick={() => void deleteActiveList()}
-                  >
-                    Supprimer liste
-                  </button>
+                  <button type="button" className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-ns-tertiary hover:bg-gray-50" onClick={() => { setListFormMode("rename"); setListFormId(activeList.id); setListFormName(activeList.name); setListFormOpen(true); }}>Renommer</button>
+                  <button type="button" className="h-8 rounded-lg border border-red-200 px-2 text-xs font-semibold text-red-700 hover:bg-red-50" disabled={busy} onClick={() => void deleteActiveList()}>Suppr. liste</button>
                 </>
               ) : null}
+              <button type="button" className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-medium text-ns-secondary hover:bg-gray-50" disabled={loading || busy} onClick={() => void load()} aria-label="Rafraîchir">↻</button>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-end gap-2 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-            <div className="min-w-[180px] flex-1">
-              <label className={LABEL_CLASS} htmlFor="prospect-search">
-                Recherche
-              </label>
-              <input
-                id="prospect-search"
-                className={INPUT_CLASS}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Nom, email, société, tag…"
-              />
-            </div>
-            <div>
-              <label className={LABEL_CLASS} htmlFor="prospect-status-filter">
-                Statut
-              </label>
-              <select
-                id="prospect-status-filter"
-                className={INPUT_CLASS}
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as ProspectStatus | "all")}
-              >
-                <option value="all">Tous</option>
-                {PROSPECT_STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button
-              type="button"
-              className={BTN_SECONDARY}
-              disabled={loading || busy}
-              onClick={() => void load()}
-            >
-              Rafraîchir
-            </button>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white">
             {loading ? (
-              <p className="p-6 text-sm text-ns-secondary">Chargement…</p>
+              <p className="p-4 text-sm text-ns-secondary">Chargement…</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[980px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-xs font-semibold uppercase tracking-wide text-ns-secondary">
-                      <th className="w-10 px-2 py-2">
-                        <input
-                          type="checkbox"
-                          checked={allFilteredSelected}
-                          onChange={toggleAllFiltered}
-                          aria-label="Tout sélectionner"
-                          className="h-4 w-4 accent-sky-600"
-                        />
+              <div className="min-h-0 flex-1 overflow-auto">
+                <table className="w-full min-w-[920px] border-collapse text-left text-xs">
+                  <thead className="sticky top-0 z-10 bg-white shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
+                    <tr className="text-[10px] font-semibold uppercase tracking-wide text-ns-secondary">
+                      <th className="w-8 px-1.5 py-1.5">
+                        <input type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} aria-label="Tout sélectionner" className="h-3.5 w-3.5 accent-sky-600" />
                       </th>
-                      <th className="px-2 py-2">Membre</th>
-                      <th className="px-2 py-2">Société &amp; poste</th>
-                      <th className="px-2 py-2">Contact</th>
-                      <th className="px-2 py-2">Lieu</th>
-                      <th className="px-2 py-2">Tél.</th>
-                      <th className="px-2 py-2">Listes / tags</th>
-                      <th className="px-2 py-2">Critères</th>
-                      <th className="px-2 py-2">Vu!</th>
-                      <th className="w-10 px-2 py-2">Action</th>
+                      <th className="px-1.5 py-1.5">Membre</th>
+                      <th className="px-1.5 py-1.5">Société</th>
+                      <th className="px-1.5 py-1.5">Contact</th>
+                      <th className="hidden px-1.5 py-1.5 xl:table-cell">Lieu</th>
+                      <th className="px-1.5 py-1.5">Listes</th>
+                      <th className="w-[7.5rem] px-1.5 py-1.5">Statut</th>
+                      <th className="w-8 px-1.5 py-1.5 text-center">Vu</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filtered.map((p) => (
                       <tr
                         key={p.id}
-                        className={`border-b border-gray-50 hover:bg-ns-brand-light/60 ${
-                          selected.has(p.id) ? "bg-sky-50/80" : ""
-                        }`}
+                        className={`cursor-pointer border-t border-gray-50 hover:bg-ns-brand-light/50 ${selected.has(p.id) ? "bg-sky-50/70" : ""}`}
+                        onClick={() => openEdit(p)}
                       >
-                        <td className="px-2 py-2.5 align-top">
-                          <input
-                            type="checkbox"
-                            checked={selected.has(p.id)}
-                            onChange={() => toggleOne(p.id)}
-                            aria-label={`Sélectionner ${p.fullName || p.email}`}
-                            className="h-4 w-4 accent-sky-600"
-                          />
+                        <td className="px-1.5 py-1 align-middle" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggleOne(p.id)} aria-label={`Sélectionner ${p.fullName || p.email}`} className="h-3.5 w-3.5 accent-sky-600" />
                         </td>
-                        <td
-                          className="cursor-pointer px-2 py-2.5 align-top"
-                          onClick={() => openEdit(p)}
-                          title="Clique pour éditer"
-                        >
-                          <div className="font-semibold text-ns-tertiary">{p.fullName || "—"}</div>
-                          {p.sector ? (
-                            <div className="text-[11px] text-ns-secondary">{p.sector}</div>
-                          ) : null}
+                        <td className="max-w-[11rem] truncate px-1.5 py-1 align-middle font-semibold text-ns-tertiary" title={[p.fullName, p.sector].filter(Boolean).join(" · ")}>{p.fullName || "—"}</td>
+                        <td className="max-w-[12rem] truncate px-1.5 py-1 align-middle text-ns-secondary" title={[p.company, p.position].filter(Boolean).join(" · ")}>
+                          <span className="font-medium text-ns-tertiary">{p.company || "—"}</span>
+                          {p.position ? <span className="text-ns-secondary/80"> · {p.position}</span> : null}
                         </td>
-                        <td
-                          className="cursor-pointer px-2 py-2.5 align-top"
-                          onClick={() => openEdit(p)}
-                        >
-                          <div className="font-semibold text-ns-tertiary">{p.company || "—"}</div>
-                          {p.position ? (
-                            <div className="text-[11px] uppercase tracking-wide text-ns-secondary">
-                              {p.position}
-                            </div>
-                          ) : null}
+                        <td className="max-w-[14rem] truncate px-1.5 py-1 align-middle text-sky-800" title={p.email}>
+                          {p.email}
                         </td>
-                        <td className="px-2 py-2.5 align-top">
-                          <a
-                            href={`mailto:${p.email}`}
-                            className="text-sky-700 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {p.email}
-                          </a>
-                          {p.linkedin ? (
-                            <a
-                              href={p.linkedin}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-ns-secondary hover:text-ns-tertiary"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              Profil <ExternalLink className="h-3 w-3" />
-                            </a>
-                          ) : null}
+                        <td className="hidden max-w-[6rem] truncate px-1.5 py-1 align-middle text-ns-secondary xl:table-cell" title={[p.city, p.phone].filter(Boolean).join(" · ") || undefined}>
+                          {p.city || (p.phone ? p.phone : "—")}
                         </td>
-                        <td
-                          className="cursor-pointer px-2 py-2.5 align-top text-ns-secondary"
-                          onClick={() => openEdit(p)}
-                        >
-                          {p.city || "—"}
-                        </td>
-                        <td
-                          className="cursor-pointer px-2 py-2.5 align-top text-ns-secondary"
-                          onClick={() => openEdit(p)}
-                        >
-                          {p.phone || (
-                            <span className="italic text-ns-secondary/70">Non renseigné</span>
-                          )}
-                        </td>
-                        <td className="px-2 py-2.5 align-top">
-                          <div className="flex max-w-[160px] flex-wrap gap-1">
-                            {(p.lists ?? []).map((l) => (
-                              <span
-                                key={`l-${l}`}
-                                className="rounded bg-lime-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-lime-900"
-                              >
-                                {l}
-                              </span>
+                        <td className="max-w-[8rem] px-1.5 py-1 align-middle">
+                          <div className="flex flex-wrap gap-0.5">
+                            {(p.lists ?? []).slice(0, 2).map((l) => (
+                              <span key={`l-${l}`} className="max-w-[4.5rem] truncate rounded bg-lime-100 px-1 py-px text-[9px] font-semibold uppercase text-lime-900" title={l}>{l}</span>
                             ))}
-                            {(p.tags ?? []).map((t) => (
-                              <span
-                                key={`t-${t}`}
-                                className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-ns-secondary"
-                              >
-                                {t}
-                              </span>
-                            ))}
-                            {!p.lists?.length && !p.tags?.length ? (
-                              <span className="text-[11px] italic text-ns-secondary/60">—</span>
-                            ) : null}
+                            {(p.lists?.length ?? 0) > 2 ? <span className="text-[9px] text-ns-secondary">+{(p.lists?.length ?? 0) - 2}</span> : null}
+                            {!p.lists?.length ? <span className="text-[10px] text-ns-secondary/50">—</span> : null}
                           </div>
                         </td>
-                        <td className="px-2 py-2.5 align-top">
-                          <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
-                            {CRITERIA.map(({ status, label }) => (
-                              <label
-                                key={status}
-                                className="inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-ns-secondary"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={p.status === status}
-                                  disabled={busy}
-                                  onChange={() => {
-                                    if (p.status !== status) void patchProspect(p.id, { status });
-                                  }}
-                                  className="h-3.5 w-3.5 accent-sky-600"
-                                />
-                                {label}
-                              </label>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-2 py-2.5 align-top" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(p.seen)}
+                        <td className="px-1.5 py-1 align-middle" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            className="h-7 w-full max-w-[7.5rem] rounded border border-gray-200 bg-white px-1 text-[10px] font-semibold text-ns-tertiary"
+                            value={p.status}
                             disabled={busy}
-                            aria-label="Vu"
-                            onChange={() => void patchProspect(p.id, { seen: !p.seen })}
-                            className="h-4 w-4 accent-sky-600"
-                          />
+                            aria-label="Statut"
+                            onChange={(e) => {
+                              const next = e.target.value as ProspectStatus;
+                              if (next !== p.status) void patchProspect(p.id, { status: next });
+                            }}
+                          >
+                            {PROSPECT_STATUSES.map((s) => (
+                              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+                            ))}
+                          </select>
                         </td>
-                        <td className="px-2 py-2.5 align-top">
-                          <div className="flex items-center gap-1">
-                            <Link
-                              href={`/admin/contacts?email=${encodeURIComponent(p.email)}`}
-                              className="rounded-lg px-2 py-1 text-[11px] font-semibold text-sky-800 hover:bg-sky-50"
-                              onClick={(e) => e.stopPropagation()}
-                              title="Mémoire contact"
-                            >
-                              Mémoire
-                            </Link>
-                            <button
-                              type="button"
-                              className="rounded-lg p-1.5 text-ns-secondary hover:bg-gray-100"
-                              aria-label="Éditer"
-                              onClick={() => openEdit(p)}
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </div>
+                        <td className="px-1.5 py-1 text-center align-middle" onClick={(e) => e.stopPropagation()}>
+                          <input type="checkbox" checked={Boolean(p.seen)} disabled={busy} aria-label="Vu" onChange={() => void patchProspect(p.id, { seen: !p.seen })} className="h-3.5 w-3.5 accent-sky-600" />
                         </td>
                       </tr>
                     ))}
                     {filtered.length === 0 ? (
-                      <tr>
-                        <td colSpan={10} className="px-2 py-8 text-center text-ns-secondary">
-                          Aucun prospect. Utilise Lien Feuille ou Ajouter des contacts.
-                        </td>
-                      </tr>
+                      <tr><td colSpan={8} className="px-2 py-6 text-center text-ns-secondary">Aucun prospect. Feuille ou Ajouter.</td></tr>
                     ) : null}
                   </tbody>
                 </table>
               </div>
             )}
-            <p className="border-t border-gray-50 px-3 py-2 text-[11px] text-ns-secondary">
-              {filtered.length} affiché(s) · coche pour ouvrir le bandeau jaune
-            </p>
           </div>
         </div>
       </div>
 
-      {/* Bandeau jaune — sélection (style Perso) */}
       {someSelected ? (
-        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 lg:px-6">
-          <div className="mx-auto max-w-6xl">
-            <div className="flex flex-col gap-3 rounded-2xl border border-amber-100 bg-amber-50/95 px-3 py-3 shadow-lg backdrop-blur sm:px-4">
-              <span className="shrink-0 text-sm font-medium text-ns-tertiary">
-                {selected.size} contact{selected.size > 1 ? "s" : ""} sélectionné
-                {selected.size > 1 ? "s" : ""}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelected(new Set())}
-                  className="shrink-0 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-ns-tertiary transition-colors hover:bg-amber-100/60"
-                >
-                  Tout désélectionner
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setAddToListPicked(new Set());
-                    setAddToListOpen(true);
-                  }}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-ns-tertiary transition-colors hover:bg-amber-50/80"
-                >
-                  <ListPlus className="h-4 w-4" />
-                  Ajouter à une liste
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => setCriterionOpen(true)}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-ns-tertiary transition-colors hover:bg-amber-50/80"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  Appliquer un critère
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void runBulk({ seen: true })}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-ns-tertiary transition-colors hover:bg-amber-50/80"
-                >
-                  Marquer Vu!
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Supprimer ${selected.size} contact(s) sélectionné(s) (soft delete) ?`,
-                      )
-                    ) {
-                      void runBulk({ softDelete: true });
-                    }
-                  }}
-                  className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Supprimer
-                </button>
-              </div>
+        <div className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/95 px-3 py-2 shadow-lg backdrop-blur">
+              <span className="shrink-0 text-xs font-semibold text-ns-tertiary">{selected.size} sélectionné{selected.size > 1 ? "s" : ""}</span>
+              <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-100/60">Désélectionner</button>
+              <button type="button" disabled={busy} onClick={() => { setAddToListPicked(new Set()); setAddToListOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><ListPlus className="h-3.5 w-3.5" /> Liste</button>
+              <button type="button" disabled={busy} onClick={() => setCriterionOpen(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><CheckSquare className="h-3.5 w-3.5" /> Critère</button>
+              <button type="button" disabled={busy} onClick={() => void runBulk({ seen: true })} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80">Vu!</button>
+              <button type="button" disabled={busy} onClick={() => { if (window.confirm(`Supprimer ${selected.size} contact(s) sélectionné(s) (soft delete) ?`)) void runBulk({ softDelete: true }); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Suppr.</button>
             </div>
           </div>
         </div>
@@ -1407,6 +1154,22 @@ export function AdminProspectsPanel() {
             </button>
             {editingId ? (
               <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
+                <Link
+                  href={`/admin/contacts?email=${encodeURIComponent(draft.email)}`}
+                  className="inline-flex text-sm font-semibold text-sky-800 hover:underline"
+                >
+                  Voir la mémoire contact
+                </Link>
+                {draft.linkedin?.trim() ? (
+                  <a
+                    href={draft.linkedin.trim()}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-sm font-medium text-ns-secondary hover:text-ns-tertiary"
+                  >
+                    Ouvrir LinkedIn
+                  </a>
+                ) : null}
                 <button
                   type="button"
                   className="rounded-xl border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
