@@ -14,6 +14,7 @@ import {
   persistWelcomeEmailStatus,
 } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import { isOtherSector } from "@/lib/constants/form-options";
 import {
@@ -132,11 +133,13 @@ export async function POST(request: Request) {
     } catch (error) {
       console.warn("[register] failed to store databasePerso sync status:", error);
     }
+    await syncWaitlistMemberToProspects(record, "[register]");
   } else {
     await syncWaitlistMemberToDatabasePerso(
       { ...record, referredByCode },
       "[register]",
     );
+    await syncWaitlistMemberToProspects(record, "[register]");
   }
 
   if (!storedId && process.env.NODE_ENV === "development") {

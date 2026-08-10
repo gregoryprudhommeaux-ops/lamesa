@@ -11,13 +11,17 @@ import {
   Link2,
   ListMusic,
   ListPlus,
+  Mail,
   Plus,
   Trash2,
   Upload,
+  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { EmailTemplateDoc, TemplateLocale } from "@/lib/types/events";
+import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
 
 const STATUS_LABEL: Record<ProspectStatus, string> = {
   to_contact: "À contacter",
@@ -133,12 +137,21 @@ export function AdminProspectsPanel() {
 
   const [addToListOpen, setAddToListOpen] = useState(false);
   const [addToListPicked, setAddToListPicked] = useState<Set<string>>(new Set());
+  const [listBulkMode, setListBulkMode] = useState<"add" | "remove">("add");
   const [listFormOpen, setListFormOpen] = useState(false);
   const [listFormMode, setListFormMode] = useState<"create" | "rename">("create");
   const [listFormName, setListFormName] = useState("");
   const [listFormId, setListFormId] = useState<string | null>(null);
   const [criterionOpen, setCriterionOpen] = useState(false);
   const [criterionStatus, setCriterionStatus] = useState<ProspectStatus>("contacted");
+
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<
+    Array<{ key: string; label: string; enabled: boolean }>
+  >([]);
+  const [emailTemplateKey, setEmailTemplateKey] = useState("");
+  const [emailLocale, setEmailLocale] = useState<TemplateLocale>("es");
+  const [emailLoadingTemplates, setEmailLoadingTemplates] = useState(false);
 
   const [importOpen, setImportOpen] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
@@ -561,12 +574,141 @@ export function AdminProspectsPanel() {
     }
   }
 
-  async function confirmAddToLists() {
+  const emailRecipients = useMemo(() => {
+    const pool = someSelected
+      ? filtered.filter((p) => selected.has(p.id))
+      : filtered;
+    return pool.filter((p) => p.email.includes("@")).slice(0, 50);
+  }, [filtered, selected, someSelected]);
+
+  async function openEmailModal() {
+    setError(null);
+    setEmailOpen(true);
+    setEmailLoadingTemplates(true);
+    try {
+      const res = await authFetch("/api/admin/email-templates?locale=es");
+      const json = (await res.json()) as {
+        ok?: boolean;
+        templates?: EmailTemplateDoc[];
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "templates_failed");
+      const custom = (json.templates ?? [])
+        .filter((t) => isCustomEmailTemplateKey(t.key))
+        .map((t) => ({
+          key: t.key,
+          label: t.label?.trim() || t.key.replace(/^custom_/, ""),
+          enabled: t.enabled !== false,
+        }));
+      setEmailTemplates(custom);
+      const firstEnabled = custom.find((t) => t.enabled)?.key ?? custom[0]?.key ?? "";
+      setEmailTemplateKey(firstEnabled);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setEmailOpen(false);
+    } finally {
+      setEmailLoadingTemplates(false);
+    }
+  }
+
+  async function sendListEmail() {
+    if (!emailTemplateKey || emailRecipients.length === 0) return;
+    const tpl = emailTemplates.find((t) => t.key === emailTemplateKey);
+    if (tpl && !tpl.enabled) {
+      setError("Template désactivé — active-le dans Templates.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Envoyer « ${tpl?.label ?? emailTemplateKey} » (${emailLocale}) à ${emailRecipients.length} contact(s) ? Ils passeront en « contacté ».`,
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/cold-outreach", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "send",
+          templateKey: emailTemplateKey,
+          locale: emailLocale,
+          contactIds: emailRecipients.map((p) => p.id),
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        failed?: number;
+        skipped?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "send_failed");
+      setEmailOpen(false);
+      setMessage(
+        `Email envoyé — ok ${json.sent ?? 0} · échecs ${json.failed ?? 0} · skip ${json.skipped ?? 0}`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function syncInscritsFromWaitlist() {
+    if (
+      !window.confirm(
+        "Importer tous les inscrits plateforme dans Prospects (liste « Inscrits », statut Gagné) ?",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch("/api/admin/prospects", {
+        method: "POST",
+        body: JSON.stringify({ action: "sync-waitlist" }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        scanned?: number;
+        created?: number;
+        merged?: number;
+        skipped?: number;
+        failed?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "sync_failed");
+      setMessage(
+        `Inscrits sync — scannés ${json.scanned ?? 0} · créés ${json.created ?? 0} · fusionnés ${json.merged ?? 0} · skip ${json.skipped ?? 0} · échecs ${json.failed ?? 0}`,
+      );
+      setActiveListName("Inscrits");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmListBulk() {
     const names = [...addToListPicked];
     if (names.length === 0) return;
+    const count = selected.size;
     setAddToListOpen(false);
-    await runBulk({ addLists: names });
+    if (listBulkMode === "remove") {
+      await runBulk({ removeLists: names });
+      setMessage(`${count} contact(s) retiré(s) de ${names.length} liste(s).`);
+    } else {
+      await runBulk({ addLists: names });
+    }
     setAddToListPicked(new Set());
+    setListBulkMode("add");
   }
 
   async function deleteActiveList() {
@@ -599,7 +741,7 @@ export function AdminProspectsPanel() {
 
   return (
     <div className={`space-y-2 ${someSelected ? "pb-28" : ""}`}>
-      {error && !importOpen && !contactOpen && !listFormOpen && !addToListOpen ? (
+      {error && !importOpen && !contactOpen && !listFormOpen && !addToListOpen && !emailOpen ? (
         <p className={ERROR_TEXT}>{error}</p>
       ) : null}
       {message ? <p className="text-xs font-medium text-ns-primary">{message}</p> : null}
@@ -677,9 +819,33 @@ export function AdminProspectsPanel() {
               <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light" onClick={openImport}>
                 <Link2 className="h-3.5 w-3.5" /> Feuille
               </button>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light disabled:opacity-50"
+                disabled={busy || loading}
+                title="Importer les inscrits plateforme dans Prospects"
+                onClick={() => void syncInscritsFromWaitlist()}
+              >
+                <Users className="h-3.5 w-3.5" /> Inscrits
+              </button>
               <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg bg-ns-primary px-2.5 text-xs font-semibold text-black hover:brightness-95" onClick={openCreate}>
                 <Plus className="h-3.5 w-3.5" /> Ajouter
               </button>
+              {activeListName || someSelected ? (
+                <button
+                  type="button"
+                  className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light disabled:opacity-50"
+                  disabled={busy || loading || emailRecipients.length === 0}
+                  title={
+                    someSelected
+                      ? `Email aux ${Math.min(selected.size, 50)} sélectionné(s)`
+                      : `Email à la liste (max 50)`
+                  }
+                  onClick={() => void openEmailModal()}
+                >
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </button>
+              ) : null}
               {activeList ? (
                 <>
                   <button type="button" className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-semibold text-ns-tertiary hover:bg-gray-50" onClick={() => { setListFormMode("rename"); setListFormId(activeList.id); setListFormName(activeList.name); setListFormOpen(true); }}>Renommer</button>
@@ -823,7 +989,8 @@ export function AdminProspectsPanel() {
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/95 px-3 py-2 shadow-lg backdrop-blur">
               <span className="shrink-0 text-xs font-semibold text-ns-tertiary">{selected.size} sélectionné{selected.size > 1 ? "s" : ""}</span>
               <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-100/60">Désélectionner</button>
-              <button type="button" disabled={busy} onClick={() => { setAddToListPicked(new Set()); setAddToListOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><ListPlus className="h-3.5 w-3.5" /> Liste</button>
+              <button type="button" disabled={busy} onClick={() => { setAddToListPicked(new Set()); setListBulkMode("add"); setAddToListOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><ListPlus className="h-3.5 w-3.5" /> Liste</button>
+              <button type="button" disabled={busy || emailRecipients.length === 0} onClick={() => void openEmailModal()} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><Mail className="h-3.5 w-3.5" /> Email</button>
               <button type="button" disabled={busy} onClick={() => setCriterionOpen(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><CheckSquare className="h-3.5 w-3.5" /> Critère</button>
               <button type="button" disabled={busy} onClick={() => { if (window.confirm(`Supprimer ${selected.size} contact(s) sélectionné(s) (soft delete) ?`)) void runBulk({ softDelete: true }); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Suppr.</button>
             </div>
@@ -831,7 +998,7 @@ export function AdminProspectsPanel() {
         </div>
       ) : null}
 
-      {/* Modal Ajouter à une liste */}
+      {/* Modal Gérer listes — ajouter / retirer */}
       {addToListOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
@@ -845,7 +1012,7 @@ export function AdminProspectsPanel() {
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-ns-tertiary">
                 <ListPlus className="h-5 w-5" />
-                Ajouter à une liste
+                Gérer les listes
               </h2>
               <button
                 type="button"
@@ -860,6 +1027,30 @@ export function AdminProspectsPanel() {
                 {selected.size} contact{selected.size > 1 ? "s" : ""} sélectionné
                 {selected.size > 1 ? "s" : ""}
               </p>
+              <div className="inline-flex rounded-xl bg-gray-100 p-1 text-sm font-semibold">
+                <button
+                  type="button"
+                  className={`rounded-lg px-3 py-1.5 ${
+                    listBulkMode === "add"
+                      ? "bg-white text-ns-tertiary shadow-sm"
+                      : "text-ns-secondary"
+                  }`}
+                  onClick={() => setListBulkMode("add")}
+                >
+                  Ajouter
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-lg px-3 py-1.5 ${
+                    listBulkMode === "remove"
+                      ? "bg-white text-ns-tertiary shadow-sm"
+                      : "text-ns-secondary"
+                  }`}
+                  onClick={() => setListBulkMode("remove")}
+                >
+                  Retirer
+                </button>
+              </div>
               {lists.length === 0 ? (
                 <p className="text-sm text-ns-secondary">
                   Aucune liste — crée-en une ci-dessous.
@@ -896,19 +1087,25 @@ export function AdminProspectsPanel() {
                   ))}
                 </div>
               )}
-              <button
-                type="button"
-                className="w-full py-2 text-sm font-semibold text-ns-secondary hover:text-ns-tertiary"
-                onClick={() => {
-                  setAddToListOpen(false);
-                  setListFormMode("create");
-                  setListFormId(null);
-                  setListFormName("");
-                  setListFormOpen(true);
-                }}
-              >
-                + Créer une nouvelle liste
-              </button>
+              {listBulkMode === "add" ? (
+                <button
+                  type="button"
+                  className="w-full py-2 text-sm font-semibold text-ns-secondary hover:text-ns-tertiary"
+                  onClick={() => {
+                    setAddToListOpen(false);
+                    setListFormMode("create");
+                    setListFormId(null);
+                    setListFormName("");
+                    setListFormOpen(true);
+                  }}
+                >
+                  + Créer une nouvelle liste
+                </button>
+              ) : (
+                <p className="text-xs text-ns-secondary">
+                  Les contacts seront retirés des listes cochées (la liste elle-même reste).
+                </p>
+              )}
             </div>
             <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
               <button type="button" className={BTN_SECONDARY} onClick={() => setAddToListOpen(false)}>
@@ -918,9 +1115,9 @@ export function AdminProspectsPanel() {
                 type="button"
                 className={BTN_PRIMARY}
                 disabled={busy || addToListPicked.size === 0}
-                onClick={() => void confirmAddToLists()}
+                onClick={() => void confirmListBulk()}
               >
-                Ajouter
+                {listBulkMode === "remove" ? "Retirer" : "Ajouter"}
               </button>
             </div>
           </div>
@@ -973,6 +1170,118 @@ export function AdminProspectsPanel() {
                 onClick={() => void submitListForm()}
               >
                 {listFormMode === "create" ? "Créer" : "Enregistrer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Modal email template */}
+      {emailOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEmailOpen(false);
+          }}
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-ns-tertiary">
+                <Mail className="h-5 w-5" />
+                Envoyer un email
+              </h2>
+              <button
+                type="button"
+                className="rounded-full p-2 hover:bg-gray-100"
+                onClick={() => setEmailOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="space-y-4 p-6">
+              <p className="text-sm text-ns-secondary">
+                {someSelected
+                  ? `${emailRecipients.length} contact(s) sélectionné(s)`
+                  : activeListName
+                    ? `Liste « ${activeListName} » · ${emailRecipients.length} destinataire(s)`
+                    : `${emailRecipients.length} destinataire(s)`}
+                {filtered.length > 50 && !someSelected ? (
+                  <span className="block text-xs text-amber-800">Max 50 par envoi — premiers de la vue.</span>
+                ) : null}
+                {someSelected && selected.size > 50 ? (
+                  <span className="block text-xs text-amber-800">Max 50 — seuls les 50 premiers sélectionnés.</span>
+                ) : null}
+              </p>
+              {error && emailOpen ? <p className={ERROR_TEXT}>{error}</p> : null}
+              {emailLoadingTemplates ? (
+                <p className="text-sm text-ns-secondary">Chargement des templates…</p>
+              ) : emailTemplates.length === 0 ? (
+                <p className="text-sm text-ns-secondary">
+                  Aucun template custom. Crée-en un dans{" "}
+                  <Link href="/admin/templates" className="font-semibold text-ns-tertiary underline">
+                    Templates
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <>
+                  <div>
+                    <label className={LABEL_CLASS} htmlFor="prospect-email-template">
+                      Template
+                    </label>
+                    <select
+                      id="prospect-email-template"
+                      className={INPUT_CLASS}
+                      value={emailTemplateKey}
+                      onChange={(e) => setEmailTemplateKey(e.target.value)}
+                    >
+                      {emailTemplates.map((t) => (
+                        <option key={t.key} value={t.key} disabled={!t.enabled}>
+                          {t.label}
+                          {!t.enabled ? " (désactivé)" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={LABEL_CLASS} htmlFor="prospect-email-locale">
+                      Langue
+                    </label>
+                    <select
+                      id="prospect-email-locale"
+                      className={INPUT_CLASS}
+                      value={emailLocale}
+                      onChange={(e) => setEmailLocale(e.target.value as TemplateLocale)}
+                    >
+                      <option value="es">Español</option>
+                      <option value="fr">Français</option>
+                      <option value="en">English</option>
+                    </select>
+                  </div>
+                  <p className="text-xs text-ns-secondary">
+                    Templates custom uniquement. Les destinataires passent en statut « contacté ».
+                  </p>
+                </>
+              )}
+            </div>
+            <div className="flex justify-end gap-2 border-t border-gray-100 px-6 py-4">
+              <button type="button" className={BTN_SECONDARY} onClick={() => setEmailOpen(false)}>
+                Annuler
+              </button>
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={
+                  busy ||
+                  emailLoadingTemplates ||
+                  !emailTemplateKey ||
+                  emailRecipients.length === 0
+                }
+                onClick={() => void sendListEmail()}
+              >
+                Envoyer
               </button>
             </div>
           </div>

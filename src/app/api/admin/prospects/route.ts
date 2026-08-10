@@ -15,6 +15,7 @@ import {
   upsertProspect,
 } from "@/lib/prospects/store";
 import { softDeleteProspects } from "@/lib/prospects/lists-store";
+import { syncAllWaitlistToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { PROSPECT_STATUSES } from "@/lib/types/prospects";
 
 const IMPORT_LIMIT = 500;
@@ -43,6 +44,7 @@ const bulkSchema = z.object({
   status: z.enum(PROSPECT_STATUSES).optional(),
   addTags: z.array(z.string().trim().max(40)).max(20).optional(),
   addLists: z.array(z.string().trim().max(60)).max(10).optional(),
+  removeLists: z.array(z.string().trim().max(60)).max(10).optional(),
   seen: z.boolean().optional(),
   softDelete: z.boolean().optional(),
 });
@@ -99,18 +101,31 @@ export async function POST(request: Request) {
       ? String((body as { action?: string }).action ?? "create")
       : "create";
 
+  if (action === "sync-waitlist") {
+    try {
+      const result = await syncAllWaitlistToProspects({
+        logPrefix: "[admin/prospects sync-waitlist]",
+      });
+      return NextResponse.json({ action: "sync-waitlist", ...result });
+    } catch (error) {
+      console.error("[admin/prospects sync-waitlist]", error);
+      return NextResponse.json({ ok: false, error: "sync_failed" }, { status: 502 });
+    }
+  }
+
   if (action === "bulk") {
     const parsed = bulkSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
     }
-    const { ids, status, addTags, addLists, seen, softDelete } = parsed.data;
+    const { ids, status, addTags, addLists, removeLists, seen, softDelete } = parsed.data;
     if (
       !softDelete &&
       !status &&
       seen === undefined &&
       !(addTags?.length) &&
-      !(addLists?.length)
+      !(addLists?.length) &&
+      !(removeLists?.length)
     ) {
       return NextResponse.json({ ok: false, error: "nothing_to_update" }, { status: 400 });
     }
@@ -126,7 +141,14 @@ export async function POST(request: Request) {
           await createProspectList(name);
         }
       }
-      const updated = await bulkUpdateProspects({ ids, status, addTags, addLists, seen });
+      const updated = await bulkUpdateProspects({
+        ids,
+        status,
+        addTags,
+        addLists,
+        removeLists,
+        seen,
+      });
       if (addLists?.length) {
         for (const id of ids) {
           void import("@/lib/contacts/activities-store").then(async ({ recordContactActivity }) => {
@@ -139,6 +161,24 @@ export async function POST(request: Request) {
                 source: "admin",
                 summary: `Ajouté à la liste « ${listName} »`,
                 refs: { prospectId: id, listName },
+              });
+            }
+          });
+        }
+      }
+      if (removeLists?.length) {
+        for (const id of ids) {
+          void import("@/lib/contacts/activities-store").then(async ({ recordContactActivity }) => {
+            const p = await import("@/lib/prospects/store").then((m) => m.getProspectById(id));
+            if (!p) return;
+            for (const listName of removeLists) {
+              await recordContactActivity({
+                email: p.email,
+                type: "list_added",
+                source: "admin",
+                summary: `Retiré de la liste « ${listName} »`,
+                refs: { prospectId: id, listName },
+                meta: { action: "removed" },
               });
             }
           });

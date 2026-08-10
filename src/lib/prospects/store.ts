@@ -191,6 +191,7 @@ export async function bulkUpdateProspects(input: {
   status?: Prospect["status"];
   addTags?: string[];
   addLists?: string[];
+  removeLists?: string[];
   seen?: boolean;
 }): Promise<number> {
   const ids = [...new Set(input.ids.filter(Boolean))];
@@ -199,6 +200,7 @@ export async function bulkUpdateProspects(input: {
   const now = new Date().toISOString();
   const addTags = (input.addTags ?? []).map((t) => t.trim()).filter(Boolean);
   const addLists = (input.addLists ?? []).map((t) => t.trim()).filter(Boolean);
+  const removeLists = (input.removeLists ?? []).map((t) => t.trim().toLowerCase()).filter(Boolean);
   let n = 0;
 
   // Firestore batches max 500
@@ -219,8 +221,15 @@ export async function bulkUpdateProspects(input: {
       if (addTags.length) {
         patch.tags = [...new Set([...(existing.tags ?? []), ...addTags])];
       }
+      let nextLists = existing.lists ?? [];
       if (addLists.length) {
-        patch.lists = [...new Set([...(existing.lists ?? []), ...addLists])];
+        nextLists = [...new Set([...nextLists, ...addLists])];
+      }
+      if (removeLists.length) {
+        nextLists = nextLists.filter((l) => !removeLists.includes(l.toLowerCase()));
+      }
+      if (addLists.length || removeLists.length) {
+        patch.lists = nextLists;
       }
       batch.set(snap.ref, patch, { merge: true });
       batchOps += 1;

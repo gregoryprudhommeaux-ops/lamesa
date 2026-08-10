@@ -8,6 +8,7 @@ import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendFranconetworkAnnouncementEmail } from "@/lib/email/send-fn-announcement";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 
 /** Minimal FrancoNetwork user payload used for mapping / import. */
@@ -254,6 +255,7 @@ export async function upsertFranconetworkWaitlistMember(
           { merge: true },
         );
       }
+      await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
       await sendFranconetworkAnnouncementEmail({
         to: record.email,
@@ -280,6 +282,7 @@ export async function upsertFranconetworkWaitlistMember(
         { merge: true },
       );
     }
+    await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
     await sendFranconetworkAnnouncementEmail({
       to: record.email,

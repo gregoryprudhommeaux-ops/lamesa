@@ -160,13 +160,15 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [prospects, waitlistEmails] = await Promise.all([
-      listProspects({ status: "to_contact", limit: 3000 }),
-      loadWaitlistEmails(),
-    ]);
+    const waitlistEmails = await loadWaitlistEmails();
     const idFilter = parsed.data.contactIds?.length
       ? new Set(parsed.data.contactIds)
       : null;
+
+    // Explicit IDs (from Prospects list/selection) → any status; otherwise cold pool = to_contact
+    const prospects = idFilter
+      ? await listProspects({ limit: 3000 })
+      : await listProspects({ status: "to_contact", limit: 3000 });
 
     let targets = prospects
       .filter((p) => !idFilter || idFilter.has(p.id))

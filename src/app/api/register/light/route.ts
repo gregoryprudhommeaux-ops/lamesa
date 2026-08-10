@@ -14,6 +14,7 @@ import {
   persistWelcomeEmailStatus,
 } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import {
   isValidReferralCodeFormat,
@@ -124,11 +125,13 @@ export async function POST(request: Request) {
     } catch (error) {
       console.warn("[register/light] failed to store databasePerso sync status:", error);
     }
+    await syncWaitlistMemberToProspects(record, "[register/light]");
   } else {
     await syncWaitlistMemberToDatabasePerso(
       { ...record, referredByCode },
       "[register/light]",
     );
+    await syncWaitlistMemberToProspects(record, "[register/light]");
   }
 
   if (!storedId && process.env.NODE_ENV === "development") {

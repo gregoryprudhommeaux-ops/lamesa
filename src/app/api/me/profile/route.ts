@@ -9,6 +9,7 @@ import { isPlatformAdminIdentity } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { CITY_HUBS } from "@/lib/constants/city-hubs";
 import { isOtherSector } from "@/lib/constants/form-options";
 import { FieldValue } from "firebase-admin/firestore";
@@ -125,6 +126,7 @@ export async function PATCH(request: Request) {
   } catch (error) {
     console.warn("[me/profile] failed to store databasePerso sync status:", error);
   }
+  await syncWaitlistMemberToProspects(merged, "[me/profile]");
 
   return NextResponse.json({ ok: true, id: profile.id });
 }
