@@ -45,8 +45,74 @@ const emptyDraft = {
 
 type Draft = typeof emptyDraft;
 
+type SortKey = "fullName" | "company" | "email" | "city" | "lists" | "status" | "updatedAt";
+type SortDir = "asc" | "desc";
+
+const STATUS_SORT_RANK: Record<ProspectStatus, number> = {
+  to_contact: 0,
+  contacted: 1,
+  nurture: 2,
+  won: 3,
+  do_not_contact: 4,
+};
+
 function parseCsvField(raw: string): string[] {
   return [...new Set(raw.split(/[,;\n]/).map((s) => s.trim()).filter(Boolean))];
+}
+
+function compareProspects(a: Prospect, b: Prospect, key: SortKey, dir: SortDir): number {
+  const mul = dir === "asc" ? 1 : -1;
+  const str = (v: string) => v.trim().toLowerCase();
+  let cmp = 0;
+  switch (key) {
+    case "fullName":
+      cmp = str(a.fullName || a.email).localeCompare(str(b.fullName || b.email), "fr", {
+        sensitivity: "base",
+      });
+      break;
+    case "company":
+      cmp = str(a.company).localeCompare(str(b.company), "fr", { sensitivity: "base" });
+      if (cmp === 0) {
+        cmp = str(a.position).localeCompare(str(b.position), "fr", { sensitivity: "base" });
+      }
+      break;
+    case "email":
+      cmp = str(a.email).localeCompare(str(b.email), "fr");
+      break;
+    case "city":
+      cmp = str(a.city).localeCompare(str(b.city), "fr", { sensitivity: "base" });
+      break;
+    case "lists": {
+      const la = (a.lists ?? []).slice().sort((x, y) => x.localeCompare(y, "fr"))[0] ?? "";
+      const lb = (b.lists ?? []).slice().sort((x, y) => x.localeCompare(y, "fr"))[0] ?? "";
+      cmp = str(la).localeCompare(str(lb), "fr", { sensitivity: "base" });
+      if (cmp === 0) cmp = (a.lists?.length ?? 0) - (b.lists?.length ?? 0);
+      break;
+    }
+    case "status":
+      cmp = STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status];
+      break;
+    case "updatedAt":
+      cmp = String(a.updatedAt ?? "").localeCompare(String(b.updatedAt ?? ""));
+      break;
+    default:
+      cmp = 0;
+  }
+  if (cmp !== 0) return cmp * mul;
+  return str(a.email).localeCompare(str(b.email), "fr") * mul;
+}
+
+function formatShortDate(iso: string): string {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+      year: "2-digit",
+    });
+  } catch {
+    return iso.slice(0, 10);
+  }
 }
 
 export function AdminProspectsPanel() {
@@ -56,6 +122,8 @@ export function AdminProspectsPanel() {
   const [activeListName, setActiveListName] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | "all">("all");
   const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +198,7 @@ export function AdminProspectsPanel() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const listQ = activeListName?.trim().toLowerCase() ?? "";
-    return prospects.filter((p) => {
+    const rows = prospects.filter((p) => {
       if (listQ && !p.lists.some((l) => l.toLowerCase() === listQ)) return false;
       if (!q) return true;
       return [
@@ -147,7 +215,23 @@ export function AdminProspectsPanel() {
         .toLowerCase()
         .includes(q);
     });
-  }, [prospects, query, activeListName]);
+    return [...rows].sort((a, b) => compareProspects(a, b, sortKey, sortDir));
+  }, [prospects, query, activeListName, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      return;
+    }
+    setSortKey(key);
+    // Dates: newest first by default; text: A→Z
+    setSortDir(key === "updatedAt" ? "desc" : "asc");
+  }
+
+  function sortIndicator(key: SortKey): string {
+    if (sortKey !== key) return "";
+    return sortDir === "asc" ? " ↑" : " ↓";
+  }
 
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((p) => selected.has(p.id));
@@ -590,18 +674,6 @@ export function AdminProspectsPanel() {
                 placeholder="Rechercher…"
                 aria-label="Recherche"
               />
-              <select
-                id="prospect-status-filter"
-                className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs text-ns-tertiary"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as ProspectStatus | "all")}
-                aria-label="Statut"
-              >
-                <option value="all">Tous statuts</option>
-                {PROSPECT_STATUSES.map((s) => (
-                  <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                ))}
-              </select>
               <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light" onClick={openImport}>
                 <Link2 className="h-3.5 w-3.5" /> Feuille
               </button>
@@ -629,13 +701,58 @@ export function AdminProspectsPanel() {
                       <th className="w-8 px-1.5 py-1.5">
                         <input type="checkbox" checked={allFilteredSelected} onChange={toggleAllFiltered} aria-label="Tout sélectionner" className="h-3.5 w-3.5 accent-sky-600" />
                       </th>
-                      <th className="px-1.5 py-1.5">Membre</th>
-                      <th className="px-1.5 py-1.5">Société</th>
-                      <th className="px-1.5 py-1.5">Contact</th>
-                      <th className="hidden px-1.5 py-1.5 xl:table-cell">Lieu</th>
-                      <th className="px-1.5 py-1.5">Listes</th>
-                      <th className="w-[7.5rem] px-1.5 py-1.5">Statut</th>
-                      <th className="w-8 px-1.5 py-1.5 text-center">Vu</th>
+                      <th className="px-1.5 py-1.5">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("fullName")}>
+                          Membre{sortIndicator("fullName")}
+                        </button>
+                      </th>
+                      <th className="px-1.5 py-1.5">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("company")}>
+                          Société{sortIndicator("company")}
+                        </button>
+                      </th>
+                      <th className="px-1.5 py-1.5">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("email")}>
+                          Contact{sortIndicator("email")}
+                        </button>
+                      </th>
+                      <th className="hidden px-1.5 py-1.5 xl:table-cell">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("city")}>
+                          Lieu{sortIndicator("city")}
+                        </button>
+                      </th>
+                      <th className="px-1.5 py-1.5">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("lists")}>
+                          Listes{sortIndicator("lists")}
+                        </button>
+                      </th>
+                      <th className="w-[8.5rem] px-1.5 py-1.5">
+                        <label className="sr-only" htmlFor="prospect-status-col-filter">
+                          Filtrer par statut
+                        </label>
+                        <select
+                          id="prospect-status-col-filter"
+                          className="h-7 w-full max-w-[8.5rem] rounded border border-gray-200 bg-white px-1 text-[10px] font-semibold uppercase tracking-wide text-ns-secondary"
+                          value={statusFilter}
+                          onChange={(e) =>
+                            setStatusFilter(e.target.value as ProspectStatus | "all")
+                          }
+                          onClick={(e) => e.stopPropagation()}
+                          title="Filtrer les contacts par statut"
+                        >
+                          <option value="all">Statut · tous</option>
+                          {PROSPECT_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {STATUS_LABEL[s]}
+                            </option>
+                          ))}
+                        </select>
+                      </th>
+                      <th className="w-[4.5rem] px-1.5 py-1.5">
+                        <button type="button" className="hover:text-ns-tertiary" onClick={() => toggleSort("updatedAt")} title="Date de mise à jour">
+                          Maj.{sortIndicator("updatedAt")}
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -684,8 +801,8 @@ export function AdminProspectsPanel() {
                             ))}
                           </select>
                         </td>
-                        <td className="px-1.5 py-1 text-center align-middle" onClick={(e) => e.stopPropagation()}>
-                          <input type="checkbox" checked={Boolean(p.seen)} disabled={busy} aria-label="Vu" onChange={() => void patchProspect(p.id, { seen: !p.seen })} className="h-3.5 w-3.5 accent-sky-600" />
+                        <td className="whitespace-nowrap px-1.5 py-1 align-middle text-[10px] text-ns-secondary" title={p.updatedAt || undefined}>
+                          {formatShortDate(p.updatedAt)}
                         </td>
                       </tr>
                     ))}
@@ -708,7 +825,6 @@ export function AdminProspectsPanel() {
               <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-100/60">Désélectionner</button>
               <button type="button" disabled={busy} onClick={() => { setAddToListPicked(new Set()); setAddToListOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><ListPlus className="h-3.5 w-3.5" /> Liste</button>
               <button type="button" disabled={busy} onClick={() => setCriterionOpen(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><CheckSquare className="h-3.5 w-3.5" /> Critère</button>
-              <button type="button" disabled={busy} onClick={() => void runBulk({ seen: true })} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80">Vu!</button>
               <button type="button" disabled={busy} onClick={() => { if (window.confirm(`Supprimer ${selected.size} contact(s) sélectionné(s) (soft delete) ?`)) void runBulk({ softDelete: true }); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Suppr.</button>
             </div>
           </div>
@@ -1123,15 +1239,6 @@ export function AdminProspectsPanel() {
                   onChange={(e) => setDraft((d) => ({ ...d, tags: e.target.value }))}
                 />
               </div>
-              <label className="inline-flex items-center gap-2 text-sm font-medium text-ns-tertiary">
-                <input
-                  type="checkbox"
-                  checked={draft.seen}
-                  onChange={(e) => setDraft((d) => ({ ...d, seen: e.target.checked }))}
-                  className="h-4 w-4 accent-sky-600"
-                />
-                Vu!
-              </label>
               <div>
                 <label className={LABEL_CLASS} htmlFor="pf-notes">
                   Notes
