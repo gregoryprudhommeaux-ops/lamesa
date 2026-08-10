@@ -28,7 +28,7 @@ import {
   formatRegistrantDate,
   registrantSubtitle as buildRegistrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { CalendarPlus, Mail, Trash2, UserPlus, X } from "lucide-react";
+import { CalendarPlus, Mail, Trash2, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -278,6 +278,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [targetEventId, setTargetEventId] = useState("");
   const [adding, setAdding] = useState(false);
+  const [syncingProspects, setSyncingProspects] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -725,16 +726,78 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     }
   }
 
+  async function syncMembersToProspects(scope: "all" | "selected") {
+    const emails =
+      scope === "selected"
+        ? selectedRows.map((r) => r.email).filter((e) => e?.includes("@"))
+        : undefined;
+    if (scope === "selected" && (!emails || emails.length === 0)) {
+      setError("Aucun email valide dans la sélection.");
+      return;
+    }
+    const countLabel =
+      scope === "selected" ? `${emails!.length} sélectionné(s)` : "tous les membres";
+    if (
+      !window.confirm(
+        `Fusionner ${countLabel} dans Prospects (liste « MEMBRES INSCRITS », statut Gagné) ?`,
+      )
+    ) {
+      return;
+    }
+    setSyncingProspects(true);
+    setError(null);
+    setActionMsg(null);
+    try {
+      const res = await authFetch("/api/admin/prospects", {
+        method: "POST",
+        body: JSON.stringify({
+          action: "sync-waitlist",
+          ...(emails ? { emails } : {}),
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        scanned?: number;
+        created?: number;
+        merged?: number;
+        skipped?: number;
+        failed?: number;
+        listName?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "sync_failed");
+      setActionMsg(
+        `Prospects « ${json.listName ?? "MEMBRES INSCRITS"} » — scannés ${json.scanned ?? 0} · créés ${json.created ?? 0} · fusionnés ${json.merged ?? 0} · échecs ${json.failed ?? 0}`,
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncingProspects(false);
+    }
+  }
+
   if (loading) return <p className="text-sm text-ns-secondary">Chargement…</p>;
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h2 className="text-xl font-bold text-ns-hero">{title}</h2>
-        <p className="text-sm text-ns-secondary">
-          {filtered.length} / {rows.length} inscrit{rows.length > 1 ? "s" : ""}
-          {selectedIds.size > 0 ? ` · ${selectedIds.size} sélectionné(s)` : ""}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-ns-secondary">
+            {filtered.length} / {rows.length} inscrit{rows.length > 1 ? "s" : ""}
+            {selectedIds.size > 0 ? ` · ${selectedIds.size} sélectionné(s)` : ""}
+          </p>
+          <button
+            type="button"
+            disabled={syncingProspects || rows.length === 0}
+            onClick={() => void syncMembersToProspects("all")}
+            className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-sm`}
+            title="Créer/fusionner tous les membres dans Prospects → liste MEMBRES INSCRITS"
+          >
+            <Users className="h-4 w-4" />
+            {syncingProspects ? "Sync…" : "→ Prospects"}
+          </button>
+        </div>
       </div>
       {error && <p className={ERROR_TEXT}>{error}</p>}
       {actionMsg && <p className="text-sm font-medium text-ns-tertiary">{actionMsg}</p>}
@@ -903,6 +966,15 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           >
             <UserPlus className="h-4 w-4" />
             Ajouter à un événement
+          </button>
+          <button
+            type="button"
+            disabled={syncingProspects}
+            onClick={() => void syncMembersToProspects("selected")}
+            className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-sm`}
+          >
+            <Users className="h-4 w-4" />
+            → Prospects
           </button>
           <button
             type="button"
@@ -1356,6 +1428,18 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           >
             <UserPlus className="h-4 w-4" />
             Ajouter à un événement
+          </button>
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-ns-brand-light"
+            disabled={syncingProspects}
+            onClick={() => {
+              setContextMenu(null);
+              void syncMembersToProspects("selected");
+            }}
+          >
+            <Users className="h-4 w-4" />
+            {syncingProspects ? "Sync Prospects…" : "→ Prospects (MEMBRES INSCRITS)"}
           </button>
           <button
             type="button"

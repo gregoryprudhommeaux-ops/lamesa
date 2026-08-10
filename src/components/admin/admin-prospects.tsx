@@ -661,7 +661,7 @@ export function AdminProspectsPanel() {
   async function syncInscritsFromWaitlist() {
     if (
       !window.confirm(
-        "Importer tous les inscrits plateforme dans Prospects (liste « Inscrits », statut Gagné) ?",
+        "Importer tous les membres inscrits dans Prospects (liste « MEMBRES INSCRITS », statut Gagné) ? Les fiches existantes seront fusionnées.",
       )
     ) {
       return;
@@ -681,13 +681,14 @@ export function AdminProspectsPanel() {
         merged?: number;
         skipped?: number;
         failed?: number;
+        listName?: string;
         error?: string;
       };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "sync_failed");
       setMessage(
-        `Inscrits sync — scannés ${json.scanned ?? 0} · créés ${json.created ?? 0} · fusionnés ${json.merged ?? 0} · skip ${json.skipped ?? 0} · échecs ${json.failed ?? 0}`,
+        `MEMBRES INSCRITS — scannés ${json.scanned ?? 0} · créés ${json.created ?? 0} · fusionnés ${json.merged ?? 0} · skip ${json.skipped ?? 0} · échecs ${json.failed ?? 0}`,
       );
-      setActiveListName("Inscrits");
+      setActiveListName(json.listName ?? "MEMBRES INSCRITS");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -823,10 +824,10 @@ export function AdminProspectsPanel() {
                 type="button"
                 className="inline-flex h-8 items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 text-xs font-semibold text-ns-tertiary hover:bg-ns-brand-light disabled:opacity-50"
                 disabled={busy || loading}
-                title="Importer les inscrits plateforme dans Prospects"
+                title="Importer les membres inscrits dans Prospects (liste MEMBRES INSCRITS)"
                 onClick={() => void syncInscritsFromWaitlist()}
               >
-                <Users className="h-3.5 w-3.5" /> Inscrits
+                <Users className="h-3.5 w-3.5" /> MEMBRES INSCRITS
               </button>
               <button type="button" className="inline-flex h-8 items-center gap-1 rounded-lg bg-ns-primary px-2.5 text-xs font-semibold text-black hover:brightness-95" onClick={openCreate}>
                 <Plus className="h-3.5 w-3.5" /> Ajouter

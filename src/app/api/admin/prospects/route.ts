@@ -102,8 +102,16 @@ export async function POST(request: Request) {
       : "create";
 
   if (action === "sync-waitlist") {
+    const emailsRaw =
+      body && typeof body === "object" && "emails" in body
+        ? (body as { emails?: unknown }).emails
+        : undefined;
+    const emails = Array.isArray(emailsRaw)
+      ? emailsRaw.filter((e): e is string => typeof e === "string" && e.includes("@")).slice(0, 2000)
+      : undefined;
     try {
       const result = await syncAllWaitlistToProspects({
+        emails,
         logPrefix: "[admin/prospects sync-waitlist]",
       });
       return NextResponse.json({ action: "sync-waitlist", ...result });
