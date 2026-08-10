@@ -3,7 +3,8 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import type { EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Recipient = {
   id: string;
@@ -18,6 +19,8 @@ type Props = {
   enabled: boolean;
 };
 
+const BATCH_LIMIT = 50;
+
 export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   const authFetch = useAuthFetch();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -29,7 +32,6 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   const [message, setMessage] = useState<string | null>(null);
   const [manualEmail, setManualEmail] = useState("");
   const [manualName, setManualName] = useState("");
-  const [importText, setImportText] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -42,30 +44,15 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         skippedWaitlist?: Recipient[];
         error?: string;
         detail?: string;
+        batchLimit?: number;
       };
       if (!res.ok || !json.ok) {
-        const code = json.error ?? "load_failed";
-        if (code === "perso_unauthorized") {
-          throw new Error(
-            json.detail ??
-              "Token Database Perso refusé — aligne DATABASE_PERSO_API_TOKEN sur LA MESA et Perso (Vercel).",
-          );
-        }
-        if (code === "database_perso_not_configured") {
-          throw new Error("DATABASE_PERSO_BASE_URL / API_TOKEN manquants sur LA MESA.");
-        }
-        if (code === "perso_ensure_lists_failed" || code === "perso_list_failed") {
-          throw new Error(
-            "API listes Perso indisponible (deploy Perso ou token). Détail: " +
-              (json.detail ?? code),
-          );
-        }
-        throw new Error(json.detail ? `${code}: ${json.detail}` : code);
+        throw new Error(json.detail ? `${json.error}: ${json.detail}` : json.error ?? "load_failed");
       }
       const list = json.recipients ?? [];
       setRecipients(list);
       setSkippedWaitlist(json.skippedWaitlist ?? []);
-      setSelected(new Set(list.map((r) => r.id)));
+      setSelected(new Set(list.slice(0, BATCH_LIMIT).map((r) => r.id)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -76,6 +63,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const selectedCount = selected.size;
+  const overBatch = selectedCount > BATCH_LIMIT;
+
+  const selectedPreview = useMemo(
+    () => recipients.filter((r) => selected.has(r.id)).slice(0, BATCH_LIMIT),
+    [recipients, selected],
+  );
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -108,89 +103,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       }
       setManualEmail("");
       setManualName("");
-      setMessage("Contact ajouté à LA MESA - CONTACTER (A CONTACTER).");
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function importContacter() {
-    if (!importText.trim()) {
-      setError("Colle des emails (un par ligne) ou un CSV name,email.");
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const res = await authFetch("/api/admin/cold-outreach", {
-        method: "POST",
-        body: JSON.stringify({
-          action: "import-contacter",
-          text: importText,
-        }),
-      });
-      const json = (await res.json()) as {
-        ok?: boolean;
-        parsed?: number;
-        added?: number;
-        skippedWaitlist?: number;
-        failed?: number;
-        error?: string;
-        limit?: number;
-        count?: number;
-      };
-      if (!res.ok || !json.ok) {
-        if (json.error === "too_many") {
-          throw new Error(`Trop de lignes (${json.count}). Limite : ${json.limit}.`);
-        }
-        if (json.error === "no_emails_parsed") {
-          throw new Error("Aucun email reconnu dans le texte collé.");
-        }
-        throw new Error(json.error ?? "import_failed");
-      }
-      setImportText("");
-      setMessage(
-        `Import CONTACTER — lus: ${json.parsed ?? 0} · ajoutés: ${json.added ?? 0} · déjà waitlist: ${json.skippedWaitlist ?? 0} · échecs: ${json.failed ?? 0}`,
-      );
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function backfillInscrits() {
-    if (
-      !window.confirm(
-        "Synchroniser tous les inscrits waitlist vers la liste Perso « LA MESA - INSCRITS » (et les retirer de CONTACTER) ?",
-      )
-    ) {
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const res = await authFetch("/api/admin/cold-outreach", {
-        method: "POST",
-        body: JSON.stringify({ action: "backfill-inscrits" }),
-      });
-      const json = (await res.json()) as {
-        ok?: boolean;
-        synced?: number;
-        failed?: number;
-        skipped?: number;
-        error?: string;
-      };
-      if (!res.ok || !json.ok) throw new Error(json.error ?? "backfill_failed");
-      setMessage(
-        `Backfill INSCRITS — sync: ${json.synced ?? 0} · skip: ${json.skipped ?? 0} · échecs: ${json.failed ?? 0}`,
-      );
+      setMessage("Prospect ajouté (statut à contacter).");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -204,9 +117,10 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       setError("Aucun destinataire sélectionné.");
       return;
     }
+    const ids = [...selected].slice(0, BATCH_LIMIT);
     if (
       !window.confirm(
-        `Envoyer « ${templateKey} » (${locale}) à ${selected.size} contact(s) ? Ils passeront en CONTACTÉ.`,
+        `Envoyer « ${templateKey} » (${locale}) à ${ids.length} contact(s) (max ${BATCH_LIMIT}/batch) ? Ils passeront en « contacté ».`,
       )
     ) {
       return;
@@ -221,7 +135,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           action: "send",
           templateKey,
           locale,
-          contactIds: [...selected],
+          contactIds: ids,
         }),
       });
       const json = (await res.json()) as {
@@ -247,12 +161,15 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     <div className="space-y-4 rounded-xl border border-dashed border-ns-alternate bg-ns-brand-light/30 p-4">
       <div>
         <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-          Envoi cold · Database Perso
+          Envoi cold · Prospects LA MESA
         </h3>
         <p className="mt-1 text-xs text-ns-secondary">
-          Source : liste <strong>LA MESA - CONTACTER</strong> avec critère{" "}
-          <strong>A CONTACTER</strong>. Les inscrits waitlist sont exclus. Après envoi réussi →{" "}
-          <strong>CONTACTÉ</strong>. Au chargement, les listes Perso sont créées si besoin.
+          Source : CRM interne (<strong>à contacter</strong>). Inscrits waitlist exclus. Après envoi →{" "}
+          <strong>contacté</strong>. Batch max <strong>{BATCH_LIMIT}</strong>. Import Sheet / fiches →{" "}
+          <Link href="/admin/prospects" className="font-semibold text-ns-primary underline">
+            Prospects
+          </Link>
+          .
         </p>
         {!enabled ? (
           <p className="mt-2 text-xs font-semibold text-amber-800">
@@ -302,61 +219,36 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         </div>
       </div>
 
-      <div>
-        <label className={LABEL_CLASS} htmlFor="cold-import-text">
-          Import masse → CONTACTER (A CONTACTER)
-        </label>
-        <textarea
-          id="cold-import-text"
-          className={`${INPUT_CLASS} min-h-[120px] font-mono text-xs`}
-          value={importText}
-          onChange={(e) => setImportText(e.target.value)}
-          placeholder={"email@dominio.com\nou CSV :\nNombre,Email,Empresa\nAda,ada@ex.com,Acme"}
-        />
-        <div className="mt-2 flex flex-wrap gap-2">
-          <button
-            type="button"
-            className={BTN_SECONDARY}
-            disabled={busy || !importText.trim()}
-            onClick={() => void importContacter()}
-          >
-            Importer vers CONTACTER
-          </button>
-          <p className="self-center text-[11px] text-ns-secondary">
-            Max 250 · waitlist exclus auto · colle depuis ton Sheet (colonnes email / nombre)
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-wrap gap-2">
         <button type="button" className={BTN_SECONDARY} disabled={busy || loading} onClick={() => void load()}>
-          Rafraîchir la liste
-        </button>
-        <button
-          type="button"
-          className={BTN_SECONDARY}
-          disabled={busy || loading}
-          onClick={() => void backfillInscrits()}
-          title="Pousse tous les inscrits waitlist vers LA MESA - INSCRITS sur Database Perso"
-        >
-          Sync inscrits → INSCRITS
+          Rafraîchir
         </button>
         <button
           type="button"
           className={BTN_PRIMARY}
-          disabled={busy || loading || !enabled || selected.size === 0}
+          disabled={busy || loading || !enabled || selectedCount === 0}
           onClick={() => void sendSelected()}
         >
-          {busy ? "Envoi…" : `Envoyer à ${selected.size} contact(s)`}
+          {busy
+            ? "Envoi…"
+            : `Envoyer à ${Math.min(selectedCount, BATCH_LIMIT)} contact(s)`}
         </button>
+        {overBatch ? (
+          <p className="self-center text-[11px] text-amber-800">
+            {selectedCount} sélectionnés — seuls les {BATCH_LIMIT} premiers seront envoyés.
+          </p>
+        ) : null}
       </div>
 
       {loading ? (
-        <p className="text-sm text-ns-secondary">Chargement Perso…</p>
+        <p className="text-sm text-ns-secondary">Chargement prospects…</p>
       ) : recipients.length === 0 ? (
         <p className="text-sm text-ns-secondary">
-          Aucun contact « A CONTACTER » (hors waitlist). Ajoute-en dans Database Perso ou via le
-          champ email ci-dessus.
+          Aucun prospect « à contacter ». Importe un Sheet sur{" "}
+          <Link href="/admin/prospects" className="font-semibold underline">
+            Prospects
+          </Link>{" "}
+          ou ajoute un email ici.
         </p>
       ) : (
         <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">
@@ -381,6 +273,13 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           ))}
         </ul>
       )}
+
+      {selectedPreview.length > 0 && overBatch ? (
+        <p className="text-[11px] text-ns-secondary">
+          Ce batch : {selectedPreview.map((r) => r.email).slice(0, 3).join(", ")}
+          {selectedPreview.length > 3 ? "…" : ""}
+        </p>
+      ) : null}
 
       {skippedWaitlist.length > 0 ? (
         <p className="text-[11px] text-ns-secondary">

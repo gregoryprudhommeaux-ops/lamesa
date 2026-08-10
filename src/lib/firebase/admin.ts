@@ -40,6 +40,7 @@ export function getAdminFirestore(): Firestore {
 
 export const COLLECTIONS = {
   waitlist: "la_mesa_waitlist",
+  prospects: "la_mesa_prospects",
   events: "events",
   participations: "event_participations",
   respondents: "event_respondents",

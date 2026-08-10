@@ -4,23 +4,18 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
-import {
-  addLaMesaToContacter,
-  DatabasePersoError,
-  ensureLaMesaLists,
-  isDatabasePersoConfigured,
-  listLaMesaToContact,
-  markLaMesaContacted,
-} from "@/lib/database-perso";
-import { firstEmail, sendColdTemplateEmail } from "@/lib/email/send-cold-template";
+import { sendColdTemplateEmail } from "@/lib/email/send-cold-template";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { parseContacterImportText } from "@/lib/admin/parse-contacter-import";
-import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
+import {
+  listProspects,
+  markProspectsContacted,
+  upsertProspect,
+} from "@/lib/prospects/store";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
-const BULK_IMPORT_LIMIT = 250;
+const SEND_BATCH_LIMIT = 50;
 
 async function loadWaitlistEmails(): Promise<Set<string>> {
   if (!isFirebaseAdminConfigured()) return new Set();
@@ -35,44 +30,29 @@ async function loadWaitlistEmails(): Promise<Set<string>> {
   return emails;
 }
 
-/** Recipients: Perso CONTACTER + A CONTACTER, minus waitlist. */
+/** Recipients: internal prospects status=to_contact, minus waitlist. */
 export async function GET(request: Request) {
   const admin = await requirePlatformAdmin(request);
   if (isNextResponse(admin)) return admin;
 
-  if (!isDatabasePersoConfigured()) {
-    return NextResponse.json({ ok: false, error: "database_perso_not_configured" }, { status: 503 });
+  if (!isFirebaseAdminConfigured()) {
+    return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
   }
 
   try {
-    const ensured = await ensureLaMesaLists();
-    if (!ensured.ok) {
-      return NextResponse.json(
-        { ok: false, error: "perso_ensure_lists_failed" },
-        { status: 502 },
-      );
-    }
-
-    const [listed, waitlistEmails] = await Promise.all([
-      listLaMesaToContact(),
+    const [prospects, waitlistEmails] = await Promise.all([
+      listProspects({ status: "to_contact", limit: 3000 }),
       loadWaitlistEmails(),
     ]);
 
-    if (!listed.ok) {
-      return NextResponse.json({ ok: false, error: "perso_list_failed" }, { status: 502 });
-    }
-
-    const recipients = listed.contacts
-      .map((c) => {
-        const email = firstEmail(c.emails);
-        return {
-          id: c.id,
-          fullName: c.fullName || email || "—",
-          email,
-          company: c.company,
-          alreadyOnWaitlist: email ? waitlistEmails.has(email) : false,
-        };
-      })
+    const recipients = prospects
+      .map((p) => ({
+        id: p.id,
+        fullName: p.fullName || p.email,
+        email: p.email,
+        company: p.company || null,
+        alreadyOnWaitlist: waitlistEmails.has(p.email),
+      }))
       .filter((r) => r.email.includes("@"));
 
     const eligible = recipients.filter((r) => !r.alreadyOnWaitlist);
@@ -80,38 +60,15 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ok: true,
-      listName: "LA MESA - CONTACTER",
-      actionFilter: "A CONTACTER",
+      source: "la_mesa_prospects",
+      statusFilter: "to_contact",
+      batchLimit: SEND_BATCH_LIMIT,
       count: eligible.length,
       recipients: eligible,
       skippedWaitlist,
     });
   } catch (error) {
     console.error("[admin/cold-outreach GET]", error);
-    if (error instanceof DatabasePersoError) {
-      if (error.code === "unauthorized" || error.status === 401) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "perso_unauthorized",
-            detail:
-              "Token Database Perso refusé. Vérifie DATABASE_PERSO_API_TOKEN (LA MESA) = DATABASE_PERSO_API_TOKEN (Perso).",
-          },
-          { status: 502 },
-        );
-      }
-      if (error.code === "timeout") {
-        return NextResponse.json({ ok: false, error: "perso_timeout" }, { status: 504 });
-      }
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "perso_upstream",
-          detail: error.message.slice(0, 200),
-        },
-        { status: 502 },
-      );
-    }
     return NextResponse.json(
       {
         ok: false,
@@ -134,17 +91,15 @@ const sendSchema = z.object({
   templateKey: z.string().min(1),
   locale: z.enum(["es", "fr", "en"]).default("es"),
   contactIds: z.array(z.string().min(1)).optional(),
-  /** If true, only report who would be mailed */
   dryRun: z.boolean().optional(),
 });
 
-/** Manual add or send cold campaign. */
 export async function POST(request: Request) {
   const admin = await requirePlatformAdmin(request);
   if (isNextResponse(admin)) return admin;
 
-  if (!isDatabasePersoConfigured()) {
-    return NextResponse.json({ ok: false, error: "database_perso_not_configured" }, { status: 503 });
+  if (!isFirebaseAdminConfigured()) {
+    return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
   }
 
   let body: unknown;
@@ -173,116 +128,21 @@ export async function POST(request: Request) {
       );
     }
     try {
-      const result = await addLaMesaToContacter({
+      const result = await upsertProspect({
         email,
         fullName: parsed.data.fullName,
         company: parsed.data.company,
         phone: parsed.data.phone,
+        status: "to_contact",
+        source: "cold-manual",
       });
       if (!result.ok) {
-        return NextResponse.json(
-          { ok: false, error: result.error ?? "add_failed" },
-          { status: 502 },
-        );
+        return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
       }
-      return NextResponse.json({ ok: true, contact: result });
+      return NextResponse.json({ ok: true, contact: result.prospect, action: result.action });
     } catch (error) {
       console.error("[admin/cold-outreach add]", error);
       return NextResponse.json({ ok: false, error: "add_failed" }, { status: 502 });
-    }
-  }
-
-  if (action === "import-contacter") {
-    const text =
-      body && typeof body === "object" && "text" in body
-        ? String((body as { text?: string }).text ?? "")
-        : "";
-    const rows = parseContacterImportText(text);
-    if (rows.length === 0) {
-      return NextResponse.json({ ok: false, error: "no_emails_parsed" }, { status: 400 });
-    }
-    if (rows.length > BULK_IMPORT_LIMIT) {
-      return NextResponse.json(
-        { ok: false, error: "too_many", limit: BULK_IMPORT_LIMIT, count: rows.length },
-        { status: 400 },
-      );
-    }
-    try {
-      await ensureLaMesaLists();
-      const waitlistEmails = await loadWaitlistEmails();
-      let added = 0;
-      let skippedWaitlist = 0;
-      let failed = 0;
-      const errors: Array<{ email: string; error: string }> = [];
-
-      for (const row of rows) {
-        if (waitlistEmails.has(row.email)) {
-          skippedWaitlist += 1;
-          continue;
-        }
-        const result = await addLaMesaToContacter(row);
-        if (result.ok) {
-          added += 1;
-        } else {
-          failed += 1;
-          errors.push({ email: row.email, error: result.error ?? "add_failed" });
-        }
-      }
-
-      return NextResponse.json({
-        ok: true,
-        action: "import-contacter",
-        parsed: rows.length,
-        added,
-        skippedWaitlist,
-        failed,
-        errors: errors.slice(0, 20),
-      });
-    } catch (error) {
-      console.error("[admin/cold-outreach import-contacter]", error);
-      return NextResponse.json({ ok: false, error: "import_failed" }, { status: 502 });
-    }
-  }
-
-  if (action === "backfill-inscrits") {
-    try {
-      await ensureLaMesaLists();
-      if (!isFirebaseAdminConfigured()) {
-        return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
-      }
-      const snap = await getAdminFirestore().collection(COLLECTIONS.waitlist).limit(3000).get();
-      let synced = 0;
-      let failed = 0;
-      let skipped = 0;
-      for (const doc of snap.docs) {
-        const row = {
-          id: doc.id,
-          ...(doc.data() as Omit<WaitlistRegistration, "id">),
-        };
-        if (isSoftDeleted(row)) {
-          skipped += 1;
-          continue;
-        }
-        if (!row.email?.trim() && !row.phone?.trim()) {
-          skipped += 1;
-          continue;
-        }
-        const result = await syncWaitlistMemberToDatabasePerso(row, "[cold-outreach/backfill]");
-        if (result.ok) synced += 1;
-        else if (result.skipped) skipped += 1;
-        else failed += 1;
-      }
-      return NextResponse.json({
-        ok: true,
-        action: "backfill-inscrits",
-        synced,
-        failed,
-        skipped,
-        total: snap.size,
-      });
-    } catch (error) {
-      console.error("[admin/cold-outreach backfill]", error);
-      return NextResponse.json({ ok: false, error: "backfill_failed" }, { status: 502 });
     }
   }
 
@@ -300,29 +160,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const listed = await listLaMesaToContact();
-    if (!listed.ok) {
-      return NextResponse.json({ ok: false, error: "perso_list_failed" }, { status: 502 });
-    }
-    const waitlistEmails = await loadWaitlistEmails();
+    const [prospects, waitlistEmails] = await Promise.all([
+      listProspects({ status: "to_contact", limit: 3000 }),
+      loadWaitlistEmails(),
+    ]);
     const idFilter = parsed.data.contactIds?.length
       ? new Set(parsed.data.contactIds)
       : null;
 
-    const targets = listed.contacts
-      .filter((c) => !idFilter || idFilter.has(c.id))
-      .map((c) => ({
-        id: c.id,
-        fullName: c.fullName,
-        email: firstEmail(c.emails),
-      }))
-      .filter((c) => c.email.includes("@") && !waitlistEmails.has(c.email));
+    let targets = prospects
+      .filter((p) => !idFilter || idFilter.has(p.id))
+      .filter((p) => p.email.includes("@") && !waitlistEmails.has(p.email))
+      .map((p) => ({ id: p.id, fullName: p.fullName || p.email, email: p.email }));
+
+    if (targets.length > SEND_BATCH_LIMIT) {
+      targets = targets.slice(0, SEND_BATCH_LIMIT);
+    }
 
     if (dryRun) {
       return NextResponse.json({
         ok: true,
         dryRun: true,
         count: targets.length,
+        batchLimit: SEND_BATCH_LIMIT,
         recipients: targets,
       });
     }
@@ -335,53 +195,48 @@ export async function POST(request: Request) {
       reason?: string;
       error?: string;
     }> = [];
-    const marked: string[] = [];
+    const succeededIds: string[] = [];
 
-    for (const target of targets) {
-      const mail = await sendColdTemplateEmail({
+    for (const t of targets) {
+      const sent = await sendColdTemplateEmail({
         templateKey,
         locale,
-        to: target.email,
-        fullName: target.fullName || target.email,
+        to: t.email,
+        fullName: t.fullName,
       });
-      if (!mail.ok) {
+      if ("skipped" in sent && sent.skipped) {
         results.push({
-          contactId: target.id,
-          email: target.email,
-          ok: false,
-          error: mail.error,
-        });
-        continue;
-      }
-      if ("skipped" in mail && mail.skipped) {
-        results.push({
-          contactId: target.id,
-          email: target.email,
+          contactId: t.id,
+          email: t.email,
           ok: true,
           skipped: true,
-          reason: mail.reason,
+          reason: sent.reason,
         });
         continue;
       }
-      results.push({ contactId: target.id, email: target.email, ok: true });
-      marked.push(target.id);
+      if (!sent.ok) {
+        results.push({
+          contactId: t.id,
+          email: t.email,
+          ok: false,
+          error: "error" in sent ? sent.error : "send_failed",
+        });
+        continue;
+      }
+      results.push({ contactId: t.id, email: t.email, ok: true });
+      succeededIds.push(t.id);
     }
 
-    let mark: { ok: boolean; updated?: number } = { ok: true, updated: 0 };
-    if (marked.length > 0) {
-      mark = await markLaMesaContacted(marked);
+    if (succeededIds.length > 0) {
+      await markProspectsContacted(succeededIds);
     }
-
-    const sent = results.filter((r) => r.ok && !r.skipped).length;
-    const failed = results.filter((r) => !r.ok).length;
-    const skipped = results.filter((r) => r.skipped).length;
 
     return NextResponse.json({
       ok: true,
-      sent,
-      failed,
-      skipped,
-      markContacted: mark,
+      sent: results.filter((r) => r.ok && !r.skipped).length,
+      skipped: results.filter((r) => r.skipped).length,
+      failed: results.filter((r) => !r.ok).length,
+      batchLimit: SEND_BATCH_LIMIT,
       results,
     });
   } catch (error) {
