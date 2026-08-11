@@ -158,7 +158,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   }
 
   return (
-    <div className="space-y-4 rounded-xl border border-dashed border-ns-alternate bg-ns-brand-light/30 p-4">
+    <div className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-xl border border-dashed border-ns-alternate bg-ns-brand-light/30 p-4">
       <div>
         <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
           Envoi cold · Prospects LA MESA

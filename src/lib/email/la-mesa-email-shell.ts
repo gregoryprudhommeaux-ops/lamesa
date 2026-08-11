@@ -146,7 +146,7 @@ export function wrapLaMesaEmailHtml(options: LaMesaEmailShellOptions): string {
         <table role="presentation" width="100%" style="max-width:${maxWidth}px;background:#ffffff;border-radius:16px;padding:32px;">
           <tr><td style="font-size:12px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#b4e600;">LA MESA</td></tr>
           ${titleRow}
-          <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;">${options.bodyHtml}</td></tr>
+          <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;word-break:break-word;overflow-wrap:anywhere;">${options.bodyHtml}</td></tr>
           ${footerRow}
           ${siteRow}
         </table>

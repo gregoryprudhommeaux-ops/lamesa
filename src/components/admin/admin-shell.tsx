@@ -44,7 +44,7 @@ export function AdminShell({
 
   return (
     <RequireAuth admin loginHref="/admin/login">
-      <div className="flex min-h-screen flex-col bg-ns-brand-light">
+      <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden bg-ns-brand-light">
         <header className="sticky top-0 z-40 border-b border-white/10 bg-ns-hero shadow-md">
           <div
             className={
@@ -145,8 +145,8 @@ export function AdminShell({
         <div
           className={
             workspace
-              ? "mx-auto w-full max-w-[1600px] flex-1 px-3 py-3"
-              : "mx-auto w-full max-w-6xl flex-1 px-4 py-8"
+              ? "mx-auto w-full min-w-0 max-w-[1600px] flex-1 px-3 py-3"
+              : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8"
           }
         >
           <h1 className="sr-only">{title}</h1>

@@ -39,6 +39,7 @@ export function AdminEmailTemplatesPanel() {
   const [newLabel, setNewLabel] = useState("");
   const [creating, setCreating] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [previewBody, setPreviewBody] = useState(body);
 
   const activeMeta = useMemo(
     () => templates.find((t) => t.key === activeKey),
@@ -46,12 +47,18 @@ export function AdminEmailTemplatesPanel() {
   );
   const isCustom = isCustomEmailTemplateKey(activeKey);
 
+  // Debounce preview so typing doesn't remount the iframe (layout jump)
+  useEffect(() => {
+    const t = window.setTimeout(() => setPreviewBody(body), 280);
+    return () => window.clearTimeout(t);
+  }, [body]);
+
   const previewHtml = useMemo(
     () =>
-      wrapLaMesaPlainBody(body || "(Aperçu du corps…)", {
+      wrapLaMesaPlainBody(previewBody || "(Aperçu du corps…)", {
         lang: editLocale,
       }),
-    [body, editLocale],
+    [previewBody, editLocale],
   );
 
   const load = useCallback(async () => {
@@ -274,7 +281,7 @@ export function AdminEmailTemplatesPanel() {
   if (loading) return <p className="text-sm text-ns-secondary">Chargement…</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
       <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
         <h2 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
           Créer un template
@@ -285,7 +292,7 @@ export function AdminEmailTemplatesPanel() {
           automations (invitation, rappel, etc.) restent dans la liste système.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
-          <div className="min-w-[220px] flex-1">
+          <div className="min-w-0 flex-1 basis-[220px]">
             <label className={LABEL_CLASS} htmlFor="new-tpl-label">
               Nom du template
             </label>
@@ -308,8 +315,8 @@ export function AdminEmailTemplatesPanel() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="space-y-4">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-4">
           <div className="space-y-1">
             <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
               Automatiques
@@ -329,13 +336,13 @@ export function AdminEmailTemplatesPanel() {
                   setActiveKey(t.key);
                   setMessage(null);
                 }}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+                className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
                   activeKey === t.key
                     ? "bg-ns-primary/15 font-semibold text-ns-primary"
                     : "hover:bg-ns-brand-light"
                 }`}
               >
-                <span className="block">
+                <span className="block truncate">
                   {templateLabel(t.key, "label" in t ? t.label : undefined)}
                 </span>
                 <span
@@ -362,13 +369,13 @@ export function AdminEmailTemplatesPanel() {
                     setActiveKey(t.key);
                     setMessage(null);
                   }}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+                  className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
                     activeKey === t.key
                       ? "bg-ns-primary/15 font-semibold text-ns-primary"
                       : "hover:bg-ns-brand-light"
                   }`}
                 >
-                  <span className="block">{templateLabel(t.key, t.label)}</span>
+                  <span className="block truncate">{templateLabel(t.key, t.label)}</span>
                   <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
                     Custom
                   </span>
@@ -378,8 +385,8 @@ export function AdminEmailTemplatesPanel() {
           ) : null}
         </aside>
 
-        <section className="space-y-4 rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <div>
+        <section className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface p-5">
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-ns-hero">
               {templateLabel(activeKey, activeMeta?.label)}
             </h2>
@@ -395,7 +402,7 @@ export function AdminEmailTemplatesPanel() {
             >
               Statut envoi : {enabled ? "activé" : "désactivé (non envoyé)"}
             </p>
-            <p className="mt-1 text-xs text-ns-secondary">
+            <p className="mt-1 break-words text-xs text-ns-secondary">
               Variables : {"{{fullName}}"}, {"{{firstName}}"}, {"{{email}}"}, {"{{eventTitle}}"},{" "}
               {"{{format}}"}, {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"},{" "}
               {"{{noUrl}}"}, {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"},{" "}
@@ -459,9 +466,9 @@ export function AdminEmailTemplatesPanel() {
             <label className={LABEL_CLASS}>
               Corps (texte + HTML léger — shell LA MESA à l’envoi)
             </label>
-            <p className="mb-1.5 text-[11px] leading-snug text-ns-secondary">
+            <p className="mb-1.5 break-words text-[11px] leading-snug text-ns-secondary">
               Liens et emphase :{" "}
-              <code className="rounded bg-gray-100 px-1 text-[10px]">
+              <code className="break-all rounded bg-gray-100 px-1 text-[10px]">
                 {'<a href="https://…">texte</a>'}
               </code>
               ,{" "}
@@ -472,9 +479,10 @@ export function AdminEmailTemplatesPanel() {
               . Autre HTML ignoré / échappé.
             </p>
             <textarea
-              className={`${INPUT_CLASS} min-h-[240px] font-mono text-sm`}
+              className={`${INPUT_CLASS} min-h-[240px] w-full max-w-full break-words font-mono text-sm`}
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              wrap="soft"
             />
           </div>
 
@@ -489,24 +497,26 @@ export function AdminEmailTemplatesPanel() {
           </div>
 
           {showPreview ? (
-            <div className="overflow-hidden rounded-xl border border-gray-200">
+            <div className="max-w-full overflow-hidden rounded-xl border border-gray-200">
               <p className="border-b border-gray-100 bg-ns-brand-light px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
                 Aperçu HTML (shell LA MESA)
               </p>
               <iframe
                 title="Aperçu email LA MESA"
-                className="h-[420px] w-full bg-[#0f1210]"
+                className="block h-[420px] w-full max-w-full bg-[#0f1210]"
                 srcDoc={previewHtml}
               />
             </div>
           ) : null}
 
           {isCustom ? (
-            <ColdOutreachPanel
-              templateKey={activeKey}
-              locale={editLocale}
-              enabled={enabled}
-            />
+            <div className="min-w-0 max-w-full overflow-hidden">
+              <ColdOutreachPanel
+                templateKey={activeKey}
+                locale={editLocale}
+                enabled={enabled}
+              />
+            </div>
           ) : null}
 
           <div className="flex flex-wrap gap-2">
