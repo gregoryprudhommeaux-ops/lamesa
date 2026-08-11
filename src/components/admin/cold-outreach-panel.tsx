@@ -11,6 +11,13 @@ type Recipient = {
   fullName: string;
   email: string;
   company?: string | null;
+  status?: string;
+};
+
+type ProspectListOption = {
+  id: string;
+  name: string;
+  contactCount: number;
 };
 
 type Props = {
@@ -20,11 +27,15 @@ type Props = {
 };
 
 const BATCH_LIMIT = 50;
+/** Sentinel: pool « à contacter » (hors listes). */
+const LIST_TO_CONTACT = "";
 
 export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   const authFetch = useAuthFetch();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [skippedWaitlist, setSkippedWaitlist] = useState<Recipient[]>([]);
+  const [lists, setLists] = useState<ProspectListOption[]>([]);
+  const [listFilter, setListFilter] = useState(LIST_TO_CONTACT);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -37,11 +48,13 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const res = await authFetch("/api/admin/cold-outreach");
+      const qs = listFilter ? `?list=${encodeURIComponent(listFilter)}` : "";
+      const res = await authFetch(`/api/admin/cold-outreach${qs}`);
       const json = (await res.json()) as {
         ok?: boolean;
         recipients?: Recipient[];
         skippedWaitlist?: Recipient[];
+        lists?: ProspectListOption[];
         error?: string;
         detail?: string;
         batchLimit?: number;
@@ -52,13 +65,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       const list = json.recipients ?? [];
       setRecipients(list);
       setSkippedWaitlist(json.skippedWaitlist ?? []);
+      if (json.lists) setLists(json.lists);
       setSelected(new Set(list.slice(0, BATCH_LIMIT).map((r) => r.id)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [authFetch]);
+  }, [authFetch, listFilter]);
 
   useEffect(() => {
     void load();
@@ -66,6 +80,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
 
   const selectedCount = selected.size;
   const overBatch = selectedCount > BATCH_LIMIT;
+  const activeListLabel = listFilter || "À contacter (hors waitlist)";
 
   const selectedPreview = useMemo(
     () => recipients.filter((r) => selected.has(r.id)).slice(0, BATCH_LIMIT),
@@ -79,6 +94,10 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       else next.add(id);
       return next;
     });
+  }
+
+  function selectAllVisible() {
+    setSelected(new Set(recipients.slice(0, BATCH_LIMIT).map((r) => r.id)));
   }
 
   async function addManual() {
@@ -120,7 +139,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     const ids = [...selected].slice(0, BATCH_LIMIT);
     if (
       !window.confirm(
-        `Envoyer « ${templateKey} » (${locale}) à ${ids.length} contact(s) (max ${BATCH_LIMIT}/batch) ? Ils passeront en « contacté ».`,
+        `Envoyer « ${templateKey} » (${locale}) à ${ids.length} contact(s) de « ${activeListLabel} » (max ${BATCH_LIMIT}/batch) ?`,
       )
     ) {
       return;
@@ -164,8 +183,9 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           Envoi cold · Prospects LA MESA
         </h3>
         <p className="mt-1 text-xs text-ns-secondary">
-          Source : CRM interne (<strong>à contacter</strong>). Inscrits waitlist exclus. Après envoi →{" "}
-          <strong>contacté</strong>. Batch max <strong>{BATCH_LIMIT}</strong>. Import Sheet / fiches →{" "}
+          Choisis une <strong>liste Prospects</strong> ou le pool « à contacter ». Après envoi →{" "}
+          <strong>contacté</strong> (sauf Gagné / Ne pas contacter). Batch max{" "}
+          <strong>{BATCH_LIMIT}</strong>. Gérer les listes →{" "}
           <Link href="/admin/prospects" className="font-semibold text-ns-primary underline">
             Prospects
           </Link>
@@ -180,6 +200,31 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
 
       {error ? <p className={ERROR_TEXT}>{error}</p> : null}
       {message ? <p className="text-sm font-medium text-ns-primary">{message}</p> : null}
+
+      <div>
+        <label className={LABEL_CLASS} htmlFor="cold-list-filter">
+          Liste Prospects
+        </label>
+        <select
+          id="cold-list-filter"
+          className={INPUT_CLASS}
+          value={listFilter}
+          disabled={busy || loading}
+          onChange={(e) => setListFilter(e.target.value)}
+        >
+          <option value={LIST_TO_CONTACT}>À contacter (défaut · hors waitlist)</option>
+          {lists.map((l) => (
+            <option key={l.id} value={l.name}>
+              {l.name} ({l.contactCount})
+            </option>
+          ))}
+        </select>
+        <p className="mt-1 text-[11px] text-ns-secondary">
+          {listFilter
+            ? `Liste « ${listFilter} » — tous statuts, inscrits inclus.`
+            : "Pool cold classique : statut « à contacter », emails déjà inscrits exclus."}
+        </p>
+      </div>
 
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
         <div>
@@ -226,6 +271,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         <button
           type="button"
           className={BTN_SECONDARY}
+          disabled={busy || loading || recipients.length === 0}
+          onClick={selectAllVisible}
+        >
+          Tout sélectionner
+        </button>
+        <button
+          type="button"
+          className={BTN_SECONDARY}
           disabled={busy || selectedCount === 0}
           onClick={() => setSelected(new Set())}
         >
@@ -252,11 +305,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         <p className="text-sm text-ns-secondary">Chargement prospects…</p>
       ) : recipients.length === 0 ? (
         <p className="text-sm text-ns-secondary">
-          Aucun prospect « à contacter ». Importe un Sheet sur{" "}
+          {listFilter
+            ? `Aucun contact dans « ${listFilter} ».`
+            : "Aucun prospect « à contacter »."}{" "}
+          Gère les listes sur{" "}
           <Link href="/admin/prospects" className="font-semibold underline">
             Prospects
-          </Link>{" "}
-          ou ajoute un email ici.
+          </Link>
+          .
         </p>
       ) : (
         <ul className="max-h-64 space-y-1 overflow-y-auto text-sm">

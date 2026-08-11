@@ -174,11 +174,18 @@ export async function markProspectsContacted(ids: string[]): Promise<number> {
   const batch = db.batch();
   for (const id of ids) {
     const ref = db.collection(COLLECTIONS.prospects).doc(id);
-    batch.set(
-      ref,
-      { status: "contacted", lastContactedAt: now, updatedAt: now },
-      { merge: true },
-    );
+    const snap = await ref.get();
+    if (!snap.exists) continue;
+    const status = String(snap.data()?.status ?? "to_contact");
+    // Don't downgrade won / do_not_contact after a campaign send
+    const patch: Record<string, string> = {
+      lastContactedAt: now,
+      updatedAt: now,
+    };
+    if (status !== "won" && status !== "do_not_contact") {
+      patch.status = "contacted";
+    }
+    batch.set(ref, patch, { merge: true });
     n += 1;
   }
   if (n > 0) await batch.commit();

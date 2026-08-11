@@ -13,6 +13,7 @@ import {
   markProspectsContacted,
   upsertProspect,
 } from "@/lib/prospects/store";
+import { listProspectLists } from "@/lib/prospects/lists-store";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 const SEND_BATCH_LIMIT = 50;
@@ -30,7 +31,12 @@ async function loadWaitlistEmails(): Promise<Set<string>> {
   return emails;
 }
 
-/** Recipients: internal prospects status=to_contact, minus waitlist. */
+/**
+ * Recipients for cold UI.
+ * - Default: status=to_contact, waitlist emails excluded.
+ * - ?list=NAME: members of that Prospects playlist (any status); waitlist not excluded
+ *   (needed for « MEMBRES INSCRITS » dedicated mailings).
+ */
 export async function GET(request: Request) {
   const admin = await requirePlatformAdmin(request);
   if (isNextResponse(admin)) return admin;
@@ -39,11 +45,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ ok: false, error: "not_configured" }, { status: 503 });
   }
 
+  const url = new URL(request.url);
+  const listName = url.searchParams.get("list")?.trim() || "";
+
   try {
-    const [prospects, waitlistEmails] = await Promise.all([
-      listProspects({ status: "to_contact", limit: 3000 }),
+    const [prospects, waitlistEmails, lists] = await Promise.all([
+      listName
+        ? listProspects({ list: listName, limit: 3000 })
+        : listProspects({ status: "to_contact", limit: 3000 }),
       loadWaitlistEmails(),
+      listProspectLists(),
     ]);
+
+    const excludeWaitlist = !listName;
 
     const recipients = prospects
       .map((p) => ({
@@ -51,21 +65,33 @@ export async function GET(request: Request) {
         fullName: p.fullName || p.email,
         email: p.email,
         company: p.company || null,
+        status: p.status,
         alreadyOnWaitlist: waitlistEmails.has(p.email),
       }))
       .filter((r) => r.email.includes("@"));
 
-    const eligible = recipients.filter((r) => !r.alreadyOnWaitlist);
-    const skippedWaitlist = recipients.filter((r) => r.alreadyOnWaitlist);
+    const eligible = excludeWaitlist
+      ? recipients.filter((r) => !r.alreadyOnWaitlist)
+      : recipients;
+    const skippedWaitlist = excludeWaitlist
+      ? recipients.filter((r) => r.alreadyOnWaitlist)
+      : [];
 
     return NextResponse.json({
       ok: true,
       source: "la_mesa_prospects",
-      statusFilter: "to_contact",
+      statusFilter: listName ? null : "to_contact",
+      listFilter: listName || null,
+      excludeWaitlist,
       batchLimit: SEND_BATCH_LIMIT,
       count: eligible.length,
       recipients: eligible,
       skippedWaitlist,
+      lists: lists.map((l) => ({
+        id: l.id,
+        name: l.name,
+        contactCount: l.contactCount,
+      })),
     });
   } catch (error) {
     console.error("[admin/cold-outreach GET]", error);
@@ -165,14 +191,16 @@ export async function POST(request: Request) {
       ? new Set(parsed.data.contactIds)
       : null;
 
-    // Explicit IDs (from Prospects list/selection) → any status; otherwise cold pool = to_contact
+    // Explicit IDs (list/selection) → any status, keep waitlist members.
+    // Default cold pool → to_contact only, exclude waitlist.
     const prospects = idFilter
       ? await listProspects({ limit: 3000 })
       : await listProspects({ status: "to_contact", limit: 3000 });
 
     let targets = prospects
       .filter((p) => !idFilter || idFilter.has(p.id))
-      .filter((p) => p.email.includes("@") && !waitlistEmails.has(p.email))
+      .filter((p) => p.email.includes("@"))
+      .filter((p) => (idFilter ? true : !waitlistEmails.has(p.email)))
       .map((p) => ({ id: p.id, fullName: p.fullName || p.email, email: p.email }));
 
     if (targets.length > SEND_BATCH_LIMIT) {
