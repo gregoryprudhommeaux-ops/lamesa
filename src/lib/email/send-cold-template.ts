@@ -1,5 +1,5 @@
 import {
-  escapeEmailHtml,
+  richTextToEmailHtml,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
@@ -65,7 +65,7 @@ export async function sendColdTemplateEmail(input: {
   const bodyText = applyTemplateVars(tpl.body, vars);
   const html = wrapLaMesaEmailHtml({
     lang: input.locale,
-    bodyHtml: escapeEmailHtml(bodyText).replace(/\n/g, "<br/>"),
+    bodyHtml: richTextToEmailHtml(bodyText),
   });
 
   return sendTransactionalEmail({

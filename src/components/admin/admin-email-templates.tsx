@@ -456,7 +456,21 @@ export function AdminEmailTemplatesPanel() {
             />
           </div>
           <div>
-            <label className={LABEL_CLASS}>Corps (texte — le design HTML LA MESA s’applique à l’envoi)</label>
+            <label className={LABEL_CLASS}>
+              Corps (texte + HTML léger — shell LA MESA à l’envoi)
+            </label>
+            <p className="mb-1.5 text-[11px] leading-snug text-ns-secondary">
+              Liens et emphase :{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">
+                {'<a href="https://…">texte</a>'}
+              </code>
+              ,{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<b>"}</code>,{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<i>"}</code>,{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<u>"}</code>,{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<br>"}</code>
+              . Autre HTML ignoré / échappé.
+            </p>
             <textarea
               className={`${INPUT_CLASS} min-h-[240px] font-mono text-sm`}
               value={body}

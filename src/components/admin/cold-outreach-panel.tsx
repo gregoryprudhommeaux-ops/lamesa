@@ -225,6 +225,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
         </button>
         <button
           type="button"
+          className={BTN_SECONDARY}
+          disabled={busy || selectedCount === 0}
+          onClick={() => setSelected(new Set())}
+        >
+          Effacer la sélection
+        </button>
+        <button
+          type="button"
           className={BTN_PRIMARY}
           disabled={busy || loading || !enabled || selectedCount === 0}
           onClick={() => void sendSelected()}

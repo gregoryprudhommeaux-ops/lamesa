@@ -15,6 +15,78 @@ export function plainTextToEmailHtml(text: string): string {
   return escapeEmailHtml(text).replace(/\n/g, "<br/>");
 }
 
+const PLACEHOLDER_RE = /\uE000(\d+)\uE001/g;
+
+function parseSafeHttpHref(attrs: string): string | null {
+  const m =
+    attrs.match(/href\s*=\s*"([^"]*)"/i) ||
+    attrs.match(/href\s*=\s*'([^']*)'/i) ||
+    attrs.match(/href\s*=\s*([^\s>]+)/i);
+  if (!m) return null;
+  let href = (m[1] ?? "").trim();
+  href = href.replace(/&amp;/gi, "&").replace(/&quot;/gi, '"');
+  if (!/^https?:\/\//i.test(href)) return null;
+  if (/[\s<>"']/.test(href)) return null;
+  return href;
+}
+
+function escapeOutsidePlaceholders(s: string): string {
+  return s
+    .split(/(\uE000\d+\uE001)/)
+    .map((part) => (/^\uE000\d+\uE001$/.test(part) ? part : escapeEmailHtml(part)))
+    .join("");
+}
+
+/**
+ * Template body → email HTML.
+ * Allows limited inline markup: a[href=http(s)], b, strong, i, em, u, br.
+ * Everything else is escaped. Newlines → br.
+ */
+export function richTextToEmailHtml(text: string): string {
+  return convertRichText(text, true);
+}
+
+function convertRichText(text: string, nl2br: boolean): string {
+  const placeholders: string[] = [];
+  const protect = (html: string) => {
+    const i = placeholders.length;
+    placeholders.push(html);
+    return `\uE000${i}\uE001`;
+  };
+
+  let s = text.replace(/\r\n/g, "\n");
+
+  // Links first (http/https only); recurse on label so <b> inside links works
+  s = s.replace(/<a\s+([^>]+)>([\s\S]*?)<\/a>/gi, (full, attrs: string, inner: string) => {
+    const href = parseSafeHttpHref(attrs);
+    if (!href) return full;
+    const safeInner = convertRichText(inner, false);
+    return protect(
+      `<a href="${escapeEmailHtml(href)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${safeInner}</a>`,
+    );
+  });
+
+  // Inline formats, innermost first
+  let prev = "";
+  while (prev !== s) {
+    prev = s;
+    s = s.replace(
+      /<(b|strong|i|em|u)>([\s\S]*?)<\/\1>/gi,
+      (_full, tag: string, inner: string) => {
+        const t = tag.toLowerCase();
+        return protect(`<${t}>${escapeOutsidePlaceholders(inner)}</${t}>`);
+      },
+    );
+  }
+
+  s = s.replace(/<br\s*\/?>/gi, () => protect("<br/>"));
+
+  s = escapeOutsidePlaceholders(s);
+  if (nl2br) s = s.replace(/\n/g, "<br/>");
+
+  return s.replace(PLACEHOLDER_RE, (_, n: string) => placeholders[Number(n)] ?? "");
+}
+
 /** Display label for the public site (footer of every branded mail). */
 export const LA_MESA_SITE_LINK_LABEL = "www.lamesasecreta.com";
 
@@ -85,10 +157,10 @@ export function wrapLaMesaEmailHtml(options: LaMesaEmailShellOptions): string {
 </html>`;
 }
 
-/** Wrap a plain-text template body in the LA MESA shell (for preview + simple sends). */
+/** Wrap a template body in the LA MESA shell (preview + simple sends). Allows safe inline HTML. */
 export function wrapLaMesaPlainBody(bodyText: string, opts?: { title?: string; lang?: string }): string {
   return wrapLaMesaEmailHtml({
-    bodyHtml: plainTextToEmailHtml(bodyText),
+    bodyHtml: richTextToEmailHtml(bodyText),
     title: opts?.title,
     lang: opts?.lang,
   });
