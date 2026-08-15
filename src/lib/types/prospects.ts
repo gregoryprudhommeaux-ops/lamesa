@@ -31,6 +31,8 @@ export type Prospect = {
   createdAt: string;
   updatedAt: string;
   lastContactedAt?: string | null;
+  /** Template campaigns successfully sent; prevents selecting the same contact twice. */
+  sentTemplateKeys?: string[];
   deletedAt?: string | null;
 };
 

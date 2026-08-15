@@ -28,6 +28,9 @@ function docToProspect(id: string, data: Record<string, unknown>): Prospect {
     updatedAt: String(data.updatedAt ?? ""),
     lastContactedAt:
       typeof data.lastContactedAt === "string" ? data.lastContactedAt : null,
+    sentTemplateKeys: Array.isArray(data.sentTemplateKeys)
+      ? data.sentTemplateKeys.map(String).filter(Boolean)
+      : [],
     deletedAt: typeof data.deletedAt === "string" ? data.deletedAt : null,
   };
 }
@@ -167,7 +170,10 @@ export async function softDeleteProspect(id: string): Promise<boolean> {
   return true;
 }
 
-export async function markProspectsContacted(ids: string[]): Promise<number> {
+export async function markProspectsContacted(
+  ids: string[],
+  templateKey?: string,
+): Promise<number> {
   const db = getAdminFirestore();
   const now = new Date().toISOString();
   let n = 0;
@@ -182,10 +188,22 @@ export async function markProspectsContacted(ids: string[]): Promise<number> {
       lastContactedAt: now,
       updatedAt: now,
     };
+    const sentTemplateKeys = Array.isArray(snap.data()?.sentTemplateKeys)
+      ? snap.data()!.sentTemplateKeys.map(String).filter(Boolean)
+      : [];
     if (status !== "won" && status !== "do_not_contact") {
       patch.status = "contacted";
     }
-    batch.set(ref, patch, { merge: true });
+    batch.set(
+      ref,
+      {
+        ...patch,
+        ...(templateKey
+          ? { sentTemplateKeys: [...new Set([...sentTemplateKeys, templateKey])] }
+          : {}),
+      },
+      { merge: true },
+    );
     n += 1;
   }
   if (n > 0) await batch.commit();

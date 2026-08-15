@@ -34,6 +34,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
   const authFetch = useAuthFetch();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [skippedWaitlist, setSkippedWaitlist] = useState<Recipient[]>([]);
+  const [alreadySent, setAlreadySent] = useState<Recipient[]>([]);
   const [lists, setLists] = useState<ProspectListOption[]>([]);
   const [listFilter, setListFilter] = useState(LIST_TO_CONTACT);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -48,12 +49,14 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     setLoading(true);
     setError(null);
     try {
-      const qs = listFilter ? `?list=${encodeURIComponent(listFilter)}` : "";
-      const res = await authFetch(`/api/admin/cold-outreach${qs}`);
+      const qs = new URLSearchParams({ templateKey });
+      if (listFilter) qs.set("list", listFilter);
+      const res = await authFetch(`/api/admin/cold-outreach?${qs.toString()}`);
       const json = (await res.json()) as {
         ok?: boolean;
         recipients?: Recipient[];
         skippedWaitlist?: Recipient[];
+        alreadySent?: Recipient[];
         lists?: ProspectListOption[];
         error?: string;
         detail?: string;
@@ -65,6 +68,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       const list = json.recipients ?? [];
       setRecipients(list);
       setSkippedWaitlist(json.skippedWaitlist ?? []);
+      setAlreadySent(json.alreadySent ?? []);
       if (json.lists) setLists(json.lists);
       setSelected(new Set(list.slice(0, BATCH_LIMIT).map((r) => r.id)));
     } catch (e) {
@@ -72,7 +76,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [authFetch, listFilter]);
+  }, [authFetch, listFilter, templateKey]);
 
   useEffect(() => {
     void load();
@@ -289,10 +293,13 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           className={BTN_PRIMARY}
           disabled={busy || loading || !enabled || selectedCount === 0}
           onClick={() => void sendSelected()}
+          title={!enabled ? "Active d’abord ce template avec le bouton « Activer » ci-dessous." : undefined}
         >
           {busy
             ? "Envoi…"
-            : `Envoyer à ${Math.min(selectedCount, BATCH_LIMIT)} contact(s)`}
+            : !enabled
+              ? "Active le template pour envoyer"
+              : `Envoyer à ${Math.min(selectedCount, BATCH_LIMIT)} contact(s)`}
         </button>
         {overBatch ? (
           <p className="self-center text-[11px] text-amber-800">
@@ -353,6 +360,13 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
             .map((r) => r.email)
             .join(", ")}
           {skippedWaitlist.length > 5 ? "…" : ""}
+        </p>
+      ) : null}
+
+      {alreadySent.length > 0 ? (
+        <p className="text-[11px] font-medium text-ns-secondary">
+          {alreadySent.length} contact(s) déjà destinataire(s) de ce template — exclus
+          automatiquement de cette sélection.
         </p>
       ) : null}
     </div>

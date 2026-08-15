@@ -14,6 +14,7 @@ import {
   upsertProspect,
 } from "@/lib/prospects/store";
 import { listProspectLists } from "@/lib/prospects/lists-store";
+import { isEligibleForTemplateCampaign } from "@/lib/prospects/campaign-eligibility";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 const SEND_BATCH_LIMIT = 50;
@@ -47,6 +48,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const listName = url.searchParams.get("list")?.trim() || "";
+  const templateKey = url.searchParams.get("templateKey")?.trim() || "";
 
   try {
     const [prospects, waitlistEmails, lists] = await Promise.all([
@@ -70,12 +72,25 @@ export async function GET(request: Request) {
       }))
       .filter((r) => r.email.includes("@"));
 
-    const eligible = excludeWaitlist
+    const waitlistEligible = excludeWaitlist
       ? recipients.filter((r) => !r.alreadyOnWaitlist)
       : recipients;
+    const eligible = waitlistEligible.filter((r) =>
+      isEligibleForTemplateCampaign(
+        prospects.find((p) => p.id === r.id) ?? {},
+        templateKey,
+      ),
+    );
     const skippedWaitlist = excludeWaitlist
       ? recipients.filter((r) => r.alreadyOnWaitlist)
       : [];
+    const alreadySent = waitlistEligible.filter(
+      (r) =>
+        !isEligibleForTemplateCampaign(
+          prospects.find((p) => p.id === r.id) ?? {},
+          templateKey,
+        ),
+    );
 
     return NextResponse.json({
       ok: true,
@@ -87,6 +102,7 @@ export async function GET(request: Request) {
       count: eligible.length,
       recipients: eligible,
       skippedWaitlist,
+      alreadySent,
       lists: lists.map((l) => ({
         id: l.id,
         name: l.name,
@@ -201,7 +217,12 @@ export async function POST(request: Request) {
       .filter((p) => !idFilter || idFilter.has(p.id))
       .filter((p) => p.email.includes("@"))
       .filter((p) => (idFilter ? true : !waitlistEmails.has(p.email)))
-      .map((p) => ({ id: p.id, fullName: p.fullName || p.email, email: p.email }));
+      .map((p) => ({
+        id: p.id,
+        fullName: p.fullName || p.email,
+        email: p.email,
+        previousStatus: p.status,
+      }));
 
     if (targets.length > SEND_BATCH_LIMIT) {
       targets = targets.slice(0, SEND_BATCH_LIMIT);
@@ -267,10 +288,11 @@ export async function POST(request: Request) {
     }
 
     if (succeededIds.length > 0) {
-      await markProspectsContacted(succeededIds);
+      await markProspectsContacted(succeededIds, templateKey);
       for (const id of succeededIds) {
         const p = targets.find((t) => t.id === id);
         if (!p) continue;
+        if (p.previousStatus === "won" || p.previousStatus === "do_not_contact") continue;
         void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
           recordContactActivity({
             email: p.email,
