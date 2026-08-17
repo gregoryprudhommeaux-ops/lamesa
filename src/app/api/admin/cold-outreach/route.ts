@@ -11,7 +11,6 @@ import { isSoftDeleted } from "@/lib/member/soft-delete";
 import {
   listProspects,
   markProspectsContacted,
-  upsertProspect,
 } from "@/lib/prospects/store";
 import { listProspectLists } from "@/lib/prospects/lists-store";
 import { isEligibleForTemplateCampaign } from "@/lib/prospects/campaign-eligibility";
@@ -122,11 +121,11 @@ export async function GET(request: Request) {
   }
 }
 
-const addSchema = z.object({
-  email: z.string().email(),
+const manualSendSchema = z.object({
+  email: z.string().trim().email(),
   fullName: z.string().trim().max(200).optional(),
-  company: z.string().trim().max(200).optional(),
-  phone: z.string().trim().max(40).optional(),
+  templateKey: z.string().min(1),
+  locale: z.enum(["es", "fr", "en"]).default("es"),
 });
 
 const sendSchema = z.object({
@@ -156,35 +155,43 @@ export async function POST(request: Request) {
       ? String((body as { action?: string }).action ?? "send")
       : "send";
 
-  if (action === "add") {
-    const parsed = addSchema.safeParse(body);
+  if (action === "send_manual") {
+    const parsed = manualSendSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });
     }
-    const waitlistEmails = await loadWaitlistEmails();
-    const email = parsed.data.email.trim().toLowerCase();
-    if (waitlistEmails.has(email)) {
+    if (!isCustomEmailTemplateKey(parsed.data.templateKey)) {
       return NextResponse.json(
-        { ok: false, error: "already_on_waitlist", email },
-        { status: 409 },
+        { ok: false, error: "custom_template_required" },
+        { status: 400 },
       );
     }
     try {
-      const result = await upsertProspect({
-        email,
-        fullName: parsed.data.fullName,
-        company: parsed.data.company,
-        phone: parsed.data.phone,
-        status: "to_contact",
-        source: "cold-manual",
+      const email = parsed.data.email.trim().toLowerCase();
+      const result = await sendColdTemplateEmail({
+        templateKey: parsed.data.templateKey,
+        locale: parsed.data.locale,
+        to: email,
+        fullName: parsed.data.fullName?.trim() || email,
       });
-      if (!result.ok) {
-        return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+      if ("skipped" in result && result.skipped) {
+        return NextResponse.json({
+          ok: true,
+          sent: 0,
+          skipped: 1,
+          reason: result.reason,
+        });
       }
-      return NextResponse.json({ ok: true, contact: result.prospect, action: result.action });
+      if (!result.ok) {
+        return NextResponse.json(
+          { ok: false, error: "error" in result ? result.error : "send_failed" },
+          { status: 502 },
+        );
+      }
+      return NextResponse.json({ ok: true, sent: 1, skipped: 0, email });
     } catch (error) {
-      console.error("[admin/cold-outreach add]", error);
-      return NextResponse.json({ ok: false, error: "add_failed" }, { status: 502 });
+      console.error("[admin/cold-outreach send_manual]", error);
+      return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
     }
   }
 

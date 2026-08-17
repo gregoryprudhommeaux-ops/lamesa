@@ -104,7 +104,19 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     setSelected(new Set(recipients.slice(0, BATCH_LIMIT).map((r) => r.id)));
   }
 
-  async function addManual() {
+  async function sendManual() {
+    if (!enabled) {
+      setError("Active le template avant d’envoyer.");
+      return;
+    }
+    const email = manualEmail.trim();
+    if (
+      !window.confirm(
+        `Envoyer « ${templateKey} » (${locale}) uniquement à ${email} ?\n\nCette adresse ne sera ajoutée ni aux Prospects ni à une liste.`,
+      )
+    ) {
+      return;
+    }
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -112,22 +124,33 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       const res = await authFetch("/api/admin/cold-outreach", {
         method: "POST",
         body: JSON.stringify({
-          action: "add",
-          email: manualEmail.trim(),
+          action: "send_manual",
+          templateKey,
+          locale,
+          email,
           fullName: manualName.trim() || undefined,
         }),
       });
-      const json = (await res.json()) as { ok?: boolean; error?: string };
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        skipped?: number;
+        reason?: string;
+        error?: string;
+      };
       if (!res.ok || !json.ok) {
-        if (json.error === "already_on_waitlist") {
-          throw new Error("Cet email est déjà inscrit sur LA MESA — pas de cold.");
-        }
-        throw new Error(json.error ?? "add_failed");
+        throw new Error(json.error ?? "send_failed");
+      }
+      if ((json.skipped ?? 0) > 0) {
+        throw new Error(
+          json.reason === "template_disabled"
+            ? "Template désactivé — active-le avant d’envoyer."
+            : json.reason ?? "Envoi ignoré.",
+        );
       }
       setManualEmail("");
       setManualName("");
-      setMessage("Prospect ajouté (statut à contacter).");
-      await load();
+      setMessage(`Template envoyé uniquement à ${email}. Aucun prospect créé.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -233,7 +256,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
         <div>
           <label className={LABEL_CLASS} htmlFor="cold-manual-email">
-            Ajouter un email
+            Envoi individuel / test
           </label>
           <input
             id="cold-manual-email"
@@ -260,13 +283,16 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           <button
             type="button"
             className={BTN_SECONDARY}
-            disabled={busy || !manualEmail.includes("@")}
-            onClick={() => void addManual()}
+            disabled={busy || !enabled || !manualEmail.includes("@")}
+            onClick={() => void sendManual()}
           >
-            Ajouter
+            {busy ? "Envoi…" : "Envoyer ce template"}
           </button>
         </div>
       </div>
+      <p className="-mt-3 text-[11px] text-ns-secondary">
+        Envoi direct à cette seule adresse : aucun prospect créé, aucune liste modifiée.
+      </p>
 
       <div className="flex flex-wrap gap-2">
         <button type="button" className={BTN_SECONDARY} disabled={busy || loading} onClick={() => void load()}>
