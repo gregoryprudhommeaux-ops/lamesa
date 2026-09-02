@@ -370,6 +370,7 @@
     "interestAuthRequired": "Sign in with your LA MESA account to reply. Your name, email and company come from your profile — no need to re-enter them.",
     "interestValidateAuthHint": "To validate your reply, sign in with your LA MESA account (or create one). Name, email and company come from your profile.",
     "interestOrCreateAccount": "No account yet?",
+    "interestContactPrefix": "For any questions:",
     "interestLoginCta": "Sign in",
     "interestSignupCta": "Create an account",
     "interestNeedMembership": "You're signed in, but we can't find your member profile. Join first (same email), then come back to validate.",

@@ -370,6 +370,7 @@
     "interestAuthRequired": "Inicia sesión con tu cuenta LA MESA para responder. Tu nombre, correo y empresa vienen de tu perfil — no hace falta volver a escribirlos.",
     "interestValidateAuthHint": "Para validar tu respuesta, inicia sesión con tu cuenta LA MESA (o crea una). Nombre, correo y empresa vienen de tu perfil.",
     "interestOrCreateAccount": "¿Aún no tienes cuenta?",
+    "interestContactPrefix": "Para cualquier duda:",
     "interestLoginCta": "Iniciar sesión",
     "interestSignupCta": "Crear una cuenta",
     "interestNeedMembership": "Estás conectado, pero no encontramos tu perfil de miembro. Inscríbete primero (mismo correo) y vuelve a validar.",

@@ -370,6 +370,7 @@
     "interestAuthRequired": "Connecte-toi avec ton compte LA MESA pour répondre. Tes infos (nom, email, entreprise) viennent de ton profil — pas besoin de les ressaisir.",
     "interestValidateAuthHint": "Pour valider ta réponse, connecte-toi avec ton compte LA MESA (ou crée-en un). Nom, email et entreprise viennent de ton profil.",
     "interestOrCreateAccount": "Pas encore de compte ?",
+    "interestContactPrefix": "Pour toute question :",
     "interestLoginCta": "Se connecter",
     "interestSignupCta": "Créer un compte",
     "interestNeedMembership": "Ton compte est connecté, mais on ne trouve pas ton profil membre. Inscris-toi d’abord (même email), puis reviens valider.",

@@ -564,6 +564,16 @@ function InterestForm({
           </Link>
         </p>
       ) : null}
+
+      <p className="pt-2 text-center text-xs text-ns-secondary">
+        {t("interestContactPrefix")}{" "}
+        <a
+          href="mailto:greg@nextstep-services.com"
+          className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+        >
+          greg@nextstep-services.com
+        </a>
+      </p>
     </form>
   );
 }
@@ -677,11 +687,6 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
       <div className="mt-5 space-y-1.5 text-center">
         <p className="text-base font-bold text-ns-hero">
           {fmtDateTime(event.startsAt, locale)}
-          {event.endsAt ? (
-            <span className="font-semibold text-ns-tertiary">
-              {` → ${fmtDateTime(event.endsAt, locale)}`}
-            </span>
-          ) : null}
         </p>
         {interestMode && event.interestDeadlineAt ? (
           <p className="text-sm font-semibold text-ns-tertiary">
@@ -735,13 +740,7 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
         </div>
       ) : null}
 
-      {interestMode ? (
-        <div className="mt-5 rounded-xl border border-ns-alternate bg-ns-brand-light/30 px-4 py-3 text-sm">
-          <p className="font-bold text-ns-hero">{t("filterTitle")}</p>
-          <p className="mt-1 text-ns-secondary">{t("filterBody")}</p>
-          <p className="mt-2 text-xs font-medium leading-relaxed text-ns-tertiary">{t("allInPrice")}</p>
-        </div>
-      ) : (typeof event.priceMxn === "number" && event.priceMxn > 0) ||
+      {interestMode ? null : (typeof event.priceMxn === "number" && event.priceMxn > 0) ||
         hasNegotiatedMenuInfo(event) ? (
         <PriceBlock event={event} locale={locale} />
       ) : null}
