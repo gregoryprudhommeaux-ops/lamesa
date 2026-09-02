@@ -261,6 +261,7 @@ export async function upsertFranconetworkWaitlistMember(
         to: record.email,
         fullName: record.fullName,
         waitlistId: existing.id,
+        member: { ...record, ...patch },
         alreadySent: existing.fnAnnouncementEmailStatus === "sent",
       });
 
@@ -288,6 +289,7 @@ export async function upsertFranconetworkWaitlistMember(
       to: record.email,
       fullName: record.fullName,
       waitlistId: ref.id,
+      member: record,
       alreadySent: false,
     });
 

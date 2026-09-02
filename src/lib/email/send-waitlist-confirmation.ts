@@ -9,8 +9,8 @@ import {
 } from "@/lib/email/templates";
 import {
   escapeEmailHtml,
-  laMesaSiteFooterHtml,
-  laMesaSiteFooterText,
+  laMesaEmailFooterHtml,
+  laMesaEmailFooterText,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
 import type { TemplateLocale } from "@/lib/types/events";
@@ -121,7 +121,7 @@ function buildLegacyFullContent(
             </td>
           </tr>
           <tr><td style="padding-top:28px;font-size:12px;color:#777;">${escapeHtml(copy.footer)}</td></tr>
-          ${laMesaSiteFooterHtml()}
+          ${laMesaEmailFooterHtml(locale)}
         </table>
       </td>
     </tr>
@@ -142,7 +142,7 @@ function buildLegacyFullContent(
     "",
     copy.footer,
     "",
-    laMesaSiteFooterText(),
+    laMesaEmailFooterText(locale),
   ].join("\n");
 
   return { subject: copy.subject, html, text };
@@ -179,7 +179,7 @@ async function buildExpressFromTemplate(input: {
     bodyHtml,
   });
 
-  return { subject, html, text: `${bodyText}\n\n${laMesaSiteFooterText()}` };
+  return { subject, html, text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}` };
 }
 
 export async function sendWaitlistConfirmationEmail(input: {

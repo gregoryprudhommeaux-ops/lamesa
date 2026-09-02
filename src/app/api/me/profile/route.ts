@@ -12,6 +12,7 @@ import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-pe
 import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { CITY_HUBS } from "@/lib/constants/city-hubs";
 import { isOtherSector } from "@/lib/constants/form-options";
+import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 
@@ -23,8 +24,17 @@ const profilePatchSchema = z
   .object({
     fullName: z.string().trim().min(3).max(120).optional(),
     linkedinUrl: z
-      .union([z.literal(""), z.string().trim().url()])
-      .optional(),
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => {
+        if (v === undefined) return undefined;
+        if (!v) return "";
+        return normalizeLinkedInUrl(v) || v;
+      })
+      .refine((v) => v === undefined || v === "" || isValidLinkedInUrl(v), {
+        message: "invalid_linkedin",
+      }),
     company: z.string().trim().max(120).optional(),
     sector: z.string().trim().max(80).optional(),
     sectorOther: z
@@ -83,7 +93,28 @@ export async function PATCH(request: Request) {
 
   const parsed = profilePatchSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    const path = issue?.path?.[0] ? String(issue.path[0]) : undefined;
+    let message = "validation";
+    if (issue?.message === "sector_other_required" || issue?.message === "invalid_linkedin") {
+      message = issue.message;
+    } else if (path === "linkedinUrl") {
+      message = "invalid_linkedin";
+    } else if (path === "sectorOther" || path === "sector") {
+      message = "sector_other_required";
+    } else if (path === "phone") {
+      message = "invalid_phone";
+    } else if (path === "city") {
+      message = "invalid_city";
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: message,
+        field: path,
+      },
+      { status: 400 },
+    );
   }
 
   const db = getAdminFirestore();
@@ -118,6 +149,8 @@ export async function PATCH(request: Request) {
   const merged = {
     ...profile,
     ...patch,
+    linkedinUrl: patch.linkedinUrl ?? profile.linkedinUrl,
+    sectorOther: patch.sectorOther ?? profile.sectorOther,
     profileComplete: nextProfileComplete,
   };
   const sync = await syncWaitlistMemberToDatabasePerso(merged, "[me/profile]");

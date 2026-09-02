@@ -1,4 +1,5 @@
 import {
+  laMesaSiteFooterText,
   richTextToEmailHtml,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
@@ -66,13 +67,14 @@ export async function sendColdTemplateEmail(input: {
   const html = wrapLaMesaEmailHtml({
     lang: input.locale,
     bodyHtml: richTextToEmailHtml(bodyText),
+    includeLegalFooter: false,
   });
 
   return sendTransactionalEmail({
     to: email,
     subject,
     html,
-    text: bodyText,
+    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
     bccAdmins: false,
   });
 }

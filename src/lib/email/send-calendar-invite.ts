@@ -9,9 +9,9 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import {
+  laMesaEmailFooterText,
   wrapLaMesaEmailHtml,
   wrapLaMesaPlainBody,
-  laMesaSiteFooterText,
 } from "@/lib/email/la-mesa-email-shell";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
@@ -122,7 +122,7 @@ export async function sendCalendarInviteEmail(input: {
     to: input.participation.email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
     attachments: [
       {
         name: "invite.ics",
@@ -158,6 +158,6 @@ export async function sendTemplatedEventEmail(input: {
     to: input.participation.email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
   });
 }

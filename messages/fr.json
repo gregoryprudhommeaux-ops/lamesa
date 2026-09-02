@@ -233,10 +233,10 @@
     "error": "Envoi impossible. Réessaie dans un instant.",
     "errors": {
       "already_registered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
-      "sector_other_required": "Tu as choisi « Autre » : précise ton secteur dans le champ libre.",
-      "invalid_linkedin": "URL LinkedIn invalide (linkedin.com/in/…)",
+      "sector_other_required": "Tu as choisi « Autre » : précise ton secteur dans le champ libre dessous (ex. psychologie, coaching).",
+      "invalid_linkedin": "Enregistrement impossible : le LinkedIn doit être un profil valide, par ex. https://www.linkedin.com/in/ton-profil",
       "invalid_phone": "Numéro de téléphone invalide — indicatif pays + numéro local requis.",
-      "validation": "Vérifie les champs du formulaire."
+      "validation": "Enregistrement impossible : vérifie les champs indiqués et réessaie."
     }
   },
   "admin": {
@@ -412,9 +412,25 @@
     "profileIncompleteBadge": "Profil incomplet",
     "completionRate": "Taux de complétion : {percent}%",
     "completionHint": "Plus ton profil est complet, mieux on peut te matcher pour t’inviter à une table qui te correspond.",
+    "missingFieldsTitle": "Pour arriver à 100 %, complète encore :",
+    "linkedinHint": "Colle le lien de ton profil LinkedIn (linkedin.com/in/… est accepté ; https:// sera ajouté si besoin).",
+    "sectorOtherHint": "Si tu as choisi « Autre », précise ton secteur. Sans ce champ, le profil n’atteint pas 100 % et ne peut pas être enregistré.",
+    "saveFailedPrefix": "Impossible d’enregistrer le profil :",
     "save": "Enregistrer",
     "saving": "Enregistrement…",
     "saved": "Profil mis à jour.",
+    "errors": {
+      "sector_other_required": "Tu as choisi « Autre » : précise ton secteur dans le champ libre dessous (ex. psychologie, coaching).",
+      "invalid_linkedin": "LinkedIn invalide. Utilise un lien de profil, par ex. https://www.linkedin.com/in/ton-profil",
+      "invalid_phone": "Téléphone invalide : inclus l’indicatif pays (ex. +52…).",
+      "invalid_city": "Choisis une ville dans la liste.",
+      "validation": "Vérifie les champs du formulaire et réessaie.",
+      "unauthorized": "Ta session a expiré. Reconnecte-toi puis réessaie.",
+      "forbidden": "Tu n’as pas la permission de modifier ce profil.",
+      "not_on_waitlist": "Aucun profil associé à cet email.",
+      "save_failed": "Erreur d’enregistrement. Réessaie dans quelques secondes.",
+      "generic": "Enregistrement impossible. Vérifie les champs et réessaie."
+    },
     "upcomingTitle": "Prochaines invitations",
     "upcomingEmpty": "Aucune invitation à venir pour le moment.",
     "pastTitle": "Invitations passées",

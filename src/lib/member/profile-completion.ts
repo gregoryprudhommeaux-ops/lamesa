@@ -50,6 +50,22 @@ export const PROFILE_COMPLETION_FIELD_LABELS_ES: Record<ProfileCompletionField, 
   isSeeking: "qué buscas",
 };
 
+/** English labels for member-facing UI. */
+export const PROFILE_COMPLETION_FIELD_LABELS_EN: Record<ProfileCompletionField, string> = {
+  fullName: "full name",
+  email: "email",
+  phone: "phone",
+  company: "company",
+  sector: "industry (specify if Other)",
+  position: "role",
+  city: "city",
+  linkedinUrl: "LinkedIn",
+  invitationMotivation: "motivation",
+  extraActivities: "interests",
+  canBring: "what you can bring",
+  isSeeking: "what you’re looking for",
+};
+
 export type ProfileCompletionInput = {
   fullName?: string | null;
   email?: string | null;
@@ -112,6 +128,23 @@ export function listMissingProfileFieldsEs(profile: ProfileCompletionInput): str
   return PROFILE_COMPLETION_FIELDS.filter((field) => !isFieldFilled(profile, field)).map(
     (field) => PROFILE_COMPLETION_FIELD_LABELS_ES[field],
   );
+}
+
+/** English labels of empty fields (member UI). */
+export function listMissingProfileFieldsEn(profile: ProfileCompletionInput): string[] {
+  return PROFILE_COMPLETION_FIELDS.filter((field) => !isFieldFilled(profile, field)).map(
+    (field) => PROFILE_COMPLETION_FIELD_LABELS_EN[field],
+  );
+}
+
+/** Locale-aware missing-field labels for member UI. */
+export function listMissingProfileFieldsForLocale(
+  profile: ProfileCompletionInput,
+  locale: string,
+): string[] {
+  if (locale === "fr") return listMissingProfileFieldsFr(profile);
+  if (locale === "en") return listMissingProfileFieldsEn(profile);
+  return listMissingProfileFieldsEs(profile);
 }
 
 /** True when the profile is not fully filled (cannot be curated at 100%). */

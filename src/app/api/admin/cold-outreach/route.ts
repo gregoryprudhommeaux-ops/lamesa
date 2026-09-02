@@ -14,6 +14,10 @@ import {
 } from "@/lib/prospects/store";
 import { listProspectLists } from "@/lib/prospects/lists-store";
 import { isEligibleForTemplateCampaign } from "@/lib/prospects/campaign-eligibility";
+import {
+  isDatabasePersoConfigured,
+  markLaMesaContacted,
+} from "@/lib/database-perso";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 const SEND_BATCH_LIMIT = 50;
@@ -310,6 +314,16 @@ export async function POST(request: Request) {
             meta: { status: "contacted" },
           }),
         );
+      }
+
+      // Mirror CONTACTÉ on Database Perso (LA MESA - CONTACTER) by email.
+      if (isDatabasePersoConfigured()) {
+        const emails = succeededIds
+          .map((id) => targets.find((t) => t.id === id)?.email)
+          .filter((e): e is string => Boolean(e?.includes("@")));
+        void markLaMesaContacted([], emails).catch((error) => {
+          console.warn("[admin/cold-outreach] database-perso mark-contacted failed:", error);
+        });
       }
     }
 

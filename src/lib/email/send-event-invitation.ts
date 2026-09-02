@@ -1,6 +1,6 @@
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
-  laMesaSiteFooterText,
+  laMesaEmailFooterText,
   wrapLaMesaPlainBody,
 } from "@/lib/email/la-mesa-email-shell";
 
@@ -15,6 +15,6 @@ export async function sendEventInvitationEmail(input: {
     to: input.to,
     subject: input.subject,
     html,
-    text: `${input.bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${input.bodyText}\n\n${laMesaEmailFooterText("es")}`,
   });
 }

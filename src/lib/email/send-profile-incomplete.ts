@@ -1,6 +1,6 @@
 import {
   escapeEmailHtml,
-  laMesaSiteFooterText,
+  laMesaEmailFooterText,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
@@ -208,7 +208,7 @@ export async function sendProfileIncompleteEmail(input: {
     to: email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${laMesaEmailFooterText("es")}`,
     bccAdmins: false,
   });
 

@@ -8,7 +8,7 @@ import {
 } from "@/lib/email/templates";
 import {
   escapeEmailHtml,
-  laMesaSiteFooterText,
+  laMesaEmailFooterText,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
 import type { TemplateLocale } from "@/lib/types/events";
@@ -73,6 +73,6 @@ export async function sendReferralInviteEmail(input: {
     to: input.to,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
   });
 }

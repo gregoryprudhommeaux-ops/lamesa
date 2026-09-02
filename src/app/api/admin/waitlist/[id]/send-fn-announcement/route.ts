@@ -65,6 +65,7 @@ export async function POST(request: Request, { params }: Params) {
       to: member.email.trim(),
       fullName: member.fullName ?? "",
       waitlistId: member.id,
+      member,
       force,
       alreadySent,
     });

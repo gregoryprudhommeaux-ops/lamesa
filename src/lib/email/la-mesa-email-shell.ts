@@ -109,6 +109,113 @@ export function laMesaSiteFooterText(): string {
   return LA_MESA_SITE_LINK_LABEL;
 }
 
+export type EmailFooterLang = "es" | "en" | "fr";
+
+/** Normalize template / shell lang to a supported footer locale. */
+export function normalizeEmailFooterLang(lang?: string | null): EmailFooterLang {
+  if (lang === "fr" || lang === "en") return lang;
+  return "es";
+}
+
+/** Member account settings (delete profile / opt out of emails). */
+export function laMesaMemberSettingsUrl(lang?: string | null): string {
+  const locale = normalizeEmailFooterLang(lang);
+  return `${PRODUCTION_SITE_URL}/${locale}/reglages`;
+}
+
+type LegalFooterCopy = {
+  beforeLink: string;
+  linkLabel: string;
+  afterLink: string;
+};
+
+function legalFooterCopy(lang: EmailFooterLang): LegalFooterCopy {
+  switch (lang) {
+    case "fr":
+      return {
+        beforeLink:
+          "Vous recevez cet e-mail parce que vous êtes inscrit(e) à LA MESA. Si vous ne souhaitez plus recevoir d'e-mails, vous pouvez supprimer votre profil dans vos ",
+        linkLabel: "réglages",
+        afterLink: ".",
+      };
+    case "en":
+      return {
+        beforeLink:
+          "You're receiving this email because you're registered with LA MESA. If you no longer wish to receive emails, you can delete your profile in ",
+        linkLabel: "account settings",
+        afterLink: ".",
+      };
+    default:
+      return {
+        beforeLink:
+          "Recibes este correo porque estás registrado(a) en LA MESA. Si ya no deseas recibir correos, puedes eliminar tu perfil en ",
+        linkLabel: "ajustes de la cuenta",
+        afterLink: ".",
+      };
+  }
+}
+
+export type LaMesaEmailFooterOptions = {
+  /** Default true — member-facing mails. */
+  includeLegal?: boolean;
+  /** Default true. */
+  includeSite?: boolean;
+};
+
+/** HTML row: legal notice + optional site link at the bottom of the white card. */
+export function laMesaEmailFooterHtml(
+  lang?: string | null,
+  options: LaMesaEmailFooterOptions = {},
+): string {
+  const locale = normalizeEmailFooterLang(lang);
+  const includeLegal = options.includeLegal !== false;
+  const includeSite = options.includeSite !== false;
+  if (!includeLegal && !includeSite) return "";
+
+  const parts: string[] = [];
+  if (includeLegal) {
+    const copy = legalFooterCopy(locale);
+    const settingsUrl = escapeEmailHtml(laMesaMemberSettingsUrl(locale));
+    const linkLabel = escapeEmailHtml(copy.linkLabel);
+    parts.push(
+      `${escapeEmailHtml(copy.beforeLink)}<a href="${settingsUrl}" style="color:#555;font-weight:600;text-decoration:underline;">${linkLabel}</a>${escapeEmailHtml(copy.afterLink)}`,
+    );
+  }
+  if (includeSite) {
+    const href = escapeEmailHtml(laMesaSiteHref());
+    const label = escapeEmailHtml(LA_MESA_SITE_LINK_LABEL);
+    parts.push(
+      `<a href="${href}" style="color:#555;font-weight:600;text-decoration:underline;">${label}</a>`,
+    );
+  }
+
+  const inner = includeLegal && includeSite ? parts.join("<br/><br/>") : parts.join("");
+  return `<tr><td style="padding-top:28px;border-top:1px solid #eeeeee;font-size:11px;line-height:1.5;color:#888;">${inner}</td></tr>`;
+}
+
+/** @deprecated Prefer laMesaEmailFooterHtml — kept for callers that only need the site row. */
+export function laMesaLegalFooterHtml(lang?: string | null): string {
+  return laMesaEmailFooterHtml(lang, { includeLegal: true, includeSite: false });
+}
+
+/** Plain-text legal + site lines for multipart member emails. */
+export function laMesaEmailFooterText(
+  lang?: string | null,
+  options: LaMesaEmailFooterOptions = {},
+): string {
+  const locale = normalizeEmailFooterLang(lang);
+  const includeLegal = options.includeLegal !== false;
+  const includeSite = options.includeSite !== false;
+  const lines: string[] = [];
+  if (includeLegal) {
+    const copy = legalFooterCopy(locale);
+    const settingsUrl = laMesaMemberSettingsUrl(locale);
+    lines.push(`${copy.beforeLink}${copy.linkLabel} (${settingsUrl})${copy.afterLink}`);
+  }
+  if (includeSite) lines.push(LA_MESA_SITE_LINK_LABEL);
+  return lines.join("\n\n");
+}
+
 export type LaMesaEmailShellOptions = {
   /** Main body HTML (already escaped / safe). */
   bodyHtml: string;
@@ -118,13 +225,15 @@ export type LaMesaEmailShellOptions = {
   footerHtml?: string;
   lang?: string;
   maxWidthPx?: number;
+  /** When false, omit the legal opt-out footer. Default true for member mails. */
+  includeLegalFooter?: boolean;
   /** When false, omit the site link footer (rare). Default true. */
   includeSiteLink?: boolean;
 };
 
 /**
  * Dark outer frame + white card + lime LA MESA mark — same look as invites / waitlist mails.
- * Always appends www.lamesasecreta.com at the bottom of the card (unless includeSiteLink: false).
+ * Appends legal notice + www.lamesasecreta.com at the bottom (unless disabled).
  */
 export function wrapLaMesaEmailHtml(options: LaMesaEmailShellOptions): string {
   const lang = options.lang ?? "es";
@@ -135,7 +244,10 @@ export function wrapLaMesaEmailHtml(options: LaMesaEmailShellOptions): string {
   const footerRow = options.footerHtml?.trim()
     ? `<tr><td style="padding-top:24px;">${options.footerHtml}</td></tr>`
     : "";
-  const siteRow = options.includeSiteLink === false ? "" : laMesaSiteFooterHtml();
+  const emailFooterRow = laMesaEmailFooterHtml(lang, {
+    includeLegal: options.includeLegalFooter !== false,
+    includeSite: options.includeSiteLink !== false,
+  });
 
   return `<!DOCTYPE html>
 <html lang="${escapeEmailHtml(lang)}">
@@ -148,7 +260,7 @@ export function wrapLaMesaEmailHtml(options: LaMesaEmailShellOptions): string {
           ${titleRow}
           <tr><td style="padding-top:20px;font-size:15px;line-height:1.55;color:#222;word-break:break-word;overflow-wrap:anywhere;">${options.bodyHtml}</td></tr>
           ${footerRow}
-          ${siteRow}
+          ${emailFooterRow}
         </table>
       </td>
     </tr>

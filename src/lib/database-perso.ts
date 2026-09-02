@@ -214,16 +214,32 @@ export async function listLaMesaToContact(): Promise<{
   }
 }
 
-/** After cold mail: CONTACTÉ on, A CONTACTER off. */
+/** After cold mail: CONTACTÉ on, A CONTACTER off (by Perso ids and/or emails). */
 export async function markLaMesaContacted(
   contactIds: string[],
-): Promise<{ ok: boolean; updated?: number }> {
+  emails: string[] = [],
+): Promise<{
+  ok: boolean;
+  updated?: number;
+  addedToList?: number;
+  unmatched?: number;
+}> {
   try {
-    const data = await fetchDatabasePerso<{ ok?: boolean; updated?: number }>(
-      "/api/public/lists/la-mesa/mark-contacted",
-      { method: "POST", body: { contactIds } },
-    );
-    return { ok: data.ok === true, updated: data.updated };
+    const data = await fetchDatabasePerso<{
+      ok?: boolean;
+      updated?: number;
+      addedToList?: number;
+      unmatched?: number;
+    }>("/api/public/lists/la-mesa/mark-contacted", {
+      method: "POST",
+      body: { contactIds, emails },
+    });
+    return {
+      ok: data.ok === true,
+      updated: data.updated,
+      addedToList: data.addedToList,
+      unmatched: data.unmatched,
+    };
   } catch (error) {
     if (error instanceof DatabasePersoError && error.status === 404) {
       return { ok: false };

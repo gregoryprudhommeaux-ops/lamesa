@@ -39,7 +39,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
   referral_invite:
     "Invitation ami (parrainage / satisfaction « Sí, invitar »)",
   fn_announcement:
-    "Annonce FrancoNetwork → LA MESA (ES — manuel + auto import)",
+    "Annonce FrancoNetwork → LA MESA (ES — auto à l’import FN + manuel admin)",
   profile_incomplete:
     "Profil incomplet — rappel mensuel (ES, cron 1er du mois)",
 };
@@ -565,20 +565,22 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
   },
   fn_announcement: {
     es: {
-      subject: "Tu perfil en LA MESA (desde FrancoNetwork)",
+      subject: "Te sumamos a LA MESA (desde FrancoNetwork)",
       body: [
         "Hola {{fullName}},",
         "",
-        "Lanzamos LA MESA Secreta en Guadalajara: cenas y encuentros temáticos, mesas armadas a mano.",
+        "Al inscribirte en FrancoNetwork, también quedaste en la lista de LA MESA: cenas privadas en Guadalajara, mesas de 14 a 16 personas, un tema por noche. Te escribimos cuando haya una mesa que encaje contigo.",
         "",
-        "Como estabas en FrancoNetwork, dejamos tu perfil listo en la plataforma con este correo ({{email}}). Así puedes entrar al listado y ver qué te parece.",
+        "Tu perfil hoy va al {{profilePercent}}%.",
         "",
-        "Primera vez: {{loginUrl}}",
-        "Elige crear cuenta con este correo y una contraseña nueva (no es la de FrancoNetwork).",
+        "{{profileMatchNote}}",
         "",
-        "Luego puedes completar o corregir tu perfil. Si no quieres que te escribamos para mesas, desactívalo desde ahí.",
+        "Para ver tu perfil, editarlo o salirte de la lista:",
+        "{{profileUrl}}",
         "",
-        "Sin compromiso.",
+        "Primera vez en LA MESA: crea tu acceso en {{loginUrl}} (correo {{email}}, contraseña nueva — no es la de FrancoNetwork).",
+        "",
+        "Sin compromiso hasta que confirmes una invitación concreta.",
         "",
         "Gregory",
         "LA MESA · Guadalajara",

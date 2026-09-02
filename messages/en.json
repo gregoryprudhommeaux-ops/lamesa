@@ -233,10 +233,10 @@
     "error": "Could not submit. Please try again.",
     "errors": {
       "already_registered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
-      "sector_other_required": "You chose “Other”: please specify your industry in the free-text field.",
-      "invalid_linkedin": "Invalid LinkedIn URL (linkedin.com/in/…)",
+      "sector_other_required": "You chose “Other”: type your industry in the free-text field below (e.g. psychology, coaching).",
+      "invalid_linkedin": "Could not save: LinkedIn must be a valid profile URL, e.g. https://www.linkedin.com/in/your-profile",
       "invalid_phone": "Invalid phone number — country code and local number required.",
-      "validation": "Please check the form fields."
+      "validation": "Could not save: check the highlighted fields and try again."
     }
   },
   "admin": {
@@ -412,9 +412,25 @@
     "profileIncompleteBadge": "Incomplete profile",
     "completionRate": "Completion rate: {percent}%",
     "completionHint": "The more complete your profile, the better we can match you to a table that fits.",
+    "missingFieldsTitle": "To reach 100%, still complete:",
+    "linkedinHint": "Paste your LinkedIn profile link (linkedin.com/in/… is fine; https:// will be added if missing).",
+    "sectorOtherHint": "If you chose “Other”, specify your industry. Without it the profile stays under 100% and cannot be saved.",
+    "saveFailedPrefix": "Could not save your profile:",
     "save": "Save",
     "saving": "Saving…",
     "saved": "Profile updated.",
+    "errors": {
+      "sector_other_required": "You chose “Other”: type your industry in the free-text field below (e.g. psychology, coaching).",
+      "invalid_linkedin": "Invalid LinkedIn. Use a profile link, e.g. https://www.linkedin.com/in/your-profile",
+      "invalid_phone": "Invalid phone: include country code (e.g. +52…).",
+      "invalid_city": "Pick a city from the list.",
+      "validation": "Check the form fields and try again.",
+      "unauthorized": "Your session expired. Sign in again and retry.",
+      "forbidden": "You don’t have permission to edit this profile.",
+      "not_on_waitlist": "No profile is linked to this email.",
+      "save_failed": "Save failed. Try again in a few seconds.",
+      "generic": "Could not save. Check the fields and try again."
+    },
     "upcomingTitle": "Upcoming invitations",
     "upcomingEmpty": "No upcoming invitations yet.",
     "pastTitle": "Past invitations",

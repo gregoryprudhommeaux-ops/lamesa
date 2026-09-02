@@ -56,6 +56,12 @@ export type TemplateVars = {
   inviteUrl?: string;
   /** Comma-separated missing profile fields (locale of the email) */
   missingFields?: string;
+  /** 0–100 profile completion (member nurture emails) */
+  profilePercent?: string;
+  /** Paragraph about matching / completion (pre-rendered, locale of the email) */
+  profileMatchNote?: string;
+  /** Member account URL (view / edit / opt out) */
+  profileUrl?: string;
   eventTitle: string;
   when: string;
   where: string;
@@ -91,6 +97,9 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{sponsorName}}", sponsorFallback)
     .replaceAll("{{inviteUrl}}", vars.inviteUrl ?? "")
     .replaceAll("{{missingFields}}", vars.missingFields ?? "")
+    .replaceAll("{{profilePercent}}", vars.profilePercent ?? "")
+    .replaceAll("{{profileMatchNote}}", vars.profileMatchNote ?? "")
+    .replaceAll("{{profileUrl}}", vars.profileUrl ?? "")
     .replaceAll("{{eventTitle}}", vars.eventTitle)
     .replaceAll("{{when}}", vars.when)
     .replaceAll("{{where}}", vars.where)

@@ -407,7 +407,17 @@ export function AdminEmailTemplatesPanel() {
               {"{{format}}"}, {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"},{" "}
               {"{{noUrl}}"}, {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"},{" "}
               {"{{inviteUrl}}"}, {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
-              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}…
+              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}
+              {activeKey === "fn_announcement" ? (
+                <>
+                  , {"{{profilePercent}}"}, {"{{profileMatchNote}}"}, {"{{profileUrl}}"},{" "}
+                  {"{{missingFields}}"}
+                </>
+              ) : null}
+              {activeKey === "profile_incomplete" ? (
+                <>, {"{{missingFields}}"}</>
+              ) : null}
+              …
             </p>
           </div>
           {error && <p className={ERROR_TEXT}>{error}</p>}

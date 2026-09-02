@@ -233,10 +233,10 @@
     "error": "No se pudo enviar. Inténtalo de nuevo.",
     "errors": {
       "already_registered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
-      "sector_other_required": "Elegiste «Otro»: escribe tu sector en el campo libre.",
-      "invalid_linkedin": "URL de LinkedIn no válida (linkedin.com/in/…)",
-      "invalid_phone": "Número no válido: se necesitan código de país y número local.",
-      "validation": "Revisa los campos del formulario."
+      "sector_other_required": "Elegiste «Otro»: escribe tu sector en el campo libre debajo (ej. psicología, coaching).",
+      "invalid_linkedin": "No se pudo guardar: el LinkedIn debe ser un perfil válido, por ejemplo https://www.linkedin.com/in/tu-perfil",
+      "invalid_phone": "Número no válido: incluye código de país y número local (ej. +52…).",
+      "validation": "No se pudo guardar: revisa los campos marcados e inténtalo de nuevo."
     }
   },
   "admin": {
@@ -412,9 +412,25 @@
     "profileIncompleteBadge": "Perfil incompleto",
     "completionRate": "Tasa de completado: {percent}%",
     "completionHint": "Cuanto más completo esté tu perfil, mejor podremos invitarte a una mesa que te encaje.",
+    "missingFieldsTitle": "Para llegar al 100%, completa aún:",
+    "linkedinHint": "Pega el enlace de tu perfil LinkedIn (aceptamos linkedin.com/in/…; se añadirá https:// si falta).",
+    "sectorOtherHint": "Si elegiste «Otro», indica tu sector concreto. Sin este dato el perfil no llega al 100% y no se puede guardar.",
+    "saveFailedPrefix": "No se pudo guardar el perfil:",
     "save": "Guardar",
     "saving": "Guardando…",
     "saved": "Perfil actualizado.",
+    "errors": {
+      "sector_other_required": "Elegiste «Otro»: escribe tu sector en el campo libre debajo (ej. psicología, coaching).",
+      "invalid_linkedin": "El LinkedIn no es válido. Usa un enlace de perfil, por ejemplo https://www.linkedin.com/in/tu-perfil",
+      "invalid_phone": "Teléfono no válido: incluye código de país (ej. +52…).",
+      "invalid_city": "Elige una ciudad de la lista.",
+      "validation": "Revisa los campos del formulario e inténtalo de nuevo.",
+      "unauthorized": "Tu sesión expiró. Vuelve a iniciar sesión e inténtalo de nuevo.",
+      "forbidden": "No tienes permiso para modificar este perfil.",
+      "not_on_waitlist": "No hay un perfil asociado a este correo.",
+      "save_failed": "Error al guardar. Inténtalo de nuevo en unos segundos.",
+      "generic": "No se pudo guardar. Revisa los campos e inténtalo de nuevo."
+    },
     "upcomingTitle": "Próximas invitaciones",
     "upcomingEmpty": "No hay invitaciones próximas por el momento.",
     "pastTitle": "Invitaciones anteriores",

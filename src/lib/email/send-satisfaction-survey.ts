@@ -10,7 +10,7 @@ import {
 } from "@/lib/email/templates";
 import {
   escapeEmailHtml,
-  laMesaSiteFooterText,
+  laMesaEmailFooterText,
   plainTextToEmailHtml,
   wrapLaMesaEmailHtml,
 } from "@/lib/email/la-mesa-email-shell";
@@ -56,7 +56,7 @@ export async function sendSatisfactionSurveyEmail(input: {
     to: input.participation.email,
     subject,
     html,
-    text: `${bodyText}\n\n${surveyUrl}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${surveyUrl}\n\n${laMesaEmailFooterText(locale)}`,
   });
   if (!result.ok) return result;
   return { ok: true, surveyUrl };

@@ -4,16 +4,17 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
 import { POSITIONS, SECTORS, isSectorCode } from "@/lib/constants/form-options";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
+import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
+import { listMissingProfileFieldsForLocale } from "@/lib/member/profile-completion";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
-  ERROR_TEXT,
   FORM_SECTION_TITLE,
   INPUT_CLASS,
   LABEL_CLASS,
 } from "@/lib/ui/nextstep";
-import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Profile = WaitlistRegistration & { id: string };
 
@@ -22,6 +23,17 @@ type MemberProfilePanelProps = {
   completionPercent: number;
   onSaved: () => void | Promise<void>;
 };
+
+type FieldKey =
+  | "linkedinUrl"
+  | "sectorOther"
+  | "phone"
+  | "city"
+  | "fullName"
+  | "company"
+  | "sector"
+  | "position"
+  | "invitationMotivation";
 
 function initialSectorState(profile: Profile): { sector: string; sectorOther: string } {
   const raw = (profile.sector ?? "").trim();
@@ -39,6 +51,12 @@ function initialSectorState(profile: Profile): { sector: string; sectorOther: st
   };
 }
 
+function fieldInputClass(hasError: boolean): string {
+  return hasError
+    ? `${INPUT_CLASS} border-red-400 ring-1 ring-red-300`
+    : INPUT_CLASS;
+}
+
 export function MemberProfilePanel({
   profile,
   completionPercent,
@@ -46,10 +64,13 @@ export function MemberProfilePanel({
 }: MemberProfilePanelProps) {
   const t = useTranslations("account");
   const tReg = useTranslations("registration");
+  const locale = useLocale();
   const authFetch = useAuthFetch();
+  const errorRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<FieldKey | null>(null);
 
   const [fullName, setFullName] = useState(profile.fullName ?? "");
   const [company, setCompany] = useState(profile.company ?? "");
@@ -81,16 +102,74 @@ export function MemberProfilePanel({
     setIsSeeking(profile.isSeeking ?? "");
   }, [profile]);
 
+  const missingFields = useMemo(
+    () => listMissingProfileFieldsForLocale(profile, locale),
+    [profile, locale],
+  );
+
+  function showSaveError(message: string, field: FieldKey | null = null) {
+    setError(message);
+    setErrorField(field);
+    setSaved(false);
+    requestAnimationFrame(() => {
+      errorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
+  function mapApiError(code: string | undefined): { message: string; field: FieldKey | null } {
+    switch (code) {
+      case "sector_other_required":
+        return { message: t("errors.sector_other_required"), field: "sectorOther" };
+      case "invalid_linkedin":
+        return { message: t("errors.invalid_linkedin"), field: "linkedinUrl" };
+      case "invalid_phone":
+        return { message: t("errors.invalid_phone"), field: "phone" };
+      case "invalid_city":
+        return { message: t("errors.invalid_city"), field: "city" };
+      case "unauthorized":
+        return { message: t("errors.unauthorized"), field: null };
+      case "forbidden":
+        return { message: t("errors.forbidden"), field: null };
+      case "not_on_waitlist":
+        return { message: t("errors.not_on_waitlist"), field: null };
+      case "validation":
+        return { message: t("errors.validation"), field: null };
+      default:
+        return {
+          message: code ? `${t("errors.generic")} (${code})` : t("errors.generic"),
+          field: null,
+        };
+    }
+  }
+
+  function normalizeLinkedinField() {
+    const normalized = normalizeLinkedInUrl(linkedinUrl);
+    if (normalized && normalized !== linkedinUrl.trim()) {
+      setLinkedinUrl(normalized);
+    }
+    return normalized;
+  }
+
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setSaved(false);
     setError(null);
+    setErrorField(null);
+
     if (sector === "other" && !sectorOther.trim()) {
-      setError(tReg("errors.sector_other_required"));
+      showSaveError(`${t("saveFailedPrefix")} ${t("errors.sector_other_required")}`, "sectorOther");
       setSaving(false);
       return;
     }
+
+    const normalizedLinkedin = normalizeLinkedinField();
+    if (!isValidLinkedInUrl(normalizedLinkedin || linkedinUrl)) {
+      showSaveError(`${t("saveFailedPrefix")} ${t("errors.invalid_linkedin")}`, "linkedinUrl");
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await authFetch("/api/me/profile", {
         method: "PATCH",
@@ -102,26 +181,42 @@ export function MemberProfilePanel({
           position,
           city,
           phone,
-          linkedinUrl,
+          linkedinUrl: normalizedLinkedin || linkedinUrl.trim(),
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
           canBring,
           isSeeking,
         }),
       });
-      const json = (await res.json()) as { ok?: boolean; error?: string };
+      const json = (await res.json()) as { ok?: boolean; error?: string; field?: string };
       if (!res.ok || !json.ok) {
-        setError(
-          json.error === "validation"
-            ? tReg("errors.sector_other_required")
-            : (json.error ?? "save_failed"),
-        );
+        const mapped = mapApiError(json.error);
+        const apiField = json.field;
+        const knownFields: FieldKey[] = [
+          "linkedinUrl",
+          "sectorOther",
+          "phone",
+          "city",
+          "fullName",
+          "company",
+          "sector",
+          "position",
+          "invitationMotivation",
+        ];
+        const field =
+          apiField && knownFields.includes(apiField as FieldKey)
+            ? (apiField as FieldKey)
+            : mapped.field;
+        showSaveError(`${t("saveFailedPrefix")} ${mapped.message}`, field);
         return;
       }
+      setLinkedinUrl(normalizedLinkedin || linkedinUrl.trim());
       setSaved(true);
       await onSaved();
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      showSaveError(
+        `${t("saveFailedPrefix")} ${err instanceof Error ? err.message : t("errors.save_failed")}`,
+      );
     } finally {
       setSaving(false);
     }
@@ -139,6 +234,12 @@ export function MemberProfilePanel({
           <p className="mt-1.5 text-sm leading-relaxed text-ns-secondary">
             {t("completionHint")}
           </p>
+          {missingFields.length > 0 ? (
+            <p className="mt-2 text-sm leading-relaxed text-ns-tertiary">
+              <span className="font-semibold">{t("missingFieldsTitle")}</span>{" "}
+              {missingFields.join(", ")}.
+            </p>
+          ) : null}
           <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-amber-100">
             <div
               className="h-full rounded-full bg-amber-500 transition-[width]"
@@ -148,33 +249,55 @@ export function MemberProfilePanel({
         </div>
       ) : null}
 
-      {error && <p className={ERROR_TEXT}>{error}</p>}
-      {saved && <p className="text-sm font-medium text-ns-primary">{t("saved")}</p>}
+      {error ? (
+        <div
+          ref={errorRef}
+          role="alert"
+          className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium leading-relaxed text-red-800"
+        >
+          {error}
+        </div>
+      ) : null}
+      {saved && !error ? (
+        <p className="text-sm font-medium text-ns-primary" role="status">
+          {t("saved")}
+        </p>
+      ) : null}
 
-      <form onSubmit={(e) => void saveProfile(e)} className="space-y-4">
+      <form onSubmit={(e) => void saveProfile(e)} className="space-y-4" noValidate>
         <h3 className={FORM_SECTION_TITLE}>{t("profileTitle")}</h3>
         <div>
           <label className={LABEL_CLASS}>{t("fields.fullName")}</label>
           <input
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "fullName")}
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             required
           />
         </div>
         <div>
-          <label className={LABEL_CLASS}>{t("fields.linkedinUrl")}</label>
+          <label className={LABEL_CLASS} htmlFor="member-linkedin">
+            {t("fields.linkedinUrl")}
+          </label>
           <input
-            className={INPUT_CLASS}
+            id="member-linkedin"
+            className={fieldInputClass(errorField === "linkedinUrl")}
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
+            onBlur={() => normalizeLinkedinField()}
+            placeholder={tReg("fields.linkedinPlaceholder")}
             required
+            aria-invalid={errorField === "linkedinUrl"}
+            aria-describedby="member-linkedin-hint"
           />
+          <p id="member-linkedin-hint" className="mt-1.5 text-xs leading-relaxed text-ns-secondary">
+            {t("linkedinHint")}
+          </p>
         </div>
         <div>
           <label className={LABEL_CLASS}>{t("fields.company")}</label>
           <input
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "company")}
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             required
@@ -186,7 +309,7 @@ export function MemberProfilePanel({
           </label>
           <select
             id="member-sector"
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "sector" || errorField === "sectorOther")}
             value={sector}
             onChange={(e) => {
               const next = e.target.value;
@@ -212,7 +335,7 @@ export function MemberProfilePanel({
             </label>
             <input
               id="member-sector-other"
-              className={INPUT_CLASS}
+              className={fieldInputClass(errorField === "sectorOther")}
               value={sectorOther}
               onChange={(e) =>
                 setSectorState((prev) => ({ ...prev, sectorOther: e.target.value }))
@@ -221,7 +344,15 @@ export function MemberProfilePanel({
               minLength={2}
               maxLength={120}
               placeholder={tReg("fields.sectorOtherPlaceholder")}
+              aria-invalid={errorField === "sectorOther"}
+              aria-describedby="member-sector-other-hint"
             />
+            <p
+              id="member-sector-other-hint"
+              className="mt-1.5 text-xs leading-relaxed text-ns-secondary"
+            >
+              {t("sectorOtherHint")}
+            </p>
           </div>
         ) : null}
         <div>
@@ -230,7 +361,7 @@ export function MemberProfilePanel({
           </label>
           <select
             id="member-position"
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "position")}
             value={position}
             onChange={(e) => setPosition(e.target.value)}
             required
@@ -249,10 +380,11 @@ export function MemberProfilePanel({
           </label>
           <select
             id="member-city"
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "city")}
             value={city}
             onChange={(e) => setCity(e.target.value)}
             required
+            aria-invalid={errorField === "city"}
           >
             <option value="">{t("fields.selectPlaceholder")}</option>
             {CITY_HUBS.map((hub) => (
@@ -265,10 +397,11 @@ export function MemberProfilePanel({
         <div>
           <label className={LABEL_CLASS}>{t("fields.phone")}</label>
           <input
-            className={INPUT_CLASS}
+            className={fieldInputClass(errorField === "phone")}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             required
+            aria-invalid={errorField === "phone"}
           />
         </div>
         <div>
@@ -305,7 +438,7 @@ export function MemberProfilePanel({
         <div>
           <label className={LABEL_CLASS}>{t("fields.invitationMotivation")}</label>
           <textarea
-            className={`${INPUT_CLASS} resize-y`}
+            className={fieldInputClass(errorField === "invitationMotivation")}
             rows={3}
             value={invitationMotivation}
             onChange={(e) => setInvitationMotivation(e.target.value)}
