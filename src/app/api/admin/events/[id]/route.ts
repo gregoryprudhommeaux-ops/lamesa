@@ -36,6 +36,11 @@ const updateSchema = z.object({
     .nullable(),
   parking: z.enum(["secure_nearby", "valet", "on_site", "unknown"]).optional().nullable(),
   shareEnabled: z.boolean().optional(),
+  responseMode: z.enum(["rsvp", "interest"]).optional(),
+  subtitle: z.string().trim().max(200).optional().nullable(),
+  interestDeadlineAt: z.string().optional().nullable(),
+  allInPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  allInPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };

@@ -62,6 +62,8 @@ export type TemplateVars = {
   profileMatchNote?: string;
   /** Member account URL (view / edit / opt out) */
   profileUrl?: string;
+  /** Pre-rendered Save the Date interest reply summary */
+  interestSummary?: string;
   eventTitle: string;
   when: string;
   where: string;
@@ -100,6 +102,7 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{profilePercent}}", vars.profilePercent ?? "")
     .replaceAll("{{profileMatchNote}}", vars.profileMatchNote ?? "")
     .replaceAll("{{profileUrl}}", vars.profileUrl ?? "")
+    .replaceAll("{{interestSummary}}", vars.interestSummary ?? "")
     .replaceAll("{{eventTitle}}", vars.eventTitle)
     .replaceAll("{{when}}", vars.when)
     .replaceAll("{{where}}", vars.where)

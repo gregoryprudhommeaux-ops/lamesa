@@ -2,6 +2,7 @@
 
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
 import { AdminEventFunnel } from "@/components/admin/admin-event-funnel";
+import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest-inbox";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { consumePendingEventSeed } from "@/lib/admin/pending-invitees";
@@ -131,9 +132,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [flyerUrl, setFlyerUrl] = useState("");
   const [status, setStatus] = useState<"draft" | "published" | "closed">("draft");
   const [eventLanguage, setEventLanguage] = useState<"fr" | "en" | "es">("es");
+  const [responseMode, setResponseMode] = useState<"rsvp" | "interest">("rsvp");
+  const [subtitle, setSubtitle] = useState("");
+  const [interestDeadlineAt, setInterestDeadlineAt] = useState("");
+  const [allInPriceMinMxn, setAllInPriceMinMxn] = useState("");
+  const [allInPriceMaxMxn, setAllInPriceMaxMxn] = useState("");
   const [selectedInvitees, setSelectedInvitees] = useState<SelectedInvitee[]>([]);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
+  const [sendingSaveTheDate, setSendingSaveTheDate] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
   const [inviteSendOk, setInviteSendOk] = useState(false);
 
@@ -233,6 +240,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setFlyerUrl("");
     setStatus("draft");
     setEventLanguage("es");
+    setResponseMode("rsvp");
+    setSubtitle("");
+    setInterestDeadlineAt("");
+    setAllInPriceMinMxn("");
+    setAllInPriceMaxMxn("");
     setSelectedInvitees(invitees);
   }
 
@@ -315,6 +327,19 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setFlyerUrl(event.flyerUrl ?? "");
     setStatus(event.status ?? "draft");
     setEventLanguage(event.eventLanguage ?? "es");
+    setResponseMode(event.responseMode === "interest" ? "interest" : "rsvp");
+    setSubtitle(event.subtitle ?? "");
+    setInterestDeadlineAt(toLocalInputFromIso(event.interestDeadlineAt));
+    setAllInPriceMinMxn(
+      event.allInPriceMinMxn != null && Number.isFinite(event.allInPriceMinMxn)
+        ? String(event.allInPriceMinMxn)
+        : "",
+    );
+    setAllInPriceMaxMxn(
+      event.allInPriceMaxMxn != null && Number.isFinite(event.allInPriceMaxMxn)
+        ? String(event.allInPriceMaxMxn)
+        : "",
+    );
     setSelectedInvitees([]);
   }
 
@@ -348,6 +373,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       dressCode,
       parking,
       shareEnabled,
+      responseMode,
+      subtitle: subtitle.trim(),
+      interestDeadlineAt: interestDeadlineAt.trim()
+        ? toIsoFromLocalInput(interestDeadlineAt.trim())
+        : null,
+      allInPriceMinMxn: allInPriceMinMxn.trim() === "" ? null : Number(allInPriceMinMxn),
+      allInPriceMaxMxn: allInPriceMaxMxn.trim() === "" ? null : Number(allInPriceMaxMxn),
     };
   }
 
@@ -447,6 +479,42 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       await loadAll();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function sendSaveTheDateBlast() {
+    if (!activeId) return;
+    setSendingSaveTheDate(true);
+    setError(null);
+    setInviteSendResult(null);
+    try {
+      const res = await authFetch(`/api/admin/events/${activeId}/send-save-the-date`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        skipped?: number;
+        failed?: number;
+        error?: string;
+        errors?: string[];
+      };
+      if (!res.ok && json.error === "no_recipients") {
+        throw new Error("Aucun destinataire (invitees / waitlist).");
+      }
+      const summary = `Save the Date — envoyés: ${json.sent ?? 0}, skip: ${json.skipped ?? 0}, échecs: ${json.failed ?? 0}`;
+      setInviteSendOk(Boolean(json.ok));
+      setInviteSendResult(
+        [summary, ...(json.errors ?? [])].filter(Boolean).join("\n"),
+      );
+      await loadAll();
+    } catch (e) {
+      setInviteSendOk(false);
+      setInviteSendResult(e instanceof Error ? e.message : String(e));
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingSaveTheDate(false);
     }
   }
 
@@ -1059,7 +1127,62 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 <option value="en">English</option>
               </select>
             </div>
+            <div>
+              <label className={LABEL_CLASS}>Mode de réponse publique</label>
+              <select
+                value={responseMode}
+                onChange={(e) => setResponseMode(e.target.value as "rsvp" | "interest")}
+                className={INPUT_CLASS}
+              >
+                <option value="rsvp">RSVP classique (confirmer présence)</option>
+                <option value="interest">Save the Date / intérêt (OUI/NON/AUTRE)</option>
+              </select>
+            </div>
           </div>
+
+          {responseMode === "interest" ? (
+            <div className="space-y-3 rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+              <div>
+                <label className={LABEL_CLASS}>Sous-titre</label>
+                <input
+                  className={INPUT_CLASS}
+                  value={subtitle}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  placeholder="Guadalajara · entraide & réseau d’affaires"
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Deadline réponse (intérêt)</label>
+                <input
+                  type="datetime-local"
+                  className={INPUT_CLASS}
+                  value={interestDeadlineAt}
+                  onChange={(e) => setInterestDeadlineAt(e.target.value)}
+                  onClick={openNativePicker}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={LABEL_CLASS}>Prix all-in min (MXN)</label>
+                  <input
+                    className={INPUT_CLASS}
+                    value={allInPriceMinMxn}
+                    onChange={(e) => setAllInPriceMinMxn(e.target.value)}
+                    placeholder="800"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Prix all-in max (MXN)</label>
+                  <input
+                    className={INPUT_CLASS}
+                    value={allInPriceMaxMxn}
+                    onChange={(e) => setAllInPriceMaxMxn(e.target.value)}
+                    placeholder="1000"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="border-t border-gray-100 pt-4">
             <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
@@ -1102,6 +1225,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
               >
                 <Mail className="h-4 w-4" /> Lancer les invitations
+              </button>
+            )}
+            {activeId && responseMode === "interest" && (
+              <button
+                type="button"
+                onClick={() => void sendSaveTheDateBlast()}
+                disabled={
+                  sendingSaveTheDate ||
+                  activeParticipations.filter(
+                    (p) => p.status === "invited" || p.status === "waitlist",
+                  ).length === 0
+                }
+                className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
+                title="Envoie le Save the Date (lien page intérêt) aux invités / waitlist"
+              >
+                <Mail className="h-4 w-4" />{" "}
+                {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
               </button>
             )}
             {activeId && (
@@ -1241,6 +1381,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               participations={activeParticipations}
               onEventUpdated={() => void loadAll()}
             />
+
+            {responseMode === "interest" ? (
+              <AdminEventInterestInbox eventId={activeEvent.id} />
+            ) : null}
 
             <AdminEventSatisfactionResults participations={activeParticipations} />
 

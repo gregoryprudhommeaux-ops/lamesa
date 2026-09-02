@@ -31,23 +31,36 @@ export function CompletionCell({
       : "Profil complet";
 
   return (
-    <div className="min-w-[5.5rem]">
+    <div className="min-w-[5.5rem]" title={missingHint}>
       <div className="mb-1 flex items-center gap-1.5">
         <span className={`text-sm font-bold tabular-nums ${tone}`}>{percent}%</span>
         {missingFields.length > 0 ? (
-          <span
-            className="inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-ns-secondary/40 text-[10px] font-bold leading-none text-ns-secondary"
-            title={missingHint}
-            aria-label={missingHint}
-            onClick={(e) => e.stopPropagation()}
-          >
-            ?
+          <span className="relative inline-flex">
+            <button
+              type="button"
+              className="peer inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full border border-ns-secondary/40 text-[10px] font-bold leading-none text-ns-secondary hover:border-ns-tertiary hover:text-ns-tertiary"
+              aria-label={missingHint}
+              onClick={(e) => e.stopPropagation()}
+            >
+              ?
+            </button>
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute left-1/2 top-full z-30 mt-1.5 hidden w-max max-w-[16rem] -translate-x-1/2 rounded-md bg-ns-tertiary px-2.5 py-1.5 text-left text-[11px] font-medium leading-snug text-white shadow-lg peer-hover:block peer-focus-visible:block"
+            >
+              {missingHint}
+            </span>
           </span>
         ) : null}
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light">
         <div className={`h-full rounded-full ${bar}`} style={{ width: `${percent}%` }} />
       </div>
+      {missingFields.length > 0 ? (
+        <p className="mt-1 max-w-[14rem] text-[10px] leading-snug text-ns-secondary">
+          {missingHint}
+        </p>
+      ) : null}
     </div>
   );
 }

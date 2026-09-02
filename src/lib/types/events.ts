@@ -10,7 +10,19 @@ export type EventParticipationStatus =
   | "declined";
 
 export type EventStatusSource = "admin" | "guest";
-export type EventRespondentAttendance = "yes" | "no" | "maybe";
+export type EventRespondentAttendance = "yes" | "no" | "maybe" | "other";
+
+/** Save-the-Date / interest response (distinct from paid-seat RSVP). */
+export type EventInterestResponse = "yes" | "no" | "other";
+
+export type EventInterestDeclineReason =
+  | "too_expensive"
+  | "not_available"
+  | "not_interested_format"
+  | "not_interested_theme"
+  | "other";
+
+export type EventResponseMode = "rsvp" | "interest";
 
 export type EmailTemplateKey =
   | "calendar_invite"
@@ -25,6 +37,10 @@ export type EmailTemplateKey =
   | "fn_announcement"
   /** Monthly nudge: profile not 100% complete */
   | "profile_incomplete"
+  /** Nominative Save the Date / interest invite */
+  | "save_the_date"
+  /** Auto ack after member validates Save the Date interest reply */
+  | "interest_ack"
   /** Custom admin-created templates: custom_<slug> */
   | `custom_${string}`;
 
@@ -114,6 +130,19 @@ export interface AdminEvent {
    * null/undefined = not specified.
    */
   menuIncludesDrinks?: boolean | null;
+  /**
+   * Public page response mode.
+   * - rsvp (default): classic confirm-presence form
+   * - interest: Save the Date YES/NO/OTHER + reasons
+   */
+  responseMode?: EventResponseMode;
+  /** Optional subtitle under the title (e.g. Save the Date editions). */
+  subtitle?: string;
+  /** ISO datetime — after this, interest form soft-locks (Mexico City end of day recommended). */
+  interestDeadlineAt?: string | null;
+  /** All-in price range for interest editions (MXN / person, ticket + menu). */
+  allInPriceMinMxn?: number | null;
+  allInPriceMaxMxn?: number | null;
   status?: "draft" | "published" | "closed";
   createdAt?: string;
   updatedAt?: string;
@@ -168,11 +197,30 @@ export interface EventRespondent {
   firstName: string;
   lastName: string;
   email: string;
-  whatsapp: string;
-  jobTitle: string;
-  companyName: string;
-  comments: string;
+  whatsapp?: string;
+  jobTitle?: string;
+  companyName?: string;
+  comments?: string;
+  /** Legacy guest form always wrote "yes". Interest form uses interestResponse. */
   attendance: EventRespondentAttendance;
+  /** Save-the-Date interest answer */
+  interestResponse?: EventInterestResponse;
+  declineReason?: EventInterestDeclineReason | null;
+  declineReasonOther?: string | null;
+  /** Expectations for this dinner (required on YES) */
+  expectations?: string | null;
+  /** Ideas for next events / free comment */
+  ideasComment?: string | null;
+  /** Self-attestation: French dirigeant / fondateur / entrepreneur */
+  frenchFounderAttested?: boolean;
+  /** True when email is not yet on LA MESA waitlist */
+  profilePending?: boolean;
+  waitlistId?: string | null;
+  /** Auto email after interest form submit */
+  interestAckEmailStatus?: "sent" | "failed" | "skipped";
+  interestAckEmailSentAt?: string;
+  interestAckEmailError?: string;
+  updatedAt?: string;
   createdAt?: string;
 }
 

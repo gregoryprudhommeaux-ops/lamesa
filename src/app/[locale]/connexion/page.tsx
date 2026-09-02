@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { MemberLoginPanel } from "@/components/account/member-login-panel";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { setRequestLocale } from "next-intl/server";
@@ -10,7 +11,9 @@ export default async function ConnexionPage({ params }: Props) {
 
   return (
     <LaMesaShell card cardClassName="max-w-md">
-      <MemberLoginPanel />
+      <Suspense fallback={null}>
+        <MemberLoginPanel />
+      </Suspense>
     </LaMesaShell>
   );
 }

@@ -132,6 +132,11 @@ export const eventSchema = z.object({
   shareEnabled: z.boolean().optional(),
   status: z.enum(["draft", "published", "closed"]).optional(),
   eventLanguage: z.enum(["fr", "es", "en"]).optional(),
+  responseMode: z.enum(["rsvp", "interest"]).optional(),
+  subtitle: z.string().trim().max(200).optional(),
+  interestDeadlineAt: z.string().optional().nullable(),
+  allInPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  allInPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   inviteEmails: z
     .array(
       z.object({

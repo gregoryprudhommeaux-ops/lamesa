@@ -10,9 +10,21 @@ import {
   signInWithEmailAndPassword,
 } from "firebase/auth";
 import { Eye, EyeOff } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+
+/** Relative app path only — blocks open redirects. */
+function safeNextPath(raw: string | null): string | null {
+  if (!raw) return null;
+  const path = raw.trim();
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) return null;
+  if (path.includes("\\")) return null;
+  // Admin lives outside [locale]
+  if (path === "/admin" || path.startsWith("/admin/")) return null;
+  return path;
+}
 
 type AuthMode = "signin" | "signup";
 
@@ -105,8 +117,11 @@ export function MemberLoginPanel() {
   const t = useTranslations("account");
   const { user, loading, isAdmin, configured } = useAuth();
   const router = useRouter();
-  const locale = useLocale();
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const searchParams = useSearchParams();
+  const nextPath = safeNextPath(searchParams.get("next"));
+  const [mode, setMode] = useState<AuthMode>(
+    searchParams.get("mode") === "signup" ? "signup" : "signin",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -117,11 +132,16 @@ export function MemberLoginPanel() {
   useEffect(() => {
     if (loading || !user) return;
     if (isAdmin) {
-      router.replace("/admin/dashboard");
+      // Admin app is outside the [locale] tree
+      window.location.assign("/admin/dashboard");
       return;
     }
-    router.replace(`/${locale}/compte?tab=profil`);
-  }, [user, loading, isAdmin, router, locale]);
+    if (nextPath) {
+      router.replace(nextPath);
+      return;
+    }
+    router.replace("/compte?tab=profil");
+  }, [user, loading, isAdmin, router, nextPath]);
 
   async function onEmailSubmit(e: FormEvent) {
     e.preventDefault();
