@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { requireVerifiedUser } from "@/lib/auth/member.server";
 import { isFellowVisibleStatus } from "@/lib/events/capacity";
+import { formatMesaPublicLabel, resolveMesaNumber } from "@/lib/events/mesa-public-label";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
@@ -14,6 +15,9 @@ type CalendarEventDto = {
   id: string;
   slug: string;
   title: string;
+  /** Masked public label for non-invitees (e.g. LA MESA 001). */
+  publicLabel?: string;
+  mesaNumber?: number;
   startsAt: string;
   endsAt?: string;
   venueName?: string;
@@ -105,14 +109,17 @@ export async function GET(request: Request) {
   for (const event of publishedEvents) {
     const part = participationByEventId.get(event.id);
     const invited = !!part;
+    const mesaNumber = resolveMesaNumber(event, publishedEvents);
+    const publicLabel = formatMesaPublicLabel(mesaNumber);
 
     if (!invited) {
       events.push({
         id: event.id,
         slug: event.slug,
-        title: event.title,
+        title: publicLabel,
+        publicLabel,
+        mesaNumber,
         startsAt: event.startsAt,
-        ...(event.endsAt ? { endsAt: event.endsAt } : {}),
         invited: false,
       });
       continue;
@@ -123,6 +130,8 @@ export async function GET(request: Request) {
       id: event.id,
       slug: event.slug,
       title: event.title,
+      publicLabel,
+      mesaNumber,
       startsAt: event.startsAt,
       ...(event.endsAt ? { endsAt: event.endsAt } : {}),
       venueName: event.venueName,

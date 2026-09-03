@@ -137,6 +137,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [interestDeadlineAt, setInterestDeadlineAt] = useState("");
   const [allInPriceMinMxn, setAllInPriceMinMxn] = useState("");
   const [allInPriceMaxMxn, setAllInPriceMaxMxn] = useState("");
+  const [mesaNumber, setMesaNumber] = useState("");
   const [selectedInvitees, setSelectedInvitees] = useState<SelectedInvitee[]>([]);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [sendingInvites, setSendingInvites] = useState(false);
@@ -245,6 +246,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setInterestDeadlineAt("");
     setAllInPriceMinMxn("");
     setAllInPriceMaxMxn("");
+    setMesaNumber("");
     setSelectedInvitees(invitees);
   }
 
@@ -340,6 +342,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         ? String(event.allInPriceMaxMxn)
         : "",
     );
+    setMesaNumber(
+      event.mesaNumber != null && Number.isFinite(event.mesaNumber)
+        ? String(event.mesaNumber)
+        : "",
+    );
     setSelectedInvitees([]);
   }
 
@@ -380,6 +387,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         : null,
       allInPriceMinMxn: allInPriceMinMxn.trim() === "" ? null : Number(allInPriceMinMxn),
       allInPriceMaxMxn: allInPriceMaxMxn.trim() === "" ? null : Number(allInPriceMaxMxn),
+      mesaNumber: mesaNumber.trim() === "" ? null : Number(mesaNumber),
     };
   }
 
@@ -738,6 +746,25 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 className={INPUT_CLASS}
                 placeholder="Ex. IA & entrepreneurs Guadalajara"
               />
+            </div>
+            <div>
+              <label className={LABEL_CLASS} htmlFor="event-mesa-number">
+                {labels["fields.mesaNumber"] ?? "N° MESA (calendrier masqué)"}
+              </label>
+              <input
+                id="event-mesa-number"
+                type="number"
+                min={1}
+                max={9999}
+                value={mesaNumber}
+                onChange={(e) => setMesaNumber(e.target.value)}
+                className={INPUT_CLASS}
+                placeholder="1 → LA MESA 001"
+              />
+              <p className="mt-1 text-xs text-ns-secondary">
+                {labels["fields.mesaNumberHint"] ??
+                  "Affiché aux non-invités dans le calendrier membre. Vide = rang chrono des soirées publiées."}
+              </p>
             </div>
             <div>
               <label className={LABEL_CLASS} htmlFor="event-format">
@@ -1383,7 +1410,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             />
 
             {responseMode === "interest" ? (
-              <AdminEventInterestInbox eventId={activeEvent.id} />
+              <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
             ) : null}
 
             <AdminEventSatisfactionResults participations={activeParticipations} />

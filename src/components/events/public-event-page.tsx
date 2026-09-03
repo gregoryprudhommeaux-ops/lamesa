@@ -417,11 +417,17 @@ function InterestForm({
           ? "interestSuccessNo"
           : "interestSuccessOther";
     return (
-      <div className="mt-8 space-y-4">
+      <div className="mt-8 space-y-6">
         <p className="text-sm font-medium text-ns-primary">{t(successKey)}</p>
-        <Link href="/compte?tab=profil" className={BTN_PRIMARY}>
-          {t("profileCtaMember")}
-        </Link>
+        <p className="border-t border-gray-100 pt-4 text-center text-xs text-ns-secondary">
+          {t("profileSuggestionPrefix")}{" "}
+          <Link
+            href="/compte?tab=profil"
+            className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+          >
+            {t("profileSuggestionLink")}
+          </Link>
+        </p>
       </div>
     );
   }
@@ -531,39 +537,36 @@ function InterestForm({
         />
       </div>
 
-      {!user && !deadlinePassed ? (
-        <p className="text-xs text-ns-secondary">{t("interestValidateAuthHint")}</p>
-      ) : null}
+      {error && !(user && notOnWaitlist) ? <p className={ERROR_TEXT}>{error}</p> : null}
 
-      {user && notOnWaitlist && !deadlinePassed ? (
-        <div className="space-y-2">
-          <p className="text-xs text-ns-secondary">{t("interestNeedMembership")}</p>
-          <Link href="/light" className="text-sm font-semibold text-ns-primary underline-offset-2 hover:underline">
-            {t("interestJoinCta")}
-          </Link>
-        </div>
-      ) : null}
-
-      {error ? <p className={ERROR_TEXT}>{error}</p> : null}
-      <button
-        type="submit"
-        className={BTN_PRIMARY}
-        disabled={submitting || deadlinePassed || authLoading || (Boolean(user) && profileLoading)}
-      >
-        {submitting || (user && profileLoading)
-          ? t("loading")
-          : !user
-            ? t("submitInterestLogin")
-            : t("submitInterest")}
-      </button>
       {!user && !deadlinePassed ? (
-        <p className="text-xs text-ns-secondary">
-          {t("interestOrCreateAccount")}{" "}
-          <Link href={signupHref} className="font-semibold text-ns-primary underline-offset-2 hover:underline">
-            {t("interestSignupCta")}
-          </Link>
-        </p>
-      ) : null}
+        <>
+          <button
+            type="submit"
+            className={BTN_PRIMARY}
+            disabled={submitting || deadlinePassed || authLoading}
+          >
+            {submitting ? t("loading") : t("submitInterestAuthCta")}
+          </button>
+          <p className="text-xs text-ns-secondary">
+            <Link href={signupHref} className="font-semibold text-ns-primary underline-offset-2 hover:underline">
+              {t("interestSignupCta")}
+            </Link>
+          </p>
+        </>
+      ) : user && notOnWaitlist && !deadlinePassed ? (
+        <Link href="/light" className={BTN_PRIMARY}>
+          {t("submitInterestAuthCta")}
+        </Link>
+      ) : (
+        <button
+          type="submit"
+          className={BTN_PRIMARY}
+          disabled={submitting || deadlinePassed || authLoading || profileLoading}
+        >
+          {submitting || profileLoading ? t("loading") : t("submitInterest")}
+        </button>
+      )}
 
       <p className="pt-2 text-center text-xs text-ns-secondary">
         {t("interestContactPrefix")}{" "}

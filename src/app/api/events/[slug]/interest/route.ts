@@ -11,6 +11,7 @@ import {
   isInterestDeadlinePassed,
   splitFullName,
 } from "@/lib/events/event-interest";
+import { syncInterestRespondentToProspectLists } from "@/lib/events/sync-interest-to-prospect-lists";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent } from "@/lib/types/events";
 
@@ -163,6 +164,22 @@ export async function POST(request: Request, { params }: Params) {
     ideasComment: payload.ideasComment,
   });
 
+  const listSync = await syncInterestRespondentToProspectLists({
+    eventSlug: slug,
+    email,
+    fullName: waitlist.fullName || `${firstName} ${lastName}`.trim(),
+    company: waitlist.company,
+    phone: waitlist.phone,
+    position: waitlist.position,
+    interestResponse: data.interestResponse,
+    expectations: payload.expectations,
+    declineReason: payload.declineReason,
+    declineReasonOther: payload.declineReasonOther,
+    ideasComment: payload.ideasComment,
+    waitlist,
+    logPrefix: "[interest]",
+  });
+
   if (respondentRef) {
     if ("skipped" in mail && mail.skipped) {
       await respondentRef.set(
@@ -206,5 +223,6 @@ export async function POST(request: Request, { params }: Params) {
         : mail.ok
           ? "sent"
           : "failed",
+    prospectList: listSync.list ?? null,
   });
 }

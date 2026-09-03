@@ -32,6 +32,17 @@ Invitation nominative. Merci de répondre avant dimanche 6 septembre.
 - **Save the Date** (`save_the_date`) — envoi nominatif admin
 - **Accusé de réponse** (`interest_ack`) — auto après validation du formulaire (rappel événement + réponse + invitation formelle sous quelques jours)
 
+## Listes Prospects (auto)
+
+À chaque réponse, le contact est placé dans :
+
+| Liste | Contenu |
+|-------|---------|
+| `STD dirigeants-fr-2026-09-24 — OUI` | Intéressés (pour l’invitation formelle ensuite) |
+| `STD dirigeants-fr-2026-09-24 — NON/AUTRE` | Non + Autre |
+
+Notes du contact = résumé de la réponse. Bouton admin **Sync → listes Prospects** pour backfill. Paiement / montant : après invitation formelle (participations).
+
 Remplir [`invite-list.example.csv`](./invite-list.example.csv) puis importer / coller dans l’admin événement (invités) avant l’envoi Save the Date.
 
 Colonnes : `email`, `fullName`, `company`, `source`

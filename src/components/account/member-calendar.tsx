@@ -13,6 +13,8 @@ type CalendarEvent = {
   id: string;
   slug: string;
   title: string;
+  publicLabel?: string;
+  mesaNumber?: number;
   startsAt: string;
   endsAt?: string;
   venueName?: string;
@@ -299,13 +301,10 @@ export function MemberCalendar() {
                         <div
                           className="block w-full cursor-not-allowed rounded-lg border border-gray-100 bg-gray-50 px-1.5 py-1 text-left opacity-70"
                           title={t("calendar.invitationRequired")}
-                          aria-label={t("calendar.invitationRequired")}
+                          aria-label={`${ev.publicLabel ?? ev.title} — ${t("calendar.invitationRequired")}`}
                         >
-                          <p className="truncate text-[11px] font-semibold leading-tight text-ns-secondary">
-                            {ev.title}
-                          </p>
-                          <p className="truncate text-[10px] text-ns-secondary">
-                            {formatTime(ev.startsAt)}
+                          <p className="text-[10px] font-semibold leading-tight text-ns-secondary">
+                            {ev.publicLabel ?? ev.title}
                           </p>
                         </div>
                       </li>

@@ -143,6 +143,8 @@ export interface AdminEvent {
   /** All-in price range for interest editions (MXN / person, ticket + menu). */
   allInPriceMinMxn?: number | null;
   allInPriceMaxMxn?: number | null;
+  /** Public ordinal for masked calendar label (LA MESA 001). */
+  mesaNumber?: number | null;
   status?: "draft" | "published" | "closed";
   createdAt?: string;
   updatedAt?: string;

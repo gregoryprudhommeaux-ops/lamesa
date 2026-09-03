@@ -110,6 +110,7 @@ export async function POST(request: Request) {
       interestDeadlineAt: data.interestDeadlineAt ?? null,
       allInPriceMinMxn: data.allInPriceMinMxn ?? null,
       allInPriceMaxMxn: data.allInPriceMaxMxn ?? null,
+      mesaNumber: data.mesaNumber ?? null,
       city: data.city ?? null,
       createdAt: now,
       updatedAt: now,

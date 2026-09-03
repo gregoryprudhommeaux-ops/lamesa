@@ -41,6 +41,7 @@ const updateSchema = z.object({
   interestDeadlineAt: z.string().optional().nullable(),
   allInPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   allInPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  mesaNumber: z.number().int().min(1).max(9999).optional().nullable(),
 });
 
 type Params = { params: Promise<{ id: string }> };

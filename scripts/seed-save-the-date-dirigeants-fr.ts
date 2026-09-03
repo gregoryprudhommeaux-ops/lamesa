@@ -30,6 +30,8 @@ const dbId = process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() || "(default)";
 const db = dbId === "(default)" ? getFirestore() : getFirestore(dbId);
 
 const SLUG = "dirigeants-fr-2026-09-24";
+const LIST_YES = `STD ${SLUG} — OUI`;
+const LIST_NO = `STD ${SLUG} — NON/AUTRE`;
 
 /** Wed 24 Sep 2026 20:00 America/Mexico_City ≈ 02:00 UTC next day */
 const STARTS_AT = "2026-09-25T02:00:00.000Z";
@@ -37,16 +39,29 @@ const ENDS_AT = "2026-09-25T05:00:00.000Z";
 /** Sun 6 Sep 2026 23:59 Mexico City ≈ 2026-09-07T05:59:00Z */
 const INTEREST_DEADLINE = "2026-09-07T05:59:00.000Z";
 
-async function main() {
-  const existing = await db
-    .collection("events")
-    .where("slug", "==", SLUG)
-    .limit(1)
-    .get();
+async function ensureList(name: string, now: string) {
+  const snap = await db.collection("la_mesa_prospect_lists").where("name", "==", name).limit(1).get();
+  if (!snap.empty) {
+    console.log("list exists", name);
+    return;
+  }
+  const all = await db.collection("la_mesa_prospect_lists").limit(200).get();
+  const hit = all.docs.find(
+    (d) => String(d.data().name ?? "").toLowerCase() === name.toLowerCase(),
+  );
+  if (hit) {
+    console.log("list exists", hit.data().name);
+    return;
+  }
+  await db.collection("la_mesa_prospect_lists").add({ name, createdAt: now, updatedAt: now });
+  console.log("list created", name);
+}
 
+async function main() {
   const now = new Date().toISOString();
+  const existing = await db.collection("events").where("slug", "==", SLUG).limit(1).get();
+
   const payload = {
-    slug: SLUG,
     title: "LA MESA DES DIRIGEANTS ET ENTREPRENEURS FRANÇAIS",
     subtitle: "",
     organizerName: "LA MESA",
@@ -65,6 +80,7 @@ async function main() {
     allInPriceMaxMxn: 1000,
     responseMode: "interest",
     interestDeadlineAt: INTEREST_DEADLINE,
+    mesaNumber: 1,
     format: "dinner",
     eventLanguage: "fr",
     status: "published",
@@ -86,6 +102,9 @@ async function main() {
     });
     console.log("created", ref.id, SLUG);
   }
+
+  await ensureList(LIST_YES, now);
+  await ensureList(LIST_NO, now);
 
   console.log("public url path: /fr/e/" + SLUG);
 }

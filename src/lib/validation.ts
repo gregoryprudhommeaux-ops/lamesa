@@ -137,6 +137,8 @@ export const eventSchema = z.object({
   interestDeadlineAt: z.string().optional().nullable(),
   allInPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   allInPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  /** Public ordinal for masked calendar label (LA MESA 001). */
+  mesaNumber: z.number().int().min(1).max(9999).optional().nullable(),
   inviteEmails: z
     .array(
       z.object({
