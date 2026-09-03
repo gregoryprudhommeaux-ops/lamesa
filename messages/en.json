@@ -63,17 +63,17 @@
   },
   "about": {
     "metaTitle": "How it works — LA MESA",
-    "metaDescription": "How LA MESA works: free signup, invitation, ACCESS ticket to confirm, negotiated menu on site.",
+    "metaDescription": "How LA MESA works: free signup, invitation, seat confirmation and dinner priced by restaurant.",
     "title": "How it works",
     "introLead": "One table. One theme. Selected guests, by invitation.",
-    "introBody": "Sign up free. You get an invitation when an evening matches your profile. Once invited, you confirm your seat by paying the ACCESS ticket (~MXN $450 on average; welcome drink / amuse-bouches depending on the edition). The negotiated menu is paid on site.",
+    "introBody": "Sign up free. You get an invitation when an evening matches your profile. Once invited, you confirm your seat by paying for the dinner within the stated deadline. Prices vary by restaurant and menu — plan on about MXN $1,000 on average.",
     "forWho": "For decision-makers, founders, investors, and experts who bring something to that evening’s theme. Tables stay small; we mix the room by hand.",
     "stepsTitle": "How it works",
     "steps": {
       "1": "Sign up free and join the list.",
       "2": "Complete your profile so we can propose a table suited to your experience, industry, and the evening’s theme.",
       "3": "You get an invitation when an evening matches your profile.",
-      "4": "Confirm your seat by paying the ACCESS ticket (~MXN $450 on average) within the stated deadline. Inclusions (welcome drink / amuse-bouches) depend on the edition. Negotiated menu = on site, on you."
+      "4": "Confirm your seat by paying for the dinner within the stated deadline. Prices vary by restaurant and menu — plan on about MXN $1,000 on average."
     },
     "eligibilityNote": "The list is the starting point. An invite only comes when a table fits.",
     "faqTitle": "Frequently asked questions",
@@ -88,7 +88,7 @@
       },
       "payment": {
         "q": "How do I confirm my seat?",
-        "a": "Once you get the invitation, you pay the ACCESS ticket (on average MXN $450) within the stated deadline. If not, the seat is released and offered to someone else."
+        "a": "Once you get the invitation, you pay for the dinner within the stated deadline. If not, the seat is released and offered to someone else."
       },
       "composition": {
         "q": "Will I know who else is at the table before I pay?",
@@ -96,7 +96,7 @@
       },
       "price": {
         "q": "How much does it cost, and who pays?",
-        "a": "Two parts: (1) ACCESS ticket ~MXN $450 / person on average to confirm the seat — exact amount with the invitation; depending on the edition, welcome drink and/or amuse-bouches may be included; (2) negotiated menu and other on-site consumptions, on you (typical estimate MXN $500–$1,500 / person depending on menu, whether drinks are included, and what you order). Except special cases (e.g. a complimentary evening under sponsorship)."
+        "a": "Prices vary by restaurant and menu. On average, plan on about MXN $1,000 per person. The exact amount is in the invitation. Except special cases (e.g. a complimentary evening under sponsorship)."
       },
       "absence": {
         "q": "What if I can’t make it at the last minute?",

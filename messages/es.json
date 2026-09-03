@@ -63,17 +63,17 @@
   },
   "about": {
     "metaTitle": "Cómo funciona — LA MESA",
-    "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación, confirmación con ticket ACCESS, menú negociado en el lugar.",
+    "metaDescription": "Cómo funciona LA MESA: registro gratis, invitación, confirmación de lugar y cena según el restaurante.",
     "title": "Cómo funciona",
     "introLead": "Una mesa. Un tema. Perfiles elegidos, por invitación.",
-    "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando el ticket ACCESS (~$450 MXN en promedio; welcome drink / amuse-bouches según la edición). El menú negociado se paga en el lugar.",
+    "introBody": "Regístrate gratis. Recibes una invitación cuando una noche encaja con tu perfil. Si te invitan, confirmas tu lugar pagando la cena dentro del plazo indicado. Los precios varían según el restaurante y el menú: cuenta unos $1,000 MXN en promedio.",
     "forWho": "Para decisores, founders, inversionistas y expertos que aportan a la temática de la noche. Las mesas son chicas; armamos los perfiles a mano.",
     "stepsTitle": "Cómo funciona",
     "steps": {
       "1": "Te registras gratis y entras a la lista.",
       "2": "Completas tu perfil para que podamos proponerte una mesa acorde a tu experiencia, industria y a la temática del evento.",
       "3": "Recibes una invitación cuando una noche encaja con tu perfil.",
-      "4": "Confirmas tu lugar pagando el ticket ACCESS (~$450 MXN en promedio) dentro del plazo indicado. Inclusiones (welcome drink / amuse-bouches) según la edición. Menú negociado = en el lugar, a tu cargo."
+      "4": "Confirmas tu lugar pagando la cena dentro del plazo indicado. Los precios varían según el restaurante y el menú: cuenta unos $1,000 MXN en promedio."
     },
     "eligibilityNote": "La lista es el punto de partida. La invitación llega solo si la mesa te encaja.",
     "faqTitle": "Preguntas frecuentes",
@@ -88,7 +88,7 @@
       },
       "payment": {
         "q": "¿Cómo confirmo mi lugar?",
-        "a": "Cuando llega la invitación, pagas el ticket ACCESS (en promedio $450 MXN) en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
+        "a": "Cuando llega la invitación, pagas la cena en el plazo indicado. Si no, el lugar se libera y se ofrece a alguien más."
       },
       "composition": {
         "q": "¿Voy a saber quiénes estarán en la mesa antes de pagar?",
@@ -96,7 +96,7 @@
       },
       "price": {
         "q": "¿Cuánto cuesta y quién paga?",
-        "a": "Dos conceptos: (1) ticket ACCESS ~$450 MXN / persona en promedio para confirmar el lugar — monto exacto en la invitación; según la edición puede incluir welcome drink y/o amuse-bouches; (2) menú negociado y demás consumos en el lugar, a tu cargo (estimación típica $500–$1,500 MXN / persona según menú, bebidas incluidas o no, y lo que pidas). Salvo casos especiales (p. ej. noche cortesía por patrocinio)."
+        "a": "Los precios varían según el restaurante y el menú. En promedio, cuenta unos $1,000 MXN por persona. El monto exacto va en la invitación. Salvo casos especiales (p. ej. noche cortesía por patrocinio)."
       },
       "absence": {
         "q": "¿Qué pasa si no puedo ir a última hora?",

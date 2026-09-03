@@ -63,17 +63,17 @@
   },
   "about": {
     "metaTitle": "Fonctionnement — LA MESA",
-    "metaDescription": "Comment fonctionne LA MESA : inscription gratuite, invitation, confirmation par ticket ACCESS, menu négocié sur place.",
+    "metaDescription": "Comment fonctionne LA MESA : inscription gratuite, invitation, confirmation de place et dîner selon le restaurant.",
     "title": "Fonctionnement",
     "introLead": "Une table. Un thème. Des profils choisis, sur invitation.",
-    "introBody": "Inscris-toi gratuitement. Tu reçois une invitation quand une soirée correspond à ton profil. Une fois invité, tu confirmes ta place en réglant le ticket ACCESS (~450 $ MXN en moyenne ; welcome drink / amuse-bouches selon l’édition). Le menu négocié se paie sur place.",
+    "introBody": "Inscris-toi gratuitement. Tu reçois une invitation quand une soirée correspond à ton profil. Une fois invité, tu confirmes ta place en réglant le dîner dans le délai indiqué. Les prix varient selon le restaurant et le menu : compte environ 1 000 $ MXN en moyenne.",
     "forWho": "Pour des décideurs, fondateurs, investisseurs et experts qui ont quelque chose à apporter à la thématique de la soirée. Les tables restent petites ; on mélange les profils à la main.",
     "stepsTitle": "Comment ça marche",
     "steps": {
       "1": "Inscris-toi gratuitement et tu rejoins la liste.",
       "2": "Tu complètes ton profil pour qu’on puisse te proposer une table adaptée à ton expérience, ton industrie et à la thématique de l’événement.",
       "3": "Tu reçois une invitation quand une soirée correspond à ton profil.",
-      "4": "Tu confirmes ta place en réglant le ticket ACCESS (~450 $ MXN en moyenne) dans le délai indiqué. Inclus (welcome drink / amuse-bouches) selon l’édition. Menu négocié = sur place, à ta charge."
+      "4": "Tu confirmes ta place en réglant le dîner dans le délai indiqué. Les prix varient selon le restaurant et le menu : compte environ 1 000 $ MXN en moyenne."
     },
     "eligibilityNote": "La liste, c’est le point de départ. L’invitation arrive seulement si la table te correspond.",
     "faqTitle": "Questions fréquentes",
@@ -88,7 +88,7 @@
       },
       "payment": {
         "q": "Comment confirmer sa place ?",
-        "a": "Une fois l’invitation reçue, tu règles le ticket ACCESS (en moyenne 450 $ MXN) dans le délai indiqué. Sinon, la place est libérée et proposée à quelqu’un d’autre."
+        "a": "Une fois l’invitation reçue, tu règles le dîner dans le délai indiqué. Sinon, la place est libérée et proposée à quelqu’un d’autre."
       },
       "composition": {
         "q": "Vais-je savoir qui sera à table avant de payer ?",
@@ -96,7 +96,7 @@
       },
       "price": {
         "q": "Combien ça coûte, et qui paie ?",
-        "a": "Deux postes : (1) ticket ACCESS ~450 $ MXN / personne en moyenne pour confirmer la place — montant exact à l’invitation ; selon l’édition, welcome drink et/ou amuse-bouches peuvent être inclus ; (2) menu négocié et autres consommations sur place, à ta charge (estimation typique 500–1 500 $ MXN / personne selon menu, boissons incluses ou non, et commandes). Hors cas particuliers (ex. soirée offerte via sponsoring)."
+        "a": "Les prix varient selon le restaurant et le menu. En moyenne, compte environ 1 000 $ MXN par personne. Le montant exact figure dans l’invitation. Hors cas particuliers (ex. soirée offerte via sponsoring)."
       },
       "absence": {
         "q": "Que faire en cas d’absence de dernière minute ?",
