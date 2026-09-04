@@ -141,23 +141,23 @@ function legalFooterCopy(lang: EmailFooterLang): LegalFooterCopy {
     case "fr":
       return {
         beforeLink:
-          "Vous recevez cet e-mail parce que vous êtes inscrit(e) à LA MESA. Si vous ne souhaitez plus recevoir d'e-mails, vous pouvez supprimer votre profil dans vos ",
+          "Vous recevez cet e-mail parce que vous avez été identifié comme probablement intéressé par ce qu'on propose, ou vous êtes déjà inscrit(e) à LA MESA. Si vous ne souhaitez plus recevoir d'e-mails, vous pouvez supprimer votre profil dans vos ",
         linkLabel: "réglages",
-        afterLink: ".",
+        afterLink: ', ou répondre à cet email en mentionnant "UNSUBSCRIBE".',
       };
     case "en":
       return {
         beforeLink:
-          "You're receiving this email because you're registered with LA MESA. If you no longer wish to receive emails, you can delete your profile in ",
+          "You're receiving this email because you were identified as likely interested in what we offer, or you're already registered with LA MESA. If you no longer wish to receive emails, you can delete your profile in ",
         linkLabel: "account settings",
-        afterLink: ".",
+        afterLink: ', or reply to this email mentioning "UNSUBSCRIBE".',
       };
     default:
       return {
         beforeLink:
-          "Recibes este correo porque estás registrado(a) en LA MESA. Si ya no deseas recibir correos, puedes eliminar tu perfil en ",
+          "Recibes este correo porque te identificamos como probablemente interesado(a) en lo que ofrecemos, o ya estás registrado(a) en LA MESA. Si ya no deseas recibir correos, puedes eliminar tu perfil en ",
         linkLabel: "ajustes de la cuenta",
-        afterLink: ".",
+        afterLink: ', o responder a este correo mencionando "UNSUBSCRIBE".',
       };
   }
 }

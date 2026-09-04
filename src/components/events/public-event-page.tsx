@@ -31,10 +31,18 @@ import { addDoc, collection, getDocs, limit, query, where } from "firebase/fires
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-/** Lightweight **bold** markers in admin-authored intro copy. */
+/** Lightweight bold markers in admin-authored intro copy: <bold>…</bold> or **…**. */
 function renderIntroRichText(text: string): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const parts = text.split(/(<bold>[\s\S]*?<\/bold>|\*\*[^*]+\*\*)/gi);
   return parts.map((part, index) => {
+    const boldTag = part.match(/^<bold>([\s\S]*?)<\/bold>$/i);
+    if (boldTag) {
+      return (
+        <strong key={index} className="font-semibold text-ns-tertiary">
+          {boldTag[1].trim()}
+        </strong>
+      );
+    }
     if (part.startsWith("**") && part.endsWith("**")) {
       return (
         <strong key={index} className="font-semibold text-ns-tertiary">

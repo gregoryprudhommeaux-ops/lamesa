@@ -33,6 +33,7 @@ describe("la-mesa-email-shell", () => {
   it("localizes the legal footer text", () => {
     const fr = laMesaEmailFooterText("fr");
     expect(fr).toContain("inscrit(e) à LA MESA");
+    expect(fr).toContain("UNSUBSCRIBE");
     expect(fr).toContain("/fr/reglages");
   });
 

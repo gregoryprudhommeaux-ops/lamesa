@@ -36,8 +36,22 @@ const LIST_NO = `STD ${SLUG} — NON/AUTRE`;
 /** Wed 24 Sep 2026 20:00 America/Mexico_City ≈ 02:00 UTC next day */
 const STARTS_AT = "2026-09-25T02:00:00.000Z";
 const ENDS_AT = "2026-09-25T05:00:00.000Z";
-/** Sun 6 Sep 2026 23:59 Mexico City ≈ 2026-09-07T05:59:00Z */
-const INTEREST_DEADLINE = "2026-09-07T05:59:00.000Z";
+/** Mon 7 Sep 2026 23:59 Mexico City ≈ 2026-09-08T05:59:00Z */
+const INTEREST_DEADLINE = "2026-09-08T05:59:00.000Z";
+
+const INTRO_TEXT = [
+  "Je souhaitais t'inviter à participer à un dîner entre dirigeants et entrepreneurs français de Guadalajara, autour d’une table assez petite pour que la conversation soit possible et intéressante pour toi car je m'occupe de la sélection des invités.",
+  "",
+  "On parlera de ce qu’on construit ici — business, équipe, décisions, partenariats, stratégies — et on se rend utiles les uns aux autres.",
+  "",
+  "La soirée du <bold>24 septembre</bold> (à partir de 20 h) se composera en fonction des réponses des fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité.",
+  "",
+  "Ce <bold>Save the Date</bold> va nous aider à calibrer le restaurant, et selon ta réponse, tu recevras très prochainement une invitation formelle avec les détails, ainsi que les modalités de règlement à compléter par transfert avant la rencontre.",
+  "",
+  "<bold>Invitation nominative.</bold> Merci de répondre avant <bold>Lundi 7 Septembre</bold>.",
+  "",
+  "Pour valider ta réponse, tu vas enregistrer ton profil sur LA MESA (si tu ne l'as pas déjà fait), ce qui te permettra par la suite d'être invité à d'autres rencontres autour de thématiques professionnelles ou autre, tu pourras ensuite choisir celles auxquelles tu souhaites participer ou pas.",
+].join("\n");
 
 async function ensureList(name: string, now: string) {
   const snap = await db.collection("la_mesa_prospect_lists").where("name", "==", name).limit(1).get();
@@ -65,8 +79,7 @@ async function main() {
     title: "LA MESA DES DIRIGEANTS ET ENTREPRENEURS FRANÇAIS",
     subtitle: "",
     organizerName: "LA MESA",
-    introText:
-      "Un dîner entre dirigeants et entrepreneurs français de Guadalajara, autour d’une table assez petite pour que la conversation tienne. On parle de ce qu’on construit ici — business, équipe, décisions — et on se rend utiles les uns aux autres.\n\nLa soirée du <bold>24 septembre</bold> se compose selon qui répond. Fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité. On ne publie pas la liste des noms à l’avance ; le filtre, c’est le profil et l’intention.\n\nC’est un <bold>Save the Date</bold>. Tu indiques ton intérêt, on calibre le lieu au centre avec le nombre de réponses, puis on te confirme.\n\n<bold>Invitation nominative.</bold> Merci de répondre avant <bold>dimanche 6 septembre</bold>.",
+    introText: INTRO_TEXT,
     venueName: "",
     address: "Centre de Guadalajara — lieu à confirmer",
     city: "Guadalajara",
