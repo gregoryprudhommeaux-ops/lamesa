@@ -150,7 +150,7 @@ export async function POST(request: Request) {
 const putSchema = z.object({
   key: TEMPLATE_KEY_SCHEMA,
   locale: z.enum(["es", "fr", "en"]).default("es"),
-  subject: z.string().trim().min(3).max(200).optional(),
+  subject: z.string().trim().min(3).max(300).optional(),
   body: z.string().trim().min(10).max(20000).optional(),
   reset: z.boolean().optional(),
   eventId: z.string().min(1).optional(),
@@ -347,13 +347,15 @@ export async function PUT(request: Request) {
       return NextResponse.json({ ok: false, error: synced.error }, { status: 502 });
     }
     const content = synced.locales[locale];
+    const nextEnabled =
+      typeof parsed.data.enabled === "boolean" ? parsed.data.enabled : currentEnabled;
     await eventRef.set(
       {
         emailTemplateOverrides: {
           ...existingAll,
           [key]: {
             locales: synced.locales,
-            ...(currentEnabled !== undefined ? { enabled: currentEnabled } : {}),
+            ...(nextEnabled !== undefined ? { enabled: nextEnabled } : {}),
           },
         },
         updatedAt: now,
@@ -368,7 +370,7 @@ export async function PUT(request: Request) {
         subject: content.subject,
         body: content.body,
         locales: synced.locales,
-        enabled: currentEnabled !== false,
+        enabled: nextEnabled !== false,
         updatedAt: now,
       },
       scope: "event",
@@ -402,6 +404,8 @@ export async function PUT(request: Request) {
   }
 
   const label = parsed.data.label?.trim() || existingLabel;
+  const nextEnabled =
+    typeof parsed.data.enabled === "boolean" ? parsed.data.enabled : existingEnabled;
 
   if (parsed.data.reset) {
     if (isCustomEmailTemplateKey(key)) {
@@ -411,7 +415,7 @@ export async function PUT(request: Request) {
         custom: true,
         label: label ?? starter.label,
         locales: starter.locales,
-        enabled: existingEnabled,
+        enabled: nextEnabled,
         updatedAt: now,
       });
       return NextResponse.json({
@@ -419,7 +423,7 @@ export async function PUT(request: Request) {
         template: {
           ...starter,
           locale,
-          enabled: existingEnabled,
+          enabled: nextEnabled,
           updatedAt: now,
         },
         scope: "global",
@@ -432,7 +436,7 @@ export async function PUT(request: Request) {
     for (const loc of TEMPLATE_LOCALES) {
       if (!nextLocales[loc]) nextLocales[loc] = defaultLocaleContent(key, loc);
     }
-    await ref.set({ key, locales: nextLocales, enabled: existingEnabled, updatedAt: now });
+    await ref.set({ key, locales: nextLocales, enabled: nextEnabled, updatedAt: now });
     const pair = nextLocales[locale]!;
     return NextResponse.json({
       ok: true,
@@ -442,7 +446,7 @@ export async function PUT(request: Request) {
         subject: pair.subject,
         body: pair.body,
         locales: nextLocales,
-        enabled: existingEnabled,
+        enabled: nextEnabled,
         updatedAt: now,
       },
       scope: "global",
@@ -462,7 +466,7 @@ export async function PUT(request: Request) {
     {
       key,
       locales: synced.locales,
-      enabled: existingEnabled,
+      enabled: nextEnabled,
       updatedAt: now,
       ...(existingCustom ? { custom: true, label: label ?? key } : {}),
       ...(label ? { label } : {}),
@@ -477,9 +481,11 @@ export async function PUT(request: Request) {
       subject: content.subject,
       body: content.body,
       locales: synced.locales,
-      enabled: existingEnabled,
+      enabled: nextEnabled,
       updatedAt: now,
-      ...(existingCustom ? { custom: true, label: label ?? key } : {}),
+      ...(existingCustom || label
+        ? { custom: existingCustom || undefined, label: label ?? key }
+        : {}),
     },
     scope: "global",
     translated: true,

@@ -32,6 +32,7 @@ export function AdminEmailTemplatesPanel() {
   const [eventId, setEventId] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [editLabel, setEditLabel] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -43,12 +44,15 @@ export function AdminEmailTemplatesPanel() {
   const [previewBody, setPreviewBody] = useState(body);
   const [menuKey, setMenuKey] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
+  /** Prevents mid-edit form wipe when authFetch identity changes. */
+  const hydratedSelectionRef = useRef<string | null>(null);
 
   const activeMeta = useMemo(
     () => templates.find((t) => t.key === activeKey),
     [templates, activeKey],
   );
   const isCustom = isCustomEmailTemplateKey(activeKey);
+  const selectionKey = `${activeKey}|${editLocale}|${eventId}`;
 
   // Debounce preview so typing doesn't remount the iframe (layout jump)
   useEffect(() => {
@@ -64,52 +68,81 @@ export function AdminEmailTemplatesPanel() {
     [previewBody, editLocale],
   );
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const qs = new URLSearchParams({ locale: editLocale });
-      if (eventId) qs.set("eventId", eventId);
-      const [tplRes, evRes] = await Promise.all([
-        authFetch(`/api/admin/email-templates?${qs.toString()}`),
-        authFetch("/api/admin/events"),
-      ]);
-      const tplJson = (await tplRes.json()) as {
-        ok?: boolean;
-        templates?: EmailTemplateDoc[];
-        error?: string;
-      };
-      const evJson = (await evRes.json()) as {
-        ok?: boolean;
-        events?: AdminEvent[];
-        error?: string;
-      };
-      if (!tplRes.ok || !tplJson.ok) throw new Error(tplJson.error ?? "load_failed");
-      const list = tplJson.templates ?? [];
-      setTemplates(list);
-      setEvents(evJson.events ?? []);
+  const fetchTemplates = useCallback(async (): Promise<EmailTemplateDoc[]> => {
+    const qs = new URLSearchParams({ locale: editLocale });
+    if (eventId) qs.set("eventId", eventId);
+    const [tplRes, evRes] = await Promise.all([
+      authFetch(`/api/admin/email-templates?${qs.toString()}`),
+      authFetch("/api/admin/events"),
+    ]);
+    const tplJson = (await tplRes.json()) as {
+      ok?: boolean;
+      templates?: EmailTemplateDoc[];
+      error?: string;
+    };
+    const evJson = (await evRes.json()) as {
+      ok?: boolean;
+      events?: AdminEvent[];
+      error?: string;
+    };
+    if (!tplRes.ok || !tplJson.ok) throw new Error(tplJson.error ?? "load_failed");
+    const list = tplJson.templates ?? [];
+    setTemplates(list);
+    setEvents(evJson.events ?? []);
+    return list;
+  }, [authFetch, editLocale, eventId]);
+
+  const hydrateFromList = useCallback(
+    (list: EmailTemplateDoc[], force = false) => {
       const current =
         list.find((t) => t.key === activeKey) ??
         list.find((t) => t.key === "calendar_invite") ??
         list[0];
-      if (current) {
-        if (!list.some((t) => t.key === activeKey)) {
-          setActiveKey(current.key);
-        }
-        setSubject(current.subject);
-        setBody(current.body);
-        setEnabled(current.enabled !== false);
+      if (!current) return;
+      if (!list.some((t) => t.key === activeKey)) {
+        setActiveKey(current.key);
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [authFetch, activeKey, editLocale, eventId]);
+      const keyForCurrent = `${current.key}|${editLocale}|${eventId}`;
+      if (!force && hydratedSelectionRef.current === keyForCurrent) return;
+      hydratedSelectionRef.current = keyForCurrent;
+      setSubject(current.subject);
+      setBody(current.body);
+      setEnabled(current.enabled !== false);
+      setEditLabel(
+        (current.label?.trim() || templateLabel(current.key, current.label)).slice(0, 80),
+      );
+    },
+    [activeKey, editLocale, eventId],
+  );
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await fetchTemplates();
+        if (cancelled) return;
+        // Always hydrate when selection changes; skip only if same selection re-fetched
+        const force = hydratedSelectionRef.current !== selectionKey;
+        hydrateFromList(list, force);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTemplates, hydrateFromList, selectionKey]);
+
+  async function refreshList(rehydrate = false) {
+    if (rehydrate) hydratedSelectionRef.current = null;
+    const list = await fetchTemplates();
+    if (rehydrate) hydrateFromList(list, true);
+    return list;
+  }
 
   useEffect(() => {
     if (!menuKey) return;
@@ -147,12 +180,19 @@ export function AdminEmailTemplatesPanel() {
         throw new Error(json.error ?? "create_failed");
       }
       setNewLabel("");
+      hydratedSelectionRef.current = null;
       setActiveKey(json.template.key);
       setSubject(json.template.subject);
       setBody(json.template.body);
+      setEditLabel(
+        (json.template.label?.trim() || templateLabel(json.template.key, json.template.label)).slice(
+          0,
+          80,
+        ),
+      );
       setEnabled(true);
       setMessage(`Template « ${json.template.label ?? json.template.key} » créé (ES/FR/EN).`);
-      await load();
+      await refreshList(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -171,16 +211,26 @@ export function AdminEmailTemplatesPanel() {
       if (opts.asEventOverride && isCustom) {
         throw new Error("Les templates custom sont globaux (pas d’override event).");
       }
+      const trimmedSubject = subject.trim();
+      const trimmedBody = body.trim();
+      if (!opts.reset) {
+        if (trimmedSubject.length < 3) throw new Error("L’objet (titre) du mail est trop court.");
+        if (trimmedBody.length < 10) throw new Error("Le corps du mail est trop court.");
+      }
+      if (isCustom && editLabel.trim().length < 2) {
+        throw new Error("Le nom du template est trop court.");
+      }
       const res = await authFetch("/api/admin/email-templates", {
         method: "PUT",
         body: JSON.stringify({
           key: activeKey,
           locale: editLocale,
-          subject: opts.reset ? "xxx" : subject,
-          body: opts.reset ? "xxxxxxxxxx" : body,
+          subject: opts.reset ? "xxx" : trimmedSubject,
+          body: opts.reset ? "xxxxxxxxxx" : trimmedBody,
           reset: Boolean(opts.reset),
+          enabled,
+          ...(isCustom ? { label: editLabel.trim() } : {}),
           ...(opts.asEventOverride ? { eventId } : {}),
-          ...(activeMeta?.label ? { label: activeMeta.label } : {}),
         }),
       });
       const json = (await res.json()) as {
@@ -192,6 +242,11 @@ export function AdminEmailTemplatesPanel() {
       if (!res.ok || !json.ok || !json.template) throw new Error(json.error ?? "save_failed");
       setSubject(json.template.subject);
       setBody(json.template.body);
+      setEnabled(json.template.enabled !== false);
+      if (json.template.label?.trim()) {
+        setEditLabel(json.template.label.trim().slice(0, 80));
+      }
+      hydratedSelectionRef.current = selectionKey;
       const otherLocales = TEMPLATE_LOCALES.filter((l) => l !== editLocale)
         .map((l) => TEMPLATE_LOCALE_LABELS[l])
         .join(" et ");
@@ -199,10 +254,10 @@ export function AdminEmailTemplatesPanel() {
         opts.reset
           ? `Template ${TEMPLATE_LOCALE_LABELS[editLocale]} réinitialisé.`
           : opts.asEventOverride
-            ? `Override enregistré pour l’event (${TEMPLATE_LOCALE_LABELS[editLocale]}) — ${otherLocales} mis à jour par traduction.`
-            : `Template ${TEMPLATE_LOCALE_LABELS[editLocale]} enregistré (global) — ${otherLocales} mis à jour par traduction.`,
+            ? `Override enregistré pour l’event (objet + corps + statut) — ${otherLocales} mis à jour par traduction.`
+            : `Objet, corps${isCustom ? ", nom" : ""} et statut enregistrés (${TEMPLATE_LOCALE_LABELS[editLocale]}) — ${otherLocales} mis à jour par traduction.`,
       );
-      await load();
+      await refreshList(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -237,7 +292,7 @@ export function AdminEmailTemplatesPanel() {
           ? "Template activé — les envois repris."
           : "Template désactivé — aucun envoi pour ce mail.",
       );
-      await load();
+      await refreshList(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -294,7 +349,7 @@ export function AdminEmailTemplatesPanel() {
             : "Template personnalisé supprimé — retour aux valeurs par défaut.",
         );
       }
-      await load();
+      await refreshList(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -331,9 +386,16 @@ export function AdminEmailTemplatesPanel() {
       setActiveKey(json.template.key);
       setSubject(json.template.subject);
       setBody(json.template.body);
+      setEditLabel(
+        (json.template.label?.trim() || templateLabel(json.template.key, json.template.label)).slice(
+          0,
+          80,
+        ),
+      );
       setEnabled(true);
+      hydratedSelectionRef.current = null;
       setMessage(`Template « ${json.template.label ?? json.template.key} » dupliqué.`);
-      await load();
+      await refreshList(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -495,7 +557,7 @@ export function AdminEmailTemplatesPanel() {
         <section className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface p-5">
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-ns-hero">
-              {templateLabel(activeKey, activeMeta?.label)}
+              {isCustom ? editLabel || templateLabel(activeKey, activeMeta?.label) : templateLabel(activeKey, activeMeta?.label)}
             </h2>
             <p className="mt-1 text-xs text-ns-secondary">
               Multilingue ES / FR / EN. Envoi email & WhatsApp : langue de l’événement (défaut{" "}
@@ -535,7 +597,10 @@ export function AdminEmailTemplatesPanel() {
               <button
                 key={loc}
                 type="button"
-                onClick={() => setEditLocale(loc)}
+                onClick={() => {
+                  hydratedSelectionRef.current = null;
+                  setEditLocale(loc);
+                }}
                 className={`rounded-full px-3 py-1 text-xs font-semibold ${
                   editLocale === loc
                     ? "bg-[#b4e600] text-[#111]"
@@ -548,8 +613,9 @@ export function AdminEmailTemplatesPanel() {
             ))}
           </div>
           <p className="text-xs text-ns-secondary">
-            À l’enregistrement, ES / FR / EN sont synchronisés par traduction depuis la langue
-            active. Les variables {"{{…}}"} sont conservées.
+            À l’enregistrement, l’objet + le corps ES / FR / EN sont synchronisés par traduction
+            depuis la langue active. Les variables {"{{…}}"} sont conservées. Le nom du template et
+            le statut d’envoi sont aussi sauvegardés.
           </p>
 
           {!isCustom ? (
@@ -558,7 +624,10 @@ export function AdminEmailTemplatesPanel() {
               <select
                 className={INPUT_CLASS}
                 value={eventId}
-                onChange={(e) => setEventId(e.target.value)}
+                onChange={(e) => {
+                  hydratedSelectionRef.current = null;
+                  setEventId(e.target.value);
+                }}
               >
                 <option value="">— Global (tous les événements) —</option>
                 {events.map((ev) => (
@@ -569,16 +638,42 @@ export function AdminEmailTemplatesPanel() {
                 ))}
               </select>
             </div>
-          ) : null}
+          ) : (
+            <div>
+              <label className={LABEL_CLASS}>Nom du template (liste Custom)</label>
+              <input
+                className={INPUT_CLASS}
+                value={editLabel}
+                maxLength={80}
+                onChange={(e) => setEditLabel(e.target.value)}
+                placeholder="Ex. STD dirigeants FR — 24 sept. 2026"
+              />
+            </div>
+          )}
 
           <div>
-            <label className={LABEL_CLASS}>Objet ({TEMPLATE_LOCALE_LABELS[editLocale]})</label>
+            <label className={LABEL_CLASS}>
+              Objet / titre du mail ({TEMPLATE_LOCALE_LABELS[editLocale]})
+            </label>
             <input
               className={INPUT_CLASS}
               value={subject}
+              maxLength={300}
               onChange={(e) => setSubject(e.target.value)}
+              placeholder="Sujet visible dans la boîte mail"
             />
           </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-ns-tertiary">
+            <input
+              type="checkbox"
+              className="h-4 w-4 rounded border-gray-300"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+            />
+            Envois activés pour ce template
+          </label>
+
           <div>
             <label className={LABEL_CLASS}>
               Corps (texte + HTML léger — shell LA MESA à l’envoi)
@@ -627,6 +722,10 @@ export function AdminEmailTemplatesPanel() {
             <div className="max-w-full overflow-hidden rounded-xl border border-gray-200">
               <p className="border-b border-gray-100 bg-ns-brand-light px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
                 Aperçu HTML (shell LA MESA)
+              </p>
+              <p className="border-b border-gray-100 bg-white px-3 py-2 text-xs text-ns-tertiary">
+                <span className="font-bold text-ns-secondary">Objet : </span>
+                {subject.trim() || "—"}
               </p>
               <iframe
                 title="Aperçu email LA MESA"
