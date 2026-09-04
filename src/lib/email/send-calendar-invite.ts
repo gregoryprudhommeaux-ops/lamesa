@@ -4,6 +4,7 @@ import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-trans
 import {
   applyTemplateVars,
   buildEventTemplateVars,
+  formatEventWhereLine,
   getEmailTemplate,
   isEmailTemplateEnabled,
   sendLocaleForEvent,
@@ -93,7 +94,7 @@ export async function sendCalendarInviteEmail(input: {
   const subject = applyTemplateVars(template.subject, vars);
   const bodyText = applyTemplateVars(template.body, vars);
 
-  const location = [input.event.venueName, input.event.address].filter(Boolean).join(" — ");
+  const location = formatEventWhereLine(input.event.venueName, input.event.address);
   const from = brevoFromAddress();
   const ics = buildCalendarInviteIcs({
     uid: `${input.event.id}-${input.participation.id}@lamesa`,

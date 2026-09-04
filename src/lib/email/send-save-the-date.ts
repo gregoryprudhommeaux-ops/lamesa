@@ -33,11 +33,11 @@ export async function sendSaveTheDateEmail(input: {
         ? "Centro de Guadalajara — lugar por confirmar"
         : "Centre de Guadalajara — lieu à confirmer";
 
+  const hasWhere =
+    Boolean(input.event.venueName?.trim()) || Boolean(input.event.address?.trim());
+
   const vars = buildEventTemplateVars({
-    event: {
-      ...input.event,
-      venueName: input.event.venueName?.trim() || whereFallback,
-    },
+    event: hasWhere ? input.event : { ...input.event, venueName: whereFallback },
     publicBaseUrl: base,
     fullName: input.participation.fullName ?? "",
     email: input.participation.email,

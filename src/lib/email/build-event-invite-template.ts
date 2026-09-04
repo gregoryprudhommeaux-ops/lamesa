@@ -1,5 +1,6 @@
 import type { AdminEvent } from "@/lib/types/events";
 import { labelEventFormat } from "@/lib/constants/event-formats";
+import { formatEventWhereLine } from "@/lib/email/templates";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 
 type Lang = "fr" | "en" | "es";
@@ -67,7 +68,7 @@ export function buildDefaultEventInviteTemplate(input: {
   const when = fmtDateTime(event.startsAt, lang);
   const ends = event.endsAt ? fmtDateTime(event.endsAt, lang) : "";
   const url = eventPublicUrl(input.publicBaseUrl, event.slug, lang);
-  const where = [event.venueName, event.address].filter(Boolean).join(" — ");
+  const where = formatEventWhereLine(event.venueName, event.address);
   const dress =
     event.dressCode && event.dressCode !== "none_specified"
       ? (DRESS_LABELS[lang][event.dressCode] ?? event.dressCode)
