@@ -8,6 +8,31 @@ export function slugify(input: string): string {
     .slice(0, 72);
 }
 
+/**
+ * Public event slug from title + dinner date (Mexico City calendar day).
+ * Example: "Dirigeants FR" + 2026-09-25T02:00Z → dirigeants-fr-2026-09-24
+ */
+export function eventSlugFromTitleAndDate(title: string, startsAt: string): string {
+  const base = slugify(title).slice(0, 48).replace(/-+$/g, "");
+  const ms = Date.parse(startsAt);
+  if (!Number.isFinite(ms)) return base || "event";
+
+  // America/Mexico_City offset for this instant (handles DST via Intl).
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(ms));
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+  const ymd = y && m && d ? `${y}-${m}-${d}` : "";
+  if (!ymd) return base || "event";
+  if (!base) return ymd;
+  return `${base}-${ymd}`.slice(0, 72);
+}
+
 export function eventPublicUrl(baseUrl: string, slug: string, locale = "es"): string {
   const b = baseUrl.replace(/\/+$/, "");
   return `${b}/${locale}/e/${slug}`;

@@ -5,7 +5,7 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { slugify } from "@/lib/events/utils";
+import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
 import { nextInviteStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { eventSchema } from "@/lib/validation";
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
   const data = parsed.data;
   const db = getAdminFirestore();
   const now = new Date().toISOString();
-  const slug = slugify(data.title);
+  const slug = eventSlugFromTitleAndDate(data.title, data.startsAt) || slugify(data.title);
 
   try {
     const capacity = data.capacity ?? DEFAULT_GUEST_CAPACITY;

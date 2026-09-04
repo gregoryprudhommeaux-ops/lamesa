@@ -4,7 +4,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { slugify } from "@/lib/events/utils";
+import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -72,10 +72,21 @@ export async function PATCH(request: Request, { params }: Params) {
   const db = getAdminFirestore();
 
   try {
+    // Preserve existing slug so public /e/… URLs stay stable when the title is edited.
+    const existing = await db.collection(COLLECTIONS.events).doc(id).get();
+    const currentSlug =
+      existing.exists && typeof existing.data()?.slug === "string"
+        ? String(existing.data()?.slug).trim()
+        : "";
+    const nextSlug =
+      currentSlug ||
+      eventSlugFromTitleAndDate(data.title, data.startsAt) ||
+      slugify(data.title);
+
     await db.collection(COLLECTIONS.events).doc(id).set(
       {
         ...data,
-        slug: slugify(data.title),
+        slug: nextSlug,
         updatedAt: new Date().toISOString(),
       },
       { merge: true },

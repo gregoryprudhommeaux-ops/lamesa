@@ -29,8 +29,12 @@ Invitation nominative. Merci de répondre avant dimanche 6 septembre.
 
 ## Email
 
-- **Save the Date** (`save_the_date`) — envoi nominatif admin
+- **Save the Date** (`save_the_date`) — envoi nominatif admin (système)
+- **Custom éditable** (`custom_dirigeants_fr_2026_09_24`) — Admin → Templates → Custom · « STD dirigeants FR — 24 sept. 2026 » (base page publique, FR/ES/EN) — utilisable depuis Prospects → Email
 - **Accusé de réponse** (`interest_ack`) — auto après validation du formulaire (rappel événement + réponse + invitation formelle sous quelques jours)
+
+Seed template custom :
+`node --env-file=.env.local --import tsx scripts/seed-custom-template-dirigeants-fr.ts`
 
 ## Listes Prospects (auto)
 
