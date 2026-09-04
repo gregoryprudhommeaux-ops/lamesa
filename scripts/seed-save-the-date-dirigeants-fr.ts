@@ -80,6 +80,7 @@ async function main() {
     subtitle: "",
     organizerName: "LA MESA",
     introText: INTRO_TEXT,
+    calendarTitle: "LA MESA | Dîner des Dirigeants et Entrepreneurs Français (GDL)",
     venueName: "",
     address: "Centre de Guadalajara — lieu à confirmer",
     city: "Guadalajara",

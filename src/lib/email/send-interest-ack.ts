@@ -1,8 +1,16 @@
 import {
+  buildAddToCalendarIcs,
+  buildGoogleCalendarUrl,
+  plainTextFromRichMarkers,
+} from "@/lib/email/ics";
+import {
+  escapeEmailHtml,
   laMesaEmailFooterText,
+  richTextToEmailHtml,
+  wrapLaMesaEmailHtml,
   wrapLaMesaPlainBody,
 } from "@/lib/email/la-mesa-email-shell";
-import { sendTransactionalEmail } from "@/lib/email/send-transactional";
+import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
   buildEventTemplateVars,
@@ -67,6 +75,24 @@ const DECLINE_LABELS: Record<
   },
 };
 
+const CALENDAR_CTA_LABEL: Record<TemplateLocale, string> = {
+  fr: "Ajouter cet événement à mon calendrier",
+  es: "Añadir este evento a mi calendario",
+  en: "Add this event to my calendar",
+};
+
+const CALENDAR_NOTE: Record<TemplateLocale, string> = {
+  fr: "Tu peux déjà bloquer la date : ouvre la pièce jointe (.ics) ou utilise le bouton ci-dessous. Le lieu sera précisé avec l’invitation formelle.",
+  es: "Ya puedes bloquear la fecha: abre el archivo adjunto (.ics) o usa el botón de abajo. El lugar se precisará con la invitación formal.",
+  en: "You can already block the date: open the attached .ics file or use the button below. The venue will be confirmed with the formal invitation.",
+};
+
+const LOCATION_TBC: Record<TemplateLocale, string> = {
+  fr: "À préciser",
+  es: "Por precisar",
+  en: "To be confirmed",
+};
+
 export function buildInterestSummary(input: {
   locale: TemplateLocale;
   interestResponse: EventInterestResponse;
@@ -126,6 +152,18 @@ export function buildInterestSummary(input: {
   return lines.join("\n");
 }
 
+export function interestCalendarTitle(event: AdminEvent): string {
+  const custom = event.calendarTitle?.trim();
+  if (custom) return custom;
+  return `LA MESA | ${event.title.trim()}`;
+}
+
+export function interestCalendarDescription(event: AdminEvent): string {
+  const intro = event.introText?.trim();
+  if (intro) return plainTextFromRichMarkers(intro).slice(0, 1500);
+  return plainTextFromRichMarkers(event.title).slice(0, 1500);
+}
+
 export async function sendInterestAckEmail(input: {
   event: AdminEvent;
   email: string;
@@ -144,6 +182,7 @@ export async function sendInterestAckEmail(input: {
   const base = getSiteUrl();
   const locale = input.locale ?? sendLocaleForEvent(input.event);
   const template = await getEmailTemplate("interest_ack", input.event, locale);
+  const addToCalendar = input.interestResponse === "yes";
 
   const whereFallback =
     locale === "en"
@@ -174,14 +213,65 @@ export async function sendInterestAckEmail(input: {
   };
 
   const subject = applyTemplateVars(template.subject, vars);
-  const bodyText = applyTemplateVars(template.body, vars);
-  const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
+  let bodyText = applyTemplateVars(template.body, vars);
+
+  const calendarTitle = interestCalendarTitle(input.event);
+  const calendarLocation = LOCATION_TBC[locale];
+  const calendarDescription = interestCalendarDescription(input.event);
+  const googleCalUrl = addToCalendar
+    ? buildGoogleCalendarUrl({
+        title: calendarTitle,
+        description: calendarDescription,
+        location: calendarLocation,
+        startsAt: input.event.startsAt,
+        endsAt: input.event.endsAt,
+      })
+    : null;
+
+  if (addToCalendar && googleCalUrl) {
+    bodyText = `${bodyText}\n\n${CALENDAR_NOTE[locale]}\n${googleCalUrl}`;
+  }
+
+  const html =
+    addToCalendar && googleCalUrl
+      ? wrapLaMesaEmailHtml({
+          lang: locale,
+          bodyHtml: richTextToEmailHtml(
+            bodyText.replace(googleCalUrl, "").replace(/\n{3,}/g, "\n\n").trimEnd(),
+          ),
+          footerHtml: `<a href="${escapeEmailHtml(googleCalUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;">${escapeEmailHtml(CALENDAR_CTA_LABEL[locale])}</a>`,
+        })
+      : wrapLaMesaPlainBody(bodyText, { lang: locale });
+
+  const from = brevoFromAddress();
+  const attachments = addToCalendar
+    ? [
+        {
+          name: "la-mesa-save-the-date.ics",
+          content: Buffer.from(
+            buildAddToCalendarIcs({
+              uid: `interest-${input.event.id}-${input.email.toLowerCase()}@lamesa`,
+              title: calendarTitle,
+              description: calendarDescription,
+              location: calendarLocation,
+              startsAt: input.event.startsAt,
+              endsAt: input.event.endsAt,
+              organizerEmail: from.email,
+              organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
+              url: vars.eventUrl,
+            }),
+            "utf8",
+          ).toString("base64"),
+        },
+      ]
+    : undefined;
 
   return sendTransactionalEmail({
     to: input.email,
     subject,
     html,
     text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
+    attachments,
     bccAdmins: false,
   });
 }

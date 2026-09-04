@@ -86,6 +86,11 @@ export interface AdminEvent {
   shareEnabled?: boolean;
   eventLanguage?: "fr" | "es" | "en";
   introText?: string;
+  /**
+   * Optional calendar SUMMARY for Save the Date holds / invites.
+   * Falls back to `LA MESA | {title}` when omitted.
+   */
+  calendarTitle?: string;
   /** Restaurant / venue name */
   venueName?: string;
   address?: string;
