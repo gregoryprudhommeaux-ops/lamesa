@@ -1,10 +1,6 @@
 import { NextResponse } from "next/server";
 import { isPlatformAdminIdentity, normalizeEmail } from "@/lib/auth/platform-admin";
-import {
-  findWaitlistByEmail,
-  linkWaitlistUid,
-  requireVerifiedUser,
-} from "@/lib/auth/member.server";
+import { requireVerifiedUser } from "@/lib/auth/member.server";
 import { sendInterestAckEmail } from "@/lib/email/send-interest-ack";
 import {
   eventInterestSchema,
@@ -13,6 +9,7 @@ import {
 } from "@/lib/events/event-interest";
 import { syncInterestRespondentToProspectLists } from "@/lib/events/sync-interest-to-prospect-lists";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { ensureWaitlistProfileForAuth } from "@/lib/member/ensure-waitlist-for-auth";
 import type { AdminEvent } from "@/lib/types/events";
 
 type Params = { params: Promise<{ slug: string }> };
@@ -30,19 +27,17 @@ export async function POST(request: Request, { params }: Params) {
   if (isNextResponse(user)) return user;
 
   const email = normalizeEmail(user.email!);
-  let waitlist = await findWaitlistByEmail(email);
+  const waitlist = await ensureWaitlistProfileForAuth({
+    uid: user.uid,
+    email,
+    displayName: user.name,
+  });
 
   if (!waitlist) {
-    if (isPlatformAdminIdentity({ email })) {
-      return NextResponse.json({ ok: false, error: "no_profile" }, { status: 403 });
-    }
     return NextResponse.json({ ok: false, error: "not_on_waitlist" }, { status: 403 });
   }
 
-  if (!waitlist.uid) {
-    await linkWaitlistUid(waitlist.id, user.uid);
-    waitlist = { ...waitlist, uid: user.uid };
-  } else if (waitlist.uid !== user.uid && !isPlatformAdminIdentity({ email })) {
+  if (waitlist.uid && waitlist.uid !== user.uid && !isPlatformAdminIdentity({ email })) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
 
@@ -215,6 +210,7 @@ export async function POST(request: Request, { params }: Params) {
     ok: true,
     id,
     profilePending: false,
+    profileProvisioned: Boolean(waitlist.provisioned || waitlist.revived),
     interestResponse: data.interestResponse,
     emailAck:
       "skipped" in mail && mail.skipped

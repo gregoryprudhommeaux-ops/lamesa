@@ -14,6 +14,8 @@ function getAdminAuth() {
 export type VerifiedUser = {
   uid: string;
   email: string | null;
+  /** Google / provider display name when present on the ID token. */
+  name: string | null;
 };
 
 export async function verifyBearerUser(request: Request): Promise<VerifiedUser | null> {
@@ -26,6 +28,7 @@ export async function verifyBearerUser(request: Request): Promise<VerifiedUser |
     return {
       uid: decoded.uid,
       email: typeof decoded.email === "string" ? decoded.email : null,
+      name: typeof decoded.name === "string" ? decoded.name : null,
     };
   } catch {
     return null;

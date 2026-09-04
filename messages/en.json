@@ -412,7 +412,7 @@
     "interestOther": "Other",
     "declineReasonLabel": "Why? (required)",
     "declineReasons": {
-      "too_expensive": "Too expensive",
+      "want_to_know_more": "I'd like to know more first",
       "not_available": "Not available",
       "not_interested_format": "Not interested in the format",
       "not_interested_theme": "Not interested in the theme",
@@ -423,7 +423,7 @@
     "expectationsPlaceholder": "e.g. exchange among FR founders, business topics…",
     "ideasLabel": "Comment / ideas for next events (optional)",
     "attestationLabel": "I confirm I am a French founder, director or entrepreneur.",
-    "submitInterest": "Validate my reply",
+    "submitInterest": "Save my reply",
     "submitInterestLogin": "Validate — sign in",
     "submitInterestAuthCta": "Log in / Create your profile",
     "interestSuccessYes": "Thanks — your interest is recorded. A confirmation email with a calendar invite has been sent.",
@@ -445,7 +445,7 @@
       "expectations_required": "Share your expectations for this dinner.",
       "attestation_required": "Please check the confirmation box.",
       "unauthorized": "Sign in to send your reply.",
-      "not_on_waitlist": "Sign in with the email from your invitation (or create access), then come back to reply.",
+      "not_on_waitlist": "We couldn’t link your account right now. Try again, or email greg@nextstep-services.com.",
       "validation": "Check the fields and try again.",
       "generic": "Could not submit. Please try again."
     },

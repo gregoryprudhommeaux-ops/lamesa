@@ -288,7 +288,6 @@ function InterestForm({
     email: string;
     company: string;
   } | null>(null);
-  const [notOnWaitlist, setNotOnWaitlist] = useState(false);
   const autoSubmitAttempted = useRef(false);
 
   const [interestResponse, setInterestResponse] = useState<EventInterestResponse | "">("");
@@ -319,7 +318,6 @@ function InterestForm({
     if (authLoading) return;
     if (!user) {
       setMemberProfile(null);
-      setNotOnWaitlist(false);
       setProfileLoading(false);
       return;
     }
@@ -341,20 +339,15 @@ function InterestForm({
         if (cancelled) return;
         if (!res.ok || !json.ok || json.notOnWaitlist || !json.profile) {
           setMemberProfile(null);
-          setNotOnWaitlist(true);
           return;
         }
-        setNotOnWaitlist(false);
         setMemberProfile({
           fullName: String(json.profile.fullName ?? ""),
           email: String(json.profile.email ?? user.email ?? ""),
           company: String(json.profile.company ?? ""),
         });
       } catch {
-        if (!cancelled) {
-          setMemberProfile(null);
-          setNotOnWaitlist(true);
-        }
+        if (!cancelled) setMemberProfile(null);
       } finally {
         if (!cancelled) setProfileLoading(false);
       }
@@ -444,14 +437,14 @@ function InterestForm({
   }
 
   useEffect(() => {
-    if (authLoading || profileLoading || !user || !memberProfile || deadlinePassed) return;
+    if (authLoading || profileLoading || !user || deadlinePassed) return;
     if (autoSubmitAttempted.current) return;
     const draft = readInterestDraft(event.slug);
     if (!draft) return;
     autoSubmitAttempted.current = true;
     void submitInterest(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot after login return
-  }, [authLoading, profileLoading, user, memberProfile, deadlinePassed, event.slug]);
+  }, [authLoading, profileLoading, user, deadlinePassed, event.slug]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -474,12 +467,6 @@ function InterestForm({
     }
 
     if (profileLoading) return;
-
-    if (notOnWaitlist || !memberProfile) {
-      writeInterestDraft(event.slug, draft);
-      setError(t("errors.not_on_waitlist"));
-      return;
-    }
 
     await submitInterest(draft);
   }
@@ -539,11 +526,16 @@ function InterestForm({
         <p className={ERROR_TEXT}>{t("interestDeadlinePassed")}</p>
       ) : null}
 
-      {memberProfile ? (
+      {user && !authLoading ? (
         <p className="text-sm text-ns-secondary">
           {t("interestSignedInAs", {
-            name: memberProfile.fullName || memberProfile.email,
-            email: memberProfile.email,
+            name:
+              memberProfile?.fullName ||
+              user.displayName ||
+              memberProfile?.email ||
+              user.email ||
+              "",
+            email: memberProfile?.email || user.email || "",
           })}
         </p>
       ) : null}
@@ -637,7 +629,7 @@ function InterestForm({
         />
       </div>
 
-      {error && !(user && notOnWaitlist) ? <p className={ERROR_TEXT}>{error}</p> : null}
+      {error ? <p className={ERROR_TEXT}>{error}</p> : null}
 
       {!user && !deadlinePassed ? (
         <>
@@ -654,15 +646,11 @@ function InterestForm({
             </Link>
           </p>
         </>
-        ) : user && notOnWaitlist && !deadlinePassed ? (
-        <Link href={loginHref} className={BTN_PRIMARY}>
-          {t("submitInterestAuthCta")}
-        </Link>
       ) : (
         <button
           type="submit"
           className={BTN_PRIMARY}
-          disabled={submitting || deadlinePassed || authLoading || profileLoading}
+          disabled={submitting || deadlinePassed || authLoading || profileLoading || !user}
         >
           {submitting || profileLoading ? t("loading") : t("submitInterest")}
         </button>

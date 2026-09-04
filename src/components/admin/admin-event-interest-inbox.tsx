@@ -12,7 +12,8 @@ type Props = {
 };
 
 const REASON_LABELS: Record<string, string> = {
-  too_expensive: "Trop cher",
+  want_to_know_more: "En savoir plus",
+  too_expensive: "Trop cher (ancien)",
   not_available: "Pas dispo",
   not_interested_format: "Format",
   not_interested_theme: "Thématique",

@@ -412,7 +412,7 @@
     "interestOther": "Otro",
     "declineReasonLabel": "¿Por qué? (obligatorio)",
     "declineReasons": {
-      "too_expensive": "Demasiado caro",
+      "want_to_know_more": "Me gustaría saber más antes",
       "not_available": "No disponible",
       "not_interested_format": "No me interesa el formato",
       "not_interested_theme": "No me interesa la temática",
@@ -423,7 +423,7 @@
     "expectationsPlaceholder": "Ej. intercambiar entre fundadores FR, temas de negocio…",
     "ideasLabel": "Comentario / ideas de próximos eventos (opcional)",
     "attestationLabel": "Confirmo que soy dirigente, fundador(a) o emprendedor(a) francés(a).",
-    "submitInterest": "Validar mi respuesta",
+    "submitInterest": "Guardar mi respuesta",
     "submitInterestLogin": "Validar — iniciar sesión",
     "submitInterestAuthCta": "Log in / Crea tu perfil",
     "interestSuccessYes": "Gracias — registramos tu interés. Te enviamos un correo de confirmación con la invitación de calendario.",
@@ -445,7 +445,7 @@
       "expectations_required": "Indica tus expectativas para esta cena.",
       "attestation_required": "Marca la casilla de confirmación.",
       "unauthorized": "Inicia sesión para enviar tu respuesta.",
-      "not_on_waitlist": "Inicia sesión con el correo de tu invitación (o crea tu acceso) y vuelve a responder.",
+      "not_on_waitlist": "No pudimos vincular tu cuenta por ahora. Intenta de nuevo o escribe a greg@nextstep-services.com.",
       "validation": "Revisa los campos e inténtalo de nuevo.",
       "generic": "No se pudo enviar. Inténtalo de nuevo."
     },

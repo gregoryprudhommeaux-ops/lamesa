@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { EventInterestDeclineReason } from "@/lib/types/events";
 
+/** Reasons shown in the public interest form (not including legacy values). */
 export const INTEREST_DECLINE_REASONS = [
-  "too_expensive",
+  "want_to_know_more",
   "not_available",
   "not_interested_format",
   "not_interested_theme",

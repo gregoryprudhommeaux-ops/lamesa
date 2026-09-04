@@ -85,6 +85,10 @@ export function ExpressSignupForm() {
       setDone(true);
       form.reset();
       setResetKey((k) => k + 1);
+      if (nextPath) {
+        router.push(nextPath);
+        return;
+      }
     } catch {
       setError(t("errors.generic"));
     } finally {
@@ -173,6 +177,12 @@ export function ExpressSignupForm() {
           disabled={submitting}
           className={INPUT_CLASS}
           placeholder={t("fields.emailPlaceholder")}
+          defaultValue={
+            (() => {
+              const fromQuery = searchParams.get("email")?.trim().toLowerCase() ?? "";
+              return fromQuery.includes("@") ? fromQuery : undefined;
+            })()
+          }
         />
       </div>
 

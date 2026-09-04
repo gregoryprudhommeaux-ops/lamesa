@@ -17,7 +17,6 @@ import {
   isEmailTemplateEnabled,
   sendLocaleForEvent,
 } from "@/lib/email/templates";
-import { INTEREST_DECLINE_REASONS } from "@/lib/events/event-interest";
 import {
   interestCalendarDescription,
   interestCalendarTitle,
@@ -53,11 +52,9 @@ const INTEREST_ANSWER_LABELS: Record<
   },
 };
 
-const DECLINE_LABELS: Record<
-  TemplateLocale,
-  Record<(typeof INTEREST_DECLINE_REASONS)[number], string>
-> = {
+const DECLINE_LABELS: Record<TemplateLocale, Record<string, string>> = {
   fr: {
+    want_to_know_more: "J'aimerais en savoir plus avant",
     too_expensive: "Trop cher",
     not_available: "Pas disponible",
     not_interested_format: "Pas intéressé(e) par le format",
@@ -65,6 +62,7 @@ const DECLINE_LABELS: Record<
     other: "Autre",
   },
   es: {
+    want_to_know_more: "Me gustaría saber más antes",
     too_expensive: "Demasiado caro",
     not_available: "No disponible",
     not_interested_format: "No me interesa el formato",
@@ -72,6 +70,7 @@ const DECLINE_LABELS: Record<
     other: "Otro",
   },
   en: {
+    want_to_know_more: "I'd like to know more first",
     too_expensive: "Too expensive",
     not_available: "Not available",
     not_interested_format: "Not interested in the format",

@@ -16,6 +16,8 @@ export type EventRespondentAttendance = "yes" | "no" | "maybe" | "other";
 export type EventInterestResponse = "yes" | "no" | "other";
 
 export type EventInterestDeclineReason =
+  | "want_to_know_more"
+  /** @deprecated legacy — kept for responses already stored in Firestore */
   | "too_expensive"
   | "not_available"
   | "not_interested_format"

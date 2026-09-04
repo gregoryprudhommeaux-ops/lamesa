@@ -14,7 +14,7 @@ export async function requirePlatformAdmin(
   if (!isPlatformAdminIdentity({ email: user.email })) {
     return NextResponse.json({ ok: false, error: "forbidden" }, { status: 403 });
   }
-  return { uid: user.uid, email: user.email ?? "" };
+  return { uid: user.uid, email: user.email ?? "", name: user.name };
 }
 
 export function isNextResponse(value: unknown): value is NextResponse {

@@ -412,7 +412,7 @@
     "interestOther": "Autre",
     "declineReasonLabel": "Pourquoi ? (obligatoire)",
     "declineReasons": {
-      "too_expensive": "Trop cher",
+      "want_to_know_more": "J'aimerais en savoir plus avant",
       "not_available": "Pas disponible",
       "not_interested_format": "Pas intéressé(e) par le format",
       "not_interested_theme": "Pas intéressé(e) par la thématique",
@@ -423,7 +423,7 @@
     "expectationsPlaceholder": "Ex. échanger entre fondateurs FR, sujets business…",
     "ideasLabel": "Commentaire / idées de prochains événements (optionnel)",
     "attestationLabel": "Je confirme être dirigeant(e), fondateur(trice) ou entrepreneur(e) français(e).",
-    "submitInterest": "Valider ma réponse",
+    "submitInterest": "Enregistrer ma réponse",
     "submitInterestLogin": "Valider — se connecter",
     "submitInterestAuthCta": "Log in / Créer un compte",
     "interestSuccessYes": "Merci — ton intérêt est enregistré. Un email de confirmation avec l’invitation calendrier t’a été envoyé.",
@@ -445,7 +445,7 @@
       "expectations_required": "Indique tes attentes pour ce dîner.",
       "attestation_required": "Coche la case de confirmation.",
       "unauthorized": "Connecte-toi pour envoyer ta réponse.",
-      "not_on_waitlist": "Connecte-toi avec l’email de ton invitation (ou crée ton accès), puis reviens valider ta réponse.",
+      "not_on_waitlist": "Impossible d’associer ton compte pour le moment. Réessaie, ou écris à greg@nextstep-services.com.",
       "validation": "Vérifie les champs et réessaie.",
       "generic": "Envoi impossible. Réessaie."
     },
