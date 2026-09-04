@@ -6,6 +6,11 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { INTEREST_DECLINE_REASONS, isInterestDeadlinePassed } from "@/lib/events/event-interest";
 import {
+  interestCalendarDescription,
+  interestCalendarTitle,
+} from "@/lib/events/interest-calendar";
+import { buildGoogleCalendarUrl } from "@/lib/email/ics";
+import {
   formatAccessIncludes,
   formatMenuPriceEstimate,
   hasNegotiatedMenuInfo,
@@ -478,9 +483,34 @@ function InterestForm({
         : done.interestResponse === "no"
           ? "interestSuccessNo"
           : "interestSuccessOther";
+    const calendarUrl =
+      done.interestResponse === "yes"
+        ? buildGoogleCalendarUrl({
+            title: interestCalendarTitle(event),
+            description: interestCalendarDescription(event),
+            location:
+              event.venueName?.trim() ||
+              t("interestCalendarLocationTbc"),
+            startsAt: event.startsAt,
+            endsAt: event.endsAt,
+          })
+        : null;
     return (
       <div className="mt-8 space-y-6">
         <p className="text-sm font-medium text-ns-primary">{t(successKey)}</p>
+        {calendarUrl ? (
+          <div className="space-y-2">
+            <p className="text-sm text-ns-secondary">{t("interestCalendarHint")}</p>
+            <a
+              href={calendarUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${BTN_PRIMARY} inline-flex`}
+            >
+              {t("interestCalendarCta")}
+            </a>
+          </div>
+        ) : null}
         <p className="border-t border-gray-100 pt-4 text-center text-xs text-ns-secondary">
           {t("profileSuggestionPrefix")}{" "}
           <Link

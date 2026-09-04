@@ -1,7 +1,6 @@
 import {
   buildAddToCalendarIcs,
   buildGoogleCalendarUrl,
-  plainTextFromRichMarkers,
 } from "@/lib/email/ics";
 import {
   escapeEmailHtml,
@@ -19,6 +18,10 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import { INTEREST_DECLINE_REASONS } from "@/lib/events/event-interest";
+import {
+  interestCalendarDescription,
+  interestCalendarTitle,
+} from "@/lib/events/interest-calendar";
 import { getSiteUrl } from "@/lib/site-url";
 import type {
   AdminEvent,
@@ -26,6 +29,8 @@ import type {
   EventInterestResponse,
   TemplateLocale,
 } from "@/lib/types/events";
+
+export { interestCalendarDescription, interestCalendarTitle } from "@/lib/events/interest-calendar";
 
 const INTEREST_ANSWER_LABELS: Record<
   TemplateLocale,
@@ -150,18 +155,6 @@ export function buildInterestSummary(input: {
   }
 
   return lines.join("\n");
-}
-
-export function interestCalendarTitle(event: AdminEvent): string {
-  const custom = event.calendarTitle?.trim();
-  if (custom) return custom;
-  return `LA MESA | ${event.title.trim()}`;
-}
-
-export function interestCalendarDescription(event: AdminEvent): string {
-  const intro = event.introText?.trim();
-  if (intro) return plainTextFromRichMarkers(intro).slice(0, 1500);
-  return plainTextFromRichMarkers(event.title).slice(0, 1500);
 }
 
 export async function sendInterestAckEmail(input: {
