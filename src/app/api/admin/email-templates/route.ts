@@ -35,6 +35,8 @@ const TEMPLATE_KEY_SCHEMA = z
 const createSchema = z.object({
   label: z.string().trim().min(2).max(80),
   slug: z.string().trim().min(2).max(48).optional(),
+  /** Copy locales from an existing custom (or system) template. */
+  duplicateFrom: z.string().trim().min(2).max(64).optional(),
 });
 
 async function buildSyncedLocales(input: {
@@ -114,15 +116,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "already_exists", key }, { status: 409 });
   }
 
-  const starter = defaultEmailTemplate(key, "es", { label: parsed.data.label });
   const now = new Date().toISOString();
+  let locales = defaultEmailTemplate(key, "es", { label: parsed.data.label }).locales!;
+
+  const sourceKeyRaw = parsed.data.duplicateFrom?.trim();
+  if (sourceKeyRaw) {
+    if (!isSystemEmailTemplateKey(sourceKeyRaw) && !isCustomEmailTemplateKey(sourceKeyRaw)) {
+      return NextResponse.json({ ok: false, error: "invalid_duplicate_source" }, { status: 400 });
+    }
+    const sourceKey = sourceKeyRaw as EmailTemplateKey;
+    const sourceLocales: Partial<Record<TemplateLocale, EmailTemplateLocaleContent>> = {};
+    for (const loc of TEMPLATE_LOCALES) {
+      const tpl = await getEmailTemplate(sourceKey, null, loc);
+      sourceLocales[loc] = { subject: tpl.subject, body: tpl.body };
+    }
+    locales = sourceLocales as Record<TemplateLocale, EmailTemplateLocaleContent>;
+  }
+
   await ref.set({
     key,
     custom: true,
     label: parsed.data.label.trim(),
-    locales: starter.locales,
+    locales,
     enabled: true,
     updatedAt: now,
+    ...(sourceKeyRaw ? { duplicatedFrom: sourceKeyRaw } : {}),
   });
 
   const template = await getEmailTemplate(key, null, "es");

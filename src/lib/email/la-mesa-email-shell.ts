@@ -39,11 +39,18 @@ function escapeOutsidePlaceholders(s: string): string {
 
 /**
  * Template body → email HTML.
- * Allows limited inline markup: a[href=http(s)], b, strong, i, em, u, br.
+ * Allows limited inline markup: a[href=http(s)], bold, b, strong, i, em, u, br.
  * Everything else is escaped. Newlines → br.
  */
 export function richTextToEmailHtml(text: string): string {
   return convertRichText(text, true);
+}
+
+/** Map authoring tags to email-safe HTML tags. */
+function emailInlineTag(tag: string): string {
+  const t = tag.toLowerCase();
+  if (t === "bold") return "b";
+  return t;
 }
 
 function convertRichText(text: string, nl2br: boolean): string {
@@ -66,14 +73,14 @@ function convertRichText(text: string, nl2br: boolean): string {
     );
   });
 
-  // Inline formats, innermost first
+  // Inline formats, innermost first (<bold> → <b> for email clients)
   let prev = "";
   while (prev !== s) {
     prev = s;
     s = s.replace(
-      /<(b|strong|i|em|u)>([\s\S]*?)<\/\1>/gi,
+      /<(bold|b|strong|i|em|u)>([\s\S]*?)<\/\1>/gi,
       (_full, tag: string, inner: string) => {
-        const t = tag.toLowerCase();
+        const t = emailInlineTag(tag);
         return protect(`<${t}>${escapeOutsidePlaceholders(inner)}</${t}>`);
       },
     );

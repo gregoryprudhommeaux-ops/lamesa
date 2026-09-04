@@ -20,7 +20,8 @@ import type {
   TemplateLocale,
 } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Copy, MoreVertical, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function AdminEmailTemplatesPanel() {
   const authFetch = useAuthFetch();
@@ -40,6 +41,8 @@ export function AdminEmailTemplatesPanel() {
   const [creating, setCreating] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [previewBody, setPreviewBody] = useState(body);
+  const [menuKey, setMenuKey] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const activeMeta = useMemo(
     () => templates.find((t) => t.key === activeKey),
@@ -107,6 +110,24 @@ export function AdminEmailTemplatesPanel() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!menuKey) return;
+    function onDocClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuKey(null);
+      }
+    }
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuKey(null);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [menuKey]);
 
   async function createTemplate() {
     setCreating(true);
@@ -224,28 +245,32 @@ export function AdminEmailTemplatesPanel() {
     }
   }
 
-  async function removeCustomTemplate() {
-    const label = templateLabel(activeKey, activeMeta?.label);
-    const scopeLabel = isCustom
+  async function removeCustomTemplate(targetKey?: EmailTemplateKey) {
+    const key = targetKey ?? activeKey;
+    const meta = templates.find((t) => t.key === key);
+    const customTarget = isCustomEmailTemplateKey(key);
+    const label = templateLabel(key, meta?.label);
+    const scopeLabel = customTarget
       ? `le template custom « ${label} » (suppression définitive)`
       : eventId
         ? "l’override de cet événement"
         : "la version personnalisée globale (ES / FR / EN)";
     const ok = window.confirm(
-      `Supprimer ${scopeLabel} ?${isCustom ? "" : "\n\nLe texte reviendra aux valeurs par défaut du code."}`,
+      `Supprimer ${scopeLabel} ?${customTarget ? "" : "\n\nLe texte reviendra aux valeurs par défaut du code."}`,
     );
     if (!ok) return;
 
     setSaving(true);
     setMessage(null);
     setError(null);
+    setMenuKey(null);
     try {
       const res = await authFetch("/api/admin/email-templates", {
         method: "DELETE",
         body: JSON.stringify({
-          key: activeKey,
+          key,
           locale: editLocale,
-          ...(eventId && !isCustom ? { eventId } : {}),
+          ...(eventId && !customTarget ? { eventId } : {}),
         }),
       });
       const json = (await res.json()) as {
@@ -256,11 +281,13 @@ export function AdminEmailTemplatesPanel() {
       };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "delete_failed");
       if (json.hardDeleted) {
-        setActiveKey("calendar_invite");
+        if (activeKey === key) setActiveKey("calendar_invite");
         setMessage("Template custom supprimé.");
       } else if (json.template) {
-        setSubject(json.template.subject);
-        setBody(json.template.body);
+        if (activeKey === key) {
+          setSubject(json.template.subject);
+          setBody(json.template.body);
+        }
         setMessage(
           eventId
             ? "Override event supprimé — retour au template global / défaut."
@@ -272,6 +299,45 @@ export function AdminEmailTemplatesPanel() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function duplicateCustomTemplate(source: EmailTemplateDoc) {
+    const baseLabel = templateLabel(source.key, source.label).trim() || "Template";
+    const suggested = `${baseLabel} (copie)`.slice(0, 80);
+    const label = window.prompt("Nom du nouveau template :", suggested)?.trim();
+    if (!label || label.length < 2) return;
+
+    setCreating(true);
+    setMessage(null);
+    setError(null);
+    setMenuKey(null);
+    try {
+      const res = await authFetch("/api/admin/email-templates", {
+        method: "POST",
+        body: JSON.stringify({
+          label,
+          duplicateFrom: source.key,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        template?: EmailTemplateDoc;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.template) {
+        throw new Error(json.error ?? "duplicate_failed");
+      }
+      setActiveKey(json.template.key);
+      setSubject(json.template.subject);
+      setBody(json.template.body);
+      setEnabled(true);
+      setMessage(`Template « ${json.template.label ?? json.template.key} » dupliqué.`);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCreating(false);
     }
   }
 
@@ -362,24 +428,65 @@ export function AdminEmailTemplatesPanel() {
                 Custom
               </p>
               {customTemplates.map((t) => (
-                <button
+                <div
                   key={t.key}
-                  type="button"
-                  onClick={() => {
-                    setActiveKey(t.key);
-                    setMessage(null);
-                  }}
-                  className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
-                    activeKey === t.key
-                      ? "bg-ns-primary/15 font-semibold text-ns-primary"
-                      : "hover:bg-ns-brand-light"
+                  className={`relative flex min-w-0 items-stretch rounded-lg ${
+                    activeKey === t.key ? "bg-ns-primary/15" : "hover:bg-ns-brand-light"
                   }`}
                 >
-                  <span className="block truncate">{templateLabel(t.key, t.label)}</span>
-                  <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-                    Custom
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveKey(t.key);
+                      setMessage(null);
+                      setMenuKey(null);
+                    }}
+                    className={`min-w-0 flex-1 px-3 py-2 text-left text-sm ${
+                      activeKey === t.key ? "font-semibold text-ns-primary" : ""
+                    }`}
+                  >
+                    <span className="block truncate">{templateLabel(t.key, t.label)}</span>
+                    <span className="mt-1 inline-block text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                      Custom
+                    </span>
+                  </button>
+                  <div className="relative shrink-0 self-center pr-1" ref={menuKey === t.key ? menuRef : undefined}>
+                    <button
+                      type="button"
+                      aria-label={`Actions ${templateLabel(t.key, t.label)}`}
+                      aria-expanded={menuKey === t.key}
+                      className="rounded-md p-1.5 text-ns-secondary hover:bg-white/80 hover:text-ns-tertiary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuKey((k) => (k === t.key ? null : t.key));
+                      }}
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                    {menuKey === t.key ? (
+                      <div className="absolute right-0 z-20 mt-1 w-40 overflow-hidden rounded-lg border border-gray-100 bg-white py-1 shadow-lg">
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ns-tertiary hover:bg-ns-brand-light"
+                          disabled={creating || saving}
+                          onClick={() => void duplicateCustomTemplate(t)}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                          Dupliquer
+                        </button>
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-700 hover:bg-red-50"
+                          disabled={creating || saving}
+                          onClick={() => void removeCustomTemplate(t.key)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Effacer
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
               ))}
             </div>
           ) : null}
@@ -482,7 +589,9 @@ export function AdminEmailTemplatesPanel() {
                 {'<a href="https://…">texte</a>'}
               </code>
               ,{" "}
-              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<b>"}</code>,{" "}
+              <code className="rounded bg-gray-100 px-1 text-[10px]">{"<bold>…</bold>"}</code>
+              {" "}
+              (ou <code className="rounded bg-gray-100 px-1 text-[10px]">{"<b>"}</code>),{" "}
               <code className="rounded bg-gray-100 px-1 text-[10px]">{"<i>"}</code>,{" "}
               <code className="rounded bg-gray-100 px-1 text-[10px]">{"<u>"}</code>,{" "}
               <code className="rounded bg-gray-100 px-1 text-[10px]">{"<br>"}</code>
@@ -497,6 +606,14 @@ export function AdminEmailTemplatesPanel() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={BTN_PRIMARY}
+              disabled={saving}
+              onClick={() => void save({ asEventOverride: false })}
+            >
+              {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+            </button>
             <button
               type="button"
               className={BTN_SECONDARY}

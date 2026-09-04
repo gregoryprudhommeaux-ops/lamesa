@@ -66,7 +66,7 @@ async function main() {
     subtitle: "",
     organizerName: "LA MESA",
     introText:
-      "Un dîner entre dirigeants et entrepreneurs français de Guadalajara, autour d’une table assez petite pour que la conversation tienne. On parle de ce qu’on construit ici — business, équipe, décisions — et on se rend utiles les uns aux autres.\n\nLa soirée du **24 septembre** se compose selon qui répond. Fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité. On ne publie pas la liste des noms à l’avance ; le filtre, c’est le profil et l’intention.\n\nC’est un **Save the Date**. Tu indiques ton intérêt, on calibre le lieu au centre avec le nombre de réponses, puis on te confirme.\n\n**Invitation nominative.** Merci de répondre avant **dimanche 6 septembre**.",
+      "Un dîner entre dirigeants et entrepreneurs français de Guadalajara, autour d’une table assez petite pour que la conversation tienne. On parle de ce qu’on construit ici — business, équipe, décisions — et on se rend utiles les uns aux autres.\n\nLa soirée du <bold>24 septembre</bold> se compose selon qui répond. Fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité. On ne publie pas la liste des noms à l’avance ; le filtre, c’est le profil et l’intention.\n\nC’est un <bold>Save the Date</bold>. Tu indiques ton intérêt, on calibre le lieu au centre avec le nombre de réponses, puis on te confirme.\n\n<bold>Invitation nominative.</bold> Merci de répondre avant <bold>dimanche 6 septembre</bold>.",
     venueName: "",
     address: "Centre de Guadalajara — lieu à confirmer",
     city: "Guadalajara",

@@ -47,6 +47,16 @@ describe("la-mesa-email-shell", () => {
     expect(html).not.toContain("&lt;b");
   });
 
+  it("maps <bold> to <b> for email clients", () => {
+    const html = richTextToEmailHtml(
+      "La soirée du <bold>24 septembre</bold>. C’est un <bold>Save the Date</bold>.",
+    );
+    expect(html).toContain("<b>24 septembre</b>");
+    expect(html).toContain("<b>Save the Date</b>");
+    expect(html).not.toContain("<bold>");
+    expect(html).not.toContain("&lt;bold");
+  });
+
   it("escapes unknown tags and blocks non-http links", () => {
     const html = richTextToEmailHtml(
       '<script>x</script> <a href="javascript:alert(1)">x</a>',
