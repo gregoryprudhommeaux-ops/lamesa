@@ -30,11 +30,15 @@ type CalendarEventDto = {
 
 async function loadPublishedEvents(db: ReturnType<typeof getAdminFirestore>): Promise<AdminEvent[]> {
   try {
-    const snap = await db.collection(COLLECTIONS.events).where("status", "==", "published").get();
+    const snap = await db
+      .collection(COLLECTIONS.events)
+      .where("status", "==", "published")
+      .limit(100)
+      .get();
     return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEvent, "id">) }));
   } catch (error) {
     console.error("[calendar] published events query failed, fallback scan", error);
-    const snap = await db.collection(COLLECTIONS.events).limit(500).get();
+    const snap = await db.collection(COLLECTIONS.events).limit(80).get();
     return snap.docs
       .filter((d) => String(d.data().status ?? "") === "published")
       .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEvent, "id">) }));
@@ -54,13 +58,7 @@ async function loadUserParticipations(
     id: d.id,
     ...(d.data() as Omit<AdminEventParticipation, "id">),
   }));
-
-  if (myParts.length === 0) {
-    const all = await db.collection(COLLECTIONS.participations).limit(2000).get();
-    myParts = all.docs
-      .filter((d) => normalizeEmail(String(d.data().email ?? "")) === email)
-      .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) }));
-  }
+  // No full-collection fallback: emails are stored normalized.
 
   return myParts;
 }
@@ -85,24 +83,37 @@ export async function GET(request: Request) {
     myParts.filter((p) => p.eventId).map((p) => [p.eventId, p]),
   );
 
-  async function fellowsFor(eventId: string) {
-    const snap = await db
-      .collection(COLLECTIONS.participations)
-      .where("eventId", "==", eventId)
-      .get();
-    return snap.docs
-      .map((d) => d.data())
-      .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
-      .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
-      .map((d) => {
-        const status = normalizeParticipationStatus(String(d.status ?? ""));
-        return {
-          fullName: d.fullName ? String(d.fullName) : undefined,
-          companyName: d.companyName ? String(d.companyName) : undefined,
-          status: (status === "attending" ? "attending" : "confirmed") as "attending" | "confirmed",
-        };
-      });
-  }
+  const invitedEventIds = [...participationByEventId.keys()];
+  const fellowsByEvent = new Map<
+    string,
+    Array<{ fullName?: string; companyName?: string; status: "attending" | "confirmed" }>
+  >();
+  await Promise.all(
+    invitedEventIds.map(async (eventId) => {
+      const snap = await db
+        .collection(COLLECTIONS.participations)
+        .where("eventId", "==", eventId)
+        .limit(80)
+        .get();
+      fellowsByEvent.set(
+        eventId,
+        snap.docs
+          .map((d) => d.data())
+          .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
+          .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
+          .map((d) => {
+            const status = normalizeParticipationStatus(String(d.status ?? ""));
+            return {
+              fullName: d.fullName ? String(d.fullName) : undefined,
+              companyName: d.companyName ? String(d.companyName) : undefined,
+              status: (status === "attending" ? "attending" : "confirmed") as
+                | "attending"
+                | "confirmed",
+            };
+          }),
+      );
+    }),
+  );
 
   const events: CalendarEventDto[] = [];
 
@@ -125,7 +136,6 @@ export async function GET(request: Request) {
       continue;
     }
 
-    const fellows = await fellowsFor(event.id);
     events.push({
       id: event.id,
       slug: event.slug,
@@ -139,7 +149,7 @@ export async function GET(request: Request) {
       mapsUrl: event.mapsUrl,
       invited: true,
       participationStatus: part.status,
-      fellows,
+      fellows: fellowsByEvent.get(event.id) ?? [],
     });
   }
 

@@ -6,7 +6,7 @@ import type { WaitlistRegistration } from "@/lib/types/events";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const WAITLIST_SCAN_LIMIT = 3000;
+const WAITLIST_SCAN_LIMIT = 500;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function authorize(request: Request): boolean {

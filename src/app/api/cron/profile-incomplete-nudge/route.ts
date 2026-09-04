@@ -25,7 +25,7 @@ async function runMonthlyProfileNudges() {
   }
 
   const db = getAdminFirestore();
-  const snap = await db.collection(COLLECTIONS.waitlist).limit(3000).get();
+  const snap = await db.collection(COLLECTIONS.waitlist).limit(500).get();
   const members = snap.docs.map((d) => ({
     id: d.id,
     ...(d.data() as Omit<WaitlistRegistration, "id">),

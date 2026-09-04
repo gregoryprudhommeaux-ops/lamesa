@@ -4,6 +4,10 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import {
+  invalidateAdminCoreCollectionsCache,
+  loadAdminCoreCollections,
+} from "@/lib/admin/load-core-collections";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
 import { nextInviteStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
@@ -19,27 +23,21 @@ export async function GET(request: Request) {
   }
 
   try {
-    const db = getAdminFirestore();
-    const [eventsSnap, partsSnap] = await Promise.all([
-      db.collection(COLLECTIONS.events).orderBy("startsAt", "desc").limit(100).get(),
-      db.collection(COLLECTIONS.participations).limit(2000).get(),
-    ]);
+    const core = await loadAdminCoreCollections();
+    const events = [...core.events].sort(
+      (a, b) => new Date(b.startsAt).getTime() - new Date(a.startsAt).getTime(),
+    );
 
-    const events = eventsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    const waitlistSnap = await db.collection(COLLECTIONS.waitlist).limit(2000).get();
     const phoneByEmail = new Map<string, string>();
-    for (const d of waitlistSnap.docs) {
-      const data = d.data();
-      const email = normalizeEmail(String(data.email ?? ""));
-      const phone = String(data.phone ?? "").trim();
+    for (const row of core.waitlist) {
+      const email = normalizeEmail(String(row.email ?? ""));
+      const phone = String(row.phone ?? "").trim();
       if (email && phone) phoneByEmail.set(email, phone);
     }
 
-    const participations = partsSnap.docs.map((d) => {
-      const data = d.data();
+    const participations = core.participations.map((data) => {
       const email = normalizeEmail(String(data.email ?? ""));
       return {
-        id: d.id,
         ...data,
         phone: phoneByEmail.get(email) ?? null,
       };
@@ -142,6 +140,7 @@ export async function POST(request: Request) {
 
     await ensureOrganizerParticipation(db, ref.id, now);
 
+    invalidateAdminCoreCollectionsCache();
     return NextResponse.json({ ok: true, id: ref.id, slug });
   } catch (error) {
     console.error("[admin/events POST]", error);

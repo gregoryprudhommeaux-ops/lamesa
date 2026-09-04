@@ -124,15 +124,14 @@ export async function POST(request: Request, { params }: Params) {
     updatedAt: now,
   };
 
-  const existingSnap = await db
+  const existingByEmail = await db
     .collection(COLLECTIONS.respondents)
-    .where("eventId", "==", eventDoc.id)
-    .limit(500)
+    .where("email", "==", email)
+    .limit(20)
     .get();
 
-  const existingDoc = existingSnap.docs.find(
-    (d) => normalizeEmail(String(d.data().email ?? "")) === email,
-  );
+  const existingDoc =
+    existingByEmail.docs.find((d) => String(d.data().eventId ?? "") === eventDoc.id) ?? null;
 
   let id: string;
   let respondentRef = existingDoc?.ref;

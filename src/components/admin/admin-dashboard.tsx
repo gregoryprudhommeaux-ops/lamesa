@@ -474,16 +474,22 @@ export function AdminDashboardPanel() {
         detail?: string;
       };
       if (!res.ok || !json.ok) {
-        if (json.error === "firestore_quota_exceeded") {
+        const code = json.error ?? "load_failed";
+        if (code === "firestore_quota_exceeded" || /quota|RESOURCE_EXHAUSTED/i.test(json.detail ?? "")) {
           throw new Error(
-            "Quota Firestore dépassé (trop de lectures). Réessaie dans quelques minutes, ou augmente le quota Firebase.",
+            "Quota Firestore dépassé (trop de lectures sur le dashboard). Réessaie dans 1–2 min, ou passe le projet Firebase en Blaze / augmente le quota.",
           );
         }
-        throw new Error(json.detail ? `${json.error}: ${json.detail}` : (json.error ?? "load_failed"));
+        throw new Error(json.detail ? `${code}: ${json.detail}` : code);
       }
       setData(json);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      const raw = e instanceof Error ? e.message : String(e);
+      setError(
+        raw === "firestore_quota_exceeded" || /RESOURCE_EXHAUSTED|Quota exceeded/i.test(raw)
+          ? "Quota Firestore dépassé (trop de lectures sur le dashboard). Réessaie dans 1–2 min, ou passe le projet Firebase en Blaze / augmente le quota."
+          : raw,
+      );
     } finally {
       setLoading(false);
     }

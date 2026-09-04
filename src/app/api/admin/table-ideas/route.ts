@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import { composeTableIdeas, TableIdeasError } from "@/lib/admin/table-matching";
 import { tableIdeasRequestSchema } from "@/lib/admin/table-matching/schemas";
+import { loadAdminCoreCollections } from "@/lib/admin/load-core-collections";
 import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
-import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import type {
-  AdminEvent,
-  AdminEventParticipation,
-  WaitlistRegistration,
-} from "@/lib/types/events";
+import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 
 const TABLE_IDEAS_ERROR_STATUS: Record<TableIdeasError["code"], number> = {
   validation: 400,
@@ -44,32 +40,13 @@ export async function POST(request: Request) {
   const theme = parsed.data.mode === "admin_theme" ? parsed.data.theme : undefined;
 
   try {
-    const db = getAdminFirestore();
-    const [waitlistSnap, eventsSnap, partsSnap] = await Promise.all([
-      db.collection(COLLECTIONS.waitlist).limit(3000).get(),
-      db.collection(COLLECTIONS.events).limit(300).get(),
-      db.collection(COLLECTIONS.participations).limit(5000).get(),
-    ]);
-
-    const members = waitlistSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<WaitlistRegistration, "id">),
-    }));
-    const events = eventsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<AdminEvent, "id">),
-    }));
-    const participations = partsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<AdminEventParticipation, "id">),
-    }));
-
+    const core = await loadAdminCoreCollections();
     const { ideas, poolSize } = await composeTableIdeas({
       mode,
       theme,
-      members,
-      participations,
-      events,
+      members: core.waitlist,
+      participations: core.participations,
+      events: core.events,
       city,
       excludeMemberIds,
     });

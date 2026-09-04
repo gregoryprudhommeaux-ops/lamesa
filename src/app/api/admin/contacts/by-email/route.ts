@@ -30,12 +30,11 @@ export async function GET(request: Request) {
 
   try {
     const db = getAdminFirestore();
-    const [prospect, waitlist, activities, partsSnap, eventsSnap] = await Promise.all([
+    const [prospect, waitlist, activities, partsSnap] = await Promise.all([
       findProspectByEmail(email),
       findWaitlistByEmailIncludingDeleted(email),
-      listActivitiesByEmail(email, 500),
-      db.collection(COLLECTIONS.participations).where("email", "==", email).limit(200).get(),
-      db.collection(COLLECTIONS.events).limit(500).get(),
+      listActivitiesByEmail(email, 100),
+      db.collection(COLLECTIONS.participations).where("email", "==", email).limit(100).get(),
     ]);
 
     let participations: AdminEventParticipation[] = partsSnap.docs.map((d) => ({
@@ -48,7 +47,7 @@ export async function GET(request: Request) {
       const byContact = await db
         .collection(COLLECTIONS.participations)
         .where("contactId", "==", waitlist.id)
-        .limit(100)
+        .limit(50)
         .get();
       const byId = new Map(participations.map((p) => [p.id, p]));
       for (const d of byContact.docs) {
@@ -62,10 +61,16 @@ export async function GET(request: Request) {
       participations = [...byId.values()];
     }
 
-    const events: AdminEvent[] = eventsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<AdminEvent, "id">),
-    }));
+    const eventIds = [...new Set(participations.map((p) => p.eventId).filter(Boolean))];
+    const events: AdminEvent[] = (
+      await Promise.all(
+        eventIds.map(async (id) => {
+          const snap = await db.collection(COLLECTIONS.events).doc(id).get();
+          if (!snap.exists) return null;
+          return { id: snap.id, ...(snap.data() as Omit<AdminEvent, "id">) };
+        }),
+      )
+    ).filter((e): e is AdminEvent => Boolean(e));
     const eventLites = events.map((e) => ({
       id: e.id,
       title: e.title,

@@ -5,6 +5,28 @@ import { normalizeReferralCode } from "@/lib/member/referral-code";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
+/**
+ * Full waitlist scans for mixed-case legacy emails. Off by default on Blaze —
+ * set FIRESTORE_LEGACY_SCAN=1 only if a known old row still uses non-normalized email.
+ * When enabled, cap is small (covers current LA MESA volume).
+ */
+const LEGACY_SCAN_ENABLED = process.env.FIRESTORE_LEGACY_SCAN === "1";
+const LEGACY_SCAN_LIMIT = 100;
+
+async function legacyWaitlistScan(
+  predicate: (data: Record<string, unknown>) => boolean,
+): Promise<{ id: string; data: Omit<WaitlistRegistration, "id"> } | null> {
+  if (!LEGACY_SCAN_ENABLED) return null;
+  const snap = await getAdminFirestore()
+    .collection(COLLECTIONS.waitlist)
+    .orderBy("createdAt", "desc")
+    .limit(LEGACY_SCAN_LIMIT)
+    .get();
+  const hit = snap.docs.find((d) => predicate(d.data() as Record<string, unknown>));
+  if (!hit) return null;
+  return { id: hit.id, data: hit.data() as Omit<WaitlistRegistration, "id"> };
+}
+
 export async function findWaitlistByEmail(
   email: string,
 ): Promise<(WaitlistRegistration & { id: string; uid?: string; linkedAt?: string }) | null> {
@@ -19,15 +41,12 @@ export async function findWaitlistByEmail(
     if (!isSoftDeleted(data)) return { id: d.id, ...data };
   }
 
-  // Legacy rows may have mixed-case emails; prefer an active profile when exact match is soft-deleted
-  const snap = await db.collection(COLLECTIONS.waitlist).orderBy("createdAt", "desc").limit(400).get();
-  const hit = snap.docs.find((d) => {
-    if (normalizeEmail(String(d.data().email ?? "")) !== target) return false;
-    return !isSoftDeleted(d.data() as Omit<WaitlistRegistration, "id">);
+  const legacy = await legacyWaitlistScan((row) => {
+    if (normalizeEmail(String(row.email ?? "")) !== target) return false;
+    return !isSoftDeleted(row as Omit<WaitlistRegistration, "id">);
   });
-  if (!hit) return null;
-  const data = hit.data() as Omit<WaitlistRegistration, "id">;
-  return { id: hit.id, ...data };
+  if (!legacy) return null;
+  return { id: legacy.id, ...legacy.data };
 }
 
 export async function findWaitlistByEmailIncludingDeleted(
@@ -43,10 +62,11 @@ export async function findWaitlistByEmailIncludingDeleted(
     return { id: d.id, ...(d.data() as Omit<WaitlistRegistration, "id">) };
   }
 
-  const snap = await db.collection(COLLECTIONS.waitlist).orderBy("createdAt", "desc").limit(400).get();
-  const hit = snap.docs.find((d) => normalizeEmail(String(d.data().email ?? "")) === target);
-  if (!hit) return null;
-  return { id: hit.id, ...(hit.data() as Omit<WaitlistRegistration, "id">) };
+  const legacy = await legacyWaitlistScan(
+    (row) => normalizeEmail(String(row.email ?? "")) === target,
+  );
+  if (!legacy) return null;
+  return { id: legacy.id, ...legacy.data };
 }
 
 export async function findWaitlistByReferralCode(
@@ -63,23 +83,21 @@ export async function findWaitlistByReferralCode(
     .limit(1)
     .get();
 
-  let hit = exact.empty ? null : exact.docs[0]!;
-
-  if (!hit) {
-    const snap = await db.collection(COLLECTIONS.waitlist).orderBy("createdAt", "desc").limit(400).get();
-    hit =
-      snap.docs.find(
-        (d) => normalizeReferralCode(String(d.data().referralCode ?? "")) === normalized,
-      ) ?? null;
+  if (!exact.empty) {
+    const hit = exact.docs[0]!;
+    const data = hit.data() as Omit<WaitlistRegistration, "id">;
+    if (isSoftDeleted(data)) return null;
+    if (isPlatformAdminEmail(data.email)) return null;
+    return { id: hit.id, ...data };
   }
 
-  if (!hit) return null;
-
-  const data = hit.data() as Omit<WaitlistRegistration, "id">;
-  if (isSoftDeleted(data)) return null;
-  if (isPlatformAdminEmail(data.email)) return null;
-
-  return { id: hit.id, ...data };
+  const legacy = await legacyWaitlistScan(
+    (row) => normalizeReferralCode(String(row.referralCode ?? "")) === normalized,
+  );
+  if (!legacy) return null;
+  if (isSoftDeleted(legacy.data)) return null;
+  if (isPlatformAdminEmail(legacy.data.email)) return null;
+  return { id: legacy.id, ...legacy.data };
 }
 
 export async function linkWaitlistUid(waitlistId: string, uid: string): Promise<void> {

@@ -10,22 +10,22 @@ import {
 } from "@/lib/admin/satisfaction-stats";
 import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import {
+  ADMIN_SCAN,
+  loadAdminCoreCollections,
+} from "@/lib/admin/load-core-collections";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
+import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
+import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
+import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import {
   computeProfileCompletionPercent,
   isExpressSignup,
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
-import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
-import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import type {
-  AdminEvent,
-  AdminEventParticipation,
-  WaitlistRegistration,
-} from "@/lib/types/events";
+import type { WaitlistRegistration } from "@/lib/types/events";
 
 const RECENT_REGISTRANTS_LIMIT = 25;
 
@@ -131,33 +131,22 @@ export async function GET(request: Request) {
 
   try {
     const db = getAdminFirestore();
+    // Shared + TTL-cached with other admin routes to avoid triple-scans per navigation.
     const draftsPromise = db
       .collection(COLLECTIONS.tableDrafts)
+      .limit(ADMIN_SCAN.drafts)
       .get()
       .catch((error) => {
         console.error("[admin/dashboard drafts]", error);
         return null;
       });
-    const [eventsSnap, partsSnap, waitlistSnap, draftsSnap] = await Promise.all([
-      db.collection(COLLECTIONS.events).limit(300).get(),
-      db.collection(COLLECTIONS.participations).limit(5000).get(),
-      db.collection(COLLECTIONS.waitlist).limit(3000).get(),
+    const [core, draftsSnap] = await Promise.all([
+      loadAdminCoreCollections(),
       draftsPromise,
     ]);
 
-    const events = eventsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<AdminEvent, "id">),
-    }));
-    const participations = partsSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<AdminEventParticipation, "id">),
-    }));
-
-    const waitlistAll = waitlistSnap.docs.map((d) => ({
-      id: d.id,
-      ...(d.data() as Omit<WaitlistRegistration, "id">),
-    }));
+    const { events, participations } = core;
+    const waitlistAll = core.waitlist;
     const waitlistActive = waitlistAll.filter((r) => !isSoftDeleted(r));
 
     const recentMembers = [...waitlistActive]

@@ -30,7 +30,10 @@ export async function GET(request: Request) {
   }
 
   try {
-    const snapshot = await getAdminFirestore().collection(COLLECTIONS.tableDrafts).get();
+    const snapshot = await getAdminFirestore()
+      .collection(COLLECTIONS.tableDrafts)
+      .limit(100)
+      .get();
     const drafts = listNormalizedTableDrafts(
       snapshot.docs,
       requestedStatus as TableDraftStatus | null,

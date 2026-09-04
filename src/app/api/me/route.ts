@@ -79,13 +79,7 @@ export async function GET(request: Request) {
     id: d.id,
     ...(d.data() as Omit<AdminEventParticipation, "id">),
   }));
-
-  if (myParts.length === 0) {
-    const all = await db.collection(COLLECTIONS.participations).limit(2000).get();
-    myParts = all.docs
-      .filter((d) => normalizeEmail(String(d.data().email ?? "")) === email)
-      .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) }));
-  }
+  // No full-collection fallback: emails are stored normalized.
 
   const eventIds = [...new Set(myParts.map((p) => p.eventId).filter(Boolean))];
   const eventsById = new Map<string, AdminEvent>();
@@ -101,24 +95,32 @@ export async function GET(request: Request) {
 
   const now = Date.now();
 
-  async function fellowsFor(eventId: string): Promise<Fellow[]> {
-    const snap = await db
-      .collection(COLLECTIONS.participations)
-      .where("eventId", "==", eventId)
-      .get();
-    return snap.docs
-      .map((d) => d.data())
-      .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
-      .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
-      .map((d) => {
-        const status = normalizeParticipationStatus(String(d.status ?? ""));
-        return {
-          fullName: d.fullName ? String(d.fullName) : undefined,
-          companyName: d.companyName ? String(d.companyName) : undefined,
-          status: status === "attending" ? "attending" : "confirmed",
-        };
-      });
-  }
+  const uniqueEventIds = [...new Set(myParts.map((p) => p.eventId).filter(Boolean))];
+  const fellowsByEvent = new Map<string, Fellow[]>();
+  await Promise.all(
+    uniqueEventIds.map(async (eventId) => {
+      const snap = await db
+        .collection(COLLECTIONS.participations)
+        .where("eventId", "==", eventId)
+        .limit(80)
+        .get();
+      fellowsByEvent.set(
+        eventId,
+        snap.docs
+          .map((d) => d.data())
+          .filter((d) => normalizeEmail(String(d.email ?? "")) !== email)
+          .filter((d) => isFellowVisibleStatus(String(d.status ?? "")))
+          .map((d) => {
+            const status = normalizeParticipationStatus(String(d.status ?? ""));
+            return {
+              fullName: d.fullName ? String(d.fullName) : undefined,
+              companyName: d.companyName ? String(d.companyName) : undefined,
+              status: status === "attending" ? "attending" : "confirmed",
+            };
+          }),
+      );
+    }),
+  );
 
   const pastInvitations = [];
   const upcomingInvitations = [];
@@ -127,7 +129,7 @@ export async function GET(request: Request) {
     const event = eventsById.get(part.eventId);
     if (!event) continue;
     const starts = new Date(event.startsAt).getTime();
-    const fellows = await fellowsFor(part.eventId);
+    const fellows = fellowsByEvent.get(part.eventId) ?? [];
     const entry = {
       participationId: part.id,
       status: part.status,

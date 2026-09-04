@@ -4,9 +4,10 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
+import { loadAdminCoreCollections } from "@/lib/admin/load-core-collections";
 import { sendColdTemplateEmail } from "@/lib/email/send-cold-template";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
-import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import {
   listProspects,
@@ -18,16 +19,14 @@ import {
   isDatabasePersoConfigured,
   markLaMesaContacted,
 } from "@/lib/database-perso";
-import type { WaitlistRegistration } from "@/lib/types/events";
 
 const SEND_BATCH_LIMIT = 50;
 
 async function loadWaitlistEmails(): Promise<Set<string>> {
   if (!isFirebaseAdminConfigured()) return new Set();
-  const snap = await getAdminFirestore().collection(COLLECTIONS.waitlist).limit(5000).get();
+  const core = await loadAdminCoreCollections();
   const emails = new Set<string>();
-  for (const doc of snap.docs) {
-    const row = { id: doc.id, ...(doc.data() as Omit<WaitlistRegistration, "id">) };
+  for (const row of core.waitlist) {
     if (isSoftDeleted(row)) continue;
     const email = row.email?.trim().toLowerCase();
     if (email?.includes("@")) emails.add(email);

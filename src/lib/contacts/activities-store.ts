@@ -65,14 +65,14 @@ export async function recordContactActivity(
 
 export async function listActivitiesByEmail(
   emailRaw: string,
-  limit = 500,
+  limit = 100,
 ): Promise<ContactActivity[]> {
   const email = normalizeProspectEmail(emailRaw);
   if (!email.includes("@")) return [];
   const snap = await getAdminFirestore()
     .collection(COLLECTIONS.contactActivities)
     .where("email", "==", email)
-    .limit(Math.min(limit, 1000))
+    .limit(Math.min(limit, 200))
     .get();
   const rows = snap.docs
     .map((d) => docToActivity(d.id, d.data() as Record<string, unknown>))
