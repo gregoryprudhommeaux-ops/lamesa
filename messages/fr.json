@@ -18,14 +18,16 @@
     "taglineAfter": " pour les entrepreneurs.",
     "taglineLead": "LA MESA : dîners thématiques à Guadalajara, ",
     "rights": "© {year} NextStep Services",
-    "about": "Fonctionnement & FAQ",
+    "about": "Fonctionnement",
+    "site": "www.lamesasecreta.com",
     "contact": "Questions & partenariats",
     "login": "Connexion",
     "admin": "Administration",
     "navAria": "Pied de page",
     "homeAria": "LA MESA — retour à l'accueil",
     "suiteAria": "NS Suite — ouvrir le hub",
-    "companyAria": "NextStep Services — ouvrir le site"
+    "companyAria": "NextStep Services — ouvrir le site",
+    "siteAria": "LA MESA — site public"
   },
   "landing": {
     "headline": "Une table. Un thème. Des profils choisis.",

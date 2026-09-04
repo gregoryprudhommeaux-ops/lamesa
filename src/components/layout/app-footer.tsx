@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Link } from "@/i18n/navigation";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import {
   NEXTSTEP_COMPANY,
   NEXTSTEP_COMPANY_URL,
@@ -31,6 +32,25 @@ export function AppFooter() {
           {t("taglineAfter")}
         </p>
 
+        <nav
+          aria-label={t("navAria")}
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[12px] font-semibold text-white/55"
+        >
+          <Link href="/fonctionnement" className="transition hover:text-white">
+            {t("about")}
+          </Link>
+          <span aria-hidden className="text-white/20">
+            ·
+          </span>
+          <a
+            href={PRODUCTION_SITE_URL}
+            className="transition hover:text-white"
+            aria-label={t("siteAria")}
+          >
+            {t("site")}
+          </a>
+        </nav>
+
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-white/35">
           <span>
             © {year}{" "}
@@ -44,12 +64,6 @@ export function AppFooter() {
               {NEXTSTEP_COMPANY}
             </a>
           </span>
-          <span aria-hidden className="text-white/20">
-            ·
-          </span>
-          <Link href="/fonctionnement" className="font-medium transition hover:text-white/55">
-            {t("about")}
-          </Link>
           <span aria-hidden className="text-white/20">
             ·
           </span>

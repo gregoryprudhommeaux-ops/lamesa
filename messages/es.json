@@ -18,14 +18,16 @@
     "taglineAfter": " para emprendedores.",
     "taglineLead": "LA MESA: cenas temáticas en Guadalajara, ",
     "rights": "© {year} NextStep Services",
-    "about": "Cómo funciona y preguntas frecuentes",
+    "about": "Funcionamiento",
+    "site": "www.lamesasecreta.com",
     "contact": "Preguntas y alianzas",
     "login": "Acceso",
     "admin": "Administración",
     "navAria": "Pie de página",
     "homeAria": "LA MESA — volver al inicio",
     "suiteAria": "NS Suite — abrir el hub",
-    "companyAria": "NextStep Services — abrir el sitio"
+    "companyAria": "NextStep Services — abrir el sitio",
+    "siteAria": "LA MESA — sitio público"
   },
   "landing": {
     "headline": "Una mesa. Un tema. Perfiles elegidos.",
