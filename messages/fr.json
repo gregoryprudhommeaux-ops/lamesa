@@ -50,16 +50,22 @@
       "email": "Email",
       "emailPlaceholder": "nom@entreprise.com"
     },
-    "submit": "S'inscrire",
+    "submit": "Log in / Créer un compte",
+    "submitCreate": "Créer un compte",
+    "submitLogin": "Se connecter",
     "submitting": "Envoi…",
-    "submitHint": "On t’envoie un accès par email pour compléter ton profil quand tu veux.",
+    "submitHint": "Compte nouveau : on t’envoie un accès par email. Compte existant : connecte-toi.",
+    "loginHint": "Tu as déjà un accès ?",
+    "loginLink": "Se connecter",
+    "alreadyRegisteredCta": "Se connecter avec cet email",
+    "tryOtherEmail": "Utiliser un autre email",
     "successTitle": "C’est noté",
     "successBody": "Vérifie ta boîte mail (et les spams) pour le lien de connexion, puis complète ton profil.",
     "successCta": "Aller à la connexion",
     "fullFormHint": "Tu préfères le formulaire complet ?",
     "fullFormLink": "Inscription détaillée",
     "errors": {
-      "alreadyRegistered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
+      "alreadyRegistered": "Cet email est déjà sur LA MESA. Connecte-toi pour continuer.",
       "generic": "Impossible d’envoyer le formulaire. Réessaie."
     }
   },
@@ -419,7 +425,7 @@
     "attestationLabel": "Je confirme être dirigeant(e), fondateur(trice) ou entrepreneur(e) français(e).",
     "submitInterest": "Valider ma réponse",
     "submitInterestLogin": "Valider — se connecter",
-    "submitInterestAuthCta": "Log in / Crée ton profil",
+    "submitInterestAuthCta": "Log in / Créer un compte",
     "interestSuccessYes": "Merci — ton intérêt est enregistré.",
     "interestSuccessNo": "Merci — ta réponse est enregistrée.",
     "interestSuccessOther": "Merci — on a bien noté ton message.",
@@ -436,7 +442,7 @@
       "expectations_required": "Indique tes attentes pour ce dîner.",
       "attestation_required": "Coche la case de confirmation.",
       "unauthorized": "Connecte-toi pour envoyer ta réponse.",
-      "not_on_waitlist": "Crée d’abord ton profil membre LA MESA, puis reviens répondre.",
+      "not_on_waitlist": "Connecte-toi avec l’email de ton invitation (ou crée ton accès), puis reviens valider ta réponse.",
       "validation": "Vérifie les champs et réessaie.",
       "generic": "Envoi impossible. Réessaie."
     },

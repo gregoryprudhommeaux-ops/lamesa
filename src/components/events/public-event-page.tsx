@@ -616,8 +616,8 @@ function InterestForm({
             </Link>
           </p>
         </>
-      ) : user && notOnWaitlist && !deadlinePassed ? (
-        <Link href="/light" className={BTN_PRIMARY}>
+        ) : user && notOnWaitlist && !deadlinePassed ? (
+        <Link href={loginHref} className={BTN_PRIMARY}>
           {t("submitInterestAuthCta")}
         </Link>
       ) : (

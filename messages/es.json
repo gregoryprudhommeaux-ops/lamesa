@@ -50,16 +50,22 @@
       "email": "Correo electrónico",
       "emailPlaceholder": "nombre@empresa.com"
     },
-    "submit": "Registrarme",
+    "submit": "Log in / Crear una cuenta",
+    "submitCreate": "Crear una cuenta",
+    "submitLogin": "Iniciar sesión",
     "submitting": "Enviando…",
-    "submitHint": "Te mandamos un acceso por correo para completar tu perfil cuando quieras.",
+    "submitHint": "Cuenta nueva: te mandamos un acceso por correo. Ya estás: inicia sesión.",
+    "loginHint": "¿Ya tienes acceso?",
+    "loginLink": "Iniciar sesión",
+    "alreadyRegisteredCta": "Iniciar sesión con este correo",
+    "tryOtherEmail": "Usar otro correo",
     "successTitle": "Listo",
     "successBody": "Revisa tu correo (y spam) para el enlace, inicia sesión y completa tu perfil.",
     "successCta": "Ir al acceso",
     "fullFormHint": "¿Prefieres el formulario completo?",
     "fullFormLink": "Registro detallado",
     "errors": {
-      "alreadyRegistered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
+      "alreadyRegistered": "Este correo ya está en LA MESA. Inicia sesión para continuar.",
       "generic": "No se pudo enviar. Inténtalo de nuevo."
     }
   },
@@ -436,7 +442,7 @@
       "expectations_required": "Indica tus expectativas para esta cena.",
       "attestation_required": "Marca la casilla de confirmación.",
       "unauthorized": "Inicia sesión para enviar tu respuesta.",
-      "not_on_waitlist": "Crea primero tu perfil de miembro LA MESA y vuelve a responder.",
+      "not_on_waitlist": "Inicia sesión con el correo de tu invitación (o crea tu acceso) y vuelve a responder.",
       "validation": "Revisa los campos e inténtalo de nuevo.",
       "generic": "No se pudo enviar. Inténtalo de nuevo."
     },

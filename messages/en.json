@@ -50,16 +50,22 @@
       "email": "Email",
       "emailPlaceholder": "name@company.com"
     },
-    "submit": "Sign up",
+    "submit": "Log in / Create an account",
+    "submitCreate": "Create an account",
+    "submitLogin": "Sign in",
     "submitting": "Sending…",
-    "submitHint": "We’ll email you access to finish your profile whenever you’re ready.",
+    "submitHint": "New here: we’ll email you access. Already on the list: sign in.",
+    "loginHint": "Already have access?",
+    "loginLink": "Sign in",
+    "alreadyRegisteredCta": "Sign in with this email",
+    "tryOtherEmail": "Use a different email",
     "successTitle": "You’re in",
     "successBody": "Check your inbox (and spam) for the link, then sign in and finish your profile.",
     "successCta": "Go to sign-in",
     "fullFormHint": "Prefer the full form?",
     "fullFormLink": "Detailed registration",
     "errors": {
-      "alreadyRegistered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
+      "alreadyRegistered": "This email is already on LA MESA. Sign in to continue.",
       "generic": "We couldn’t submit the form. Please try again."
     }
   },
@@ -436,7 +442,7 @@
       "expectations_required": "Share your expectations for this dinner.",
       "attestation_required": "Please check the confirmation box.",
       "unauthorized": "Sign in to send your reply.",
-      "not_on_waitlist": "Create your LA MESA member profile first, then come back to reply.",
+      "not_on_waitlist": "Sign in with the email from your invitation (or create access), then come back to reply.",
       "validation": "Check the fields and try again.",
       "generic": "Could not submit. Please try again."
     },

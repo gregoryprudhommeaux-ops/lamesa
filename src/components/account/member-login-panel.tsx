@@ -122,7 +122,10 @@ export function MemberLoginPanel() {
   const [mode, setMode] = useState<AuthMode>(
     searchParams.get("mode") === "signup" ? "signup" : "signin",
   );
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    const fromQuery = searchParams.get("email")?.trim().toLowerCase() ?? "";
+    return fromQuery.includes("@") ? fromQuery : "";
+  });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);

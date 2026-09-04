@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { ExpressSignupForm } from "@/components/express-signup-form";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -13,7 +14,9 @@ export default async function LightSignupPage({ params }: Props) {
 
   return (
     <LaMesaShell card cardClassName="max-w-md" brandTagline={t("brandTagline")}>
-      <ExpressSignupForm />
+      <Suspense fallback={null}>
+        <ExpressSignupForm />
+      </Suspense>
     </LaMesaShell>
   );
 }
