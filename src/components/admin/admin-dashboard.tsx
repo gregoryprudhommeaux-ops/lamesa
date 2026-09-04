@@ -469,8 +469,18 @@ export function AdminDashboardPanel() {
     setError(null);
     try {
       const res = await authFetch("/api/admin/dashboard");
-      const json = (await res.json()) as DashboardPayload;
-      if (!res.ok || !json.ok) throw new Error(json.error ?? "load_failed");
+      const json = (await res.json()) as DashboardPayload & {
+        error?: string;
+        detail?: string;
+      };
+      if (!res.ok || !json.ok) {
+        if (json.error === "firestore_quota_exceeded") {
+          throw new Error(
+            "Quota Firestore dépassé (trop de lectures). Réessaie dans quelques minutes, ou augmente le quota Firebase.",
+          );
+        }
+        throw new Error(json.detail ? `${json.error}: ${json.detail}` : (json.error ?? "load_failed"));
+      }
       setData(json);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

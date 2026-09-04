@@ -292,6 +292,19 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);
-    return NextResponse.json({ ok: false, error: "fetch_failed" }, { status: 502 });
+    const raw = error instanceof Error ? error.message : String(error);
+    const detail = raw.slice(0, 400);
+    const quota =
+      /RESOURCE_EXHAUSTED|Quota exceeded/i.test(raw) ||
+      (typeof (error as { code?: unknown })?.code === "number" &&
+        (error as { code: number }).code === 8);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: quota ? "firestore_quota_exceeded" : "fetch_failed",
+        detail,
+      },
+      { status: 502 },
+    );
   }
 }
