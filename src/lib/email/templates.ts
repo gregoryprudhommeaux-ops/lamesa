@@ -146,7 +146,9 @@ export function buildEventTemplateVars(input: {
     eventTitle: input.event.title,
     when: fmtDateTime(input.event.startsAt, lang),
     where: formatEventWhereLine(input.event.venueName, input.event.address),
-    eventUrl: eventPublicUrl(input.publicBaseUrl, input.event.slug, lang),
+    eventUrl: eventPublicUrl(input.publicBaseUrl, input.event.slug, lang, {
+      email: input.email,
+    }),
     yesUrl: input.yesUrl,
     noUrl: input.noUrl,
     surveyUrl: input.surveyUrl,

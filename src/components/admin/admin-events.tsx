@@ -510,13 +510,17 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         sent?: number;
         skipped?: number;
         failed?: number;
+        waitlistProvisioned?: number;
         error?: string;
         errors?: string[];
       };
       if (!res.ok && json.error === "no_recipients") {
         throw new Error("Aucun destinataire (invitees / waitlist).");
       }
-      const summary = `Save the Date — envoyés: ${json.sent ?? 0}, skip: ${json.skipped ?? 0}, échecs: ${json.failed ?? 0}`;
+      const provisioned = json.waitlistProvisioned ?? 0;
+      const summary = `Save the Date — envoyés: ${json.sent ?? 0}, skip: ${json.skipped ?? 0}, échecs: ${json.failed ?? 0}${
+        provisioned > 0 ? `, profils créés/réactivés: ${provisioned}` : ""
+      }`;
       setInviteSendOk(Boolean(json.ok));
       setInviteSendResult(
         [summary, ...(json.errors ?? [])].filter(Boolean).join("\n"),

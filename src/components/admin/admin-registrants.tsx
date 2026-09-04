@@ -241,7 +241,7 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
 
 type ContextMenuState = { x: number; y: number } | null;
 type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
-type ProfileFilter = "all" | "incomplete";
+type ProfileFilter = "all" | "incomplete" | "no_auth";
 type SourceFilter = "all" | "franconetwork";
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
@@ -264,9 +264,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [city, setCity] = useState("");
   const [company, setCompany] = useState("");
   const [referralFilter, setReferralFilter] = useState<ReferralFilter>("all");
-  const [profileFilter, setProfileFilter] = useState<ProfileFilter>(() =>
-    searchParams.get("profile") === "incomplete" ? "incomplete" : "all",
-  );
+  const [profileFilter, setProfileFilter] = useState<ProfileFilter>(() => {
+    const p = searchParams.get("profile");
+    if (p === "incomplete" || p === "no_auth") return p;
+    return "all";
+  });
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
     searchParams.get("source") === "franconetwork" ? "franconetwork" : "all",
   );
@@ -279,6 +281,19 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [targetEventId, setTargetEventId] = useState("");
   const [adding, setAdding] = useState(false);
   const [syncingProspects, setSyncingProspects] = useState(false);
+  const [hygieneLoading, setHygieneLoading] = useState(false);
+  const [hygiene, setHygiene] = useState<{
+    authWithoutProfile: Array<{
+      uid: string;
+      email: string;
+      displayName: string | null;
+      providers: string[];
+    }>;
+    waitlistWithoutAuth: Array<{ id: string; email: string; fullName: string | null }>;
+    authScanned: number;
+    waitlistScanned: number;
+    waitlistScanCapped: boolean;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -349,6 +364,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         const percent = computeProfileCompletionPercent(r);
         if (!(isExpressSignup(r) || percent < 50)) return false;
       }
+      if (profileFilter === "no_auth" && r.uid?.trim()) return false;
       if (sourceFilter === "franconetwork" && !isFranconetworkMember(r)) return false;
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
@@ -776,6 +792,40 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     }
   }
 
+  async function loadAuthHygiene() {
+    setHygieneLoading(true);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/auth-hygiene");
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        authWithoutProfile?: Array<{
+          uid: string;
+          email: string;
+          displayName: string | null;
+          providers: string[];
+        }>;
+        waitlistWithoutAuth?: Array<{ id: string; email: string; fullName: string | null }>;
+        authScanned?: number;
+        waitlistScanned?: number;
+        waitlistScanCapped?: boolean;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "hygiene_failed");
+      setHygiene({
+        authWithoutProfile: json.authWithoutProfile ?? [],
+        waitlistWithoutAuth: json.waitlistWithoutAuth ?? [],
+        authScanned: json.authScanned ?? 0,
+        waitlistScanned: json.waitlistScanned ?? 0,
+        waitlistScanCapped: Boolean(json.waitlistScanCapped),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setHygieneLoading(false);
+    }
+  }
+
   if (loading) return <p className="text-sm text-ns-secondary">Chargement…</p>;
 
   return (
@@ -797,10 +847,110 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             <Users className="h-4 w-4" />
             {syncingProspects ? "Sync…" : "→ Prospects"}
           </button>
+          <button
+            type="button"
+            disabled={hygieneLoading}
+            onClick={() => void loadAuthHygiene()}
+            className={`${BTN_SECONDARY} text-sm`}
+            title="Comparer Firebase Auth et les profils waitlist"
+          >
+            {hygieneLoading ? "Hygiène…" : "Hygiène Auth"}
+          </button>
         </div>
       </div>
       {error && <p className={ERROR_TEXT}>{error}</p>}
       {actionMsg && <p className="text-sm font-medium text-ns-tertiary">{actionMsg}</p>}
+
+      {hygiene ? (
+        <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="font-bold">Hygiène Auth ↔ profils</p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Auth scannés : {hygiene.authScanned} · Waitlist scannées : {hygiene.waitlistScanned}
+                {hygiene.waitlistScanCapped ? " (échantillon récent)" : ""}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-xs font-semibold text-amber-900 underline-offset-2 hover:underline"
+              onClick={() => setHygiene(null)}
+            >
+              Fermer
+            </button>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div>
+              <p className="font-semibold">
+                Auth sans profil ({hygiene.authWithoutProfile.length})
+              </p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Compte Firebase sans fiche membre — OK après P0 (création auto au STD), sinon
+                stub via invitation / light.
+              </p>
+              {hygiene.authWithoutProfile.length === 0 ? (
+                <p className="mt-2 text-xs">Aucun.</p>
+              ) : (
+                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs">
+                  {hygiene.authWithoutProfile.slice(0, 40).map((u) => (
+                    <li key={u.uid}>
+                      <a
+                        href={`/admin/contacts?email=${encodeURIComponent(u.email)}`}
+                        className="font-medium underline-offset-2 hover:underline"
+                      >
+                        {u.email}
+                      </a>
+                      {u.providers.length > 0 ? (
+                        <span className="text-amber-900/70"> · {u.providers.join(", ")}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="font-semibold">
+                Profil sans Auth ({hygiene.waitlistWithoutAuth.length})
+              </p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Fiche membre sans uid — le membre ne s’est pas encore connecté. Filtre aussi
+                disponible ci-dessous.
+              </p>
+              <button
+                type="button"
+                className="mt-2 text-xs font-semibold text-amber-900 underline-offset-2 hover:underline"
+                onClick={() => setProfileFilter("no_auth")}
+              >
+                Filtrer la liste → Sans compte Auth
+              </button>
+              {hygiene.waitlistWithoutAuth.length === 0 ? (
+                <p className="mt-2 text-xs">Aucun dans l’échantillon.</p>
+              ) : (
+                <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs">
+                  {hygiene.waitlistWithoutAuth.slice(0, 40).map((r) => (
+                    <li key={r.id}>
+                      <button
+                        type="button"
+                        className="font-medium underline-offset-2 hover:underline"
+                        onClick={() => {
+                          setProfileFilter("no_auth");
+                          setActiveId(r.id);
+                          setQ(r.email);
+                        }}
+                      >
+                        {r.email}
+                      </button>
+                      {r.fullName ? (
+                        <span className="text-amber-900/70"> · {r.fullName}</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="space-y-4 rounded-2xl border border-gray-100 bg-ns-surface p-4">
         <div>
@@ -829,6 +979,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             >
               <option value="all">Tous</option>
               <option value="incomplete">À compléter</option>
+              <option value="no_auth">Sans compte Auth</option>
             </select>
           </div>
           <div>

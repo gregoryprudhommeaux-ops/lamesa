@@ -3,10 +3,12 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
+import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendSaveTheDateEmail } from "@/lib/email/send-save-the-date";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -44,6 +46,8 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const event = { id: eventSnap.id, ...(eventSnap.data() as Omit<AdminEvent, "id">) };
+  const locale =
+    event.eventLanguage === "en" || event.eventLanguage === "es" ? event.eventLanguage : "fr";
 
   const partsSnap = await db
     .collection(COLLECTIONS.participations)
@@ -71,9 +75,34 @@ export async function POST(request: Request, { params }: Params) {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
+  let waitlistProvisioned = 0;
   const errors: string[] = [];
 
   for (const participation of recipients) {
+    const email = normalizeEmail(participation.email);
+    const ensured = await ensureWaitlistProfileByEmail({
+      email,
+      fullName: participation.fullName,
+      company: participation.companyName,
+      phone: participation.phone,
+      locale,
+      source: "la-mesa-std-invite",
+    });
+
+    if (ensured?.provisioned || ensured?.revived) {
+      waitlistProvisioned += 1;
+    }
+
+    if (ensured && (!participation.contactId || participation.contactId !== ensured.id)) {
+      await db.collection(COLLECTIONS.participations).doc(participation.id).set(
+        {
+          contactId: ensured.id,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+    }
+
     const result = await sendSaveTheDateEmail({ event, participation });
     if ("skipped" in result && result.skipped) {
       skipped += 1;
@@ -107,6 +136,7 @@ export async function POST(request: Request, { params }: Params) {
     sent,
     skipped,
     failed,
+    waitlistProvisioned,
     errors: errors.slice(0, 20),
   });
 }

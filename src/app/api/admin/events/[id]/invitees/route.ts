@@ -5,8 +5,14 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { nextInviteStatus, isOrganizerParticipation, isSeatedStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import {
+  nextInviteStatus,
+  isOrganizerParticipation,
+  isSeatedStatus,
+  DEFAULT_GUEST_CAPACITY,
+} from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
+import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
 import { z } from "zod";
 
 const inviteesSchema = z.object({
@@ -54,6 +60,8 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
+  const eventLang = String(eventSnap.data()?.eventLanguage ?? "fr");
+  const locale = eventLang === "en" || eventLang === "es" ? eventLang : "fr";
   const now = new Date().toISOString();
   const capacity = Number(eventSnap.data()?.capacity ?? DEFAULT_GUEST_CAPACITY);
   const existing = await db
@@ -74,6 +82,7 @@ export async function POST(request: Request, { params }: Params) {
   let added = 0;
   let skipped = 0;
   let waitlisted = 0;
+  let waitlistProvisioned = 0;
 
   try {
     await ensureOrganizerParticipation(db, eventId, now);
@@ -95,12 +104,24 @@ export async function POST(request: Request, { params }: Params) {
           : nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
       else waitlisted += 1;
+
+      const ensured = await ensureWaitlistProfileByEmail({
+        email,
+        fullName: inv.fullName,
+        company: inv.companyName,
+        locale,
+        source: "la-mesa-std-invite",
+      });
+      if (ensured?.provisioned || ensured?.revived) {
+        waitlistProvisioned += 1;
+      }
+
       await db.collection(COLLECTIONS.participations).add({
         eventId,
         email,
-        fullName: inv.fullName ?? null,
-        companyName: inv.companyName ?? null,
-        contactId: inv.contactId ?? null,
+        fullName: inv.fullName ?? ensured?.fullName ?? null,
+        companyName: inv.companyName ?? ensured?.company ?? null,
+        contactId: inv.contactId ?? ensured?.id ?? null,
         status,
         statusSource: "admin",
         createdAt: now,
@@ -126,7 +147,13 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     await eventRef.set({ updatedAt: now }, { merge: true });
-    return NextResponse.json({ ok: true, added, skipped, waitlisted });
+    return NextResponse.json({
+      ok: true,
+      added,
+      skipped,
+      waitlisted,
+      waitlistProvisioned,
+    });
   } catch (error) {
     console.error("[admin/events invitees POST]", error);
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 502 });

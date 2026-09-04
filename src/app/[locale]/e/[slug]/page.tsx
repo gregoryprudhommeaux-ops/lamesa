@@ -7,6 +7,7 @@ import {
 import { PRODUCTION_SITE_URL, getSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { Suspense } from "react";
 
 type Props = {
   params: Promise<{ locale: string; slug: string }>;
@@ -65,5 +66,9 @@ export default async function EventPage({ params }: Props) {
     ? (locale as AppLocale)
     : routing.defaultLocale;
 
-  return <PublicEventPage slug={slug} locale={appLocale} />;
+  return (
+    <Suspense fallback={null}>
+      <PublicEventPage slug={slug} locale={appLocale} />
+    </Suspense>
+  );
 }

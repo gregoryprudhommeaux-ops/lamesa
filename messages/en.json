@@ -407,6 +407,8 @@
     "interestNeedMembership": "You're signed in, but we can't find your member profile. Join first (same email), then come back to validate.",
     "interestJoinCta": "Create my LA MESA profile",
     "interestSignedInAs": "Signed in as {name} · {email}",
+    "interestWrongAccount": "You’re signed in as {sessionEmail}, but this invitation is for {inviteEmail}. Sign out and sign back in with the right email.",
+    "interestSwitchAccount": "Switch account",
     "interestYes": "Yes, I'm interested",
     "interestNo": "No, I won't attend",
     "interestOther": "Other",
@@ -461,7 +463,7 @@
   },
   "account": {
     "loginTitle": "Member sign-in",
-    "loginHint": "Sign in with the same email you used to register: Google, or email and password.",
+    "loginHint": "Use the same email as your invitation or signup. If you already signed in with Google, use Google again — no need to create a password.",
     "googleLogin": "Continue with Google",
     "googleRedirecting": "Redirecting to Google…",
     "emailAuth": {
@@ -477,14 +479,19 @@
       "switchToSignup": "First time? Create your password here",
       "switchToSignin": "Already have a password? Sign in",
       "errors": {
-        "invalidEmail": "Invalid email.",
-        "invalidCredentials": "Incorrect email or password.",
-        "emailInUse": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
-        "weakPassword": "Password must be at least 6 characters.",
-        "passwordMismatch": "Passwords do not match.",
-        "notEnabled": "Email/password sign-in is not enabled in Firebase. Enable Email/Password in the console.",
-        "notConfigured": "Firebase Auth is not configured.",
-        "generic": "Could not sign in. Please try again."
+        "invalidEmail": "That email doesn’t look valid. Fix it (e.g. name@company.com) and try again.",
+        "invalidCredentials": "Incorrect email or password. Double-check both, or tap “Continue with Google” if that’s how you usually sign in. No password yet? Use “First time?” under the form.",
+        "emailInUse": "This email already has an account. Tap “Sign in” with the same email, or “Continue with Google”. You don’t need to create a new one.",
+        "weakPassword": "Password too short. Choose at least 6 characters, then try again.",
+        "passwordMismatch": "The two passwords don’t match. Re-enter them so they’re identical.",
+        "tooManyRequests": "Too many attempts in a row. Wait a minute and try again — or use “Continue with Google”.",
+        "userDisabled": "This account is disabled. Email greg@nextstep-services.com to reactivate it.",
+        "network": "Network issue. Check your connection, then try again.",
+        "popupClosed": "The Google window was closed before finishing. Open “Continue with Google” again and complete sign-in.",
+        "accountExistsDifferent": "This email is already linked to another method (often Google). Use “Continue with Google” with the same email.",
+        "notEnabled": "Email/password sign-in isn’t available right now. Use “Continue with Google”, or email greg@nextstep-services.com.",
+        "notConfigured": "Sign-in isn’t available on this device. Try again later, or email greg@nextstep-services.com.",
+        "generic": "Couldn’t sign in right now. Try again, use “Continue with Google”, or email greg@nextstep-services.com if it still fails."
       }
     },
     "noAccount": "Not on the list yet?",

@@ -34,6 +34,7 @@ import {
 } from "@/lib/ui/nextstep";
 import { addDoc, collection, getDocs, limit, query, where } from "firebase/firestore";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 /** Lightweight bold markers in admin-authored intro copy: <bold>…</bold> or **…**. */
@@ -273,10 +274,20 @@ function InterestForm({
   event: AdminEvent;
 }) {
   const t = useTranslations("publicEvent");
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const authFetch = useAuthFetch();
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inviteEmail = useMemo(() => {
+    const raw = searchParams.get("email")?.trim().toLowerCase() ?? "";
+    return raw.includes("@") ? raw : null;
+  }, [searchParams]);
+  const wrongAccount = Boolean(
+    user?.email &&
+      inviteEmail &&
+      user.email.trim().toLowerCase() !== inviteEmail,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{
@@ -301,8 +312,19 @@ function InterestForm({
     [event.interestDeadlineAt],
   );
 
-  const loginHref = `/connexion?next=${encodeURIComponent(pathname)}`;
-  const signupHref = `/connexion?next=${encodeURIComponent(pathname)}&mode=signup`;
+  const loginHref = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("next", pathname);
+    if (inviteEmail) params.set("email", inviteEmail);
+    return `/connexion?${params.toString()}`;
+  }, [pathname, inviteEmail]);
+  const signupHref = useMemo(() => {
+    const params = new URLSearchParams();
+    params.set("next", pathname);
+    params.set("mode", "signup");
+    if (inviteEmail) params.set("email", inviteEmail);
+    return `/connexion?${params.toString()}`;
+  }, [pathname, inviteEmail]);
 
   useEffect(() => {
     const draft = readInterestDraft(event.slug);
@@ -437,18 +459,18 @@ function InterestForm({
   }
 
   useEffect(() => {
-    if (authLoading || profileLoading || !user || deadlinePassed) return;
+    if (authLoading || profileLoading || !user || deadlinePassed || wrongAccount) return;
     if (autoSubmitAttempted.current) return;
     const draft = readInterestDraft(event.slug);
     if (!draft) return;
     autoSubmitAttempted.current = true;
     void submitInterest(draft);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot after login return
-  }, [authLoading, profileLoading, user, deadlinePassed, event.slug]);
+  }, [authLoading, profileLoading, user, deadlinePassed, wrongAccount, event.slug]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (submitting || deadlinePassed) return;
+    if (submitting || deadlinePassed || wrongAccount) return;
     setError(null);
 
     const clientError = validateClient();
@@ -538,6 +560,28 @@ function InterestForm({
             email: memberProfile?.email || user.email || "",
           })}
         </p>
+      ) : null}
+
+      {wrongAccount && inviteEmail ? (
+        <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          <p>
+            {t("interestWrongAccount", {
+              sessionEmail: user?.email ?? "",
+              inviteEmail,
+            })}
+          </p>
+          <button
+            type="button"
+            className={BTN_PRIMARY}
+            onClick={() => {
+              void logout().then(() => {
+                router.push(loginHref);
+              });
+            }}
+          >
+            {t("interestSwitchAccount")}
+          </button>
+        </div>
       ) : null}
 
       <fieldset className="space-y-2">
@@ -646,7 +690,7 @@ function InterestForm({
             </Link>
           </p>
         </>
-      ) : (
+      ) : wrongAccount ? null : (
         <button
           type="submit"
           className={BTN_PRIMARY}

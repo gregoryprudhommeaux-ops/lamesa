@@ -407,6 +407,8 @@
     "interestNeedMembership": "Ton compte est connecté, mais on ne trouve pas ton profil membre. Inscris-toi d’abord (même email), puis reviens valider.",
     "interestJoinCta": "Créer mon profil LA MESA",
     "interestSignedInAs": "Connecté(e) : {name} · {email}",
+    "interestWrongAccount": "Tu es connecté(e) avec {sessionEmail}, alors que l’invitation est pour {inviteEmail}. Déconnecte-toi et reconnecte-toi avec le bon email.",
+    "interestSwitchAccount": "Changer de compte",
     "interestYes": "Oui, je suis intéressé(e)",
     "interestNo": "Non, je ne participe pas",
     "interestOther": "Autre",
@@ -461,7 +463,7 @@
   },
   "account": {
     "loginTitle": "Connexion membre",
-    "loginHint": "Connecte-toi avec le même email que ton inscription : Google, ou email et mot de passe.",
+    "loginHint": "Utilise le même email que ton invitation ou ton inscription. Si tu t’es déjà connecté avec Google, reprends Google — pas besoin de créer un mot de passe.",
     "googleLogin": "Continuer avec Google",
     "googleRedirecting": "Redirection Google…",
     "emailAuth": {
@@ -477,14 +479,19 @@
       "switchToSignup": "Première fois ? Crée ton mot de passe ici",
       "switchToSignin": "Déjà un mot de passe ? Se connecter",
       "errors": {
-        "invalidEmail": "Email invalide.",
-        "invalidCredentials": "Email ou mot de passe incorrect.",
-        "emailInUse": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
-        "weakPassword": "Le mot de passe doit faire au moins 6 caractères.",
-        "passwordMismatch": "Les mots de passe ne correspondent pas.",
-        "notEnabled": "La connexion email/mot de passe n’est pas activée dans Firebase. Active Email/Password dans la console.",
-        "notConfigured": "Firebase Auth n’est pas configuré.",
-        "generic": "Connexion impossible. Réessaie."
+        "invalidEmail": "Cet email ne semble pas valide. Corrige-le (ex. nom@entreprise.com) et réessaie.",
+        "invalidCredentials": "Email ou mot de passe incorrect. Vérifie les deux, ou clique « Continuer avec Google » si c’est comme ça que tu te connectes d’habitude. Pas encore de mot de passe ? Utilise le lien « Première fois » sous le formulaire.",
+        "emailInUse": "Cet email a déjà un compte. Clique « Se connecter » avec ce même email, ou « Continuer avec Google ». Pas besoin d’en créer un nouveau.",
+        "weakPassword": "Mot de passe trop court. Choisis-en un d’au moins 6 caractères, puis réessaie.",
+        "passwordMismatch": "Les deux mots de passe ne sont pas identiques. Resaisis-les pour qu’ils correspondent.",
+        "tooManyRequests": "Trop d’essais d’affilée. Attends une minute, puis réessaie — ou utilise « Continuer avec Google ».",
+        "userDisabled": "Ce compte est désactivé. Écris à greg@nextstep-services.com pour le réactiver.",
+        "network": "Problème de connexion internet. Vérifie ton réseau, puis réessaie.",
+        "popupClosed": "La fenêtre Google a été fermée avant la fin. Rouvre « Continuer avec Google » et termine la connexion.",
+        "accountExistsDifferent": "Cet email est déjà lié à une autre méthode (souvent Google). Utilise « Continuer avec Google » avec le même email.",
+        "notEnabled": "La connexion email/mot de passe n’est pas disponible pour le moment. Utilise « Continuer avec Google », ou écris à greg@nextstep-services.com.",
+        "notConfigured": "La connexion n’est pas disponible sur cet appareil. Réessaie plus tard, ou écris à greg@nextstep-services.com.",
+        "generic": "Connexion impossible pour le moment. Réessaie, utilise « Continuer avec Google », ou écris à greg@nextstep-services.com si ça bloque encore."
       }
     },
     "noAccount": "Pas encore sur la liste ?",

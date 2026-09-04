@@ -33,9 +33,18 @@ export function eventSlugFromTitleAndDate(title: string, startsAt: string): stri
   return `${base}-${ymd}`.slice(0, 72);
 }
 
-export function eventPublicUrl(baseUrl: string, slug: string, locale = "es"): string {
+export function eventPublicUrl(
+  baseUrl: string,
+  slug: string,
+  locale = "es",
+  opts?: { email?: string | null },
+): string {
   const b = baseUrl.replace(/\/+$/, "");
-  return `${b}/${locale}/e/${slug}`;
+  const url = `${b}/${locale}/e/${slug}`;
+  const email = opts?.email?.trim().toLowerCase();
+  if (!email?.includes("@")) return url;
+  const q = new URLSearchParams({ email });
+  return `${url}?${q.toString()}`;
 }
 
 export function buildEmailTemplate(

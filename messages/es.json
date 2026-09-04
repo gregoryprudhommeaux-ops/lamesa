@@ -407,6 +407,8 @@
     "interestNeedMembership": "Estás conectado, pero no encontramos tu perfil de miembro. Inscríbete primero (mismo correo) y vuelve a validar.",
     "interestJoinCta": "Crear mi perfil LA MESA",
     "interestSignedInAs": "Conectado: {name} · {email}",
+    "interestWrongAccount": "Estás conectado con {sessionEmail}, pero esta invitación es para {inviteEmail}. Cierra sesión y vuelve a entrar con el correo correcto.",
+    "interestSwitchAccount": "Cambiar de cuenta",
     "interestYes": "Sí, me interesa",
     "interestNo": "No, no participo",
     "interestOther": "Otro",
@@ -461,7 +463,7 @@
   },
   "account": {
     "loginTitle": "Acceso de miembro",
-    "loginHint": "Inicia sesión con el mismo correo que usaste al registrarte: Google, o correo y contraseña.",
+    "loginHint": "Usa el mismo correo de tu invitación o registro. Si ya entraste con Google, vuelve a usar Google — no hace falta crear una contraseña.",
     "googleLogin": "Continuar con Google",
     "googleRedirecting": "Redirigiendo a Google…",
     "emailAuth": {
@@ -477,14 +479,19 @@
       "switchToSignup": "¿Primera vez? Crea tu contraseña aquí",
       "switchToSignin": "¿Ya tienes contraseña? Inicia sesión",
       "errors": {
-        "invalidEmail": "Correo no válido.",
-        "invalidCredentials": "Correo o contraseña incorrectos.",
-        "emailInUse": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
-        "weakPassword": "La contraseña debe tener al menos 6 caracteres.",
-        "passwordMismatch": "Las contraseñas no coinciden.",
-        "notEnabled": "El acceso por correo no está activado en Firebase. Activa Email/Password en la consola.",
-        "notConfigured": "Firebase Auth no está configurado.",
-        "generic": "No fue posible iniciar sesión. Inténtalo de nuevo."
+        "invalidEmail": "Ese correo no parece válido. Corrígelo (ej. nombre@empresa.com) e inténtalo de nuevo.",
+        "invalidCredentials": "Correo o contraseña incorrectos. Revísalos, o usa « Continuar con Google » si así sueles entrar. ¿Aún no tienes contraseña? Usa el enlace « Primera vez » debajo del formulario.",
+        "emailInUse": "Este correo ya tiene una cuenta. Pulsa « Iniciar sesión » con el mismo correo, o « Continuar con Google ». No hace falta crear otra.",
+        "weakPassword": "Contraseña demasiado corta. Elige al menos 6 caracteres e inténtalo de nuevo.",
+        "passwordMismatch": "Las dos contraseñas no coinciden. Vuelve a escribirlas para que sean iguales.",
+        "tooManyRequests": "Demasiados intentos seguidos. Espera un minuto e inténtalo de nuevo — o usa « Continuar con Google ».",
+        "userDisabled": "Esta cuenta está desactivada. Escribe a greg@nextstep-services.com para reactivarla.",
+        "network": "Problema de conexión. Revisa tu red e inténtalo de nuevo.",
+        "popupClosed": "Se cerró la ventana de Google antes de terminar. Vuelve a abrir « Continuar con Google » y completa el acceso.",
+        "accountExistsDifferent": "Este correo ya está ligado a otro método (a menudo Google). Usa « Continuar con Google » con el mismo correo.",
+        "notEnabled": "El acceso con correo/contraseña no está disponible ahora. Usa « Continuar con Google », o escribe a greg@nextstep-services.com.",
+        "notConfigured": "El acceso no está disponible en este dispositivo. Inténtalo más tarde, o escribe a greg@nextstep-services.com.",
+        "generic": "No fue posible iniciar sesión. Inténtalo de nuevo, usa « Continuar con Google », o escribe a greg@nextstep-services.com si sigue fallando."
       }
     },
     "noAccount": "¿Aún no estás en la lista?",

@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { getClientAuth } from "@/lib/firebase/client";
 import { signInWithGoogle } from "@/lib/firebase/google-sign-in";
 import { BTN_PRIMARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 type GoogleLoginButtonProps = {
@@ -12,11 +13,30 @@ type GoogleLoginButtonProps = {
   onSuccess?: () => void;
 };
 
+function mapGoogleError(code: string | undefined, t: (key: string) => string): string {
+  switch (code) {
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+      return t("emailAuth.errors.popupClosed");
+    case "auth/account-exists-with-different-credential":
+      return t("emailAuth.errors.accountExistsDifferent");
+    case "auth/network-request-failed":
+      return t("emailAuth.errors.network");
+    case "auth/too-many-requests":
+      return t("emailAuth.errors.tooManyRequests");
+    case "auth/user-disabled":
+      return t("emailAuth.errors.userDisabled");
+    default:
+      return t("emailAuth.errors.generic");
+  }
+}
+
 export function GoogleLoginButton({
   label,
   redirectingLabel = "Redirection Google…",
   onSuccess,
 }: GoogleLoginButtonProps) {
+  const t = useTranslations("account");
   const { configured } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,12 +44,12 @@ export function GoogleLoginButton({
   async function onClick() {
     setError(null);
     if (!configured) {
-      setError("Firebase Auth n'est pas configuré.");
+      setError(t("emailAuth.errors.notConfigured"));
       return;
     }
     const auth = getClientAuth();
     if (!auth) {
-      setError("Auth unavailable");
+      setError(t("emailAuth.errors.notConfigured"));
       return;
     }
     setBusy(true);
@@ -44,17 +64,7 @@ export function GoogleLoginButton({
     } catch (err) {
       console.error(err);
       const code = (err as { code?: string })?.code;
-      if (code === "auth/unauthorized-domain") {
-        setError(
-          "Domaine non autorisé. Ajoute 127.0.0.1 (ou utilise localhost) dans Firebase Auth → Settings → Authorized domains.",
-        );
-      } else {
-        setError(
-          code
-            ? `Connexion Google impossible (${code}). Réessaie.`
-            : "Connexion Google impossible. Réessaie.",
-        );
-      }
+      setError(mapGoogleError(code, t));
       setBusy(false);
     }
   }
@@ -70,11 +80,6 @@ export function GoogleLoginButton({
         {busy ? redirectingLabel : label}
       </button>
       {error && <p className={`${ERROR_TEXT} text-center`}>{error}</p>}
-      {!configured && (
-        <p className="text-center text-xs text-ns-secondary">
-          Configure les variables NEXT_PUBLIC_FIREBASE_* et active Google dans Firebase Console.
-        </p>
-      )}
     </div>
   );
 }

@@ -607,6 +607,27 @@ export function AdminDashboardPanel() {
             href="/admin/inscrits?profile=incomplete"
             rows={queues.incomplete}
           />
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Hygiène Auth
+                </p>
+                <p className="mt-1 text-sm text-ns-secondary">
+                  Profils sans compte, ou comptes Auth sans fiche.
+                </p>
+              </div>
+              <Link
+                href="/admin/inscrits?profile=no_auth"
+                className="text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Voir →
+              </Link>
+            </div>
+            <p className="mt-3 text-xs text-ns-secondary">
+              Sur Inscrits : filtre « Sans compte Auth » + bouton « Hygiène Auth ».
+            </p>
+          </div>
           <OpsQueueCard
             title="Jamais invités"
             href="/admin/inscrits"

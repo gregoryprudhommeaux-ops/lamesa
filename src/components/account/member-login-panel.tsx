@@ -28,14 +28,22 @@ function safeNextPath(raw: string | null): string | null {
 
 type AuthMode = "signin" | "signup";
 
-function mapAuthError(code: string | undefined, messages: {
-  invalidEmail: string;
-  invalidCredentials: string;
-  emailInUse: string;
-  weakPassword: string;
-  notEnabled: string;
-  generic: string;
-}): string {
+function mapAuthError(
+  code: string | undefined,
+  messages: {
+    invalidEmail: string;
+    invalidCredentials: string;
+    emailInUse: string;
+    weakPassword: string;
+    notEnabled: string;
+    tooManyRequests: string;
+    userDisabled: string;
+    network: string;
+    popupClosed: string;
+    accountExistsDifferent: string;
+    generic: string;
+  },
+): string {
   switch (code) {
     case "auth/invalid-email":
       return messages.invalidEmail;
@@ -47,6 +55,17 @@ function mapAuthError(code: string | undefined, messages: {
       return messages.emailInUse;
     case "auth/weak-password":
       return messages.weakPassword;
+    case "auth/too-many-requests":
+      return messages.tooManyRequests;
+    case "auth/user-disabled":
+      return messages.userDisabled;
+    case "auth/network-request-failed":
+      return messages.network;
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+      return messages.popupClosed;
+    case "auth/account-exists-with-different-credential":
+      return messages.accountExistsDifferent;
     case "auth/operation-not-allowed":
       return messages.notEnabled;
     default:
@@ -188,6 +207,11 @@ export function MemberLoginPanel() {
           emailInUse: t("emailAuth.errors.emailInUse"),
           weakPassword: t("emailAuth.errors.weakPassword"),
           notEnabled: t("emailAuth.errors.notEnabled"),
+          tooManyRequests: t("emailAuth.errors.tooManyRequests"),
+          userDisabled: t("emailAuth.errors.userDisabled"),
+          network: t("emailAuth.errors.network"),
+          popupClosed: t("emailAuth.errors.popupClosed"),
+          accountExistsDifferent: t("emailAuth.errors.accountExistsDifferent"),
           generic: t("emailAuth.errors.generic"),
         }),
       );
