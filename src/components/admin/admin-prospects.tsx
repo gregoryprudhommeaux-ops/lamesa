@@ -1398,7 +1398,7 @@ export function AdminProspectsPanel() {
             if (e.target === e.currentTarget) closeContact();
           }}
         >
-          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:max-w-3xl sm:p-6">
             <div className="mb-4 flex items-start justify-between gap-3">
               <h2 className="flex items-center gap-2 text-base font-bold text-ns-tertiary">
                 <Plus className="h-5 w-5" />
@@ -1413,7 +1413,7 @@ export function AdminProspectsPanel() {
               </button>
             </div>
             {error && contactOpen ? <p className={`${ERROR_TEXT} mb-3`}>{error}</p> : null}
-            <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className={LABEL_CLASS} htmlFor="pf-fullName">
                   Nom complet
@@ -1438,55 +1438,51 @@ export function AdminProspectsPanel() {
                   onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={LABEL_CLASS} htmlFor="pf-company">
-                    Société
-                  </label>
-                  <input
-                    id="pf-company"
-                    className={INPUT_CLASS}
-                    value={draft.company}
-                    onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className={LABEL_CLASS} htmlFor="pf-position">
-                    Poste
-                  </label>
-                  <input
-                    id="pf-position"
-                    className={INPUT_CLASS}
-                    value={draft.position}
-                    onChange={(e) => setDraft((d) => ({ ...d, position: e.target.value }))}
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className={LABEL_CLASS} htmlFor="pf-city">
-                    Ville
-                  </label>
-                  <input
-                    id="pf-city"
-                    className={INPUT_CLASS}
-                    value={draft.city}
-                    onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <label className={LABEL_CLASS} htmlFor="pf-sector">
-                    Secteur
-                  </label>
-                  <input
-                    id="pf-sector"
-                    className={INPUT_CLASS}
-                    value={draft.sector}
-                    onChange={(e) => setDraft((d) => ({ ...d, sector: e.target.value }))}
-                  />
-                </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="pf-company">
+                  Société
+                </label>
+                <input
+                  id="pf-company"
+                  className={INPUT_CLASS}
+                  value={draft.company}
+                  onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))}
+                />
               </div>
               <div>
+                <label className={LABEL_CLASS} htmlFor="pf-position">
+                  Poste
+                </label>
+                <input
+                  id="pf-position"
+                  className={INPUT_CLASS}
+                  value={draft.position}
+                  onChange={(e) => setDraft((d) => ({ ...d, position: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="pf-city">
+                  Ville
+                </label>
+                <input
+                  id="pf-city"
+                  className={INPUT_CLASS}
+                  value={draft.city}
+                  onChange={(e) => setDraft((d) => ({ ...d, city: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="pf-sector">
+                  Secteur
+                </label>
+                <input
+                  id="pf-sector"
+                  className={INPUT_CLASS}
+                  value={draft.sector}
+                  onChange={(e) => setDraft((d) => ({ ...d, sector: e.target.value }))}
+                />
+              </div>
+              <div className="sm:col-span-2">
                 <label className={LABEL_CLASS} htmlFor="pf-linkedin">
                   Lien LinkedIn
                 </label>
@@ -1527,7 +1523,7 @@ export function AdminProspectsPanel() {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className={LABEL_CLASS} htmlFor="pf-lists">
                   Listes (virgules)
                 </label>
@@ -1538,7 +1534,7 @@ export function AdminProspectsPanel() {
                   onChange={(e) => setDraft((d) => ({ ...d, lists: e.target.value }))}
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className={LABEL_CLASS} htmlFor="pf-tags">
                   Tags (virgules)
                 </label>
@@ -1549,7 +1545,7 @@ export function AdminProspectsPanel() {
                   onChange={(e) => setDraft((d) => ({ ...d, tags: e.target.value }))}
                 />
               </div>
-              <div>
+              <div className="sm:col-span-2">
                 <label className={LABEL_CLASS} htmlFor="pf-notes">
                   Notes
                 </label>
