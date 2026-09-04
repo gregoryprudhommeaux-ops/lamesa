@@ -1,6 +1,6 @@
 import type { AdminEvent } from "@/lib/types/events";
 import { labelEventFormat } from "@/lib/constants/event-formats";
-import { formatEventWhereLine } from "@/lib/email/templates";
+import { formatEventWhereLine } from "@/lib/events/format-where";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 
 type Lang = "fr" | "en" | "es";

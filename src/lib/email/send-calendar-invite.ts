@@ -4,7 +4,6 @@ import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-trans
 import {
   applyTemplateVars,
   buildEventTemplateVars,
-  formatEventWhereLine,
   getEmailTemplate,
   isEmailTemplateEnabled,
   sendLocaleForEvent,
@@ -14,6 +13,7 @@ import {
   wrapLaMesaEmailHtml,
   wrapLaMesaPlainBody,
 } from "@/lib/email/la-mesa-email-shell";
+import { formatEventWhereLine } from "@/lib/events/format-where";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
