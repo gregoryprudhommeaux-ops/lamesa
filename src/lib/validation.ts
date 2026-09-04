@@ -120,6 +120,7 @@ export const eventSchema = z.object({
   menuPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   menuPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   menuIncludesDrinks: z.boolean().optional().nullable(),
+  pricingMode: z.enum(["ticket_onsite", "all_inclusive"]).optional(),
   format: z.enum(["breakfast", "coffee", "aperitif", "dinner"]).optional(),
   city: z.string().trim().max(80).optional(),
   dressCode: z

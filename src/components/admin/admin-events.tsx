@@ -43,6 +43,7 @@ import {
   totalCoversWithAdmin,
 } from "@/lib/events/capacity";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
+import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
 import { Copy, Mail, MessageCircle, Plus, Save, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -116,6 +117,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [endTime, setEndTime] = useState("22:30");
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
   const [priceMxn, setPriceMxn] = useState<string>("450");
+  const [pricingMode, setPricingMode] = useState<EventPricingMode>("ticket_onsite");
   const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
   const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
   const [menuIncluded, setMenuIncluded] = useState("");
@@ -227,6 +229,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setEndTime(times.endTime);
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
     setPriceMxn("450");
+    setPricingMode("ticket_onsite");
     setAccessIncludesWelcomeDrink(true);
     setAccessIncludesAmuseBouche(false);
     setMenuIncluded("");
@@ -301,6 +304,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setPriceMxn(
       event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
     );
+    setPricingMode(resolveEventPricingMode(event));
     setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
     setAccessIncludesAmuseBouche(Boolean(event.accessIncludesAmuseBouche));
     setMenuIncluded(event.menuIncluded ?? "");
@@ -366,6 +370,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       endsAt: endsAtIso,
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
+      pricingMode,
       accessIncludesWelcomeDrink,
       accessIncludesAmuseBouche,
       menuIncluded: menuIncluded.trim(),
@@ -889,151 +894,365 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             <div className="sm:col-span-2 space-y-4">
               <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
                 <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
-                  {labels["fields.accessSection"] ?? "ACCESS — ticket de participation"}
+                  {labels["fields.pricingMode"] ?? "Mode de tarification"}
                 </h3>
                 <p className="mb-3 text-xs text-ns-secondary">
-                  {labels["fields.accessSectionHint"] ??
-                    "Montant payé pour confirmer la place (virement). Hors consommations du menu négocié."}
+                  {labels["fields.pricingModeHint"] ??
+                    "Choisis comment l’invité paie : ticket + sur place, ou ticket tout inclus."}
                 </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className={LABEL_CLASS}>
-                      {labels["fields.priceMxn"] ?? "ACCESS (MXN / pers., hors IVA)"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={priceMxn}
-                      onChange={(e) => setPriceMxn(e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="450"
-                    />
-                    <p className="mt-1 text-xs text-ns-secondary">
-                      {labels["fields.priceMxnHint"] ??
-                        "Typique ~450 MXN. L’IVA (16%) et le total TTC sont calculés automatiquement."}
-                    </p>
-                    {(() => {
-                      const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
-                      if (!Number.isFinite(n) || n <= 0) return null;
-                      const { iva, totalWithIva } = computeEventIva(n);
-                      return (
-                        <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
-                          <p>
-                            {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                            <strong>{formatMxn(iva, "es")}</strong>
-                          </p>
-                          <p className="mt-0.5">
-                            {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                            <strong>{formatMxn(totalWithIva, "es")}</strong>
-                          </p>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div className="space-y-3">
-                    <p className={`${LABEL_CLASS} mb-0`}>
-                      {labels["fields.accessIncludes"] ?? "Inclus dans ACCESS"}
-                    </p>
-                    <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <label
+                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2 text-sm ${
+                      pricingMode === "ticket_onsite"
+                        ? "border-ns-primary bg-white"
+                        : "border-ns-alternate bg-white/60"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 font-semibold text-ns-tertiary">
                       <input
-                        type="checkbox"
-                        checked={accessIncludesWelcomeDrink}
-                        onChange={(e) => setAccessIncludesWelcomeDrink(e.target.checked)}
-                        className="h-4 w-4 rounded border-ns-alternate"
+                        type="radio"
+                        name="pricingMode"
+                        checked={pricingMode === "ticket_onsite"}
+                        onChange={() => setPricingMode("ticket_onsite")}
+                        className="h-4 w-4"
                       />
-                      {labels["fields.accessWelcomeDrink"] ?? "Welcome drink"}
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                      {labels["fields.pricingModeTicket"] ?? "Ticket + consommations sur place"}
+                    </span>
+                    <span className="pl-6 text-xs text-ns-secondary">
+                      {labels["fields.pricingModeTicketHint"] ??
+                        "L’invité paie d’abord un ticket pour confirmer, puis le repas / conso sur place."}
+                    </span>
+                  </label>
+                  <label
+                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2 text-sm ${
+                      pricingMode === "all_inclusive"
+                        ? "border-ns-primary bg-white"
+                        : "border-ns-alternate bg-white/60"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 font-semibold text-ns-tertiary">
                       <input
-                        type="checkbox"
-                        checked={accessIncludesAmuseBouche}
-                        onChange={(e) => setAccessIncludesAmuseBouche(e.target.checked)}
-                        className="h-4 w-4 rounded border-ns-alternate"
+                        type="radio"
+                        name="pricingMode"
+                        checked={pricingMode === "all_inclusive"}
+                        onChange={() => setPricingMode("all_inclusive")}
+                        className="h-4 w-4"
                       />
-                      {labels["fields.accessAmuseBouche"] ?? "Amuse-bouches"}
-                    </label>
-                  </div>
+                      {labels["fields.pricingModeAllIn"] ?? "Ticket tout inclus"}
+                    </span>
+                    <span className="pl-6 text-xs text-ns-secondary">
+                      {labels["fields.pricingModeAllInHint"] ??
+                        "Un seul ticket couvre l’accès et le repas. Boissons : incluses ou à part."}
+                    </span>
+                  </label>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
-                <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
-                  {labels["fields.menuSection"] ?? "MENU NÉGOCIÉ — sur place"}
-                </h3>
-                <p className="mb-3 text-xs text-ns-secondary">
-                  {labels["fields.menuSectionHint"] ??
-                    "Estimation pour le participant (paiement au restaurant). Peut être une fourchette."}
-                </p>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className={LABEL_CLASS}>
-                      {labels["fields.menuIncluded"] ?? "Description du menu négocié"}
-                    </label>
-                    <textarea
-                      value={menuIncluded}
-                      onChange={(e) => setMenuIncluded(e.target.value)}
-                      rows={4}
-                      className={INPUT_CLASS}
-                      placeholder="Entrée / plato fuerte / postre · opciones…"
-                    />
-                    <p className="mt-1 text-xs text-ns-secondary">
-                      {labels["fields.menuIncludedHint"] ??
-                        "Ce que le restaurant propose (hors ticket ACCESS)."}
+              {pricingMode === "ticket_onsite" ? (
+                <>
+                  <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                    <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                      {labels["fields.accessSection"] ?? "TICKET — confirmation de place"}
+                    </h3>
+                    <p className="mb-3 text-xs text-ns-secondary">
+                      {labels["fields.accessSectionHint"] ??
+                        "Montant payé à l’avance pour confirmer la place (virement). Les consommations se règlent sur place."}
                     </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div>
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.priceMxn"] ?? "Ticket (MXN / pers., hors IVA)"}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={priceMxn}
+                          onChange={(e) => setPriceMxn(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="450"
+                        />
+                        <p className="mt-1 text-xs text-ns-secondary">
+                          {labels["fields.priceMxnHint"] ??
+                            "Montant libre à préciser. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                        </p>
+                        {(() => {
+                          const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                          if (!Number.isFinite(n) || n <= 0) return null;
+                          const { iva, totalWithIva } = computeEventIva(n);
+                          return (
+                            <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                              <p>
+                                {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
+                                <strong>{formatMxn(iva, "es")}</strong>
+                              </p>
+                              <p className="mt-0.5">
+                                {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
+                                <strong>{formatMxn(totalWithIva, "es")}</strong>
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="space-y-3">
+                        <p className={`${LABEL_CLASS} mb-0`}>
+                          {labels["fields.accessIncludes"] ?? "Inclus dans le ticket"}
+                        </p>
+                        <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                          <input
+                            type="checkbox"
+                            checked={accessIncludesWelcomeDrink}
+                            onChange={(e) => setAccessIncludesWelcomeDrink(e.target.checked)}
+                            className="h-4 w-4 rounded border-ns-alternate"
+                          />
+                          {labels["fields.accessWelcomeDrink"] ?? "Welcome drink"}
+                        </label>
+                        <label className="flex items-center gap-2 text-sm text-ns-tertiary">
+                          <input
+                            type="checkbox"
+                            checked={accessIncludesAmuseBouche}
+                            onChange={(e) => setAccessIncludesAmuseBouche(e.target.checked)}
+                            className="h-4 w-4 rounded border-ns-alternate"
+                          />
+                          {labels["fields.accessAmuseBouche"] ?? "Amuse-bouches"}
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className={LABEL_CLASS}>
-                      {labels["fields.menuPriceMinMxn"] ?? "Estimation min (MXN / pers.)"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={menuPriceMinMxn}
-                      onChange={(e) => setMenuPriceMinMxn(e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="500"
-                    />
+
+                  <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                    <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                      {labels["fields.menuSection"] ?? "CONSOMMATIONS — sur place"}
+                    </h3>
+                    <p className="mb-3 text-xs text-ns-secondary">
+                      {labels["fields.menuSectionHint"] ??
+                        "Payé par l’invité au restaurant, même si un menu a été pré-négocié. Estimation possible."}
+                    </p>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.menuIncluded"] ?? "Description du menu / conso"}
+                        </label>
+                        <textarea
+                          value={menuIncluded}
+                          onChange={(e) => setMenuIncluded(e.target.value)}
+                          rows={4}
+                          className={INPUT_CLASS}
+                          placeholder="Entrée / plato fuerte / postre · opciones…"
+                        />
+                        <p className="mt-1 text-xs text-ns-secondary">
+                          {labels["fields.menuIncludedHint"] ??
+                            "Ce que le restaurant propose (hors ticket de confirmation)."}
+                        </p>
+                      </div>
+                      <div>
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.menuPriceMinMxn"] ?? "Estimation min (MXN / pers.)"}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={menuPriceMinMxn}
+                          onChange={(e) => setMenuPriceMinMxn(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="500"
+                        />
+                      </div>
+                      <div>
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.menuPriceMaxMxn"] ?? "Estimation max (MXN / pers.)"}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={menuPriceMaxMxn}
+                          onChange={(e) => setMenuPriceMaxMxn(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="1500"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.menuIncludesDrinks"] ?? "Boissons dans l’estimation ?"}
+                        </label>
+                        <select
+                          value={menuIncludesDrinks}
+                          onChange={(e) =>
+                            setMenuIncludesDrinks(e.target.value as "unspecified" | "yes" | "no")
+                          }
+                          className={INPUT_CLASS}
+                        >
+                          <option value="unspecified">
+                            {labels["fields.menuIncludesDrinksUnspecified"] ?? "Non précisé"}
+                          </option>
+                          <option value="yes">
+                            {labels["fields.menuIncludesDrinksYes"] ?? "Oui — boissons incluses"}
+                          </option>
+                          <option value="no">
+                            {labels["fields.menuIncludesDrinksNo"] ??
+                              "Non — boissons à part (participant)"}
+                          </option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className={LABEL_CLASS}>
-                      {labels["fields.menuPriceMaxMxn"] ?? "Estimation max (MXN / pers.)"}
-                    </label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={menuPriceMaxMxn}
-                      onChange={(e) => setMenuPriceMaxMxn(e.target.value)}
-                      className={INPUT_CLASS}
-                      placeholder="1500"
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={LABEL_CLASS}>
-                      {labels["fields.menuIncludesDrinks"] ?? "Boissons dans l’estimation ?"}
-                    </label>
-                    <select
-                      value={menuIncludesDrinks}
-                      onChange={(e) =>
-                        setMenuIncludesDrinks(e.target.value as "unspecified" | "yes" | "no")
-                      }
-                      className={INPUT_CLASS}
-                    >
-                      <option value="unspecified">
-                        {labels["fields.menuIncludesDrinksUnspecified"] ?? "Non précisé"}
-                      </option>
-                      <option value="yes">
-                        {labels["fields.menuIncludesDrinksYes"] ?? "Oui — boissons incluses"}
-                      </option>
-                      <option value="no">
-                        {labels["fields.menuIncludesDrinksNo"] ??
-                          "Non — boissons à part (participant)"}
-                      </option>
-                    </select>
+                </>
+              ) : (
+                <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                  <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
+                    {labels["fields.allInSection"] ?? "TICKET TOUT INCLUS"}
+                  </h3>
+                  <p className="mb-3 text-xs text-ns-secondary">
+                    {labels["fields.allInSectionHint"] ??
+                      "Un seul montant payé à l’avance : accès + repas. Les boissons peuvent être incluses ou à part."}
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.allInTicketMxn"] ?? "Ticket tout inclus (MXN / pers., hors IVA)"}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={priceMxn}
+                        onChange={(e) => setPriceMxn(e.target.value)}
+                        className={INPUT_CLASS}
+                        placeholder="1000"
+                      />
+                      <p className="mt-1 text-xs text-ns-secondary">
+                        {labels["fields.allInTicketHint"] ??
+                          "Montant libre. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                      </p>
+                      {(() => {
+                        const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                        if (!Number.isFinite(n) || n <= 0) return null;
+                        const { iva, totalWithIva } = computeEventIva(n);
+                        return (
+                          <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                            <p>
+                              {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
+                              <strong>{formatMxn(iva, "es")}</strong>
+                            </p>
+                            <p className="mt-0.5">
+                              {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
+                              <strong>{formatMxn(totalWithIva, "es")}</strong>
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.allInDrinks"] ?? "Boissons"}
+                      </label>
+                      <select
+                        value={menuIncludesDrinks}
+                        onChange={(e) =>
+                          setMenuIncludesDrinks(e.target.value as "unspecified" | "yes" | "no")
+                        }
+                        className={INPUT_CLASS}
+                      >
+                        <option value="unspecified">
+                          {labels["fields.menuIncludesDrinksUnspecified"] ?? "Non précisé"}
+                        </option>
+                        <option value="yes">
+                          {labels["fields.allInDrinksYes"] ?? "Incluses dans le ticket"}
+                        </option>
+                        <option value="no">
+                          {labels["fields.allInDrinksNo"] ?? "À part — réglées sur place"}
+                        </option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.menuIncluded"] ?? "Ce qui est inclus (menu)"}
+                      </label>
+                      <textarea
+                        value={menuIncluded}
+                        onChange={(e) => setMenuIncluded(e.target.value)}
+                        rows={3}
+                        className={INPUT_CLASS}
+                        placeholder="Entrées + plat + dessert…"
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.allInPriceMinMxn"] ?? "Fourchette min (optionnel, MXN)"}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={allInPriceMinMxn}
+                        onChange={(e) => setAllInPriceMinMxn(e.target.value)}
+                        className={INPUT_CLASS}
+                        placeholder="800"
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.allInPriceMaxMxn"] ?? "Fourchette max (optionnel, MXN)"}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={allInPriceMaxMxn}
+                        onChange={(e) => setAllInPriceMaxMxn(e.target.value)}
+                        className={INPUT_CLASS}
+                        placeholder="1000"
+                      />
+                    </div>
                   </div>
                 </div>
+              )}
+
+              <div className="rounded-xl border border-ns-alternate bg-white p-4">
+                <label className="flex items-start gap-2 text-sm text-ns-tertiary">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 rounded border-ns-alternate"
+                    checked={parking !== "unknown"}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setParking(parking === "unknown" ? "valet" : parking);
+                      } else {
+                        setParking("unknown");
+                      }
+                    }}
+                  />
+                  <span>
+                    <span className="font-semibold">
+                      {labels["fields.parkingAvailable"] ??
+                        "Parking / valet disponible sur place"}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ns-secondary">
+                      {labels["fields.parkingAvailableHint"] ??
+                        "Règlement indépendant sur place (hors ticket)."}
+                    </span>
+                  </span>
+                </label>
+                {parking !== "unknown" ? (
+                  <div className="mt-3">
+                    <label className={LABEL_CLASS}>
+                      {labels["fields.parkingType"] ?? "Type de parking"}
+                    </label>
+                    <select
+                      value={parking}
+                      onChange={(e) => setParking(e.target.value as Parking)}
+                      className={INPUT_CLASS}
+                    >
+                      {PARKING_OPTIONS.filter((opt) => opt !== "unknown").map((opt) => (
+                        <option key={opt} value={opt}>
+                          {labels[`parking.${opt}`] ?? opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -1117,20 +1336,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </select>
             </div>
             <div>
-              <label className={LABEL_CLASS}>{labels["fields.parking"]}</label>
-              <select
-                value={parking ?? "unknown"}
-                onChange={(e) => setParking(e.target.value as Parking)}
-                className={INPUT_CLASS}
-              >
-                {PARKING_OPTIONS.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {labels[`parking.${opt}`] ?? opt}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
               <label className={LABEL_CLASS}>{labels["fields.status"]}</label>
               <select
                 value={status}
@@ -1187,26 +1392,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   onChange={(e) => setInterestDeadlineAt(e.target.value)}
                   onClick={openNativePicker}
                 />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className={LABEL_CLASS}>Prix all-in min (MXN)</label>
-                  <input
-                    className={INPUT_CLASS}
-                    value={allInPriceMinMxn}
-                    onChange={(e) => setAllInPriceMinMxn(e.target.value)}
-                    placeholder="800"
-                  />
-                </div>
-                <div>
-                  <label className={LABEL_CLASS}>Prix all-in max (MXN)</label>
-                  <input
-                    className={INPUT_CLASS}
-                    value={allInPriceMaxMxn}
-                    onChange={(e) => setAllInPriceMaxMxn(e.target.value)}
-                    placeholder="1000"
-                  />
-                </div>
               </div>
             </div>
           ) : null}

@@ -11,6 +11,7 @@ import {
   hasNegotiatedMenuInfo,
 } from "@/lib/events/event-pricing-copy";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
+import { resolveEventPricingMode } from "@/lib/events/pricing-mode";
 import { fmtDateTime } from "@/lib/events/utils";
 import { getClientFirestore, isFirebaseClientConfigured } from "@/lib/firebase/client";
 import type {
@@ -78,6 +79,17 @@ function mapEventDoc(id: string, slug: string, data: Record<string, unknown>): A
         : data.menuIncludesDrinks === false
           ? false
           : null,
+    pricingMode:
+      data.pricingMode === "all_inclusive" || data.pricingMode === "ticket_onsite"
+        ? data.pricingMode
+        : undefined,
+    parking:
+      data.parking === "secure_nearby" ||
+      data.parking === "valet" ||
+      data.parking === "on_site" ||
+      data.parking === "unknown"
+        ? data.parking
+        : undefined,
     responseMode: data.responseMode === "interest" ? "interest" : "rsvp",
     interestDeadlineAt: data.interestDeadlineAt ? String(data.interestDeadlineAt) : null,
     allInPriceMinMxn:
@@ -96,6 +108,7 @@ function PriceBlock({
   locale: "fr" | "en" | "es";
 }) {
   const t = useTranslations("publicEvent");
+  const mode = resolveEventPricingMode(event);
   const priceMxn = event.priceMxn;
   const hasAccess = typeof priceMxn === "number" && priceMxn > 0;
   const hasMenu = hasNegotiatedMenuInfo(event);
@@ -106,7 +119,45 @@ function PriceBlock({
   const estimate = formatMenuPriceEstimate(event, locale);
   const accessLine = formatAccessIncludes(event, locale);
   const showAccessIncludes =
-    event.accessIncludesWelcomeDrink || event.accessIncludesAmuseBouche;
+    mode === "ticket_onsite" &&
+    (event.accessIncludesWelcomeDrink || event.accessIncludesAmuseBouche);
+  const parkingAvailable = event.parking && event.parking !== "unknown";
+
+  if (mode === "all_inclusive") {
+    return (
+      <div className="mt-4 space-y-3">
+        {pricing ? (
+          <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/30 px-4 py-3 text-sm">
+            <p className="font-semibold text-ns-tertiary">
+              {t("priceAllIn")} · {formatMxn(pricing.priceBeforeTax, locale)}
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">
+              {t("iva")}: {formatMxn(pricing.iva, locale)} · {t("totalWithIva")}:{" "}
+              <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
+            </p>
+            <p className="mt-2 text-xs text-ns-secondary">{t("priceAllInHint")}</p>
+            {event.menuIncludesDrinks === true ? (
+              <p className="mt-1 text-xs text-ns-secondary">{t("menuDrinksIncluded")}</p>
+            ) : null}
+            {event.menuIncludesDrinks === false ? (
+              <p className="mt-1 text-xs text-ns-secondary">{t("menuDrinksNotIncluded")}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {event.menuIncluded?.trim() ? (
+          <div className="rounded-xl border border-ns-alternate px-4 py-3 text-sm">
+            <h2 className={FORM_SECTION_TITLE}>{t("menuIncluded")}</h2>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-ns-secondary">
+              {event.menuIncluded}
+            </p>
+          </div>
+        ) : null}
+        {parkingAvailable ? (
+          <p className="text-xs text-ns-secondary">{t("parkingOnSiteHint")}</p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4 space-y-3">
@@ -146,6 +197,9 @@ function PriceBlock({
             <p className="mt-1 text-xs text-ns-secondary">{t("menuDrinksNotIncluded")}</p>
           ) : null}
         </div>
+      ) : null}
+      {parkingAvailable ? (
+        <p className="text-xs text-ns-secondary">{t("parkingOnSiteHint")}</p>
       ) : null}
     </div>
   );

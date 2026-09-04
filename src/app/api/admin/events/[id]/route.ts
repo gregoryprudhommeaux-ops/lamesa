@@ -23,6 +23,7 @@ const updateSchema = z.object({
   menuPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   menuPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   menuIncludesDrinks: z.boolean().optional().nullable(),
+  pricingMode: z.enum(["ticket_onsite", "all_inclusive"]).optional().nullable(),
   format: z.enum(["breakfast", "coffee", "aperitif", "dinner"]).optional().nullable(),
   city: z.string().trim().max(80).optional().nullable(),
   status: z.enum(["draft", "published", "closed"]).optional(),

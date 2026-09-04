@@ -131,6 +131,12 @@ export interface AdminEvent {
    */
   menuIncludesDrinks?: boolean | null;
   /**
+   * Pricing model for guest payment.
+   * - ticket_onsite: ticket confirms seat; meal/consumptions paid on site
+   * - all_inclusive: one ticket covers access + meal (drinks optional)
+   */
+  pricingMode?: "ticket_onsite" | "all_inclusive";
+  /**
    * Public page response mode.
    * - rsvp (default): classic confirm-presence form
    * - interest: Save the Date YES/NO/OTHER + reasons

@@ -96,6 +96,7 @@ export async function POST(request: Request) {
       menuPriceMinMxn: data.menuPriceMinMxn ?? null,
       menuPriceMaxMxn: data.menuPriceMaxMxn ?? null,
       menuIncludesDrinks: data.menuIncludesDrinks ?? null,
+      pricingMode: data.pricingMode ?? "ticket_onsite",
       format: data.format ?? "dinner",
       status: data.status ?? "draft",
       eventLanguage: data.eventLanguage ?? "es",
