@@ -38,7 +38,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 /** Lightweight bold markers in admin-authored intro copy: <bold>…</bold> or **…**. */
 function renderIntroRichText(text: string): ReactNode {
-  const parts = text.split(/(<bold>[\s\S]*?<\/bold>|\*\*[^*]+\*\*)/gi);
+  const parts = text.split(/(<bold>[\s\S]*?<\/bold>|<i>[\s\S]*?<\/i>|\*\*[^*]+\*\*)/gi);
   return parts.map((part, index) => {
     const boldTag = part.match(/^<bold>([\s\S]*?)<\/bold>$/i);
     if (boldTag) {
@@ -46,6 +46,14 @@ function renderIntroRichText(text: string): ReactNode {
         <strong key={index} className="font-semibold text-ns-tertiary">
           {boldTag[1].trim()}
         </strong>
+      );
+    }
+    const italicTag = part.match(/^<i>([\s\S]*?)<\/i>$/i);
+    if (italicTag) {
+      return (
+        <em key={index} className="italic">
+          {italicTag[1].trim()}
+        </em>
       );
     }
     if (part.startsWith("**") && part.endsWith("**")) {

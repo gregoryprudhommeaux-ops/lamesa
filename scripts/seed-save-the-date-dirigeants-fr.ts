@@ -36,21 +36,21 @@ const LIST_NO = `STD ${SLUG} — NON/AUTRE`;
 /** Wed 24 Sep 2026 20:00 America/Mexico_City ≈ 02:00 UTC next day */
 const STARTS_AT = "2026-09-25T02:00:00.000Z";
 const ENDS_AT = "2026-09-25T05:00:00.000Z";
-/** Mon 7 Sep 2026 23:59 Mexico City ≈ 2026-09-08T05:59:00Z */
-const INTEREST_DEADLINE = "2026-09-08T05:59:00.000Z";
+/** Mon 14 Sep 2026 23:59 Mexico City ≈ 2026-09-15T05:59:00Z */
+const INTEREST_DEADLINE = "2026-09-15T05:59:00.000Z";
 
 const INTRO_TEXT = [
-  "Je souhaitais t'inviter à participer à un dîner entre dirigeants et entrepreneurs français de Guadalajara, autour d’une table assez petite pour que la conversation soit possible et intéressante pour toi car je m'occupe de la sélection des invités.",
+  "Je souhaitais t'inviter à participer à <bold>un dîner entre dirigeants et entrepreneurs français de Guadalajara</bold>, autour d’une table assez petite pour que la conversation soit possible, mais qu'elle soit aussi intéressante pour toi, car je m'occupe de la sélection des invités parmi des fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité.",
   "",
   "On parlera de ce qu’on construit ici — business, équipe, décisions, partenariats, stratégies — et on se rend utiles les uns aux autres.",
   "",
-  "La soirée du <bold>24 septembre</bold> (à partir de 20 h) se composera en fonction des réponses des fondateurs, dirigeants, entrepreneurs établis : des gens qui portent déjà une vraie responsabilité.",
+  "Ce dîner aura lieu le <bold>24 septembre</bold> (à partir de 20 h).",
   "",
-  "Ce <bold>Save the Date</bold> va nous aider à calibrer le restaurant, et selon ta réponse, tu recevras très prochainement une invitation formelle avec les détails, ainsi que les modalités de règlement à compléter par transfert avant la rencontre.",
+  "Ce <bold>Save the Date</bold> va nous aider à calibrer le restaurant, et selon ta réponse, tu recevras très prochainement une invitation formelle avec les détails, ainsi que les modalités de règlement à compléter par transfert avant la rencontre, et si finalement tu changes d'avis que le budget ne te convient pas, ou que tu as un empêchement, aucun problème, on te retrouvera une prochaine fois!",
   "",
-  "<bold>Invitation nominative.</bold> Merci de répondre avant <bold>Lundi 7 Septembre</bold>.",
+  "<bold>Invitation nominative.</bold> Merci de répondre avant <bold>Lundi 14 Septembre</bold>.",
   "",
-  "Pour valider ta réponse, tu vas enregistrer ton profil sur LA MESA (si tu ne l'as pas déjà fait), ce qui te permettra par la suite d'être invité à d'autres rencontres autour de thématiques professionnelles ou autre, tu pourras ensuite choisir celles auxquelles tu souhaites participer ou pas.",
+  "Si tu ne l'as pas déjà fait, il va te falloir t'enregistrer sur LA MESA SECRETA ; ceci te permettra d'être invité à d'autres rencontres autour de thématiques professionnelles selon ton profil.",
 ].join("\n");
 
 async function ensureList(name: string, now: string) {
