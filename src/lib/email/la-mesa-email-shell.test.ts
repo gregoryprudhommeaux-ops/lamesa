@@ -32,6 +32,9 @@ describe("la-mesa-email-shell", () => {
     expect(coldHtml).toContain(LA_MESA_SITE_LINK_LABEL);
     expect(coldHtml).toContain("Fonctionnement");
     expect(coldHtml).toContain('href="https://lamesasecreta.com/fr/fonctionnement"');
+    expect(coldHtml.indexOf("Fonctionnement")).toBeLessThan(
+      coldHtml.indexOf(LA_MESA_SITE_LINK_LABEL),
+    );
   });
 
   it("localizes the legal footer text", () => {

@@ -67,6 +67,12 @@ export function AdminEmailTemplatesPanel() {
       }),
     [previewBody, editLocale],
   );
+  const previewFooterHint =
+    editLocale === "en"
+      ? "How it works"
+      : editLocale === "es"
+        ? "Funcionamiento"
+        : "Fonctionnement";
 
   const fetchTemplates = useCallback(async (): Promise<EmailTemplateDoc[]> => {
     const qs = new URLSearchParams({ locale: editLocale });
@@ -728,10 +734,15 @@ export function AdminEmailTemplatesPanel() {
                 {subject.trim() || "—"}
               </p>
               <iframe
+                key={`preview-${editLocale}-${previewFooterHint}`}
                 title="Aperçu email LA MESA"
-                className="block h-[420px] w-full max-w-full bg-[#0f1210]"
+                className="block h-[480px] w-full max-w-full bg-[#0f1210]"
                 srcDoc={previewHtml}
               />
+              <p className="border-t border-gray-100 bg-ns-brand-light px-3 py-2 text-[11px] text-ns-secondary">
+                Pied de page shell : <strong>{previewFooterHint}</strong> +{" "}
+                <strong>www.lamesasecreta.com</strong> (scroll jusqu’en bas de l’aperçu).
+              </p>
             </div>
           ) : null}
 

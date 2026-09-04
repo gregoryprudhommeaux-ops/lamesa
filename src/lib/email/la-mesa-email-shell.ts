@@ -124,15 +124,20 @@ export function laMesaFonctionnementHref(lang?: string | null): string {
   return `${PRODUCTION_SITE_URL}/${locale}/fonctionnement`;
 }
 
-const FOOTER_LINK_STYLE = "color:#555;font-weight:600;text-decoration:underline;";
+const FOOTER_LINK_STYLE =
+  "color:#555;font-weight:600;text-decoration:underline;display:inline-block;padding:2px 0;";
 
-/** HTML links: Fonctionnement · www.lamesasecreta.com */
+/** HTML links: Fonctionnement then www.lamesasecreta.com (one per line for email clients). */
 export function laMesaSiteLinksHtml(lang?: string | null): string {
   const howHref = escapeEmailHtml(laMesaFonctionnementHref(lang));
   const howLabel = escapeEmailHtml(laMesaFonctionnementLabel(lang));
   const siteHref = escapeEmailHtml(laMesaSiteHref());
   const siteLabel = escapeEmailHtml(LA_MESA_SITE_LINK_LABEL);
-  return `<a href="${howHref}" style="${FOOTER_LINK_STYLE}">${howLabel}</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${siteHref}" style="${FOOTER_LINK_STYLE}">${siteLabel}</a>`;
+  return [
+    `<a href="${howHref}" style="${FOOTER_LINK_STYLE}">${howLabel}</a>`,
+    `<br/>`,
+    `<a href="${siteHref}" style="${FOOTER_LINK_STYLE}">${siteLabel}</a>`,
+  ].join("");
 }
 
 /** Plain-text site lines for multipart emails. */
