@@ -81,6 +81,9 @@ async function main() {
     organizerName: "LA MESA",
     introText: INTRO_TEXT,
     calendarTitle: "LA MESA | Dîner des Dirigeants et Entrepreneurs Français (GDL)",
+    shareTitle: "LA MESA | 24 Sept | Dîner des Dirigeants et Entrepreneurs Français GDL",
+    shareDescription:
+      "Save the Date — dîner entre dirigeants et entrepreneurs français à Guadalajara (24 sept.). Dîners privés à Guadalajara. Liste sur invitation.",
     venueName: "",
     address: "Centre de Guadalajara — lieu à confirmer",
     city: "Guadalajara",

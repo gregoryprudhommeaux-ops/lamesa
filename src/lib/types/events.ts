@@ -149,6 +149,10 @@ export interface AdminEvent {
   responseMode?: EventResponseMode;
   /** Optional subtitle under the title (e.g. Save the Date editions). */
   subtitle?: string;
+  /** WhatsApp / Open Graph title when sharing the public event URL. */
+  shareTitle?: string | null;
+  /** WhatsApp / Open Graph description when sharing the public event URL. */
+  shareDescription?: string | null;
   /** ISO datetime — after this, interest form soft-locks (Mexico City end of day recommended). */
   interestDeadlineAt?: string | null;
   /** All-in price range for interest editions (MXN / person, ticket + menu). */
