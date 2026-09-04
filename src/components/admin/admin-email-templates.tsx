@@ -450,48 +450,9 @@ export function AdminEmailTemplatesPanel() {
       </div>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
-        <aside className="min-w-0 space-y-4">
-          <div className="space-y-1">
-            <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-              Automatiques
-            </p>
-            {(systemTemplates.length
-              ? systemTemplates
-              : SYSTEM_EMAIL_TEMPLATE_KEYS.map((key) => ({
-                  key,
-                  enabled: true,
-                  label: EMAIL_TEMPLATE_LABELS[key],
-                }))
-            ).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => {
-                  setActiveKey(t.key);
-                  setMessage(null);
-                }}
-                className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
-                  activeKey === t.key
-                    ? "bg-ns-primary/15 font-semibold text-ns-primary"
-                    : "hover:bg-ns-brand-light"
-                }`}
-              >
-                <span className="block truncate">
-                  {templateLabel(t.key, "label" in t ? t.label : undefined)}
-                </span>
-                <span
-                  className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
-                    t.enabled !== false ? "text-ns-primary" : "text-red-600"
-                  }`}
-                >
-                  {t.enabled !== false ? "Actif" : "Désactivé"}
-                </span>
-              </button>
-            ))}
-          </div>
-
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           {customTemplates.length > 0 ? (
-            <div className="space-y-1 border-t border-gray-100 pt-3">
+            <div className="space-y-1">
               <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
                 Custom
               </p>
@@ -557,7 +518,55 @@ export function AdminEmailTemplatesPanel() {
                 </div>
               ))}
             </div>
-          ) : null}
+          ) : (
+            <div className="rounded-lg border border-dashed border-gray-200 px-3 py-2">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                Custom
+              </p>
+              <p className="mt-1 text-xs text-ns-secondary">
+                Aucun template custom — crée-en un ci-dessus.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-1 border-t border-gray-100 pt-3">
+            <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+              Automatiques
+            </p>
+            {(systemTemplates.length
+              ? systemTemplates
+              : SYSTEM_EMAIL_TEMPLATE_KEYS.map((key) => ({
+                  key,
+                  enabled: true,
+                  label: EMAIL_TEMPLATE_LABELS[key],
+                }))
+            ).map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => {
+                  setActiveKey(t.key);
+                  setMessage(null);
+                }}
+                className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
+                  activeKey === t.key
+                    ? "bg-ns-primary/15 font-semibold text-ns-primary"
+                    : "hover:bg-ns-brand-light"
+                }`}
+              >
+                <span className="block truncate">
+                  {templateLabel(t.key, "label" in t ? t.label : undefined)}
+                </span>
+                <span
+                  className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
+                    t.enabled !== false ? "text-ns-primary" : "text-red-600"
+                  }`}
+                >
+                  {t.enabled !== false ? "Actif" : "Désactivé"}
+                </span>
+              </button>
+            ))}
+          </div>
         </aside>
 
         <section className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface p-5">
