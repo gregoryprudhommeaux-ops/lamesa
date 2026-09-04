@@ -751,7 +751,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "",
         "Based on your reply, you’ll receive a formal LA MESA invitation with the details, plus payment instructions to complete by bank transfer before the dinner, in the coming days.",
         "",
-        "Please reply by Sunday 6 September here:",
+        "Please reply by Monday 14 September here:",
         "{{eventUrl}}",
         "",
         "Nominative invite. French founders / directors / entrepreneurs only. Questions: greg@nextstep-services.com",
