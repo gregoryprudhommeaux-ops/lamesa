@@ -740,8 +740,8 @@ export function AdminEmailTemplatesPanel() {
                 srcDoc={previewHtml}
               />
               <p className="border-t border-gray-100 bg-ns-brand-light px-3 py-2 text-[11px] text-ns-secondary">
-                Pied de page shell : <strong>{previewFooterHint}</strong> +{" "}
-                <strong>www.lamesasecreta.com</strong> (scroll jusqu’en bas de l’aperçu).
+                Pied de page shell : <strong>{previewFooterHint}</strong> ·{" "}
+                <strong>www.lamesasecreta.com</strong>
               </p>
             </div>
           ) : null}
