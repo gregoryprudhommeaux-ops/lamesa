@@ -102,26 +102,49 @@ export function laMesaSiteHref(): string {
   return PRODUCTION_SITE_URL;
 }
 
-/** HTML row: site link at the bottom of the white card. */
-export function laMesaSiteFooterHtml(): string {
-  const href = escapeEmailHtml(laMesaSiteHref());
-  const label = escapeEmailHtml(LA_MESA_SITE_LINK_LABEL);
-  return `<tr><td style="padding-top:28px;border-top:1px solid #eeeeee;font-size:12px;line-height:1.4;color:#777;">
-  <a href="${href}" style="color:#555;font-weight:600;text-decoration:underline;">${label}</a>
-</td></tr>`;
-}
-
-/** Plain-text site line for multipart emails. */
-export function laMesaSiteFooterText(): string {
-  return LA_MESA_SITE_LINK_LABEL;
-}
-
 export type EmailFooterLang = "es" | "en" | "fr";
 
 /** Normalize template / shell lang to a supported footer locale. */
 export function normalizeEmailFooterLang(lang?: string | null): EmailFooterLang {
   if (lang === "fr" || lang === "en") return lang;
   return "es";
+}
+
+/** Localized label for the How it works / Fonctionnement page. */
+export function laMesaFonctionnementLabel(lang?: string | null): string {
+  const locale = normalizeEmailFooterLang(lang);
+  if (locale === "fr") return "Fonctionnement";
+  if (locale === "en") return "How it works";
+  return "Funcionamiento";
+}
+
+/** Canonical href for /fonctionnement in the email locale. */
+export function laMesaFonctionnementHref(lang?: string | null): string {
+  const locale = normalizeEmailFooterLang(lang);
+  return `${PRODUCTION_SITE_URL}/${locale}/fonctionnement`;
+}
+
+const FOOTER_LINK_STYLE = "color:#555;font-weight:600;text-decoration:underline;";
+
+/** HTML links: Fonctionnement · www.lamesasecreta.com */
+export function laMesaSiteLinksHtml(lang?: string | null): string {
+  const howHref = escapeEmailHtml(laMesaFonctionnementHref(lang));
+  const howLabel = escapeEmailHtml(laMesaFonctionnementLabel(lang));
+  const siteHref = escapeEmailHtml(laMesaSiteHref());
+  const siteLabel = escapeEmailHtml(LA_MESA_SITE_LINK_LABEL);
+  return `<a href="${howHref}" style="${FOOTER_LINK_STYLE}">${howLabel}</a>&nbsp;&nbsp;·&nbsp;&nbsp;<a href="${siteHref}" style="${FOOTER_LINK_STYLE}">${siteLabel}</a>`;
+}
+
+/** Plain-text site lines for multipart emails. */
+export function laMesaSiteFooterText(lang?: string | null): string {
+  return `${laMesaFonctionnementLabel(lang)}: ${laMesaFonctionnementHref(lang)}\n${LA_MESA_SITE_LINK_LABEL}: ${laMesaSiteHref()}`;
+}
+
+/** HTML row: site links at the bottom of the white card. */
+export function laMesaSiteFooterHtml(lang?: string | null): string {
+  return `<tr><td style="padding-top:28px;border-top:1px solid #eeeeee;font-size:12px;line-height:1.4;color:#777;">
+  ${laMesaSiteLinksHtml(lang)}
+</td></tr>`;
 }
 
 /** Member account settings (delete profile / opt out of emails). */
@@ -189,11 +212,7 @@ export function laMesaEmailFooterHtml(
     );
   }
   if (includeSite) {
-    const href = escapeEmailHtml(laMesaSiteHref());
-    const label = escapeEmailHtml(LA_MESA_SITE_LINK_LABEL);
-    parts.push(
-      `<a href="${href}" style="color:#555;font-weight:600;text-decoration:underline;">${label}</a>`,
-    );
+    parts.push(laMesaSiteLinksHtml(locale));
   }
 
   const inner = includeLegal && includeSite ? parts.join("<br/><br/>") : parts.join("");
@@ -219,7 +238,7 @@ export function laMesaEmailFooterText(
     const settingsUrl = laMesaMemberSettingsUrl(locale);
     lines.push(`${copy.beforeLink}${copy.linkLabel} (${settingsUrl})${copy.afterLink}`);
   }
-  if (includeSite) lines.push(LA_MESA_SITE_LINK_LABEL);
+  if (includeSite) lines.push(laMesaSiteFooterText(locale));
   return lines.join("\n\n");
 }
 

@@ -74,7 +74,7 @@ export async function sendColdTemplateEmail(input: {
     to: email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaSiteFooterText()}`,
+    text: `${bodyText}\n\n${laMesaSiteFooterText(input.locale)}`,
     bccAdmins: false,
   });
 }

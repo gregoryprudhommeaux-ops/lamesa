@@ -9,10 +9,12 @@ import {
 } from "./la-mesa-email-shell";
 
 describe("la-mesa-email-shell", () => {
-  it("appends legal notice and the public site link in the HTML footer", () => {
+  it("appends legal notice, fonctionnement, and the public site link in the HTML footer", () => {
     const html = wrapLaMesaPlainBody("Hola,", { lang: "es" });
     expect(html).toContain(LA_MESA_SITE_LINK_LABEL);
     expect(html).toContain('href="https://lamesasecreta.com"');
+    expect(html).toContain("Funcionamiento");
+    expect(html).toContain('href="https://lamesasecreta.com/es/fonctionnement"');
     expect(html).toContain("registrado(a) en LA MESA");
     expect(html).toContain(laMesaMemberSettingsUrl("es"));
   });
@@ -22,12 +24,14 @@ describe("la-mesa-email-shell", () => {
     expect(html).toContain("registrado(a) en LA MESA");
 
     const coldHtml = wrapLaMesaEmailHtml({
-      lang: "es",
+      lang: "fr",
       bodyHtml: "Prospect",
       includeLegalFooter: false,
     });
     expect(coldHtml).not.toContain("registrado(a) en LA MESA");
     expect(coldHtml).toContain(LA_MESA_SITE_LINK_LABEL);
+    expect(coldHtml).toContain("Fonctionnement");
+    expect(coldHtml).toContain('href="https://lamesasecreta.com/fr/fonctionnement"');
   });
 
   it("localizes the legal footer text", () => {
@@ -35,6 +39,7 @@ describe("la-mesa-email-shell", () => {
     expect(fr).toContain("inscrit(e) à LA MESA");
     expect(fr).toContain("UNSUBSCRIBE");
     expect(fr).toContain("/fr/reglages");
+    expect(fr).toContain("/fr/fonctionnement");
   });
 
   it("renders safe <a> and <b> instead of escaping them", () => {
