@@ -18,6 +18,7 @@ import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
   buildNextEventRsvpSummary,
+  isStdListForEvent,
   pickNextUpcomingEvent,
 } from "@/lib/admin/next-event-rsvp";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
@@ -30,6 +31,8 @@ import {
 } from "@/lib/member/profile-completion";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { EventRespondent, WaitlistRegistration } from "@/lib/types/events";
+import type { Prospect } from "@/lib/types/prospects";
+import { normalizeProspectStatus } from "@/lib/prospects/normalize";
 
 const RECENT_REGISTRANTS_LIMIT = 25;
 
@@ -260,6 +263,20 @@ export async function GET(request: Request) {
 
     const nextEvent = pickNextUpcomingEvent(events);
     let nextEventRespondents: EventRespondent[] = [];
+    let nextEventProspects: Array<
+      Pick<
+        Prospect,
+        | "id"
+        | "email"
+        | "fullName"
+        | "company"
+        | "status"
+        | "lists"
+        | "deletedAt"
+        | "sentTemplateKeys"
+        | "lastContactedAt"
+      >
+    > = [];
     if (nextEvent) {
       try {
         const respondentsSnap = await db
@@ -274,12 +291,66 @@ export async function GET(request: Request) {
       } catch (error) {
         console.error("[admin/dashboard] next-event respondents", error);
       }
+
+      try {
+        const listsSnap = await db.collection(COLLECTIONS.prospectLists).limit(200).get();
+        const eventListNames = listsSnap.docs
+          .map((d) => String((d.data() as { name?: string }).name ?? "").trim())
+          .filter((name) => isStdListForEvent(name, nextEvent.slug));
+
+        const byId = new Map<
+          string,
+          Pick<
+            Prospect,
+            | "id"
+            | "email"
+            | "fullName"
+            | "company"
+            | "status"
+            | "lists"
+            | "deletedAt"
+            | "sentTemplateKeys"
+            | "lastContactedAt"
+          >
+        >();
+        await Promise.all(
+          eventListNames.map(async (listName) => {
+            const snap = await db
+              .collection(COLLECTIONS.prospects)
+              .where("lists", "array-contains", listName)
+              .limit(400)
+              .get();
+            for (const doc of snap.docs) {
+              if (byId.has(doc.id)) continue;
+              const data = doc.data() as Record<string, unknown>;
+              byId.set(doc.id, {
+                id: doc.id,
+                email: String(data.email ?? ""),
+                fullName: String(data.fullName ?? ""),
+                company: String(data.company ?? ""),
+                status: normalizeProspectStatus(data.status),
+                lists: Array.isArray(data.lists) ? data.lists.map(String) : [],
+                deletedAt: typeof data.deletedAt === "string" ? data.deletedAt : null,
+                sentTemplateKeys: Array.isArray(data.sentTemplateKeys)
+                  ? data.sentTemplateKeys.map(String)
+                  : [],
+                lastContactedAt:
+                  typeof data.lastContactedAt === "string" ? data.lastContactedAt : null,
+              });
+            }
+          }),
+        );
+        nextEventProspects = [...byId.values()];
+      } catch (error) {
+        console.error("[admin/dashboard] next-event prospects", error);
+      }
     }
 
     const nextEventRsvp = buildNextEventRsvpSummary({
       events,
       participations,
       respondents: nextEventRespondents,
+      prospects: nextEventProspects,
     });
 
     return NextResponse.json({

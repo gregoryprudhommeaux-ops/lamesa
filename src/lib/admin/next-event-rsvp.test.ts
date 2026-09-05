@@ -209,4 +209,160 @@ describe("buildNextEventRsvpSummary", () => {
     });
     expect(summary?.yesGuests[0]?.fullName).toBe("A");
   });
+
+  it("merges Prospects CRM NON pas disponible into interest no count", () => {
+    const eventId = "ev3";
+    const slug = "dirigeants-fr-2026-09-24";
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [
+        respondent({
+          id: "r-yes",
+          eventId,
+          email: "yes@example.com",
+          firstName: "Yes",
+          lastName: "One",
+          interestResponse: "yes",
+        }),
+      ],
+      prospects: [
+        {
+          id: "p1",
+          email: "no1@example.com",
+          fullName: "No One",
+          company: "Co",
+          status: "no_not_available",
+          lists: [`STD ${slug} — SHORTLIST FR`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: null,
+        },
+        {
+          id: "p2",
+          email: "no2@example.com",
+          fullName: "No Two",
+          company: "",
+          status: "no_not_interested",
+          lists: [`STD ${slug} — SHORTLIST FR`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "p-yes-list",
+          email: "yes@example.com",
+          fullName: "Yes One",
+          company: "Acme",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "p-shortlist-only",
+          email: "idle@example.com",
+          fullName: "Not Contacted",
+          company: "",
+          status: "to_contact",
+          lists: [`STD ${slug} — SHORTLIST FR`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: null,
+        },
+        {
+          id: "p-deleted",
+          email: "gone@example.com",
+          fullName: "Gone",
+          company: "",
+          status: "no_not_available",
+          lists: [`STD ${slug} — SHORTLIST FR`],
+          deletedAt: "2026-09-01T00:00:00.000Z",
+          sentTemplateKeys: [],
+          lastContactedAt: null,
+        },
+      ],
+    });
+
+    expect(summary).toMatchObject({
+      yes: 1,
+      no: 2,
+      other: 0,
+      // mailed/approached only — idle shortlist excluded
+      contacted: 3,
+      pending: 0,
+    });
+  });
+
+  it("counts contacted as STD mail ∪ direct NON, not full shortlist", () => {
+    const eventId = "ev4";
+    const slug = "dirigeants-fr-2026-09-24";
+    const tpl = "custom_dirigeants_fr_2026_09_24";
+    const short = `STD ${slug} — SHORTLIST FR`;
+    const prospects = [
+      ...Array.from({ length: 50 }, (_, i) => ({
+        id: `m${i}`,
+        email: `mail${i}@example.com`,
+        fullName: `Mail ${i}`,
+        company: "",
+        status: "to_follow" as const,
+        lists: [short],
+        deletedAt: null as string | null,
+        sentTemplateKeys: [tpl],
+        lastContactedAt: "2026-09-01T00:00:00.000Z" as string | null,
+      })),
+      {
+        id: "direct-no",
+        email: "direct@example.com",
+        fullName: "Direct No",
+        company: "",
+        status: "no_not_available" as const,
+        lists: [short],
+        deletedAt: null as string | null,
+        sentTemplateKeys: [] as string[],
+        lastContactedAt: null as string | null,
+      },
+      {
+        id: "not-yet",
+        email: "waiting@example.com",
+        fullName: "Waiting",
+        company: "",
+        status: "to_contact" as const,
+        lists: [short],
+        deletedAt: null as string | null,
+        sentTemplateKeys: [] as string[],
+        lastContactedAt: null as string | null,
+      },
+    ];
+
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [],
+      prospects,
+    });
+
+    expect(summary?.contacted).toBe(51);
+    expect(summary?.no).toBe(1);
+    expect(summary?.pending).toBe(50);
+  });
 });

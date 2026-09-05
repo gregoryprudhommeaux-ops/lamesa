@@ -253,6 +253,12 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
           <p className="mt-0.5 text-sm capitalize text-ns-secondary">
             {formatNextEventWhen(rsvp.startsAt)}
           </p>
+          {rsvp.responseMode === "interest" ? (
+            <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
+              Lecture ops : contactés = mail STD + approches ; sans réponse = encore en jeu
+              (souvent À suivre). On affinera tags / listes après cette édition.
+            </p>
+          ) : null}
         </div>
         <Link
           href={eventHref}
@@ -268,6 +274,7 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
             Contactés
           </p>
           <p className="mt-1 text-2xl font-black text-ns-tertiary">{rsvp.contacted}</p>
+          <p className="text-[10px] text-ns-secondary">Mail STD + approches</p>
         </div>
         <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
           <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
@@ -280,11 +287,11 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
             Non{rsvp.other > 0 ? " / autre" : ""}
           </p>
           <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
-          {rsvp.other > 0 ? (
-            <p className="text-[10px] text-rose-800/80">
-              {rsvp.no} non · {rsvp.other} autre
-            </p>
-          ) : null}
+          <p className="text-[10px] text-rose-800/80">
+            {rsvp.other > 0
+              ? `${rsvp.no} non · ${rsvp.other} autre`
+              : "Formulaire + CRM Prospects"}
+          </p>
         </div>
         <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
           <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
