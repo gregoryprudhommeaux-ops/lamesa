@@ -16,6 +16,10 @@ import {
 } from "@/lib/admin/load-core-collections";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
+import {
+  buildNextEventRsvpSummary,
+  pickNextUpcomingEvent,
+} from "@/lib/admin/next-event-rsvp";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -25,7 +29,7 @@ import {
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import type { WaitlistRegistration } from "@/lib/types/events";
+import type { EventRespondent, WaitlistRegistration } from "@/lib/types/events";
 
 const RECENT_REGISTRANTS_LIMIT = 25;
 
@@ -254,6 +258,30 @@ export async function GET(request: Request) {
       participations,
     });
 
+    const nextEvent = pickNextUpcomingEvent(events);
+    let nextEventRespondents: EventRespondent[] = [];
+    if (nextEvent) {
+      try {
+        const respondentsSnap = await db
+          .collection(COLLECTIONS.respondents)
+          .where("eventId", "==", nextEvent.id)
+          .limit(500)
+          .get();
+        nextEventRespondents = respondentsSnap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<EventRespondent, "id">),
+        }));
+      } catch (error) {
+        console.error("[admin/dashboard] next-event respondents", error);
+      }
+    }
+
+    const nextEventRsvp = buildNextEventRsvpSummary({
+      events,
+      participations,
+      respondents: nextEventRespondents,
+    });
+
     return NextResponse.json({
       ok: true,
       kpis: {
@@ -278,6 +306,7 @@ export async function GET(request: Request) {
       distributions,
       recentTableDrafts,
       opsQueues,
+      nextEventRsvp,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

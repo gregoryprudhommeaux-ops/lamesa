@@ -199,6 +199,8 @@ export interface AdminEventParticipation {
   createdAt?: string;
   updatedAt?: string;
   calendarInviteSentAt?: string;
+  /** Save the Date email sent (interest / STD editions). */
+  saveTheDateSentAt?: string;
   confirmationEmailSentAt?: string;
   reminder7dSentAt?: string;
   reminder36hSentAt?: string;

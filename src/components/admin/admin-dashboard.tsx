@@ -80,6 +80,27 @@ type OpsQueues = {
   noShow: OpsQueueMember[];
 };
 
+type NextEventRsvpYesGuest = {
+  id: string;
+  fullName: string;
+  email: string;
+  company: string;
+};
+
+type NextEventRsvp = {
+  eventId: string;
+  eventSlug: string;
+  title: string;
+  startsAt: string;
+  responseMode: "interest" | "rsvp";
+  contacted: number;
+  yes: number;
+  no: number;
+  other: number;
+  pending: number;
+  yesGuests: NextEventRsvpYesGuest[];
+};
+
 type DistributionMember = {
   id: string;
   fullName: string;
@@ -127,6 +148,7 @@ type DashboardPayload = {
   };
   recentTableDrafts?: RecentTableDraft[];
   opsQueues?: OpsQueues;
+  nextEventRsvp?: NextEventRsvp | null;
 };
 
 const CATEGORIES: {
@@ -194,6 +216,115 @@ function OpsQueueCard({
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function formatNextEventWhen(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Mexico_City",
+  });
+}
+
+function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
+  const eventHref = `/admin/evenements?id=${encodeURIComponent(rsvp.eventId)}`;
+  const noTotal = rsvp.no + rsvp.other;
+  const modeHint =
+    rsvp.responseMode === "interest"
+      ? "Save the Date / intérêt"
+      : "RSVP classique";
+
+  return (
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+            Prochain événement · {modeHint}
+          </p>
+          <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">
+            {rsvp.title}
+          </h4>
+          <p className="mt-0.5 text-sm capitalize text-ns-secondary">
+            {formatNextEventWhen(rsvp.startsAt)}
+          </p>
+        </div>
+        <Link
+          href={eventHref}
+          className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Ouvrir l’événement →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+            Contactés
+          </p>
+          <p className="mt-1 text-2xl font-black text-ns-tertiary">{rsvp.contacted}</p>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            Oui
+          </p>
+          <p className="mt-1 text-2xl font-black text-emerald-900">{rsvp.yes}</p>
+        </div>
+        <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">
+            Non{rsvp.other > 0 ? " / autre" : ""}
+          </p>
+          <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
+          {rsvp.other > 0 ? (
+            <p className="text-[10px] text-rose-800/80">
+              {rsvp.no} non · {rsvp.other} autre
+            </p>
+          ) : null}
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Sans réponse
+          </p>
+          <p className="mt-1 text-2xl font-black text-amber-950">{rsvp.pending}</p>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-gray-100/80 pt-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Ont dit oui
+          </p>
+          {rsvp.yes > rsvp.yesGuests.length ? (
+            <p className="text-[11px] text-ns-secondary">
+              {rsvp.yesGuests.length} affichés · {rsvp.yes} au total
+            </p>
+          ) : null}
+        </div>
+        {rsvp.yesGuests.length === 0 ? (
+          <p className="mt-2 text-sm text-ns-secondary">Aucun oui pour l’instant.</p>
+        ) : (
+          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {rsvp.yesGuests.map((g) => (
+              <li
+                key={g.id}
+                className="rounded-lg border border-emerald-100/80 bg-white/70 px-2.5 py-1.5"
+              >
+                <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                  {g.fullName || g.email || "Sans nom"}
+                </span>
+                <span className="block truncate text-[11px] text-ns-secondary">
+                  {g.company || g.email}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -520,6 +651,7 @@ export function AdminDashboardPanel() {
     distributions,
     recentTableDrafts = [],
     opsQueues,
+    nextEventRsvp = null,
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -544,7 +676,7 @@ export function AdminDashboardPanel() {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Vue plateforme : derniers inscrits, volumes, funnel et satisfaction.
+            Cockpit ops : prochain dîner (RSVP), vivier, volumes et satisfaction.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -575,6 +707,46 @@ export function AdminDashboardPanel() {
         />
       </section>
 
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Files ops
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            D’abord le dîner en cours — puis le vivier (profils, priorités). Hygiène Auth et
+            jamais invités restent dans Inscrits.
+          </p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {nextEventRsvp ? (
+            <NextEventRsvpCard rsvp={nextEventRsvp} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Prochain événement
+              </p>
+              <p className="mt-2 text-sm text-ns-secondary">
+                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
+              </p>
+              <Link
+                href="/admin/evenements?nouveau=1"
+                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Nouvel événement →
+              </Link>
+            </div>
+          )}
+          <OpsQueueCard
+            title="Profils incomplets"
+            href="/admin/inscrits?profile=incomplete"
+            rows={queues.incomplete}
+          />
+          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
+          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
+          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
+        </div>
+      </section>
+
       {needingAttention > 0 ? (
         <Link
           href="/admin/inscrits?profile=incomplete"
@@ -591,53 +763,6 @@ export function AdminDashboardPanel() {
           <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
         </Link>
       ) : null}
-
-      <section>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Files ops
-          </h3>
-          <p className="mt-1 text-xs text-ns-secondary">
-            Priorités cockpit — notes et tags se gèrent dans Inscrits.
-          </p>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          <OpsQueueCard
-            title="Profils incomplets"
-            href="/admin/inscrits?profile=incomplete"
-            rows={queues.incomplete}
-          />
-          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                  Hygiène Auth
-                </p>
-                <p className="mt-1 text-sm text-ns-secondary">
-                  Profils sans compte, ou comptes Auth sans fiche.
-                </p>
-              </div>
-              <Link
-                href="/admin/inscrits?profile=no_auth"
-                className="text-xs font-semibold text-ns-primary hover:underline"
-              >
-                Voir →
-              </Link>
-            </div>
-            <p className="mt-3 text-xs text-ns-secondary">
-              Sur Inscrits : filtre « Sans compte Auth » + bouton « Hygiène Auth ».
-            </p>
-          </div>
-          <OpsQueueCard
-            title="Jamais invités"
-            href="/admin/inscrits"
-            rows={queues.neverInvited}
-          />
-          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
-          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
-          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
-        </div>
-      </section>
 
       <section>
         <div className="mb-3">
