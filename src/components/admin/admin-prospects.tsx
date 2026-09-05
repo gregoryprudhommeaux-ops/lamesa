@@ -493,6 +493,23 @@ export function AdminProspectsPanel() {
     }
   }
 
+  function removeProspectFromList(p: Prospect, listName: string) {
+    const key = listName.trim().toLowerCase();
+    if (!key) return;
+    const next = (p.lists ?? []).filter((name) => name.toLowerCase() !== key);
+    if (next.length === (p.lists ?? []).length) return;
+    void patchProspect(p.id, { lists: next });
+  }
+
+  async function removeSelectedFromActiveList() {
+    if (!activeListName || selected.size === 0) return;
+    const count = selected.size;
+    const name = activeListName;
+    await runBulk({ removeLists: [name] });
+    setMessage(`${count} contact(s) retiré(s) de « ${name} ».`);
+    setSelected(new Set());
+  }
+
   async function runBulk(body: Record<string, unknown>) {
     const ids = [...selected];
     if (ids.length === 0) {
@@ -940,13 +957,50 @@ export function AdminProspectsPanel() {
                         <td className="hidden max-w-[6rem] truncate px-1.5 py-1 align-middle text-ns-secondary xl:table-cell" title={[p.city, p.phone].filter(Boolean).join(" · ") || undefined}>
                           {p.city || (p.phone ? p.phone : "—")}
                         </td>
-                        <td className="max-w-[8rem] px-1.5 py-1 align-middle">
-                          <div className="flex flex-wrap gap-0.5">
-                            {(p.lists ?? []).slice(0, 2).map((l) => (
-                              <span key={`l-${l}`} className="max-w-[4.5rem] truncate rounded bg-lime-100 px-1 py-px text-[9px] font-semibold uppercase text-lime-900" title={l}>{l}</span>
-                            ))}
-                            {(p.lists?.length ?? 0) > 2 ? <span className="text-[9px] text-ns-secondary">+{(p.lists?.length ?? 0) - 2}</span> : null}
-                            {!p.lists?.length ? <span className="text-[10px] text-ns-secondary/50">—</span> : null}
+                        <td className="max-w-[11rem] px-1.5 py-1 align-middle" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-wrap items-center gap-0.5">
+                            {(p.lists ?? []).map((l) => {
+                              const isActiveList =
+                                Boolean(activeListName) &&
+                                l.toLowerCase() === activeListName!.toLowerCase();
+                              return (
+                                <button
+                                  key={`l-${l}`}
+                                  type="button"
+                                  disabled={busy}
+                                  title={`Retirer de « ${l} »`}
+                                  aria-label={`Retirer ${p.fullName || p.email} de la liste ${l}`}
+                                  className={`inline-flex max-w-full items-center gap-0.5 rounded py-px pl-1 pr-0.5 text-[9px] font-semibold uppercase disabled:opacity-50 ${
+                                    isActiveList
+                                      ? "bg-lime-600 text-white hover:bg-lime-700"
+                                      : "bg-lime-100 text-lime-900 hover:bg-lime-200"
+                                  }`}
+                                  onClick={() => removeProspectFromList(p, l)}
+                                >
+                                  <span className="truncate">{l}</span>
+                                  <span
+                                    aria-hidden
+                                    className={`shrink-0 px-0.5 ${isActiveList ? "text-white/90" : "text-lime-800/70"}`}
+                                  >
+                                    ×
+                                  </span>
+                                </button>
+                              );
+                            })}
+                            {activeListName ? (
+                              <button
+                                type="button"
+                                disabled={busy}
+                                className="rounded border border-red-200 bg-white px-1 py-px text-[9px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                                title={`Retirer de « ${activeListName} »`}
+                                onClick={() => removeProspectFromList(p, activeListName)}
+                              >
+                                Retirer
+                              </button>
+                            ) : null}
+                            {!p.lists?.length ? (
+                              <span className="text-[10px] text-ns-secondary/50">—</span>
+                            ) : null}
                           </div>
                         </td>
                         <td className="px-1.5 py-1 align-middle" onClick={(e) => e.stopPropagation()}>
@@ -988,6 +1042,17 @@ export function AdminProspectsPanel() {
               <span className="shrink-0 text-xs font-semibold text-ns-tertiary">{selected.size} sélectionné{selected.size > 1 ? "s" : ""}</span>
               <button type="button" onClick={() => setSelected(new Set())} className="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-100/60">Désélectionner</button>
               <button type="button" disabled={busy} onClick={() => { setAddToListPicked(new Set()); setListBulkMode("add"); setAddToListOpen(true); }} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><ListPlus className="h-3.5 w-3.5" /> Liste</button>
+              {activeListName ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void removeSelectedFromActiveList()}
+                  className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                  title={`Retirer la sélection de « ${activeListName} »`}
+                >
+                  Retirer de « {activeListName.length > 18 ? `${activeListName.slice(0, 16)}…` : activeListName} »
+                </button>
+              ) : null}
               <button type="button" disabled={busy || emailRecipients.length === 0} onClick={() => void openEmailModal()} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><Mail className="h-3.5 w-3.5" /> Email</button>
               <button type="button" disabled={busy} onClick={() => setCriterionOpen(true)} className="inline-flex items-center gap-1 rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-medium text-ns-tertiary hover:bg-amber-50/80"><CheckSquare className="h-3.5 w-3.5" /> Critère</button>
               <button type="button" disabled={busy} onClick={() => { if (window.confirm(`Supprimer ${selected.size} contact(s) sélectionné(s) (soft delete) ?`)) void runBulk({ softDelete: true }); }} className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /> Suppr.</button>
