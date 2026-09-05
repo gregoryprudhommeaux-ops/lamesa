@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
-import { mergeProspects, prospectFromInput } from "@/lib/prospects/normalize";
+import {
+  mergeProspects,
+  normalizeProspectStatus,
+  prospectFromInput,
+} from "@/lib/prospects/normalize";
 import {
   googleSheetToCsvExportUrl,
   parseProspectImportText,
 } from "@/lib/prospects/parse-import";
 import type { Prospect } from "@/lib/types/prospects";
+
+describe("normalizeProspectStatus", () => {
+  it("maps legacy nurture to to_follow", () => {
+    expect(normalizeProspectStatus("nurture")).toBe("to_follow");
+  });
+
+  it("keeps new STD statuses", () => {
+    expect(normalizeProspectStatus("no_response")).toBe("no_response");
+    expect(normalizeProspectStatus("no_not_interested")).toBe("no_not_interested");
+    expect(normalizeProspectStatus("no_not_available")).toBe("no_not_available");
+  });
+});
 
 describe("prospectFromInput", () => {
   it("rejects missing email", () => {

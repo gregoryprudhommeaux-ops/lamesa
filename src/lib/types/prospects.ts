@@ -1,12 +1,27 @@
 export const PROSPECT_STATUSES = [
   "to_contact",
+  "to_follow",
   "contacted",
-  "nurture",
+  "no_response",
+  "no_not_interested",
+  "no_not_available",
   "won",
   "do_not_contact",
 ] as const;
 
 export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
+
+/** French labels for admin CRM dropdowns. */
+export const PROSPECT_STATUS_LABELS_FR: Record<ProspectStatus, string> = {
+  to_contact: "À contacter",
+  to_follow: "À suivre",
+  contacted: "Contacté",
+  no_response: "Sans réponse",
+  no_not_interested: "NON (pas intéressés)",
+  no_not_available: "NON (pas disponible)",
+  won: "Gagné / inscrit",
+  do_not_contact: "Ne pas contacter",
+};
 
 /** Internal outreach CRM contact (admin only). Email required. */
 export type Prospect = {

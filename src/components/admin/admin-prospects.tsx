@@ -3,7 +3,7 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import type { ProspectListWithCount } from "@/lib/types/prospect-lists";
 import type { Prospect, ProspectStatus } from "@/lib/types/prospects";
-import { PROSPECT_STATUSES } from "@/lib/types/prospects";
+import { PROSPECT_STATUSES, PROSPECT_STATUS_LABELS_FR } from "@/lib/types/prospects";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import {
   CheckSquare,
@@ -23,13 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EmailTemplateDoc, TemplateLocale } from "@/lib/types/events";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
 
-const STATUS_LABEL: Record<ProspectStatus, string> = {
-  to_contact: "À contacter",
-  contacted: "Contacté",
-  nurture: "Nurture",
-  won: "Gagné / inscrit",
-  do_not_contact: "Ne pas contacter",
-};
+const STATUS_LABEL = PROSPECT_STATUS_LABELS_FR;
 
 const emptyDraft = {
   email: "",
@@ -54,10 +48,13 @@ type SortDir = "asc" | "desc";
 
 const STATUS_SORT_RANK: Record<ProspectStatus, number> = {
   to_contact: 0,
-  contacted: 1,
-  nurture: 2,
-  won: 3,
-  do_not_contact: 4,
+  no_response: 1,
+  contacted: 2,
+  to_follow: 3,
+  no_not_available: 4,
+  no_not_interested: 5,
+  won: 6,
+  do_not_contact: 7,
 };
 
 function parseCsvField(raw: string): string[] {

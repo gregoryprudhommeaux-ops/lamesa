@@ -21,6 +21,8 @@ export function fillEmpty(existing: string, incoming: string | undefined): strin
 
 export function normalizeProspectStatus(raw: unknown): ProspectStatus {
   const s = String(raw ?? "").trim();
+  // Legacy nurture → À suivre (à relancer)
+  if (s === "nurture") return "to_follow";
   if ((PROSPECT_STATUSES as readonly string[]).includes(s)) return s as ProspectStatus;
   return "to_contact";
 }
@@ -87,10 +89,13 @@ export function prospectFromInput(
 
 const STATUS_RANK: Record<ProspectStatus, number> = {
   to_contact: 0,
-  nurture: 1,
+  no_response: 1,
   contacted: 2,
-  won: 3,
-  do_not_contact: 4,
+  to_follow: 3,
+  no_not_available: 4,
+  no_not_interested: 5,
+  won: 6,
+  do_not_contact: 7,
 };
 
 export function mergeProspects(a: Prospect, b: Prospect, survivorId: string): Prospect {

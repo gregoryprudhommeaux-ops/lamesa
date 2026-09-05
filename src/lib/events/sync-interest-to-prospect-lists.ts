@@ -10,8 +10,8 @@ import {
   interestProspectListNames,
   type InterestListPair,
 } from "@/lib/events/interest-prospect-lists";
+import { prospectStatusFromInterest } from "@/lib/prospects/status-from-interest";
 import type { EventInterestResponse, WaitlistRegistration } from "@/lib/types/events";
-import type { ProspectStatus } from "@/lib/types/prospects";
 
 export {
   applyInterestListMembership,
@@ -67,7 +67,7 @@ export async function ensureInterestProspectLists(
 
 /**
  * Soft sync: never throws. Puts the respondent on OUI or NON/AUTRE list
- * (and removes them from the other).
+ * (and removes them from the other). Status follows the STD answer.
  */
 export async function syncInterestRespondentToProspectLists(input: {
   eventSlug: string;
@@ -104,8 +104,11 @@ export async function syncInterestRespondentToProspectLists(input: {
       input.interestResponse === "yes" ? lists.yes : lists.noOther;
     const noteLine = interestNoteLine(input);
     const existing = await findProspectByEmail(email);
-    const status: ProspectStatus | undefined =
-      existing?.status === "do_not_contact" ? undefined : existing?.status ?? "nurture";
+    const status = prospectStatusFromInterest({
+      interestResponse: input.interestResponse,
+      declineReason: input.declineReason,
+      existingStatus: existing?.status,
+    });
 
     if (existing) {
       const updated = await updateProspect(existing.id, {
@@ -150,7 +153,7 @@ export async function syncInterestRespondentToProspectLists(input: {
           ...(input.waitlist?.tags ?? []),
         ]),
         notes: noteLine,
-        status: "nurture",
+        status: status ?? "to_follow",
         source: input.waitlist?.source?.trim() || `interest:${input.eventSlug}`,
       },
       { source: `interest:${input.eventSlug}` },

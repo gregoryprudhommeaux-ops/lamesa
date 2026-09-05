@@ -9,6 +9,11 @@ import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import {
+  findProspectByEmail,
+  updateProspect,
+  upsertProspect,
+} from "@/lib/prospects/store";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -17,6 +22,36 @@ const sendSchema = z.object({
 });
 
 type Params = { params: Promise<{ id: string }> };
+
+/** Mark STD recipients as Sans réponse unless already won / DNC. */
+async function markProspectNoResponse(input: {
+  email: string;
+  fullName?: string | null;
+  company?: string | null;
+  phone?: string | null;
+  eventSlug: string;
+}): Promise<void> {
+  const email = normalizeEmail(input.email);
+  if (!email.includes("@")) return;
+  const existing = await findProspectByEmail(email);
+  if (existing?.status === "won" || existing?.status === "do_not_contact") return;
+  if (existing) {
+    await updateProspect(existing.id, { status: "no_response" });
+    return;
+  }
+  await upsertProspect(
+    {
+      email,
+      fullName: input.fullName ?? undefined,
+      company: input.company ?? undefined,
+      phone: input.phone ?? undefined,
+      status: "no_response",
+      tags: ["save-the-date"],
+      source: `std:${input.eventSlug}`,
+    },
+    { source: `std:${input.eventSlug}` },
+  );
+}
 
 export async function POST(request: Request, { params }: Params) {
   const admin = await requirePlatformAdmin(request);
@@ -121,6 +156,16 @@ export async function POST(request: Request, { params }: Params) {
       },
       { merge: true },
     );
+
+    void markProspectNoResponse({
+      email,
+      fullName: participation.fullName ?? ensured?.fullName,
+      company: participation.companyName ?? ensured?.company,
+      phone: participation.phone ?? ensured?.phone,
+      eventSlug: event.slug,
+    }).catch((err) => {
+      console.warn("[send-save-the-date] prospect no_response failed", email, err);
+    });
   }
 
   await db.collection(COLLECTIONS.events).doc(eventId).set(

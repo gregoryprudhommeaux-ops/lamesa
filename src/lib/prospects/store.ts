@@ -2,6 +2,7 @@ import { COLLECTIONS, getAdminFirestore } from "@/lib/firebase/admin";
 import {
   mergeProspects,
   normalizeProspectEmail,
+  normalizeProspectStatus,
   prospectFromInput,
 } from "@/lib/prospects/normalize";
 import type { Prospect, ProspectInput } from "@/lib/types/prospects";
@@ -21,7 +22,7 @@ function docToProspect(id: string, data: Record<string, unknown>): Prospect {
     notes: String(data.notes ?? ""),
     tags: Array.isArray(data.tags) ? data.tags.map(String).filter(Boolean) : [],
     lists: Array.isArray(data.lists) ? data.lists.map(String).filter(Boolean) : [],
-    status: (data.status as Prospect["status"]) || "to_contact",
+    status: normalizeProspectStatus(data.status),
     seen: Boolean(data.seen),
     source: String(data.source ?? "manual"),
     createdAt: String(data.createdAt ?? ""),
