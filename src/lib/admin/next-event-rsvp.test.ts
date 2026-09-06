@@ -365,4 +365,48 @@ describe("buildNextEventRsvpSummary", () => {
     expect(summary?.no).toBe(1);
     expect(summary?.pending).toBe(50);
   });
+
+  it("lets CRM NON override a stale form YES / OUI list", () => {
+    const eventId = "ev5";
+    const slug = "dirigeants-fr-2026-09-24";
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [
+        respondent({
+          id: "r1",
+          eventId,
+          email: "arthur@example.com",
+          firstName: "Arthur",
+          lastName: "Blondeau",
+          interestResponse: "yes",
+        }),
+      ],
+      prospects: [
+        {
+          id: "p-arthur",
+          email: "arthur@example.com",
+          fullName: "Arthur Blondeau",
+          company: "Inventec",
+          status: "no_not_available",
+          lists: [`STD ${slug} — SHORTLIST FR`, `STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(summary).toMatchObject({ yes: 0, no: 1 });
+    expect(summary?.yesGuests).toEqual([]);
+  });
 });

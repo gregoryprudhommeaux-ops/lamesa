@@ -232,6 +232,7 @@ export function buildNextEventRsvpSummary(input: {
       const onOui = listKeyMatch(p.lists, listNames.yes);
       const onNon = listKeyMatch(p.lists, listNames.noOther);
 
+      // Soft signals from playlists / won — CRM hard override below.
       if (onOui || PROSPECT_YES_STATUSES.has(p.status)) {
         yesEmails.add(email);
         if (!yesGuestsByEmail.has(email)) {
@@ -248,9 +249,35 @@ export function buildNextEventRsvpSummary(input: {
         noEmails.add(email);
       }
 
-      // Contactés = mail STD / last contact / disposition CRM — pas toute la shortlist.
+      // Contactés = mail STD / disposition CRM — pas toute la shortlist.
       if (wasProspectApproachedForEvent(p, event.slug)) {
         contactedEmails.add(email);
+      }
+    }
+
+    // CRM status wins over stale form YES / OUI list (ops correction).
+    for (const p of relatedProspects) {
+      const email = normalizeEmail(p.email);
+      if (!email.includes("@")) continue;
+      if (PROSPECT_NO_STATUSES.has(p.status)) {
+        yesEmails.delete(email);
+        otherEmails.delete(email);
+        noEmails.add(email);
+        yesGuestsByEmail.delete(email);
+        contactedEmails.add(email);
+      } else if (PROSPECT_YES_STATUSES.has(p.status)) {
+        noEmails.delete(email);
+        otherEmails.delete(email);
+        yesEmails.add(email);
+        contactedEmails.add(email);
+        if (!yesGuestsByEmail.has(email)) {
+          yesGuestsByEmail.set(email, {
+            id: p.id,
+            fullName: p.fullName?.trim() || email,
+            email: p.email,
+            company: p.company?.trim() || "",
+          });
+        }
       }
     }
 
@@ -259,13 +286,14 @@ export function buildNextEventRsvpSummary(input: {
       if (email.includes("@")) contactedEmails.add(email);
     }
 
-    // Un email classé oui et non (incohérence) : privilégier oui.
-    for (const email of yesEmails) {
-      noEmails.delete(email);
+    // Remaining dual membership (form vs list): prefer NON — ops usually corrects that way.
+    for (const email of noEmails) {
+      yesEmails.delete(email);
       otherEmails.delete(email);
+      yesGuestsByEmail.delete(email);
       contactedEmails.add(email);
     }
-    for (const email of noEmails) {
+    for (const email of yesEmails) {
       otherEmails.delete(email);
       contactedEmails.add(email);
     }

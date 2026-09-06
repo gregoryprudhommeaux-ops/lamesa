@@ -1,4 +1,5 @@
 import { COLLECTIONS, getAdminFirestore } from "@/lib/firebase/admin";
+import { applyProspectStatusToStdLists } from "@/lib/events/interest-prospect-lists";
 import {
   mergeProspects,
   normalizeProspectEmail,
@@ -137,6 +138,13 @@ export async function updateProspect(
     { existing, now },
   );
   if ("error" in next) return null;
+  const statusChanged =
+    patch.status !== undefined && patch.status !== existing.status;
+  let nextLists =
+    patch.lists !== undefined ? patch.lists : existing.lists;
+  if (statusChanged && patch.lists === undefined) {
+    nextLists = applyProspectStatusToStdLists(existing.lists, patch.status!);
+  }
   const overwritten: Prospect = {
     ...existing,
     ...next,
@@ -149,7 +157,7 @@ export async function updateProspect(
     phone: patch.phone !== undefined ? String(patch.phone).trim() : next.phone,
     notes: patch.notes !== undefined ? String(patch.notes).trim() : next.notes,
     tags: patch.tags !== undefined ? patch.tags : existing.tags,
-    lists: patch.lists !== undefined ? patch.lists : existing.lists,
+    lists: nextLists,
     status: patch.status ?? existing.status,
     seen: patch.seen !== undefined ? Boolean(patch.seen) : existing.seen,
     email: patch.email ? normalizeProspectEmail(patch.email) : existing.email,
@@ -254,7 +262,14 @@ export async function bulkUpdateProspects(input: {
       if (removeLists.length) {
         nextLists = nextLists.filter((l) => !removeLists.includes(l.toLowerCase()));
       }
-      if (addLists.length || removeLists.length) {
+      if (input.status && input.status !== existing.status) {
+        nextLists = applyProspectStatusToStdLists(nextLists, input.status);
+      }
+      if (
+        addLists.length ||
+        removeLists.length ||
+        (input.status && input.status !== existing.status)
+      ) {
         patch.lists = nextLists;
       }
       batch.set(snap.ref, patch, { merge: true });

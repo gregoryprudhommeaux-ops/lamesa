@@ -255,8 +255,9 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
           </p>
           {rsvp.responseMode === "interest" ? (
             <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
-              Lecture ops : contactés = mail STD + approches ; sans réponse = encore en jeu
-              (souvent À suivre). On affinera tags / listes après cette édition.
+              Lecture ops : contactés = mail STD + approches ; CRM NON/OUI prime sur le
+              formulaire ; sans réponse = encore en jeu (souvent À suivre). Tags / listes
+              affinés après cette édition.
             </p>
           ) : null}
         </div>
