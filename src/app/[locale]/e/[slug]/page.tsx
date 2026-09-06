@@ -4,6 +4,7 @@ import {
   buildEventShareMetadata,
   getPublishedEventShareMeta,
 } from "@/lib/events/event-share-meta";
+import { getPublishedEventBySlug } from "@/lib/events/get-published-event";
 import { PRODUCTION_SITE_URL, getSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
@@ -65,10 +66,11 @@ export default async function EventPage({ params }: Props) {
   const appLocale = routing.locales.includes(locale as AppLocale)
     ? (locale as AppLocale)
     : routing.defaultLocale;
+  const initialEvent = await getPublishedEventBySlug(slug);
 
   return (
     <Suspense fallback={null}>
-      <PublicEventPage slug={slug} locale={appLocale} />
+      <PublicEventPage slug={slug} locale={appLocale} initialEvent={initialEvent} />
     </Suspense>
   );
 }

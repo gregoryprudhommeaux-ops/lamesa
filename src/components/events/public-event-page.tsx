@@ -9,6 +9,7 @@ import {
   interestCalendarDescription,
   interestCalendarTitle,
 } from "@/lib/events/interest-calendar";
+import { mapPublishedEventDoc } from "@/lib/events/map-published-event";
 import { buildGoogleCalendarUrl } from "@/lib/email/ics";
 import {
   formatAccessIncludes,
@@ -71,56 +72,9 @@ function renderIntroRichText(text: string): ReactNode {
 type PublicEventPageProps = {
   slug: string;
   locale: "fr" | "en" | "es";
+  /** Prefetched on the server — skips slow client Firestore Listen when present. */
+  initialEvent?: AdminEvent | null;
 };
-
-function mapEventDoc(id: string, slug: string, data: Record<string, unknown>): AdminEvent {
-  return {
-    id,
-    slug: String(data.slug ?? slug),
-    title: String(data.title ?? ""),
-    subtitle: data.subtitle ? String(data.subtitle) : undefined,
-    organizerName: data.organizerName ? String(data.organizerName) : undefined,
-    introText: data.introText ? String(data.introText) : undefined,
-    venueName: data.venueName ? String(data.venueName) : undefined,
-    address: data.address ? String(data.address) : undefined,
-    mapsUrl: data.mapsUrl ? String(data.mapsUrl) : undefined,
-    startsAt: String(data.startsAt ?? ""),
-    endsAt: data.endsAt ? String(data.endsAt) : undefined,
-    capacity: typeof data.capacity === "number" ? data.capacity : undefined,
-    priceMxn: typeof data.priceMxn === "number" ? data.priceMxn : undefined,
-    accessIncludesWelcomeDrink: Boolean(data.accessIncludesWelcomeDrink),
-    accessIncludesAmuseBouche: Boolean(data.accessIncludesAmuseBouche),
-    menuIncluded: data.menuIncluded ? String(data.menuIncluded) : undefined,
-    menuPriceMinMxn:
-      typeof data.menuPriceMinMxn === "number" ? data.menuPriceMinMxn : undefined,
-    menuPriceMaxMxn:
-      typeof data.menuPriceMaxMxn === "number" ? data.menuPriceMaxMxn : undefined,
-    menuIncludesDrinks:
-      data.menuIncludesDrinks === true
-        ? true
-        : data.menuIncludesDrinks === false
-          ? false
-          : null,
-    pricingMode:
-      data.pricingMode === "all_inclusive" || data.pricingMode === "ticket_onsite"
-        ? data.pricingMode
-        : undefined,
-    parking:
-      data.parking === "secure_nearby" ||
-      data.parking === "valet" ||
-      data.parking === "on_site" ||
-      data.parking === "unknown"
-        ? data.parking
-        : undefined,
-    responseMode: data.responseMode === "interest" ? "interest" : "rsvp",
-    interestDeadlineAt: data.interestDeadlineAt ? String(data.interestDeadlineAt) : null,
-    allInPriceMinMxn:
-      typeof data.allInPriceMinMxn === "number" ? data.allInPriceMinMxn : null,
-    allInPriceMaxMxn:
-      typeof data.allInPriceMaxMxn === "number" ? data.allInPriceMaxMxn : null,
-    status: "published",
-  };
-}
 
 function PriceBlock({
   event,
@@ -713,15 +667,21 @@ function InterestForm({
   );
 }
 
-export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
+export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEventPageProps) {
   const t = useTranslations("publicEvent");
-  const [loading, setLoading] = useState(true);
-  const [event, setEvent] = useState<AdminEvent | null>(null);
+  const [loading, setLoading] = useState(!initialEvent);
+  const [event, setEvent] = useState<AdminEvent | null>(initialEvent);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
+    if (initialEvent) {
+      setEvent(initialEvent);
+      setLoading(false);
+      return;
+    }
+
     async function load() {
       if (!isFirebaseClientConfigured()) {
         setError("Firebase not configured");
@@ -743,7 +703,7 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
           setEvent(null);
           return;
         }
-        setEvent(mapEventDoc(docSnap.id, slug, docSnap.data() as Record<string, unknown>));
+        setEvent(mapPublishedEventDoc(docSnap.id, slug, docSnap.data() as Record<string, unknown>));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -751,7 +711,7 @@ export function PublicEventPage({ slug, locale }: PublicEventPageProps) {
       }
     }
     void load();
-  }, [slug]);
+  }, [slug, initialEvent]);
 
   async function submitGuest(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
