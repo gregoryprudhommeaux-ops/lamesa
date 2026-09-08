@@ -48,25 +48,25 @@ function TopBarLoginLink() {
 
   if (pathname === "/connexion" || pathname.startsWith("/connexion/")) return null;
   if (pathname === "/light" || pathname.startsWith("/light/")) return null;
-  if (loading) return null;
 
-  if (user) {
+  // Show login while auth resolves (majority logged-out) — avoids empty top bar / CLS.
+  if (loading || !user) {
     return (
-      <div className="flex items-center gap-3">
-        <Link href="/compte?tab=calendrier" className={TOP_BAR_LINK_CLASS}>
-          {tLanding("myAccountLink")}
-        </Link>
-        <Link href="/reglages" className={TOP_BAR_LINK_CLASS}>
-          {tAccount("settingsLink")}
-        </Link>
-      </div>
+      <Link href="/connexion" className={TOP_BAR_LINK_CLASS}>
+        {tLanding("loginLink")}
+      </Link>
     );
   }
 
   return (
-    <Link href="/connexion" className={TOP_BAR_LINK_CLASS}>
-      {tLanding("loginLink")}
-    </Link>
+    <div className="flex items-center gap-3">
+      <Link href="/compte?tab=calendrier" className={TOP_BAR_LINK_CLASS}>
+        {tLanding("myAccountLink")}
+      </Link>
+      <Link href="/reglages" className={TOP_BAR_LINK_CLASS}>
+        {tAccount("settingsLink")}
+      </Link>
+    </div>
   );
 }
 

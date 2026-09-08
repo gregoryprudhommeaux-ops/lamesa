@@ -8,12 +8,10 @@ import {
   getAuth,
   initializeAuth,
 } from "firebase/auth";
-import { getFirestore, type Firestore } from "firebase/firestore";
 import { startGoogleRedirectResult } from "./google-redirect";
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
-let db: Firestore | undefined;
 
 function getFirebaseConfig() {
   return {
@@ -31,7 +29,8 @@ export function isFirebaseClientConfigured(): boolean {
   return Object.values(cfg).every((v) => String(v ?? "").trim());
 }
 
-function getFirebaseApp(): FirebaseApp {
+/** Shared app instance — used by auth and by firestore-client (separate chunk). */
+export function getFirebaseApp(): FirebaseApp {
   if (!isFirebaseClientConfigured()) {
     throw new Error("Firebase client is not configured.");
   }
@@ -58,12 +57,4 @@ export function getClientAuth(): Auth | null {
     }
   }
   return auth;
-}
-
-export function getClientFirestore(): Firestore {
-  if (db) return db;
-  const firebaseApp = getFirebaseApp();
-  const databaseId = process.env.NEXT_PUBLIC_FIRESTORE_DATABASE_ID?.trim();
-  db = databaseId ? getFirestore(firebaseApp, databaseId) : getFirestore(firebaseApp);
-  return db;
 }

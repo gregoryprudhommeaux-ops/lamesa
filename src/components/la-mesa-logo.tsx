@@ -73,6 +73,22 @@ export function LaMesaLogo({
   tone = "white",
 }: LaMesaLogoProps) {
   const { width, height } = INTRINSIC[variant];
+  const sizes =
+    variant === "horizontal"
+      ? size === "xl"
+        ? "(min-width: 768px) 320px, 224px"
+        : size === "lg"
+          ? "(min-width: 768px) 192px, 160px"
+          : size === "md"
+            ? "128px"
+            : "96px"
+      : size === "xl"
+        ? "(min-width: 768px) 80px, 64px"
+        : size === "lg"
+          ? "(min-width: 768px) 64px, 56px"
+          : size === "md"
+            ? "40px"
+            : "32px";
 
   return (
     <Image
@@ -80,6 +96,7 @@ export function LaMesaLogo({
       alt="LA MESA"
       width={width}
       height={height}
+      sizes={sizes}
       priority={priority}
       className={`${SIZE_CLASS[variant][size]} shrink-0 object-contain ${className}`.trim()}
     />

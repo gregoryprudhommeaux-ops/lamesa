@@ -1,17 +1,13 @@
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { ProfileRegistrationForm } from "@/components/profile-registration-form";
+import { Suspense } from "react";
 
-export default async function InscriptionPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ ref?: string }>;
-}) {
-  const sp = await searchParams;
-  const initialReferralCode = sp.ref?.trim() ?? "";
-
+export default function InscriptionPage() {
   return (
     <LaMesaShell card cardClassName="max-w-xl">
-      <ProfileRegistrationForm initialReferralCode={initialReferralCode} />
+      <Suspense fallback={null}>
+        <ProfileRegistrationForm />
+      </Suspense>
     </LaMesaShell>
   );
 }

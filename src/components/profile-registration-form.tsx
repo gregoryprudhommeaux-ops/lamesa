@@ -13,11 +13,13 @@ import { isValidLinkedInUrl } from "@/lib/linkedin";
 import { PhoneInput, isValidFullPhone } from "@/components/phone-input";
 import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 type FormState = "idle" | "sending" | "success" | "error";
 
 type ProfileRegistrationFormProps = {
+  /** Optional prop override; otherwise reads `?ref=` on the client (keeps /inscription static). */
   initialReferralCode?: string;
 };
 
@@ -27,6 +29,9 @@ export function ProfileRegistrationForm({
   const t = useTranslations("registration");
   const tFooter = useTranslations("footer");
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const referralCode =
+    initialReferralCode.trim() || searchParams.get("ref")?.trim() || "";
   const [state, setState] = useState<FormState>("idle");
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [phoneResetKey, setPhoneResetKey] = useState(0);
@@ -121,8 +126,8 @@ export function ProfileRegistrationForm({
   return (
     <form onSubmit={onSubmit} className="space-y-8">
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
-      {initialReferralCode ? (
-        <input type="hidden" name="referralCode" value={initialReferralCode} />
+      {referralCode ? (
+        <input type="hidden" name="referralCode" value={referralCode} />
       ) : null}
 
       <div>

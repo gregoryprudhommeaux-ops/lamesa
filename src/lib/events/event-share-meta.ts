@@ -1,5 +1,4 @@
-import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import type { AdminEvent } from "@/lib/types/events";
+import { getPublishedEventBySlug } from "@/lib/events/get-published-event";
 
 /** Minimal published event fields for OG / WhatsApp link previews. */
 export type PublicEventShareMeta = {
@@ -14,35 +13,23 @@ export type PublicEventShareMeta = {
   responseMode?: "rsvp" | "interest";
 };
 
+/** Reuses cached `getPublishedEventBySlug` (no second Firestore round-trip with the page). */
 export async function getPublishedEventShareMeta(
   slug: string,
 ): Promise<PublicEventShareMeta | null> {
-  if (!slug.trim() || !isFirebaseAdminConfigured()) return null;
-  try {
-    const snap = await getAdminFirestore()
-      .collection(COLLECTIONS.events)
-      .where("slug", "==", slug)
-      .where("status", "==", "published")
-      .limit(1)
-      .get();
-    if (snap.empty) return null;
-    const doc = snap.docs[0]!;
-    const data = doc.data() as Omit<AdminEvent, "id">;
-    return {
-      id: doc.id,
-      slug: String(data.slug ?? slug),
-      title: String(data.title ?? ""),
-      startsAt: String(data.startsAt ?? ""),
-      shareTitle: data.shareTitle ?? null,
-      shareDescription: data.shareDescription ?? null,
-      calendarTitle: data.calendarTitle ?? null,
-      introText: data.introText ?? null,
-      responseMode: data.responseMode === "interest" ? "interest" : "rsvp",
-    };
-  } catch (error) {
-    console.error("[getPublishedEventShareMeta]", error);
-    return null;
-  }
+  const event = await getPublishedEventBySlug(slug);
+  if (!event) return null;
+  return {
+    id: event.id,
+    slug: event.slug,
+    title: event.title,
+    startsAt: event.startsAt,
+    shareTitle: event.shareTitle ?? null,
+    shareDescription: event.shareDescription ?? null,
+    calendarTitle: event.calendarTitle ?? null,
+    introText: event.introText ?? null,
+    responseMode: event.responseMode === "interest" ? "interest" : "rsvp",
+  };
 }
 
 function stripRichMarkers(text: string): string {

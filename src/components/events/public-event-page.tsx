@@ -19,7 +19,7 @@ import {
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { resolveEventPricingMode } from "@/lib/events/pricing-mode";
 import { fmtDateTime } from "@/lib/events/utils";
-import { getClientFirestore, isFirebaseClientConfigured } from "@/lib/firebase/client";
+import { isFirebaseClientConfigured } from "@/lib/firebase/client";
 import type {
   AdminEvent,
   EventInterestDeclineReason,
@@ -33,7 +33,6 @@ import {
   LABEL_CLASS,
   PAGE_TITLE,
 } from "@/lib/ui/nextstep";
-import { addDoc, collection, getDocs, limit, query, where } from "firebase/firestore";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -689,6 +688,11 @@ export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEve
         return;
       }
       try {
+        const [{ getClientFirestore }, { collection, getDocs, limit, query, where }] =
+          await Promise.all([
+            import("@/lib/firebase/firestore-client"),
+            import("firebase/firestore"),
+          ]);
         const db = getClientFirestore();
         const snap = await getDocs(
           query(
@@ -723,6 +727,10 @@ export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEve
     const data = new FormData(form);
 
     try {
+      const [{ getClientFirestore }, { addDoc, collection }] = await Promise.all([
+        import("@/lib/firebase/firestore-client"),
+        import("firebase/firestore"),
+      ]);
       const db = getClientFirestore();
       await addDoc(collection(db, "event_respondents"), {
         eventId: event.id,
