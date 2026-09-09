@@ -16,19 +16,20 @@ describe("applyProspectStatusToStdLists", () => {
     ]);
   });
 
-  it("moves OUI → NON when status becomes no_not_available", () => {
+  it("moves OUI → NON when status becomes no_not_available and leaves shortlist", () => {
     const next = applyProspectStatusToStdLists(
       ["A contacter", short, pair.yes],
       "no_not_available",
     );
     expect(next).toContain(pair.noOther);
-    expect(next).toContain(short);
+    expect(next).not.toContain(short);
     expect(next).not.toContain(pair.yes);
   });
 
-  it("moves to OUI when status becomes won", () => {
+  it("moves to OUI when status becomes won and drops shortlist", () => {
     const next = applyProspectStatusToStdLists([short, pair.noOther], "won");
     expect(next).toContain(pair.yes);
     expect(next).not.toContain(pair.noOther);
+    expect(next).not.toContain(short);
   });
 });

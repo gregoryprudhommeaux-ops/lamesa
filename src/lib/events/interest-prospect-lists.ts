@@ -15,6 +15,12 @@ export function interestProspectListNames(eventSlug: string): InterestListPair {
   };
 }
 
+/** Auto-synced playlist: contactés sans OUI/NON — même logique que le dashboard. */
+export function interestSansReponseListName(eventSlug: string): string {
+  const slug = eventSlug.trim() || "event";
+  return `STD ${slug} — SANS RÉPONSE`;
+}
+
 function uniqStrings(values: string[]): string[] {
   return [...new Set(values.map((t) => t.trim()).filter(Boolean))];
 }
@@ -29,19 +35,56 @@ export function extractStdEventSlugsFromLists(lists: string[] | undefined): stri
   return [...slugs];
 }
 
+function stdSlugPrefix(slug: string): string {
+  return `std ${slug.trim().toLowerCase()}`;
+}
+
+/** True for SHORTLIST / campagne lists — not OUI, NON/AUTRE, nor SANS RÉPONSE. */
+export function isStdCampaignListForSlug(listName: string, slug: string): boolean {
+  const key = listName.trim().toLowerCase();
+  const prefix = stdSlugPrefix(slug);
+  if (!key.startsWith(prefix)) return false;
+  const pair = interestProspectListNames(slug);
+  const sansReponse = interestSansReponseListName(slug).toLowerCase();
+  return (
+    key !== pair.yes.toLowerCase() &&
+    key !== pair.noOther.toLowerCase() &&
+    key !== sansReponse
+  );
+}
+
+/** Drop every STD playlist for an event (shortlist included) except `keepList` if set. */
+export function stripStdEventLists(
+  existingLists: string[] | undefined,
+  slug: string,
+  keepList?: string,
+): string[] {
+  const prefix = stdSlugPrefix(slug);
+  const keepKey = keepList?.trim().toLowerCase() ?? "";
+  return (existingLists ?? []).filter((l) => {
+    const key = l.trim().toLowerCase();
+    if (!key.startsWith(prefix)) return true;
+    if (keepKey && key === keepKey) return true;
+    return false;
+  });
+}
+
 export function applyInterestListMembership(
   existingLists: string[] | undefined,
   lists: InterestListPair,
   interestResponse: EventInterestResponse,
 ): string[] {
-  const yesKey = lists.yes.toLowerCase();
-  const noKey = lists.noOther.toLowerCase();
-  const without = (existingLists ?? []).filter((l) => {
-    const key = l.trim().toLowerCase();
-    return key !== yesKey && key !== noKey;
-  });
+  const slug = extractStdEventSlugsFromLists([lists.yes, lists.noOther])[0];
   const target = interestResponse === "yes" ? lists.yes : lists.noOther;
-  return uniqStrings([...without, target]);
+  const withoutStd = slug
+    ? stripStdEventLists(existingLists, slug)
+    : (existingLists ?? []).filter((l) => {
+        const key = l.trim().toLowerCase();
+        return (
+          key !== lists.yes.toLowerCase() && key !== lists.noOther.toLowerCase()
+        );
+      });
+  return uniqStrings([...withoutStd, target]);
 }
 
 function clearOuiNonLists(existingLists: string[] | undefined, pair: InterestListPair): string[] {

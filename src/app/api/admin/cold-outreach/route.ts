@@ -15,6 +15,8 @@ import {
 } from "@/lib/prospects/store";
 import { listProspectLists } from "@/lib/prospects/lists-store";
 import { isEligibleForTemplateCampaign } from "@/lib/prospects/campaign-eligibility";
+import { syncStdSansReponseListBySlug } from "@/lib/events/sync-std-sans-reponse-list";
+import { eventSlugFromOutreachTemplateKey } from "@/lib/events/std-outreach-templates";
 import {
   isDatabasePersoConfigured,
   markLaMesaContacted,
@@ -135,6 +137,8 @@ const sendSchema = z.object({
   templateKey: z.string().min(1),
   locale: z.enum(["es", "fr", "en"]).default("es"),
   contactIds: z.array(z.string().min(1)).optional(),
+  /** When sending from a named Prospects playlist, drop it after successful send. */
+  sourceList: z.string().trim().min(1).max(80).optional(),
   dryRun: z.boolean().optional(),
 });
 
@@ -227,6 +231,7 @@ export async function POST(request: Request) {
       .filter((p) => !idFilter || idFilter.has(p.id))
       .filter((p) => p.email.includes("@"))
       .filter((p) => (idFilter ? true : !waitlistEmails.has(p.email)))
+      .filter((p) => isEligibleForTemplateCampaign(p, templateKey))
       .map((p) => ({
         id: p.id,
         fullName: p.fullName || p.email,
@@ -298,7 +303,9 @@ export async function POST(request: Request) {
     }
 
     if (succeededIds.length > 0) {
-      await markProspectsContacted(succeededIds, templateKey);
+      await markProspectsContacted(succeededIds, templateKey, {
+        removeFromLists: parsed.data.sourceList ? [parsed.data.sourceList] : undefined,
+      });
       for (const id of succeededIds) {
         const p = targets.find((t) => t.id === id);
         if (!p) continue;
@@ -326,12 +333,28 @@ export async function POST(request: Request) {
       }
     }
 
+    let sansReponseSync: {
+      added: number;
+      removed: number;
+      total: number;
+      listName: string;
+    } | null = null;
+    const eventSlug = eventSlugFromOutreachTemplateKey(templateKey);
+    if (eventSlug && succeededIds.length > 0) {
+      try {
+        sansReponseSync = await syncStdSansReponseListBySlug(eventSlug);
+      } catch (error) {
+        console.warn("[admin/cold-outreach] sans-réponse sync failed:", error);
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       sent: results.filter((r) => r.ok && !r.skipped).length,
       skipped: results.filter((r) => r.skipped).length,
       failed: results.filter((r) => !r.ok).length,
       batchLimit: SEND_BATCH_LIMIT,
+      sansReponseSync,
       results,
     });
   } catch (error) {

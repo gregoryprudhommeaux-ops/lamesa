@@ -409,4 +409,110 @@ describe("buildNextEventRsvpSummary", () => {
     expect(summary).toMatchObject({ yes: 0, no: 1 });
     expect(summary?.yesGuests).toEqual([]);
   });
+
+  it("excludes soft-deleted emails even if an active twin remains on OUI", () => {
+    const eventId = "ev-soft";
+    const slug = "dirigeants-fr-2026-09-24";
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [
+        respondent({
+          id: "r-test",
+          eventId,
+          email: "test@example.com",
+          firstName: "Test",
+          lastName: "DOMO",
+          interestResponse: "yes",
+        }),
+      ],
+      prospects: [
+        {
+          id: "alive",
+          email: "test@example.com",
+          fullName: "Test DOMO",
+          company: "TEST CO",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: null,
+        },
+        {
+          id: "ghost",
+          email: "test@example.com",
+          fullName: "Test DOMO",
+          company: "TEST CO",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: "2026-09-01T00:00:00.000Z",
+          sentTemplateKeys: [],
+          lastContactedAt: null,
+        },
+      ],
+    });
+
+    expect(summary?.yes).toBe(0);
+    expect(summary?.yesGuests).toEqual([]);
+  });
+
+  it("includes to_follow and no_response in pending; relance template counts as contact", () => {
+    const eventId = "ev6";
+    const slug = "dirigeants-fr-2026-09-24";
+    const short = `STD ${slug} — SHORTLIST FR`;
+    const tpl = "custom_dirigeants_fr_2026_09_24";
+    const relance = "custom_relance_a_suivre_std_24_sept";
+    const prospects = [
+      ...Array.from({ length: 30 }, (_, i) => ({
+        id: `follow-${i}`,
+        email: `follow${i}@example.com`,
+        fullName: `Follow ${i}`,
+        company: "",
+        status: "to_follow" as const,
+        lists: [short],
+        deletedAt: null as string | null,
+        sentTemplateKeys: [tpl, relance],
+        lastContactedAt: "2026-09-08T00:00:00.000Z" as string | null,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => ({
+        id: `nores-${i}`,
+        email: `nores${i}@example.com`,
+        fullName: `NoRes ${i}`,
+        company: "",
+        status: "no_response" as const,
+        lists: [short],
+        deletedAt: null as string | null,
+        sentTemplateKeys: [tpl],
+        lastContactedAt: "2026-09-01T00:00:00.000Z" as string | null,
+      })),
+    ];
+
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [],
+      prospects,
+    });
+
+    expect(summary?.pending).toBe(35);
+    expect(summary?.sansReponseListName).toBe(`STD ${slug} — SANS RÉPONSE`);
+  });
 });

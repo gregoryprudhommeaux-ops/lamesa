@@ -9,6 +9,7 @@ import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { syncStdSansReponseList } from "@/lib/events/sync-std-sans-reponse-list";
 import {
   findProspectByEmail,
   updateProspect,
@@ -176,12 +177,26 @@ export async function POST(request: Request, { params }: Params) {
     { merge: true },
   );
 
+  let sansReponse: { added: number; removed: number; total: number; listName: string } | null =
+    null;
+  if (event.slug && sent > 0) {
+    try {
+      sansReponse = await syncStdSansReponseList({
+        eventSlug: event.slug,
+        eventId,
+      });
+    } catch (error) {
+      console.warn("[send-save-the-date] sans-réponse sync failed:", error);
+    }
+  }
+
   return NextResponse.json({
     ok: failed === 0,
     sent,
     skipped,
     failed,
     waitlistProvisioned,
+    sansReponse,
     errors: errors.slice(0, 20),
   });
 }

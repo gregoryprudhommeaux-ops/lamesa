@@ -1,7 +1,10 @@
 "use client";
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { interestProspectListNames } from "@/lib/events/interest-prospect-lists";
+import {
+  interestProspectListNames,
+  interestSansReponseListName,
+} from "@/lib/events/interest-prospect-lists";
 import type { EventRespondent } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -30,6 +33,10 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
 
   const listNames = useMemo(
     () => (eventSlug ? interestProspectListNames(eventSlug) : null),
+    [eventSlug],
+  );
+  const sansReponseListName = useMemo(
+    () => (eventSlug ? interestSansReponseListName(eventSlug) : null),
     [eventSlug],
   );
 
@@ -75,15 +82,25 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
         failed?: number;
         skipped?: number;
         scanned?: number;
+        reconciled?: { updated?: number };
+        sansReponse?: { added?: number; removed?: number; total?: number; listName?: string };
       };
       if (!res.ok || !json.ok) {
         setError(json.error ?? "sync_failed");
         return;
       }
+      const reconciled = json.reconciled;
+      const sansReponse = json.sansReponse;
       setMessage(
         `Listes Prospects à jour — scannés ${json.scanned ?? 0} · sync ${json.synced ?? 0}` +
           (json.failed ? ` · échecs ${json.failed}` : "") +
           (json.skipped ? ` · ignorés ${json.skipped}` : "") +
+          (reconciled?.updated
+            ? ` · shortlist nettoyée ${reconciled.updated}`
+            : "") +
+          (sansReponse?.total != null
+            ? ` · sans réponse ${sansReponse.total} (« ${sansReponse.listName ?? interestSansReponseListName(eventSlug ?? "")} »)`
+            : "") +
           (json.lists
             ? ` · « ${json.lists.yes} » / « ${json.lists.noOther} »`
             : ""),
@@ -111,15 +128,40 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
             OUI {yes} · NON {no} · AUTRE {other} · profil manquant {pendingProfile}
           </p>
           {listNames ? (
-            <p className="mt-1 text-xs text-ns-secondary">
-              Listes Prospects : <span className="font-semibold text-ns-tertiary">{listNames.yes}</span>
-              {" · "}
-              <span className="font-semibold text-ns-tertiary">{listNames.noOther}</span>
-              {" — "}
-              <a href="/admin/prospects" className="font-semibold text-ns-primary hover:underline">
-                Ouvrir Prospects
-              </a>
-            </p>
+            <div className="mt-2 space-y-1 text-xs text-ns-secondary">
+              <p>
+                <span className="font-semibold text-emerald-800">OUI</span> →{" "}
+                <a
+                  href={`/admin/prospects?list=${encodeURIComponent(listNames.yes)}`}
+                  className="font-semibold text-ns-primary hover:underline"
+                >
+                  {listNames.yes}
+                </a>
+                {" · "}plus de STD / relance · plus tard invitation ticket
+              </p>
+              <p>
+                <span className="font-semibold text-rose-800">NON</span> →{" "}
+                <a
+                  href={`/admin/prospects?list=${encodeURIComponent(listNames.noOther)}`}
+                  className="font-semibold text-ns-primary hover:underline"
+                >
+                  {listNames.noOther}
+                </a>
+                {" · "}plus aucun mail pour cet événement
+              </p>
+              {sansReponseListName ? (
+                <p>
+                  <span className="font-semibold text-amber-900">Sans réponse</span> →{" "}
+                  <a
+                    href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+                    className="font-semibold text-ns-primary hover:underline"
+                  >
+                    {sansReponseListName}
+                  </a>
+                  {" · "}relançable jusqu’à OUI/NON
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -139,9 +181,9 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-ns-secondary">
-        Chaque réponse alimente automatiquement la bonne liste Prospects (OUI vs NON/AUTRE), avec la
-        réponse dans les notes du contact. Paiement / montant : après l’invitation formelle, via les
-        participations de l’événement.
+        Pipeline : shortlist → STD → sans réponse (relances) → OUI ou NON. Les OUI ne
+        reçoivent plus le STD ; l’invitation officielle (règlement ticket) partira ensuite
+        depuis la liste OUI. Sync met à jour OUI / NON / sans réponse depuis le formulaire.
       </p>
 
       {loading ? <p className="mt-3 text-sm text-ns-secondary">Chargement…</p> : null}

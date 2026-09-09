@@ -205,6 +205,12 @@ export function AdminProspectsPanel() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const list = new URLSearchParams(window.location.search).get("list")?.trim();
+    if (list) setActiveListName(list);
+  }, []);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const listQ = activeListName?.trim().toLowerCase() ?? "";
@@ -625,6 +631,54 @@ export function AdminProspectsPanel() {
     }
   }
 
+  async function maybeCreateFollowupShortlist(ids: string[]) {
+    if (ids.length === 0) return;
+    const wantsShortlist = window.confirm(
+      `Créer une nouvelle shortlist de suivi avec ces ${ids.length} contact(s) ?`,
+    );
+    if (!wantsShortlist) return;
+
+    const baseLabel = activeListName?.trim() || "suivi";
+    const suggested = `${baseLabel} — relance ${new Date().toLocaleDateString("fr-FR")}`.slice(0, 80);
+    const rawName = window.prompt("Nom de la nouvelle shortlist :", suggested);
+    const name = rawName?.trim() ?? "";
+    if (!name) return;
+
+    const createRes = await authFetch("/api/admin/prospects/lists", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    const createJson = (await createRes.json()) as {
+      ok?: boolean;
+      list?: { name?: string };
+      error?: string;
+    };
+    if (!createRes.ok || !createJson.ok) {
+      throw new Error(createJson.error ?? "create_list_failed");
+    }
+    const listName = createJson.list?.name?.trim() || name;
+
+    const bulkRes = await authFetch("/api/admin/prospects", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "bulk",
+        ids,
+        addLists: [listName],
+      }),
+    });
+    const bulkJson = (await bulkRes.json()) as { ok?: boolean; error?: string };
+    if (!bulkRes.ok || !bulkJson.ok) {
+      throw new Error(bulkJson.error ?? "bulk_failed");
+    }
+
+    setMessage((prev) =>
+      [prev, `Shortlist « ${listName} » enregistrée (${ids.length} contact(s)).`]
+        .filter(Boolean)
+        .join("\n"),
+    );
+    setActiveListName(listName);
+  }
+
   async function sendListEmail() {
     if (!emailTemplateKey || emailRecipients.length === 0) return;
     const tpl = emailTemplates.find((t) => t.key === emailTemplateKey);
@@ -643,13 +697,15 @@ export function AdminProspectsPanel() {
     setError(null);
     setMessage(null);
     try {
+      const recipientIds = emailRecipients.map((p) => p.id);
       const res = await authFetch("/api/admin/cold-outreach", {
         method: "POST",
         body: JSON.stringify({
           action: "send",
           templateKey: emailTemplateKey,
           locale: emailLocale,
-          contactIds: emailRecipients.map((p) => p.id),
+          contactIds: recipientIds,
+          ...(activeListName ? { sourceList: activeListName } : {}),
         }),
       });
       const json = (await res.json()) as {
@@ -664,6 +720,7 @@ export function AdminProspectsPanel() {
       setMessage(
         `Email envoyé — ok ${json.sent ?? 0} · échecs ${json.failed ?? 0} · skip ${json.skipped ?? 0}`,
       );
+      await maybeCreateFollowupShortlist(recipientIds);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

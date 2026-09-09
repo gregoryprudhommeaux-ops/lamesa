@@ -98,6 +98,7 @@ type NextEventRsvp = {
   no: number;
   other: number;
   pending: number;
+  sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
 };
 
@@ -299,6 +300,14 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
             Sans réponse
           </p>
           <p className="mt-1 text-2xl font-black text-amber-950">{rsvp.pending}</p>
+          {rsvp.sansReponseListName ? (
+            <Link
+              href={`/admin/prospects?list=${encodeURIComponent(rsvp.sansReponseListName)}`}
+              className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
+            >
+              Liste relance →
+            </Link>
+          ) : null}
         </div>
       </div>
 

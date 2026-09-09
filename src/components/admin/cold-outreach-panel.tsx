@@ -4,6 +4,7 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import type { EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import Link from "next/link";
+import { isStdRelanceTemplateKey } from "@/lib/events/std-outreach-templates";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Recipient = {
@@ -82,6 +83,13 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (listFilter !== LIST_TO_CONTACT) return;
+    if (!isStdRelanceTemplateKey(templateKey)) return;
+    const match = lists.find((l) => /sans r[eé]ponse/i.test(l.name));
+    if (match) setListFilter(match.name);
+  }, [lists, templateKey, listFilter]);
+
   const selectedCount = selected.size;
   const overBatch = selectedCount > BATCH_LIMIT;
   const activeListLabel = listFilter || "À contacter (hors waitlist)";
@@ -158,6 +166,53 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
     }
   }
 
+  async function maybeCreateFollowupShortlist(ids: string[]) {
+    if (ids.length === 0) return;
+    const wantsShortlist = window.confirm(
+      `Créer une nouvelle shortlist de suivi avec ces ${ids.length} contact(s) ?`,
+    );
+    if (!wantsShortlist) return;
+
+    const suggested = `Shortlist suivi ${new Date().toLocaleDateString("fr-FR")}`;
+    const rawName = window.prompt("Nom de la nouvelle shortlist :", suggested);
+    const name = rawName?.trim() ?? "";
+    if (!name) return;
+
+    const createRes = await authFetch("/api/admin/prospects/lists", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    const createJson = (await createRes.json()) as {
+      ok?: boolean;
+      list?: { name?: string };
+      error?: string;
+    };
+    if (!createRes.ok || !createJson.ok) {
+      throw new Error(createJson.error ?? "create_list_failed");
+    }
+    const listName = createJson.list?.name?.trim() || name;
+
+    const bulkRes = await authFetch("/api/admin/prospects", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "bulk",
+        ids,
+        addLists: [listName],
+      }),
+    });
+    const bulkJson = (await bulkRes.json()) as { ok?: boolean; error?: string };
+    if (!bulkRes.ok || !bulkJson.ok) {
+      throw new Error(bulkJson.error ?? "bulk_failed");
+    }
+
+    setMessage((prev) =>
+      [prev, `Shortlist « ${listName} » enregistrée (${ids.length} contact(s)).`]
+        .filter(Boolean)
+        .join("\n"),
+    );
+    setListFilter(listName);
+  }
+
   async function sendSelected() {
     if (selected.size === 0) {
       setError("Aucun destinataire sélectionné.");
@@ -182,6 +237,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           templateKey,
           locale,
           contactIds: ids,
+          ...(listFilter ? { sourceList: listFilter } : {}),
         }),
       });
       const json = (await res.json()) as {
@@ -195,6 +251,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
       setMessage(
         `Envoyés : ${json.sent ?? 0} · échecs : ${json.failed ?? 0} · skip : ${json.skipped ?? 0}`,
       );
+      await maybeCreateFollowupShortlist(ids);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));

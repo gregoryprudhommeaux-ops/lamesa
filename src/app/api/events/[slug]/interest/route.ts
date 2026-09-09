@@ -174,6 +174,13 @@ export async function POST(request: Request, { params }: Params) {
     logPrefix: "[interest]",
   });
 
+  // Keep SANS RÉPONSE playlist aligned after each answer.
+  void import("@/lib/events/sync-std-sans-reponse-list")
+    .then(({ syncStdSansReponseList }) =>
+      syncStdSansReponseList({ eventSlug: slug, eventId: eventDoc.id }),
+    )
+    .catch((err) => console.warn("[interest] sans-réponse sync failed", err));
+
   if (respondentRef) {
     if ("skipped" in mail && mail.skipped) {
       await respondentRef.set(

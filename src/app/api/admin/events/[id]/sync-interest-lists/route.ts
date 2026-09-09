@@ -8,8 +8,10 @@ import { normalizeEmail } from "@/lib/auth/platform-admin";
 import {
   ensureInterestProspectLists,
   interestProspectListNames,
+  reconcileAnsweredStdProspectLists,
   syncInterestRespondentToProspectLists,
 } from "@/lib/events/sync-interest-to-prospect-lists";
+import { syncStdSansReponseList } from "@/lib/events/sync-std-sans-reponse-list";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { EventInterestResponse } from "@/lib/types/events";
 
@@ -83,6 +85,9 @@ export async function POST(request: Request, { params }: Params) {
     else failed += 1;
   }
 
+  const reconciled = await reconcileAnsweredStdProspectLists(slug);
+  const sansReponse = await syncStdSansReponseList({ eventSlug: slug, eventId });
+
   return NextResponse.json({
     ok: true,
     lists: interestProspectListNames(slug),
@@ -91,5 +96,7 @@ export async function POST(request: Request, { params }: Params) {
     synced,
     failed,
     skipped,
+    reconciled,
+    sansReponse,
   });
 }

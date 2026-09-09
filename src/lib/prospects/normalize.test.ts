@@ -41,6 +41,18 @@ describe("prospectFromInput", () => {
     });
   });
 
+  it("replaces lists on explicit PATCH when mergeCollections is false", () => {
+    const existing = prospectFromInput(
+      { email: "a@b.com", lists: ["Campagne A", "Campagne B"] },
+      { id: "1", now: "t0" },
+    ) as Prospect;
+    const updated = prospectFromInput(
+      { email: "a@b.com", lists: ["Campagne B"] },
+      { existing, now: "t1", mergeCollections: false },
+    ) as Prospect;
+    expect(updated.lists).toEqual(["Campagne B"]);
+  });
+
   it("merges fill-empty on existing", () => {
     const existing = prospectFromInput(
       { email: "a@b.com", fullName: "Ada", company: "X" },

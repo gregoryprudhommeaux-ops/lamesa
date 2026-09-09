@@ -1,6 +1,7 @@
 /**
  * Seed / upsert custom email: relance prospects encore « À suivre » (STD 24 sept.).
  * Editable in Admin → Templates → Custom, usable from Prospects → Email.
+ * Relances : liste « STD {slug} — SANS RÉPONSE » (alignée dashboard), pas le filtre « À suivre ».
  *
  *   node --env-file=.env.local --import tsx scripts/seed-custom-template-relance-a-suivre.ts
  */

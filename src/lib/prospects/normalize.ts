@@ -33,7 +33,13 @@ function uniqStrings(values: string[]): string[] {
 
 export function prospectFromInput(
   input: ProspectInput,
-  opts?: { id?: string; now?: string; existing?: Prospect },
+  opts?: {
+    id?: string;
+    now?: string;
+    existing?: Prospect;
+    /** When false, explicit lists/tags replace instead of union (PATCH / admin edit). */
+    mergeCollections?: boolean;
+  },
 ): Prospect | { error: "email_required" } {
   const email = normalizeProspectEmail(input.email ?? "");
   if (!isValidProspectEmail(email)) return { error: "email_required" };
@@ -42,8 +48,19 @@ export function prospectFromInput(
   const existing = opts?.existing;
 
   if (existing) {
-    const tags = uniqStrings([...(existing.tags ?? []), ...(input.tags ?? [])]);
-    const lists = uniqStrings([...(existing.lists ?? []), ...(input.lists ?? [])]);
+    const mergeCollections = opts?.mergeCollections !== false;
+    const tags =
+      input.tags !== undefined
+        ? mergeCollections
+          ? uniqStrings([...(existing.tags ?? []), ...input.tags])
+          : uniqStrings(input.tags)
+        : uniqStrings(existing.tags ?? []);
+    const lists =
+      input.lists !== undefined
+        ? mergeCollections
+          ? uniqStrings([...(existing.lists ?? []), ...input.lists])
+          : uniqStrings(input.lists)
+        : uniqStrings(existing.lists ?? []);
     return {
       ...existing,
       email,

@@ -1,17 +1,19 @@
 /**
  * Next-event RSVP cockpit snapshot.
  *
- * Interim heuristic (good enough to operate the dinner; refine CRM later):
- * - Contactés = mail STD de cet événement ∪ approches CRM (NON / OUI / sans réponse)
- *   ∪ réponses formulaire — pas toute la shortlist « À contacter ».
- * - OUI / NON = formulaire ∪ listes STD ∪ statuts CRM (won, no_not_*).
- * - Sans réponse = contactés sans OUI ni NON (souvent « À suivre » et assimilés).
- *
- * Lessons later: cleaner tags, exclusive STD lists, and fewer dual sources
- * (Prospects vs event_respondents). Do not invent a perfect taxonomy mid-edition.
+ * Pipeline listes STD (aligné Prospects) :
+ * - Contactés = mail STD / approches CRM ∪ réponses formulaire
+ * - OUI / NON = formulaire ∪ listes STD ∪ statuts CRM (won, no_not_*)
+ * - Sans réponse = contactés sans OUI ni NON → liste « SANS RÉPONSE », relançable
+ * - OUI : plus de STD ; plus tard invitation ticket
+ * - NON : plus d’outreach pour CET événement
  */
 import { isOrganizerParticipation } from "@/lib/events/capacity";
-import { interestProspectListNames } from "@/lib/events/interest-prospect-lists";
+import {
+  interestProspectListNames,
+  interestSansReponseListName,
+} from "@/lib/events/interest-prospect-lists";
+import { templateKeyMatchesEventSlug } from "@/lib/events/std-outreach-templates";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type {
   AdminEvent,
@@ -39,7 +41,18 @@ export type NextEventRsvpSummary = {
   /** Interest-only: réponses « autre » (hors oui/non strict). */
   other: number;
   pending: number;
+  /** Playlist Prospects alignée sur « sans réponse » (relances STD). */
+  sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
+};
+
+export type InterestRsvpEmailSets = {
+  yesEmails: Set<string>;
+  noEmails: Set<string>;
+  otherEmails: Set<string>;
+  contactedEmails: Set<string>;
+  pendingEmails: Set<string>;
+  yesGuestsByEmail: Map<string, NextEventRsvpYesGuest>;
 };
 
 /** Minimal prospect shape for RSVP merge (CRM + list membership). */
@@ -89,15 +102,7 @@ export function hasEventOutreachTemplate(
 ): boolean {
   const keys = sentTemplateKeys ?? [];
   if (!keys.length) return false;
-  const slug = eventSlug.trim().toLowerCase();
-  if (!slug) return false;
-  const slugUnderscore = slug.replace(/-/g, "_");
-  return keys.some((raw) => {
-    const key = raw.trim().toLowerCase();
-    if (!key) return false;
-    if (key === "save_the_date") return true;
-    return key.includes(slug) || key.includes(slugUnderscore);
-  });
+  return keys.some((raw) => templateKeyMatchesEventSlug(raw, eventSlug));
 }
 
 /**
@@ -155,6 +160,147 @@ function listKeyMatch(lists: string[] | undefined, target: string): boolean {
 }
 
 /**
+ * Shared interest-mode email buckets (dashboard + playlist SANS RÉPONSE).
+ * Single source of truth for « contactés / OUI / NON / sans réponse ».
+ */
+export function computeInterestRsvpEmailSets(input: {
+  eventSlug: string;
+  eventId: string;
+  respondents: EventRespondent[];
+  prospects: RsvpProspectSlice[];
+  contactedParticipationEmails?: string[];
+}): InterestRsvpEmailSets {
+  const listNames = interestProspectListNames(input.eventSlug);
+  const relatedProspects = input.prospects.filter(
+    (p) =>
+      !isSoftDeleted(p) &&
+      (p.lists ?? []).some((l) => isStdListForEvent(l, input.eventSlug)),
+  );
+
+  const yesEmails = new Set<string>();
+  const noEmails = new Set<string>();
+  const otherEmails = new Set<string>();
+  const contactedEmails = new Set<string>();
+  const yesGuestsByEmail = new Map<string, NextEventRsvpYesGuest>();
+
+  const softDeletedEmails = new Set(
+    input.prospects
+      .filter((p) => isSoftDeleted(p))
+      .map((p) => normalizeEmail(p.email))
+      .filter((e) => e.includes("@")),
+  );
+
+  for (const r of input.respondents.filter((row) => row.eventId === input.eventId)) {
+    const email = normalizeEmail(r.email);
+    if (!email.includes("@")) continue;
+    if (softDeletedEmails.has(email)) continue;
+    contactedEmails.add(email);
+    if (r.interestResponse === "yes") {
+      yesEmails.add(email);
+      yesGuestsByEmail.set(email, {
+        id: r.id,
+        fullName: respondentName(r),
+        email: r.email ?? "",
+        company: r.companyName?.trim() || "",
+      });
+    } else if (r.interestResponse === "no") {
+      noEmails.add(email);
+    } else if (r.interestResponse === "other") {
+      otherEmails.add(email);
+    }
+  }
+
+  for (const p of relatedProspects) {
+    const email = normalizeEmail(p.email);
+    if (!email.includes("@")) continue;
+    // Soft-deleted twin (same email) wins — drop from OUI/NON/contactés.
+    if (softDeletedEmails.has(email)) continue;
+
+    const onOui = listKeyMatch(p.lists, listNames.yes);
+    const onNon = listKeyMatch(p.lists, listNames.noOther);
+
+    if (onOui || PROSPECT_YES_STATUSES.has(p.status)) {
+      yesEmails.add(email);
+      if (!yesGuestsByEmail.has(email)) {
+        yesGuestsByEmail.set(email, {
+          id: p.id,
+          fullName: p.fullName?.trim() || email,
+          email: p.email,
+          company: p.company?.trim() || "",
+        });
+      }
+    }
+
+    if (onNon || PROSPECT_NO_STATUSES.has(p.status)) {
+      noEmails.add(email);
+    }
+
+    if (wasProspectApproachedForEvent(p, input.eventSlug)) {
+      contactedEmails.add(email);
+    }
+  }
+
+  for (const p of relatedProspects) {
+    const email = normalizeEmail(p.email);
+    if (!email.includes("@")) continue;
+    if (softDeletedEmails.has(email)) continue;
+    if (PROSPECT_NO_STATUSES.has(p.status)) {
+      yesEmails.delete(email);
+      otherEmails.delete(email);
+      noEmails.add(email);
+      yesGuestsByEmail.delete(email);
+      contactedEmails.add(email);
+    } else if (PROSPECT_YES_STATUSES.has(p.status)) {
+      noEmails.delete(email);
+      otherEmails.delete(email);
+      yesEmails.add(email);
+      contactedEmails.add(email);
+      if (!yesGuestsByEmail.has(email)) {
+        yesGuestsByEmail.set(email, {
+          id: p.id,
+          fullName: p.fullName?.trim() || email,
+          email: p.email,
+          company: p.company?.trim() || "",
+        });
+      }
+    }
+  }
+
+  for (const email of input.contactedParticipationEmails ?? []) {
+    if (email.includes("@")) contactedEmails.add(email);
+  }
+
+  for (const email of noEmails) {
+    yesEmails.delete(email);
+    otherEmails.delete(email);
+    yesGuestsByEmail.delete(email);
+    contactedEmails.add(email);
+  }
+  for (const email of yesEmails) {
+    otherEmails.delete(email);
+    contactedEmails.add(email);
+  }
+  for (const email of otherEmails) {
+    contactedEmails.add(email);
+  }
+
+  const answered = new Set([...yesEmails, ...noEmails, ...otherEmails]);
+  const pendingEmails = new Set<string>();
+  for (const email of contactedEmails) {
+    if (!answered.has(email)) pendingEmails.add(email);
+  }
+
+  return {
+    yesEmails,
+    noEmails,
+    otherEmails,
+    contactedEmails,
+    pendingEmails,
+    yesGuestsByEmail,
+  };
+}
+
+/**
  * RSVP / interest snapshot for the next dinner to finalize.
  * Interest mode merges event_respondents + Prospects CRM (listes STD / statuts NON).
  * Classic RSVP uses participation statuses.
@@ -185,129 +331,17 @@ export function buildNextEventRsvpSummary(input: {
   const yesLimit = input.yesLimit ?? 12;
 
   if (mode === "interest") {
-    const listNames = interestProspectListNames(event.slug);
-    const relatedProspects = (input.prospects ?? []).filter(
-      (p) =>
-        !isSoftDeleted(p) &&
-        (p.lists ?? []).some((l) => isStdListForEvent(l, event.slug)),
-    );
-
-    const yesEmails = new Set<string>();
-    const noEmails = new Set<string>();
-    const otherEmails = new Set<string>();
-    const contactedEmails = new Set<string>();
-    const yesGuestsByEmail = new Map<string, NextEventRsvpYesGuest>();
-
-    const softDeletedEmails = new Set(
-      (input.prospects ?? [])
-        .filter((p) => isSoftDeleted(p))
+    const sets = computeInterestRsvpEmailSets({
+      eventSlug: event.slug,
+      eventId: event.id,
+      respondents: eventRespondents,
+      prospects: input.prospects ?? [],
+      contactedParticipationEmails: contactedRows
         .map((p) => normalizeEmail(p.email))
         .filter((e) => e.includes("@")),
-    );
+    });
 
-    for (const r of eventRespondents) {
-      const email = normalizeEmail(r.email);
-      if (!email.includes("@")) continue;
-      if (softDeletedEmails.has(email)) continue;
-      contactedEmails.add(email);
-      if (r.interestResponse === "yes") {
-        yesEmails.add(email);
-        yesGuestsByEmail.set(email, {
-          id: r.id,
-          fullName: respondentName(r),
-          email: r.email ?? "",
-          company: r.companyName?.trim() || "",
-        });
-      } else if (r.interestResponse === "no") {
-        noEmails.add(email);
-      } else if (r.interestResponse === "other") {
-        otherEmails.add(email);
-      }
-    }
-
-    for (const p of relatedProspects) {
-      const email = normalizeEmail(p.email);
-      if (!email.includes("@")) continue;
-
-      const onOui = listKeyMatch(p.lists, listNames.yes);
-      const onNon = listKeyMatch(p.lists, listNames.noOther);
-
-      // Soft signals from playlists / won — CRM hard override below.
-      if (onOui || PROSPECT_YES_STATUSES.has(p.status)) {
-        yesEmails.add(email);
-        if (!yesGuestsByEmail.has(email)) {
-          yesGuestsByEmail.set(email, {
-            id: p.id,
-            fullName: p.fullName?.trim() || email,
-            email: p.email,
-            company: p.company?.trim() || "",
-          });
-        }
-      }
-
-      if (onNon || PROSPECT_NO_STATUSES.has(p.status)) {
-        noEmails.add(email);
-      }
-
-      // Contactés = mail STD / disposition CRM — pas toute la shortlist.
-      if (wasProspectApproachedForEvent(p, event.slug)) {
-        contactedEmails.add(email);
-      }
-    }
-
-    // CRM status wins over stale form YES / OUI list (ops correction).
-    for (const p of relatedProspects) {
-      const email = normalizeEmail(p.email);
-      if (!email.includes("@")) continue;
-      if (PROSPECT_NO_STATUSES.has(p.status)) {
-        yesEmails.delete(email);
-        otherEmails.delete(email);
-        noEmails.add(email);
-        yesGuestsByEmail.delete(email);
-        contactedEmails.add(email);
-      } else if (PROSPECT_YES_STATUSES.has(p.status)) {
-        noEmails.delete(email);
-        otherEmails.delete(email);
-        yesEmails.add(email);
-        contactedEmails.add(email);
-        if (!yesGuestsByEmail.has(email)) {
-          yesGuestsByEmail.set(email, {
-            id: p.id,
-            fullName: p.fullName?.trim() || email,
-            email: p.email,
-            company: p.company?.trim() || "",
-          });
-        }
-      }
-    }
-
-    for (const p of contactedRows) {
-      const email = normalizeEmail(p.email);
-      if (email.includes("@")) contactedEmails.add(email);
-    }
-
-    // Remaining dual membership (form vs list): prefer NON — ops usually corrects that way.
-    for (const email of noEmails) {
-      yesEmails.delete(email);
-      otherEmails.delete(email);
-      yesGuestsByEmail.delete(email);
-      contactedEmails.add(email);
-    }
-    for (const email of yesEmails) {
-      otherEmails.delete(email);
-      contactedEmails.add(email);
-    }
-    for (const email of otherEmails) {
-      contactedEmails.add(email);
-    }
-
-    const answered = new Set([...yesEmails, ...noEmails, ...otherEmails]);
-    let pending = 0;
-    for (const email of contactedEmails) {
-      if (!answered.has(email)) pending += 1;
-    }
-
-    const contacted = Math.max(contactedRows.length, contactedEmails.size);
+    const contacted = Math.max(contactedRows.length, sets.contactedEmails.size);
 
     return {
       eventId: event.id,
@@ -316,11 +350,12 @@ export function buildNextEventRsvpSummary(input: {
       startsAt: event.startsAt,
       responseMode: "interest",
       contacted,
-      yes: yesEmails.size,
-      no: noEmails.size,
-      other: otherEmails.size,
-      pending,
-      yesGuests: [...yesGuestsByEmail.values()].slice(0, yesLimit),
+      yes: sets.yesEmails.size,
+      no: sets.noEmails.size,
+      other: sets.otherEmails.size,
+      pending: sets.pendingEmails.size,
+      sansReponseListName: interestSansReponseListName(event.slug),
+      yesGuests: [...sets.yesGuestsByEmail.values()].slice(0, yesLimit),
     };
   }
 

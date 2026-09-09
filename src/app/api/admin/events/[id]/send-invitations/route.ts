@@ -8,6 +8,7 @@ import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { syncProspectAfterOutreachEmail } from "@/lib/prospects/store";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -97,6 +98,13 @@ export async function POST(request: Request, { params }: Params) {
         { calendarInviteSentAt: now, updatedAt: now },
         { merge: true },
       );
+      if (!isOrganizerParticipation(p)) {
+        void syncProspectAfterOutreachEmail(p.email, {
+          templateKey: "calendar_invite",
+        }).catch((err) => {
+          console.warn("[send-invitations] prospect sync failed", p.email, err);
+        });
+      }
     } else {
       failed += 1;
       errors.push(`${p.email}:${result.error}`);

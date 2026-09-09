@@ -22,6 +22,15 @@ describe("applyInterestListMembership", () => {
     ).toEqual(["MEMBRES INSCRITS", lists.yes]);
   });
 
+  it("removes SHORTLIST when answer is recorded", () => {
+    const short = `STD dirigeants-fr-2026-09-24 — SHORTLIST FR`;
+    expect(applyInterestListMembership([short, "MEMBRES INSCRITS"], lists, "yes")).toEqual([
+      "MEMBRES INSCRITS",
+      lists.yes,
+    ]);
+    expect(applyInterestListMembership([short, lists.yes], lists, "no")).toEqual([lists.noOther]);
+  });
+
   it("puts OTHER on NON/AUTRE and removes OUI", () => {
     expect(applyInterestListMembership([lists.yes], lists, "other")).toEqual([lists.noOther]);
   });

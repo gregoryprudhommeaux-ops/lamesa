@@ -1,6 +1,10 @@
 import { COLLECTIONS, getAdminFirestore } from "@/lib/firebase/admin";
 import { applyProspectStatusToStdLists } from "@/lib/events/interest-prospect-lists";
 import {
+  buildOutreachPatch,
+  preferredStatusForOutreachTemplate,
+} from "@/lib/prospects/outreach-sync";
+import {
   mergeProspects,
   normalizeProspectEmail,
   normalizeProspectStatus,
@@ -135,7 +139,7 @@ export async function updateProspect(
       seen: patch.seen !== undefined ? patch.seen : existing.seen,
       source: existing.source,
     },
-    { existing, now },
+    { existing, now, mergeCollections: false },
   );
   if ("error" in next) return null;
   const statusChanged =
@@ -182,41 +186,56 @@ export async function softDeleteProspect(id: string): Promise<boolean> {
 export async function markProspectsContacted(
   ids: string[],
   templateKey?: string,
+  opts?: { removeFromLists?: string[]; preferredStatus?: Prospect["status"] },
 ): Promise<number> {
   const db = getAdminFirestore();
-  const now = new Date().toISOString();
   let n = 0;
   const batch = db.batch();
   for (const id of ids) {
     const ref = db.collection(COLLECTIONS.prospects).doc(id);
     const snap = await ref.get();
     if (!snap.exists) continue;
-    const status = String(snap.data()?.status ?? "to_contact");
-    // Don't downgrade won / do_not_contact after a campaign send
-    const patch: Record<string, string> = {
-      lastContactedAt: now,
-      updatedAt: now,
-    };
-    const sentTemplateKeys = Array.isArray(snap.data()?.sentTemplateKeys)
-      ? snap.data()!.sentTemplateKeys.map(String).filter(Boolean)
-      : [];
-    if (status !== "won" && status !== "do_not_contact") {
-      patch.status = "contacted";
-    }
-    batch.set(
-      ref,
-      {
-        ...patch,
-        ...(templateKey
-          ? { sentTemplateKeys: [...new Set([...sentTemplateKeys, templateKey])] }
-          : {}),
-      },
-      { merge: true },
-    );
+    const data = snap.data() as Record<string, unknown>;
+    const prospect = docToProspect(snap.id, data);
+    const patch = buildOutreachPatch({
+      prospect,
+      templateKey,
+      preferredStatus:
+        opts?.preferredStatus ??
+        preferredStatusForOutreachTemplate(templateKey, prospect.status),
+      removeFromLists: opts?.removeFromLists,
+    });
+    if (!patch) continue;
+    batch.set(ref, patch, { merge: true });
     n += 1;
   }
   if (n > 0) await batch.commit();
   return n;
+}
+
+/** Mark a single prospect after an invite / STD send when we only have the email. */
+export async function syncProspectAfterOutreachEmail(
+  email: string,
+  input?: {
+    templateKey?: string;
+    preferredStatus?: Prospect["status"];
+    removeFromLists?: string[];
+  },
+): Promise<boolean> {
+  const prospect = await findProspectByEmail(email);
+  if (!prospect) return false;
+  const patch = buildOutreachPatch({
+    prospect,
+    templateKey: input?.templateKey,
+    preferredStatus: input?.preferredStatus,
+    removeFromLists: input?.removeFromLists,
+  });
+  if (!patch) return false;
+  await getAdminFirestore()
+    .collection(COLLECTIONS.prospects)
+    .doc(prospect.id)
+    .set(patch, { merge: true });
+  return true;
 }
 
 /** Bulk update status / tags / lists / seen for selected prospects. */
