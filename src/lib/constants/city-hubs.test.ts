@@ -12,6 +12,7 @@ describe("resolveCityHub", () => {
     expect(resolveCityHub("Guadalajada")).toBe("Guadalajara");
     expect(resolveCityHub("GUADALAJARA")).toBe("Guadalajara");
     expect(resolveCityHub("  Guadalajara  ")).toBe("Guadalajara");
+    expect(resolveCityHub("Guadalajara (ZMG)")).toBe("Guadalajara");
   });
 
   it("maps Autre/Other to Otro", () => {

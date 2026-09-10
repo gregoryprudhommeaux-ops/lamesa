@@ -536,6 +536,7 @@
       "unauthorized": "Ta session a expiré. Reconnecte-toi puis réessaie.",
       "forbidden": "Tu n’as pas la permission de modifier ce profil.",
       "not_on_waitlist": "Aucun profil associé à cet email.",
+      "network": "Problème de connexion ou session interrompue. Vérifie ton réseau Wi‑Fi/données, recharge la page et réessaie. Si ça continue, déconnecte-toi puis reconnecte-toi.",
       "save_failed": "Erreur d’enregistrement. Réessaie dans quelques secondes.",
       "generic": "Enregistrement impossible. Vérifie les champs et réessaie."
     },

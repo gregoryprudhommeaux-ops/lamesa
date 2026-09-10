@@ -10,7 +10,7 @@ import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
-import { CITY_HUBS } from "@/lib/constants/city-hubs";
+import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isOtherSector } from "@/lib/constants/form-options";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -45,7 +45,18 @@ const profilePatchSchema = z
       .transform((v) => (v === "" ? undefined : v)),
     position: z.string().trim().max(80).optional(),
     extraActivities: z.array(z.string().trim().min(1).max(500)).optional(),
-    city: z.enum(CITY_HUBS).optional(),
+    city: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => {
+        if (v === undefined) return undefined;
+        if (!v) return undefined;
+        return resolveCityHub(v) ?? v;
+      })
+      .refine((v) => v === undefined || (CITY_HUBS as readonly string[]).includes(v), {
+        message: "invalid_city",
+      }),
     phone: z.string().trim().min(8).max(40).optional(),
     invitationMotivation: z.string().trim().max(2000).optional(),
     canBring: z.string().trim().max(280).optional(),
@@ -149,17 +160,21 @@ export async function PATCH(request: Request) {
   const merged = {
     ...profile,
     ...patch,
+    city: (patch.city ?? profile.city) as string,
     linkedinUrl: patch.linkedinUrl ?? profile.linkedinUrl,
     sectorOther: patch.sectorOther ?? profile.sectorOther,
     profileComplete: nextProfileComplete,
   };
-  const sync = await syncWaitlistMemberToDatabasePerso(merged, "[me/profile]");
-  try {
-    await persistDatabasePersoSyncStatus(profile.id, sync);
-  } catch (error) {
-    console.warn("[me/profile] failed to store databasePerso sync status:", error);
-  }
-  await syncWaitlistMemberToProspects(merged, "[me/profile]");
+
+  // External sync must not block / fail the member save (mobile → "Failed to fetch").
+  void syncWaitlistMemberToDatabasePerso(merged, "[me/profile]")
+    .then((sync) => persistDatabasePersoSyncStatus(profile.id, sync))
+    .catch((error) => {
+      console.warn("[me/profile] database-perso sync failed:", error);
+    });
+  void syncWaitlistMemberToProspects(merged, "[me/profile]").catch((error) => {
+    console.warn("[me/profile] prospects sync failed:", error);
+  });
 
   return NextResponse.json({ ok: true, id: profile.id });
 }

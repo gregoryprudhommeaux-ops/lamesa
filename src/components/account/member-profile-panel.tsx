@@ -152,12 +152,31 @@ export function MemberProfilePanel({
         return { message: t("errors.not_on_waitlist"), field: null };
       case "validation":
         return { message: t("errors.validation"), field: null };
+      case "network":
+        return { message: t("errors.network"), field: null };
       default:
         return {
           message: code ? `${t("errors.generic")} (${code})` : t("errors.generic"),
           field: null,
         };
     }
+  }
+
+  function humanizeSaveError(err: unknown): string {
+    const raw = err instanceof Error ? err.message : String(err ?? "");
+    const lower = raw.toLowerCase();
+    if (
+      lower.includes("failed to fetch") ||
+      lower.includes("networkerror") ||
+      lower.includes("load failed") ||
+      lower.includes("network request failed")
+    ) {
+      return t("errors.network");
+    }
+    if (lower.includes("unauthorized") || lower.includes("auth/")) {
+      return t("errors.unauthorized");
+    }
+    return raw.trim() || t("errors.save_failed");
   }
 
   function normalizeLinkedinField() {
@@ -232,9 +251,7 @@ export function MemberProfilePanel({
       setSaved(true);
       await onSaved();
     } catch (err) {
-      showSaveError(
-        `${t("saveFailedPrefix")} ${err instanceof Error ? err.message : t("errors.save_failed")}`,
-      );
+      showSaveError(`${t("saveFailedPrefix")} ${humanizeSaveError(err)}`);
     } finally {
       setSaving(false);
     }

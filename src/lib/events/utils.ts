@@ -151,14 +151,19 @@ export function whatsappShareUrl(message: string, phoneDigits?: string | null): 
   return `https://wa.me/?text=${text}`;
 }
 
+/** Default display TZ for LA MESA dinners (Guadalajara / CDMX). */
+export const EVENT_DISPLAY_TIMEZONE = "America/Mexico_City";
+
 export function fmtDateTime(iso: string | undefined, lang: "fr" | "en" | "es"): string {
   if (!iso) return "";
   try {
     const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
     return d.toLocaleString(lang === "en" ? "en-US" : lang === "es" ? "es-MX" : "fr-FR", {
+      timeZone: EVENT_DISPLAY_TIMEZONE,
       year: "numeric",
       month: "short",
-      day: "2-digit",
+      day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
     });

@@ -536,6 +536,7 @@
       "unauthorized": "Tu sesión expiró. Vuelve a iniciar sesión e inténtalo de nuevo.",
       "forbidden": "No tienes permiso para modificar este perfil.",
       "not_on_waitlist": "No hay un perfil asociado a este correo.",
+      "network": "Problema de conexión o la sesión se cortó. Revisa tu red Wi‑Fi/datos, vuelve a abrir la página e inténtalo de nuevo. Si sigue fallando, cierra sesión y vuelve a entrar.",
       "save_failed": "Error al guardar. Inténtalo de nuevo en unos segundos.",
       "generic": "No se pudo guardar. Revisa los campos e inténtalo de nuevo."
     },

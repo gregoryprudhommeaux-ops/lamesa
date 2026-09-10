@@ -47,6 +47,8 @@ const CITY_HUB_ALIASES: Record<string, CityHub> = {
   "area metropolitana de guadalajara": "Guadalajara",
   "zona metropolitana de guadalajara": "Guadalajara",
   zmg: "Guadalajara",
+  "guadalajara (zmg)": "Guadalajara",
+  "guadalajara zmg": "Guadalajara",
 
   // CDMX
   cdmx: "Ciudad de México",
