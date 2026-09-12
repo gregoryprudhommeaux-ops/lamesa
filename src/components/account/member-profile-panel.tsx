@@ -201,7 +201,8 @@ export function MemberProfilePanel({
     }
 
     const normalizedLinkedin = normalizeLinkedinField();
-    if (!isValidLinkedInUrl(normalizedLinkedin || linkedinUrl)) {
+    const linkedinTrimmed = (normalizedLinkedin || linkedinUrl).trim();
+    if (linkedinTrimmed && !isValidLinkedInUrl(linkedinTrimmed)) {
       showSaveError(`${t("saveFailedPrefix")} ${t("errors.invalid_linkedin")}`, "linkedinUrl");
       setSaving(false);
       return;
@@ -218,7 +219,7 @@ export function MemberProfilePanel({
           position,
           city,
           phone,
-          linkedinUrl: normalizedLinkedin || linkedinUrl.trim(),
+          linkedinUrl: linkedinTrimmed,
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
           canBring,
@@ -247,7 +248,7 @@ export function MemberProfilePanel({
         showSaveError(`${t("saveFailedPrefix")} ${mapped.message}`, field);
         return;
       }
-      setLinkedinUrl(normalizedLinkedin || linkedinUrl.trim());
+      setLinkedinUrl(linkedinTrimmed);
       setSaved(true);
       await onSaved();
     } catch (err) {
@@ -380,7 +381,6 @@ export function MemberProfilePanel({
             onChange={(e) => setLinkedinUrl(e.target.value)}
             onBlur={() => normalizeLinkedinField()}
             placeholder={tReg("fields.linkedinPlaceholder")}
-            required
             aria-invalid={errorField === "linkedinUrl"}
             aria-describedby="member-linkedin-hint"
           />

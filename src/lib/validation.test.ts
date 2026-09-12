@@ -23,6 +23,19 @@ describe("registrationSchema canBring/isSeeking boundaries", () => {
     expect(result.success).toBe(true);
   });
 
+  it("accepts registration without LinkedIn", () => {
+    const result = registrationSchema.safeParse({ ...baseInput, linkedinUrl: "" });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects an invalid LinkedIn when provided", () => {
+    const result = registrationSchema.safeParse({
+      ...baseInput,
+      linkedinUrl: "https://example.com/not-linkedin",
+    });
+    expect(result.success).toBe(false);
+  });
+
   for (const field of ["canBring", "isSeeking"] as const) {
     describe(field, () => {
       it("trims surrounding whitespace", () => {

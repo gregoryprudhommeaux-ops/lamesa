@@ -161,8 +161,9 @@
     },
     "fields": {
       "fullName": "Full name",
-      "linkedinUrl": "LinkedIn profile",
+      "linkedinUrl": "LinkedIn profile (optional)",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
+      "linkedinHint": "Optional, but useful: table matching also draws on LinkedIn profile analysis to spot shared interests around a mesa.",
       "email": "Email",
       "emailHint": "Email where you want to receive invitations",
       "company": "Company",
@@ -521,7 +522,7 @@
     "completionRate": "Completion rate: {percent}%",
     "completionHint": "The more complete your profile, the better we can match you to a table that fits.",
     "missingFieldsTitle": "To reach 100%, still complete:",
-    "linkedinHint": "Paste your LinkedIn profile link (linkedin.com/in/… is fine; https:// will be added if missing).",
+    "linkedinHint": "Optional. If you have one, add it: the system also uses LinkedIn profile analysis to find shared interests and suggest a mesa that fits you.",
     "sectorOtherHint": "If you chose “Other”, specify your industry. Without it the profile stays under 100% and cannot be saved.",
     "saveFailedPrefix": "Could not save your profile:",
     "save": "Save",
@@ -596,7 +597,7 @@
     },
     "fields": {
       "fullName": "Full name",
-      "linkedinUrl": "LinkedIn",
+      "linkedinUrl": "LinkedIn (optional)",
       "company": "Company",
       "sector": "Industry",
       "position": "Role",

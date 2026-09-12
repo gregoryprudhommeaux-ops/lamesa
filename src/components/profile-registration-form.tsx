@@ -46,7 +46,7 @@ export function ProfileRegistrationForm({
     const data = new FormData(form);
 
     const linkedinUrl = String(data.get("linkedinUrl") ?? "").trim();
-    if (!isValidLinkedInUrl(linkedinUrl)) {
+    if (linkedinUrl && !isValidLinkedInUrl(linkedinUrl)) {
       setState("error");
       setErrorDetail("invalid_linkedin");
       return;
@@ -144,7 +144,17 @@ export function ProfileRegistrationForm({
         </div>
         <div>
           <label htmlFor="linkedinUrl" className={LABEL_CLASS}>{t("fields.linkedinUrl")}</label>
-          <input id="linkedinUrl" name="linkedinUrl" required placeholder={t("fields.linkedinPlaceholder")} className={INPUT_CLASS} disabled={state === "sending"} />
+          <input
+            id="linkedinUrl"
+            name="linkedinUrl"
+            placeholder={t("fields.linkedinPlaceholder")}
+            className={INPUT_CLASS}
+            disabled={state === "sending"}
+            aria-describedby="linkedin-hint"
+          />
+          <p id="linkedin-hint" className="mt-1.5 text-xs leading-relaxed text-ns-secondary">
+            {t("fields.linkedinHint")}
+          </p>
         </div>
         <div>
           <label htmlFor="email" className={LABEL_CLASS}>{t("fields.email")}</label>

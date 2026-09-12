@@ -161,8 +161,9 @@
     },
     "fields": {
       "fullName": "Nom complet",
-      "linkedinUrl": "Profil LinkedIn",
+      "linkedinUrl": "Profil LinkedIn (optionnel)",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
+      "linkedinHint": "Optionnel, mais utile : le matching des tables s’appuie aussi sur l’analyse du profil LinkedIn pour repérer des points d’intérêt communs autour d’une mesa.",
       "email": "Email",
       "emailHint": "Email à utiliser pour recevoir les invitations aux futurs dîners",
       "company": "Entreprise",
@@ -521,7 +522,7 @@
     "completionRate": "Taux de complétion : {percent}%",
     "completionHint": "Plus ton profil est complet, mieux on peut te matcher pour t’inviter à une table qui te correspond.",
     "missingFieldsTitle": "Pour arriver à 100 %, complète encore :",
-    "linkedinHint": "Colle le lien de ton profil LinkedIn (linkedin.com/in/… est accepté ; https:// sera ajouté si besoin).",
+    "linkedinHint": "Optionnel. Si tu en as un, ajoute-le : le système s’appuie aussi sur l’analyse du profil LinkedIn pour trouver des points d’intérêt et te proposer une mesa qui te correspond.",
     "sectorOtherHint": "Si tu as choisi « Autre », précise ton secteur. Sans ce champ, le profil n’atteint pas 100 % et ne peut pas être enregistré.",
     "saveFailedPrefix": "Impossible d’enregistrer le profil :",
     "save": "Enregistrer",
@@ -596,7 +597,7 @@
     },
     "fields": {
       "fullName": "Nom complet",
-      "linkedinUrl": "LinkedIn",
+      "linkedinUrl": "LinkedIn (optionnel)",
       "company": "Entreprise",
       "sector": "Secteur d'activité",
       "position": "Position dans l'entreprise",

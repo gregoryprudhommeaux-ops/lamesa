@@ -161,8 +161,9 @@
     },
     "fields": {
       "fullName": "Nombre completo",
-      "linkedinUrl": "Perfil de LinkedIn",
+      "linkedinUrl": "Perfil de LinkedIn (opcional)",
       "linkedinPlaceholder": "https://www.linkedin.com/in/…",
+      "linkedinHint": "Opcional, pero útil: el matching de mesas también se basa en el análisis del perfil LinkedIn para encontrar puntos de interés en común alrededor de una mesa.",
       "email": "Correo electrónico",
       "emailHint": "Correo donde quieres recibir las invitaciones",
       "company": "Empresa",
@@ -521,7 +522,7 @@
     "completionRate": "Tasa de completado: {percent}%",
     "completionHint": "Cuanto más completo esté tu perfil, mejor podremos invitarte a una mesa que te encaje.",
     "missingFieldsTitle": "Para llegar al 100%, completa aún:",
-    "linkedinHint": "Pega el enlace de tu perfil LinkedIn (aceptamos linkedin.com/in/…; se añadirá https:// si falta).",
+    "linkedinHint": "Opcional. Si tienes uno, añádelo: el sistema también se basa en el análisis del perfil LinkedIn para encontrar puntos de interés y proponerte una mesa que te encaje.",
     "sectorOtherHint": "Si elegiste «Otro», indica tu sector concreto. Sin este dato el perfil no llega al 100% y no se puede guardar.",
     "saveFailedPrefix": "No se pudo guardar el perfil:",
     "save": "Guardar",
@@ -596,7 +597,7 @@
     },
     "fields": {
       "fullName": "Nombre completo",
-      "linkedinUrl": "LinkedIn",
+      "linkedinUrl": "LinkedIn (opcional)",
       "company": "Empresa",
       "sector": "Sector",
       "position": "Puesto",

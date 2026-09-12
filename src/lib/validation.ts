@@ -9,7 +9,11 @@ export const registrationSchema = z
     linkedinUrl: z
       .string()
       .trim()
-      .refine((v) => isValidLinkedInUrl(v), { message: "invalid_linkedin" }),
+      .optional()
+      .transform((v) => v ?? "")
+      .refine((v) => v === "" || isValidLinkedInUrl(v), {
+        message: "invalid_linkedin",
+      }),
     email: z.string().trim().email().max(254),
     company: z.string().trim().min(2).max(120),
     sector: z.string().trim().min(1).max(80),
