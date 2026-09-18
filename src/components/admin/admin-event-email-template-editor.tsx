@@ -40,6 +40,7 @@ export function EventEmailTemplateEditor({
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -108,6 +109,38 @@ export function EventEmailTemplateEditor({
     }
   }
 
+  async function sendTestEmail() {
+    if (!subject.trim() || !body.trim()) {
+      setError("Objet et corps requis pour un envoi test.");
+      return;
+    }
+    setSendingTest(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/email-templates/send-test", {
+        method: "POST",
+        body: JSON.stringify({
+          subject,
+          body,
+          locale: editLocale,
+          eventId: event.id,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        to?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "send_failed");
+      setMessage(`Email test envoyé à ${json.to ?? "ton adresse admin"}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingTest(false);
+    }
+  }
+
   return (
     <div className="space-y-3 rounded-xl border border-dashed border-ns-alternate bg-white p-4">
       {hint ? <p className="text-xs text-ns-secondary">{hint}</p> : null}
@@ -166,7 +199,7 @@ export function EventEmailTemplateEditor({
         <button
           type="button"
           className={BTN_PRIMARY}
-          disabled={saving}
+          disabled={saving || sendingTest}
           onClick={() => void saveOverride(false)}
         >
           {saving ? "Enregistrement…" : `Sauver ${TEMPLATE_LOCALE_LABELS[editLocale]}`}
@@ -174,7 +207,15 @@ export function EventEmailTemplateEditor({
         <button
           type="button"
           className={BTN_SECONDARY}
-          disabled={saving}
+          disabled={saving || sendingTest}
+          onClick={() => void sendTestEmail()}
+        >
+          {sendingTest ? "Envoi test…" : "Envoyer un email test"}
+        </button>
+        <button
+          type="button"
+          className={BTN_SECONDARY}
+          disabled={saving || sendingTest}
           onClick={() => void saveOverride(true)}
         >
           Réinit. cette langue

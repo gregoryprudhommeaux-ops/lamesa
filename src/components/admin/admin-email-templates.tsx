@@ -36,6 +36,7 @@ export function AdminEmailTemplatesPanel() {
   const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [sendingTest, setSendingTest] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
@@ -268,6 +269,38 @@ export function AdminEmailTemplatesPanel() {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function sendTestEmail() {
+    if (subject.trim().length < 3 || body.trim().length < 10) {
+      setError("Objet et corps trop courts pour un envoi test.");
+      return;
+    }
+    setSendingTest(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/email-templates/send-test", {
+        method: "POST",
+        body: JSON.stringify({
+          subject,
+          body,
+          locale: editLocale,
+          eventId: eventId || null,
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        to?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "send_failed");
+      setMessage(`Email test envoyé à ${json.to ?? "ton adresse admin"}.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSendingTest(false);
     }
   }
 
@@ -720,10 +753,18 @@ export function AdminEmailTemplatesPanel() {
             <button
               type="button"
               className={BTN_PRIMARY}
-              disabled={saving}
+              disabled={saving || sendingTest}
               onClick={() => void save({ asEventOverride: false })}
             >
               {saving ? "Enregistrement…" : "Enregistrer les modifications"}
+            </button>
+            <button
+              type="button"
+              className={BTN_SECONDARY}
+              disabled={saving || sendingTest}
+              onClick={() => void sendTestEmail()}
+            >
+              {sendingTest ? "Envoi test…" : "Envoyer un email test"}
             </button>
             <button
               type="button"

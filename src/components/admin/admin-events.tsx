@@ -3,6 +3,7 @@
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
 import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
+import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
 import {
   AutoRemindersPanel,
   StdRelancePanel,
@@ -960,6 +961,18 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   onChange={(e) => setIntroText(e.target.value)}
                   rows={3}
                   className={INPUT_CLASS}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <EventDescriptionPresetsBar
+                  introText={introText}
+                  subtitle={subtitle}
+                  menuIncluded={menuIncluded}
+                  onApply={(preset) => {
+                    setIntroText(preset.introText);
+                    setSubtitle(preset.subtitle);
+                    setMenuIncluded(preset.menuIncluded);
+                  }}
                 />
               </div>
               <div className="sm:col-span-2">

@@ -48,4 +48,5 @@ export const COLLECTIONS = {
   respondents: "event_respondents",
   emailTemplates: "email_templates",
   tableDrafts: "table_drafts",
+  eventDescriptionPresets: "event_description_presets",
 } as const;
