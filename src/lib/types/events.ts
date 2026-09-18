@@ -157,6 +157,8 @@ export interface AdminEvent {
   shareDescription?: string | null;
   /** ISO datetime — after this, interest form soft-locks (Mexico City end of day recommended). */
   interestDeadlineAt?: string | null;
+  /** ISO datetime — ACCESS payment due-by date shown on formal invites (Mexico City). */
+  paymentDeadlineAt?: string | null;
   /** All-in price range for interest editions (MXN / person, ticket + menu). */
   allInPriceMinMxn?: number | null;
   allInPriceMaxMxn?: number | null;

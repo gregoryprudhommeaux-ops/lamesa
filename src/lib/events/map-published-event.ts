@@ -47,6 +47,7 @@ export function mapPublishedEventDoc(
         : undefined,
     responseMode: data.responseMode === "interest" ? "interest" : "rsvp",
     interestDeadlineAt: data.interestDeadlineAt ? String(data.interestDeadlineAt) : null,
+    paymentDeadlineAt: data.paymentDeadlineAt ? String(data.paymentDeadlineAt) : null,
     allInPriceMinMxn:
       typeof data.allInPriceMinMxn === "number" ? data.allInPriceMinMxn : null,
     allInPriceMaxMxn:

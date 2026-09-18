@@ -591,7 +591,8 @@ export function AdminEmailTemplatesPanel() {
               {"{{format}}"}, {"{{when}}"}, {"{{where}}"}, {"{{eventUrl}}"}, {"{{yesUrl}}"},{" "}
               {"{{noUrl}}"}, {"{{surveyUrl}}"}, {"{{loginUrl}}"}, {"{{sponsorName}}"},{" "}
               {"{{inviteUrl}}"}, {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
-              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}
+              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}, {"{{paymentDeadline}}"},{" "}
+              {"{{paymentDeadlineBlock}}"}
               {activeKey === "fn_announcement" ? (
                 <>
                   , {"{{profilePercent}}"}, {"{{profileMatchNote}}"}, {"{{profileUrl}}"},{" "}

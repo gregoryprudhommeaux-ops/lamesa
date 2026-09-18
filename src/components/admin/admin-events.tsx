@@ -1,7 +1,18 @@
 "use client";
 
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
-import { AdminEventFunnel } from "@/components/admin/admin-event-funnel";
+import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
+import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
+import {
+  AutoRemindersPanel,
+  StdRelancePanel,
+} from "@/components/admin/admin-event-journey-panels";
+import {
+  EventPhaseNav,
+  EventPhaseSection,
+  type EventPhaseId,
+  type EventPhaseMeta,
+} from "@/components/admin/admin-event-phase-section";
 import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest-inbox";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
@@ -137,6 +148,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [responseMode, setResponseMode] = useState<"rsvp" | "interest">("rsvp");
   const [subtitle, setSubtitle] = useState("");
   const [interestDeadlineAt, setInterestDeadlineAt] = useState("");
+  const [paymentDeadlineAt, setPaymentDeadlineAt] = useState("");
   const [allInPriceMinMxn, setAllInPriceMinMxn] = useState("");
   const [allInPriceMaxMxn, setAllInPriceMaxMxn] = useState("");
   const [mesaNumber, setMesaNumber] = useState("");
@@ -146,6 +158,50 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [sendingSaveTheDate, setSendingSaveTheDate] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
   const [inviteSendOk, setInviteSendOk] = useState(false);
+  const [openPhases, setOpenPhases] = useState<Set<EventPhaseId>>(
+    () => new Set<EventPhaseId>(["std", "definitive", "std_email"]),
+  );
+  const [activePhaseNav, setActivePhaseNav] = useState<EventPhaseId | null>("std");
+
+  const isInterestMode = responseMode === "interest";
+
+  const journeyPhases: EventPhaseMeta[] = useMemo(() => {
+    if (isInterestMode) {
+      return [
+        { id: "std", number: 1, title: "Save the Date", summary: "Infos pour annoncer la date" },
+        { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, paiement" },
+        { id: "std_email", number: 3, title: "Email STD + liste", summary: "Template, invités, envoi" },
+        { id: "std_relance", number: 4, title: "Relance STD", summary: "Sans réponse → Prospects" },
+        { id: "formal", number: 5, title: "Invitation formelle", summary: "OUI + paiement" },
+        { id: "auto", number: 6, title: "Relances auto", summary: "ICS + satisfaction" },
+      ];
+    }
+    return [
+      { id: "std", number: 1, title: "Infos événement", summary: "Identité & calendrier" },
+      { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, statut" },
+      { id: "std_email", number: 3, title: "Invités", summary: "Groupe à inviter" },
+      { id: "formal", number: 4, title: "Invitation", summary: "ICS + YES/NO" },
+      { id: "auto", number: 5, title: "Relances auto", summary: "ICS + satisfaction" },
+    ];
+  }, [isInterestMode]);
+
+  function togglePhase(id: EventPhaseId) {
+    setOpenPhases((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setActivePhaseNav(id);
+  }
+
+  function jumpToPhase(id: EventPhaseId) {
+    setOpenPhases((prev) => new Set(prev).add(id));
+    setActivePhaseNav(id);
+    requestAnimationFrame(() => {
+      document.getElementById(`phase-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   const activeEvent = useMemo(
     () => events.find((e) => e.id === activeId) ?? null,
@@ -247,6 +303,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setResponseMode("rsvp");
     setSubtitle("");
     setInterestDeadlineAt("");
+    setPaymentDeadlineAt("");
     setAllInPriceMinMxn("");
     setAllInPriceMaxMxn("");
     setMesaNumber("");
@@ -336,6 +393,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setResponseMode(event.responseMode === "interest" ? "interest" : "rsvp");
     setSubtitle(event.subtitle ?? "");
     setInterestDeadlineAt(toLocalInputFromIso(event.interestDeadlineAt));
+    setPaymentDeadlineAt(toLocalInputFromIso(event.paymentDeadlineAt));
     setAllInPriceMinMxn(
       event.allInPriceMinMxn != null && Number.isFinite(event.allInPriceMinMxn)
         ? String(event.allInPriceMinMxn)
@@ -389,6 +447,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       subtitle: subtitle.trim(),
       interestDeadlineAt: interestDeadlineAt.trim()
         ? toIsoFromLocalInput(interestDeadlineAt.trim())
+        : null,
+      paymentDeadlineAt: paymentDeadlineAt.trim()
+        ? toIsoFromLocalInput(paymentDeadlineAt.trim())
         : null,
       allInPriceMinMxn: allInPriceMinMxn.trim() === "" ? null : Number(allInPriceMinMxn),
       allInPriceMaxMxn: allInPriceMaxMxn.trim() === "" ? null : Number(allInPriceMaxMxn),
@@ -734,7 +795,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         <h2 className="text-xl font-bold text-ns-hero">{labels.eventsTitle}</h2>
         {error && <p className={ERROR_TEXT}>{error}</p>}
 
-        <section className="space-y-4 rounded-2xl border border-gray-100 bg-ns-surface p-5">
+        <div className="space-y-3">
           <div>
             <h3 className={FORM_SECTION_TITLE}>
               {activeId
@@ -742,159 +803,294 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 : labels.newEvent}
             </h3>
             <p className="mt-1 text-sm text-ns-secondary">
-              {labels.formHint ?? "Renseigne les infos, puis compose un groupe d’invités."}
+              Parcours en phases : Save the Date → définitif → emails → invitation formelle.
             </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.title"]} *</label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="Ex. IA & entrepreneurs Guadalajara"
-              />
-            </div>
-            <div>
-              <label className={LABEL_CLASS} htmlFor="event-mesa-number">
-                {labels["fields.mesaNumber"] ?? "N° MESA (calendrier masqué)"}
-              </label>
-              <input
-                id="event-mesa-number"
-                type="number"
-                min={1}
-                max={9999}
-                value={mesaNumber}
-                onChange={(e) => setMesaNumber(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="1 → LA MESA 001"
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.mesaNumberHint"] ??
-                  "Affiché aux non-invités dans le calendrier membre. Vide = rang chrono des soirées publiées."}
-              </p>
-            </div>
-            <div>
-              <label className={LABEL_CLASS} htmlFor="event-format">
-                {labels["fields.format"] ?? "Format"}
-              </label>
-              <select
-                id="event-format"
-                className={INPUT_CLASS}
-                value={format}
-                onChange={(e) => {
-                  const next = e.target.value as EventFormat;
-                  setFormat(next);
-                  if (!activeId) {
-                    const times = defaultTimesForFormat(next);
-                    setStartTime(times.startTime);
-                    setEndTime(times.endTime);
-                  }
-                }}
-              >
-                {EVENT_FORMATS.map((f) => (
-                  <option key={f} value={f}>
-                    {labels[`format.${f}`] ?? labelEventFormat(f, "fr")}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={LABEL_CLASS} htmlFor="event-city">
-                {labels["fields.city"] ?? "Ville (hub)"}
-              </label>
-              <select
-                id="event-city"
-                className={INPUT_CLASS}
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-              >
-                {CITY_HUBS.map((c) => (
-                  <option key={c} value={c}>
-                    {labelCityHubFr(c)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.organizer"]}</label>
-              <input
-                value={organizerName}
-                onChange={(e) => setOrganizerName(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="LA MESA"
-              />
-            </div>
-            <div className="sm:col-span-2 flex items-start gap-3">
-              <input
-                id="event-share-enabled"
-                type="checkbox"
-                checked={shareEnabled}
-                onChange={(e) => setShareEnabled(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-ns-primary"
-              />
-              <label htmlFor="event-share-enabled" className="cursor-pointer text-sm text-ns-tertiary">
-                <span className="font-semibold">
-                  {labels["fields.shareEnabled"] ??
-                    "Autoriser le partage de l'invitation par les membres"}
-                </span>
-                <span className="mt-0.5 block text-xs text-ns-secondary">
-                  {labels["fields.shareEnabledHint"] ??
-                    "Affiche un bouton “Partager” côté membres (lien /e/…)."}
-                </span>
-              </label>
-            </div>
+          <EventPhaseNav
+            phases={journeyPhases}
+            activeId={activePhaseNav}
+            onJump={jumpToPhase}
+          />
 
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.date"]} *</label>
-              <input
-                type="date"
-                value={eventDate}
-                onChange={(e) => setEventDate(e.target.value)}
-                onClick={openNativePicker}
-                onFocus={openNativePicker}
-                className={`${INPUT_CLASS} cursor-pointer`}
-              />
+          <EventPhaseSection
+            phase={journeyPhases.find((p) => p.id === "std")!}
+            open={openPhases.has("std")}
+            onToggle={() => togglePhase("std")}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.title"]} *</label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="Ex. IA & entrepreneurs Guadalajara"
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="event-mesa-number">
+                  {labels["fields.mesaNumber"] ?? "N° MESA (calendrier masqué)"}
+                </label>
+                <input
+                  id="event-mesa-number"
+                  type="number"
+                  min={1}
+                  max={9999}
+                  value={mesaNumber}
+                  onChange={(e) => setMesaNumber(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="1 → LA MESA 001"
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="event-format">
+                  {labels["fields.format"] ?? "Format"}
+                </label>
+                <select
+                  id="event-format"
+                  className={INPUT_CLASS}
+                  value={format}
+                  onChange={(e) => {
+                    const next = e.target.value as EventFormat;
+                    setFormat(next);
+                    if (!activeId) {
+                      const times = defaultTimesForFormat(next);
+                      setStartTime(times.startTime);
+                      setEndTime(times.endTime);
+                    }
+                  }}
+                >
+                  {EVENT_FORMATS.map((f) => (
+                    <option key={f} value={f}>
+                      {labels[`format.${f}`] ?? labelEventFormat(f, "fr")}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={LABEL_CLASS} htmlFor="event-city">
+                  {labels["fields.city"] ?? "Ville (hub)"}
+                </label>
+                <select
+                  id="event-city"
+                  className={INPUT_CLASS}
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                >
+                  {CITY_HUBS.map((c) => (
+                    <option key={c} value={c}>
+                      {labelCityHubFr(c)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.organizer"]}</label>
+                <input
+                  value={organizerName}
+                  onChange={(e) => setOrganizerName(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="LA MESA"
+                />
+              </div>
+              <div className="sm:col-span-2 flex items-start gap-3">
+                <input
+                  id="event-share-enabled"
+                  type="checkbox"
+                  checked={shareEnabled}
+                  onChange={(e) => setShareEnabled(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-ns-primary"
+                />
+                <label htmlFor="event-share-enabled" className="cursor-pointer text-sm text-ns-tertiary">
+                  <span className="font-semibold">
+                    {labels["fields.shareEnabled"] ??
+                      "Autoriser le partage de l'invitation par les membres"}
+                  </span>
+                </label>
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.date"]} *</label>
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  onClick={openNativePicker}
+                  onFocus={openNativePicker}
+                  className={`${INPUT_CLASS} cursor-pointer`}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.startsAt"]} *</label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  onClick={openNativePicker}
+                  onFocus={openNativePicker}
+                  className={`${INPUT_CLASS} cursor-pointer`}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.endsAt"]}</label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  onClick={openNativePicker}
+                  onFocus={openNativePicker}
+                  className={`${INPUT_CLASS} cursor-pointer`}
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.capacity"]}</label>
+                <input
+                  type="number"
+                  min={2}
+                  max={100}
+                  value={capacity}
+                  onChange={(e) => setCapacity(Number(e.target.value))}
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.intro"]}</label>
+                <textarea
+                  value={introText}
+                  onChange={(e) => setIntroText(e.target.value)}
+                  rows={3}
+                  className={INPUT_CLASS}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.flyerUrl"]}</label>
+                <input
+                  type="url"
+                  value={flyerUrl}
+                  onChange={(e) => setFlyerUrl(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="https://..."
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.registrationFormUrl"]}</label>
+                <input
+                  type="url"
+                  value={registrationFormUrl}
+                  onChange={(e) => setRegistrationFormUrl(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.eventLanguage"]}</label>
+                <select
+                  value={eventLanguage}
+                  onChange={(e) => setEventLanguage(e.target.value as typeof eventLanguage)}
+                  className={INPUT_CLASS}
+                >
+                  <option value="fr">Français</option>
+                  <option value="es">Español</option>
+                  <option value="en">English</option>
+                </select>
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>Mode de réponse publique</label>
+                <select
+                  value={responseMode}
+                  onChange={(e) => setResponseMode(e.target.value as "rsvp" | "interest")}
+                  className={INPUT_CLASS}
+                >
+                  <option value="rsvp">RSVP classique (confirmer présence)</option>
+                  <option value="interest">Save the Date / intérêt (OUI/NON/AUTRE)</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.startsAt"]} *</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                onClick={openNativePicker}
-                onFocus={openNativePicker}
-                className={`${INPUT_CLASS} cursor-pointer`}
-              />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.endsAt"]}</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                onClick={openNativePicker}
-                onFocus={openNativePicker}
-                className={`${INPUT_CLASS} cursor-pointer`}
-              />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.capacity"]}</label>
-              <input
-                type="number"
-                min={2}
-                max={100}
-                value={capacity}
-                onChange={(e) => setCapacity(Number(e.target.value))}
-                className={INPUT_CLASS}
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.capacityHint"] ??
-                  `Défaut ${DEFAULT_TOTAL_COVERS} personnes dont Gregory (admin). ${guestCapacityFromTotalCovers(capacity)} places invités — au-delà → liste d’attente.`}
-              </p>
-            </div>
+            {isInterestMode ? (
+              <div className="space-y-3 rounded-xl border border-amber-100 bg-amber-50/40 p-4">
+                <div>
+                  <label className={LABEL_CLASS}>Sous-titre</label>
+                  <input
+                    className={INPUT_CLASS}
+                    value={subtitle}
+                    onChange={(e) => setSubtitle(e.target.value)}
+                    placeholder="Guadalajara · entraide & réseau d’affaires"
+                  />
+                </div>
+                <div>
+                  <label className={LABEL_CLASS}>Deadline réponse (intérêt)</label>
+                  <input
+                    type="datetime-local"
+                    className={INPUT_CLASS}
+                    value={interestDeadlineAt}
+                    onChange={(e) => setInterestDeadlineAt(e.target.value)}
+                    onClick={openNativePicker}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </EventPhaseSection>
 
+          <EventPhaseSection
+            phase={journeyPhases.find((p) => p.id === "definitive")!}
+            open={openPhases.has("definitive")}
+            onToggle={() => togglePhase("definitive")}
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.venueName"]}</label>
+                <input
+                  value={venueName}
+                  onChange={(e) => setVenueName(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="Restaurant, rooftop…"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.address"]}</label>
+                <input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="Rue, colonia, ville…"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={LABEL_CLASS}>{labels["fields.mapsUrl"]}</label>
+                <input
+                  type="url"
+                  value={mapsUrl}
+                  onChange={(e) => setMapsUrl(e.target.value)}
+                  className={INPUT_CLASS}
+                  placeholder="https://maps.google.com/…"
+                />
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.dressCode"]}</label>
+                <select
+                  value={dressCode ?? "none_specified"}
+                  onChange={(e) => setDressCode(e.target.value as DressCode)}
+                  className={INPUT_CLASS}
+                >
+                  {DRESS_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {labels[`dress.${code}`] ?? code}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={LABEL_CLASS}>{labels["fields.status"]}</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as typeof status)}
+                  className={INPUT_CLASS}
+                >
+                  <option value="draft">{labels["eventStatus.draft"]}</option>
+                  <option value="published">{labels["eventStatus.published"]}</option>
+                  <option value="closed">{labels["eventStatus.closed"]}</option>
+                </select>
+              </div>
             <div className="sm:col-span-2 space-y-4">
               <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
                 <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
@@ -902,7 +1098,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </h3>
                 <p className="mb-3 text-xs text-ns-secondary">
                   {labels["fields.pricingModeHint"] ??
-                    "Choisis comment l’invité paie : ticket + sur place, ou ticket tout inclus."}
+                    "Choisis comment l’invité paie : ticket + sur place, ou ticket avec boissons incluses."}
                 </p>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <label
@@ -942,11 +1138,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         onChange={() => setPricingMode("all_inclusive")}
                         className="h-4 w-4"
                       />
-                      {labels["fields.pricingModeAllIn"] ?? "Ticket tout inclus"}
+                      {labels["fields.pricingModeAllIn"] ?? "Ticket avec boissons incluses"}
                     </span>
                     <span className="pl-6 text-xs text-ns-secondary">
                       {labels["fields.pricingModeAllInHint"] ??
-                        "Un seul ticket couvre l’accès et le repas. Boissons : incluses ou à part."}
+                        "Un seul ticket couvre l’accès, le repas et les boissons (tu peux aussi les laisser à part)."}
                     </span>
                   </label>
                 </div>
@@ -1106,16 +1302,16 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               ) : (
                 <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
                   <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-ns-tertiary">
-                    {labels["fields.allInSection"] ?? "TICKET TOUT INCLUS"}
+                    {labels["fields.allInSection"] ?? "TICKET AVEC BOISSONS INCLUSES"}
                   </h3>
                   <p className="mb-3 text-xs text-ns-secondary">
                     {labels["fields.allInSectionHint"] ??
-                      "Un seul montant payé à l’avance : accès + repas. Les boissons peuvent être incluses ou à part."}
+                      "Un seul montant payé à l’avance : accès + repas + boissons (ou boissons à part si tu le précises)."}
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className={LABEL_CLASS}>
-                        {labels["fields.allInTicketMxn"] ?? "Ticket tout inclus (MXN / pers., hors IVA)"}
+                        {labels["fields.allInTicketMxn"] ?? "Ticket avec boissons incluses (MXN / pers., hors IVA)"}
                       </label>
                       <input
                         type="number"
@@ -1214,6 +1410,24 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </div>
               )}
 
+              <div className="rounded-xl border border-ns-alternate bg-ns-brand-light/50 p-4">
+                <label className={LABEL_CLASS}>
+                  {labels["fields.paymentDeadlineAt"] ?? "Date butoir règlement ACCESS"}
+                </label>
+                <input
+                  type="datetime-local"
+                  className={INPUT_CLASS}
+                  value={paymentDeadlineAt}
+                  onChange={(e) => setPaymentDeadlineAt(e.target.value)}
+                  onClick={openNativePicker}
+                />
+                <p className="mt-1 text-xs text-ns-secondary">
+                  {labels["fields.paymentDeadlineAtHint"] ??
+                    "Affichée dans l’invitation formelle (coordonnées bancaires). Si vide : formulation générique « date butoir de l’événement »."}
+                </p>
+              </div>
+
+
               <div className="rounded-xl border border-ns-alternate bg-white p-4">
                 <label className="flex items-start gap-2 text-sm text-ns-tertiary">
                   <input
@@ -1260,350 +1474,89 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </div>
             </div>
 
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.venueName"]}</label>
-              <input
-                value={venueName}
-                onChange={(e) => setVenueName(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="Restaurant, rooftop…"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.address"]}</label>
-              <input
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="Rue, colonia, ville…"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.mapsUrl"]}</label>
-              <input
-                type="url"
-                value={mapsUrl}
-                onChange={(e) => setMapsUrl(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="https://maps.google.com/…"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.intro"]}</label>
-              <textarea
-                value={introText}
-                onChange={(e) => setIntroText(e.target.value)}
-                rows={3}
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.registrationFormUrl"]}</label>
-              <input
-                type="url"
-                value={registrationFormUrl}
-                onChange={(e) => setRegistrationFormUrl(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="https://..."
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.registrationFormUrlHint"] ??
-                  "Affiché en encart sur la page publique."}
-              </p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{labels["fields.flyerUrl"]}</label>
-              <input
-                type="url"
-                value={flyerUrl}
-                onChange={(e) => setFlyerUrl(e.target.value)}
-                className={INPUT_CLASS}
-                placeholder="https://..."
-              />
-              <p className="mt-1 text-xs text-ns-secondary">
-                {labels["fields.flyerUrlHint"] ??
-                  "Image/PDF/page. Visible depuis la page publique."}
-              </p>
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.dressCode"]}</label>
-              <select
-                value={dressCode ?? "none_specified"}
-                onChange={(e) => setDressCode(e.target.value as DressCode)}
-                className={INPUT_CLASS}
-              >
-                {DRESS_CODES.map((code) => (
-                  <option key={code} value={code}>
-                    {labels[`dress.${code}`] ?? code}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.status"]}</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as typeof status)}
-                className={INPUT_CLASS}
-              >
-                <option value="draft">{labels["eventStatus.draft"]}</option>
-                <option value="published">{labels["eventStatus.published"]}</option>
-                <option value="closed">{labels["eventStatus.closed"]}</option>
-              </select>
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{labels["fields.eventLanguage"]}</label>
-              <select
-                value={eventLanguage}
-                onChange={(e) => setEventLanguage(e.target.value as typeof eventLanguage)}
-                className={INPUT_CLASS}
-              >
-                <option value="fr">Français</option>
-                <option value="es">Español</option>
-                <option value="en">English</option>
-              </select>
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>Mode de réponse publique</label>
-              <select
-                value={responseMode}
-                onChange={(e) => setResponseMode(e.target.value as "rsvp" | "interest")}
-                className={INPUT_CLASS}
-              >
-                <option value="rsvp">RSVP classique (confirmer présence)</option>
-                <option value="interest">Save the Date / intérêt (OUI/NON/AUTRE)</option>
-              </select>
-            </div>
-          </div>
 
-          {responseMode === "interest" ? (
-            <div className="space-y-3 rounded-xl border border-amber-100 bg-amber-50/40 p-4">
-              <div>
-                <label className={LABEL_CLASS}>Sous-titre</label>
-                <input
-                  className={INPUT_CLASS}
-                  value={subtitle}
-                  onChange={(e) => setSubtitle(e.target.value)}
-                  placeholder="Guadalajara · entraide & réseau d’affaires"
-                />
-              </div>
-              <div>
-                <label className={LABEL_CLASS}>Deadline réponse (intérêt)</label>
-                <input
-                  type="datetime-local"
-                  className={INPUT_CLASS}
-                  value={interestDeadlineAt}
-                  onChange={(e) => setInterestDeadlineAt(e.target.value)}
-                  onClick={openNativePicker}
-                />
-              </div>
             </div>
-          ) : null}
+          </EventPhaseSection>
 
-          <div className="border-t border-gray-100 pt-4">
-            <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              {labels.inviteGroup ?? "Constituer un groupe (invités)"}
-            </h4>
-            <p className="mt-1 mb-3 text-xs text-ns-secondary">
-              {labels.inviteGroupHint ??
-                "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
-            </p>
-            <ContactPicker
-              selected={selectedInvitees}
-              onChange={setSelectedInvitees}
-              labels={{
-                search: labels.searchContacts,
-                selected: activeId
-                  ? `${labels.selectedContacts} (à ajouter)`
-                  : labels.selectedContacts,
-                addExternal: labels.addExternal,
-                externalEmail: "Email",
-                externalName: "Nom",
-              }}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void saveEvent()}
-              disabled={saving}
-              className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+          {isInterestMode ? (
+            <EventPhaseSection
+              phase={journeyPhases.find((p) => p.id === "std_email")!}
+              open={openPhases.has("std_email")}
+              onToggle={() => togglePhase("std_email")}
             >
-              <Save className="h-4 w-4" /> {labels.save}
-            </button>
-            {activeId && (
-              <button
-                type="button"
-                onClick={openInviteModal}
-                disabled={activeParticipations.filter((p) => p.status === "invited").length === 0}
-                className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
-                title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
-              >
-                <Mail className="h-4 w-4" /> Lancer les invitations
-              </button>
-            )}
-            {activeId && responseMode === "interest" && (
-              <button
-                type="button"
-                onClick={() => void sendSaveTheDateBlast()}
-                disabled={
-                  sendingSaveTheDate ||
-                  activeParticipations.filter(
-                    (p) => p.status === "invited" || p.status === "waitlist",
-                  ).length === 0
-                }
-                className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
-                title="Envoie le Save the Date (lien page intérêt) aux invités / waitlist"
-              >
-                <Mail className="h-4 w-4" />{" "}
-                {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
-              </button>
-            )}
-            {activeId && (
-              <button
-                type="button"
-                onClick={() => void deleteEvent()}
-                className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-red-600`}
-              >
-                <Trash2 className="h-4 w-4" /> {labels.delete}
-              </button>
-            )}
-          </div>
-        </section>
-
-        {inviteModalOpen && activeEvent && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Lancer les invitations"
-            onClick={closeInviteModal}
-          >
-            <div
-              className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
-                <div>
-                  <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
-                  <p className="mt-1 text-xs text-ns-secondary">
-                    Envoie l’invitation calendrier (.ics) avec boutons YES/NO aux invités (statut
-                    Invité), plus une copie organisateur (Gregory). Les templates sont éditables
-                    dans Dashboard → Templates email. La Waiting List n’est pas contactée ici —
-                    utilise INVITER sur une ligne.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  className="text-ns-secondary hover:text-ns-tertiary"
-                  onClick={closeInviteModal}
-                  aria-label="Fermer"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-
-              <div className="space-y-4 overflow-y-auto px-5 py-4">
-                <p className="text-sm text-ns-tertiary">
-                  Destinataires : <strong>{invitedRecipientCount}</strong> invité
-                  {invitedRecipientCount > 1 ? "s" : ""} + organisateur
-                  {activeEvent.inviteEmailSentAt
-                    ? ` · dernier envoi : ${new Date(activeEvent.inviteEmailSentAt).toLocaleString("fr-FR")}`
-                    : ""}
+              <div>
+                <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+                  {labels.inviteGroup ?? "Constituer un groupe (invités)"}
+                </h4>
+                <p className="mt-1 mb-3 text-xs text-ns-secondary">
+                  {labels.inviteGroupHint ??
+                    "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
                 </p>
-                {inviteSendResult && (
-                  <div
-                    className={`whitespace-pre-wrap rounded-lg border px-3 py-3 text-sm ${
-                      inviteSendOk
-                        ? "border-ns-primary/40 bg-ns-primary/15 font-semibold text-ns-hero"
-                        : "border-red-200 bg-red-50 text-red-800"
-                    }`}
-                  >
-                    {inviteSendResult}
-                    {inviteSendOk ? (
-                      <p className="mt-2 text-xs font-normal text-ns-secondary">
-                        Vérifie ta boîte mail (et celle de l’invité) — l’envoi est terminé. Tu
-                        peux fermer cette fenêtre.
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-                {!inviteSendOk && (
-                  <p className="text-xs text-ns-secondary">
-                    Si un envoi échoue : vérifie que Brevo est configuré (`BREVO_API_KEY` +
-                    `BREVO_FROM_EMAIL`) et que le domaine d’envoi est validé dans Brevo
-                    (Senders &amp; IP / Domains). Le template « Invitation calendrier » doit
-                    aussi être <strong>activé</strong> dans Dashboard → Templates.
-                  </p>
-                )}
+                <ContactPicker
+                  selected={selectedInvitees}
+                  onChange={setSelectedInvitees}
+                  labels={{
+                    search: labels.searchContacts,
+                    selected: activeId
+                      ? `${labels.selectedContacts} (à ajouter)`
+                      : labels.selectedContacts,
+                    addExternal: labels.addExternal,
+                    externalEmail: "Email",
+                    externalName: "Nom",
+                  }}
+                />
               </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
-                <button type="button" className={BTN_SECONDARY} onClick={closeInviteModal}>
-                  Fermer
-                </button>
-                {inviteSendOk ? (
-                  <button type="button" className={BTN_PRIMARY} onClick={closeInviteModal}>
-                    Terminé
-                  </button>
-                ) : (
+              {activeEvent ? (
+                <>
+                  <div className="rounded-xl border border-gray-100 bg-ns-brand-light p-4">
+                    <p className="text-sm font-bold text-ns-hero">Lien public</p>
+                    <a
+                      href={publicUrl}
+                      className="mt-1 break-all text-sm text-ns-primary hover:underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {publicUrl}
+                    </a>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        onClick={() => void navigator.clipboard.writeText(emailTemplate)}
+                      >
+                        <Copy className="mr-1 inline h-4 w-4" /> {labels.copyEmail}
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        onClick={() => void navigator.clipboard.writeText(whatsappTemplate)}
+                      >
+                        <Copy className="mr-1 inline h-4 w-4" /> {labels.copyWhatsapp}
+                      </button>
+                    </div>
+                  </div>
+                  <EventEmailTemplateEditor
+                    event={activeEvent}
+                    templateKey="save_the_date"
+                    onEventUpdated={() => void loadAll()}
+                    hint="Personnalise le Save the Date avant l’envoi blast."
+                  />
                   <button
                     type="button"
-                    className={BTN_PRIMARY}
-                    disabled={sendingInvites || invitedRecipientCount === 0}
-                    onClick={() => void sendInvitations()}
+                    onClick={() => void sendSaveTheDateBlast()}
+                    disabled={
+                      sendingSaveTheDate ||
+                      activeParticipations.filter(
+                        (p) => p.status === "invited" || p.status === "waitlist",
+                      ).length === 0
+                    }
+                    className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+                    title="Envoie le Save the Date (lien page intérêt) aux invités / waitlist"
                   >
-                    {sendingInvites ? "Envoi…" : `Envoyer à ${invitedRecipientCount}`}
+                    <Mail className="h-4 w-4" />{" "}
+                    {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
                   </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeEvent && (
-          <>
-            <section className="rounded-2xl border border-gray-100 bg-ns-brand-light p-5">
-              <p className="text-sm font-bold text-ns-hero">Lien public</p>
-              <a
-                href={publicUrl}
-                className="mt-1 break-all text-sm text-ns-primary hover:underline"
-                target="_blank"
-                rel="noreferrer"
-              >
-                {publicUrl}
-              </a>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={BTN_SECONDARY}
-                  onClick={() => void navigator.clipboard.writeText(emailTemplate)}
-                >
-                  <Copy className="mr-1 inline h-4 w-4" /> {labels.copyEmail}
-                </button>
-                <button
-                  type="button"
-                  className={BTN_SECONDARY}
-                  onClick={() => void navigator.clipboard.writeText(whatsappTemplate)}
-                >
-                  <Copy className="mr-1 inline h-4 w-4" /> {labels.copyWhatsapp}
-                </button>
-              </div>
-            </section>
-
-            <AdminEventFunnel
-              event={activeEvent}
-              participations={activeParticipations}
-              onEventUpdated={() => void loadAll()}
-            />
-
-            {responseMode === "interest" ? (
-              <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
-            ) : null}
-
-            <AdminEventSatisfactionResults participations={activeParticipations} />
-
+                  <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
             <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                 <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
@@ -1697,8 +1650,317 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 ))}
               </ul>
             </section>
-          </>
+                </>
+              ) : (
+                <p className="text-sm text-ns-secondary">
+                  Enregistre l’événement pour éditer le template STD et envoyer.
+                </p>
+              )}
+            </EventPhaseSection>
+          ) : (
+            <EventPhaseSection
+              phase={journeyPhases.find((p) => p.id === "std_email")!}
+              open={openPhases.has("std_email")}
+              onToggle={() => togglePhase("std_email")}
+            >
+              <ContactPicker
+                selected={selectedInvitees}
+                onChange={setSelectedInvitees}
+                labels={{
+                  search: labels.searchContacts,
+                  selected: activeId
+                    ? `${labels.selectedContacts} (à ajouter)`
+                    : labels.selectedContacts,
+                  addExternal: labels.addExternal,
+                  externalEmail: "Email",
+                  externalName: "Nom",
+                }}
+              />
+              {activeEvent ? (
+            <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
+                <button
+                  type="button"
+                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
+                  onClick={() => void openWhatsAppForAll()}
+                  disabled={activeParticipations.length === 0}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  WhatsApp à tous
+                </button>
+              </div>
+              {(() => {
+                const seatCap =
+                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
+                const seated = countSeatedParticipations(activeParticipations);
+                const waitlistCount = activeParticipations.filter(
+                  (p) => p.status === "waitlist",
+                ).length;
+                const summary =
+                  labels.seatingSummary
+                    ?.replace("{seated}", String(seated))
+                    .replace("{capacity}", String(seatCap))
+                    .replace("{waitlist}", String(waitlistCount))
+                    .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
+                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
+                return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
+              })()}
+              <ul className="mt-3 space-y-2">
+                {activeParticipations.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
+                  >
+                    <span className="min-w-0 flex-1">
+                      {p.fullName ?? p.email}
+                      {p.companyName ? ` · ${p.companyName}` : ""}
+                      {p.phone ? (
+                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
+                      ) : (
+                        <span className="mt-0.5 block text-xs text-ns-secondary">
+                          Pas de téléphone
+                        </span>
+                      )}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {p.status === "waitlist" && (
+                        <button
+                          type="button"
+                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
+                          onClick={() => void inviteFromWaitlist(p.id)}
+                          title="Passer en Invité et envoyer l’invitation calendrier"
+                        >
+                          INVITER
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
+                        onClick={() => openWhatsAppForParticipation(p)}
+                        title="Envoyer l’invitation par WhatsApp"
+                        aria-label="WhatsApp"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                      </button>
+                      <select
+                        value={
+                          p.status === "present"
+                            ? "confirmed"
+                            : p.status === "declined"
+                              ? "not_attending"
+                              : p.status
+                        }
+                        onChange={(e) =>
+                          void setParticipationStatus(
+                            p.id,
+                            e.target.value as AdminEventParticipation["status"],
+                          )
+                        }
+                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
+                      >
+                      <option value="invited">{labels["statuses.invited"]}</option>
+                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
+                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
+                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
+                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
+                      </select>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+              ) : null}
+            </EventPhaseSection>
+          )}
+
+          {isInterestMode && activeEvent ? (
+            <EventPhaseSection
+              phase={journeyPhases.find((p) => p.id === "std_relance")!}
+              open={openPhases.has("std_relance")}
+              onToggle={() => togglePhase("std_relance")}
+            >
+              <StdRelancePanel event={activeEvent} />
+            </EventPhaseSection>
+          ) : null}
+
+          <EventPhaseSection
+            phase={journeyPhases.find((p) => p.id === "formal")!}
+            open={openPhases.has("formal")}
+            onToggle={() => togglePhase("formal")}
+          >
+            {activeEvent ? (
+              isInterestMode ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-ns-secondary">
+                    Vérifie le prix et la date butoir (phase 2) — ils alimentent{" "}
+                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail.
+                  </p>
+                  <EventEmailTemplateEditor
+                    event={activeEvent}
+                    templateKey="calendar_invite"
+                    onEventUpdated={() => void loadAll()}
+                    hint="Invitation formelle : détails, prix, coordonnées bancaires."
+                  />
+                  <FormalInviteOuiPanel
+                    event={activeEvent}
+                    onEventUpdated={() => void loadAll()}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <EventEmailTemplateEditor
+                    event={activeEvent}
+                    templateKey="calendar_invite"
+                    onEventUpdated={() => void loadAll()}
+                  />
+                  <button
+                    type="button"
+                    onClick={openInviteModal}
+                    disabled={activeParticipations.filter((p) => p.status === "invited").length === 0}
+                    className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+                    title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
+                  >
+                    <Mail className="h-4 w-4" /> Lancer les invitations
+                  </button>
+                </div>
+              )
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            phase={journeyPhases.find((p) => p.id === "auto")!}
+            open={openPhases.has("auto")}
+            onToggle={() => togglePhase("auto")}
+          >
+            {activeEvent ? (
+              <div className="space-y-4">
+                <AutoRemindersPanel
+                  event={activeEvent}
+                  participations={activeParticipations}
+                  onEventUpdated={() => void loadAll()}
+                />
+                <AdminEventSatisfactionResults participations={activeParticipations} />
+              </div>
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <div className="sticky bottom-0 z-10 flex flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm backdrop-blur">
+            <button
+              type="button"
+              onClick={() => void saveEvent()}
+              disabled={saving}
+              className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+            >
+              <Save className="h-4 w-4" /> {labels.save}
+            </button>
+            {activeId && (
+              <button
+                type="button"
+                onClick={() => void deleteEvent()}
+                className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-red-600`}
+              >
+                <Trash2 className="h-4 w-4" /> {labels.delete}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {inviteModalOpen && activeEvent && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Lancer les invitations"
+            onClick={closeInviteModal}
+          >
+            <div
+              className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-white shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+                <div>
+                  <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    Envoie l’invitation calendrier (.ics) avec boutons YES/NO aux invités (statut
+                    Invité), plus une copie organisateur (Gregory). Les templates sont éditables
+                    dans Dashboard → Templates email. La Waiting List n’est pas contactée ici —
+                    utilise INVITER sur une ligne.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="text-ns-secondary hover:text-ns-tertiary"
+                  onClick={closeInviteModal}
+                  aria-label="Fermer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4 overflow-y-auto px-5 py-4">
+                <p className="text-sm text-ns-tertiary">
+                  Destinataires : <strong>{invitedRecipientCount}</strong> invité
+                  {invitedRecipientCount > 1 ? "s" : ""} + organisateur
+                  {activeEvent.inviteEmailSentAt
+                    ? ` · dernier envoi : ${new Date(activeEvent.inviteEmailSentAt).toLocaleString("fr-FR")}`
+                    : ""}
+                </p>
+                {inviteSendResult && (
+                  <div
+                    className={`whitespace-pre-wrap rounded-lg border px-3 py-3 text-sm ${
+                      inviteSendOk
+                        ? "border-ns-primary/40 bg-ns-primary/15 font-semibold text-ns-hero"
+                        : "border-red-200 bg-red-50 text-red-800"
+                    }`}
+                  >
+                    {inviteSendResult}
+                    {inviteSendOk ? (
+                      <p className="mt-2 text-xs font-normal text-ns-secondary">
+                        Vérifie ta boîte mail (et celle de l’invité) — l’envoi est terminé. Tu
+                        peux fermer cette fenêtre.
+                      </p>
+                    ) : null}
+                  </div>
+                )}
+                {!inviteSendOk && (
+                  <p className="text-xs text-ns-secondary">
+                    Si un envoi échoue : vérifie que Brevo est configuré (`BREVO_API_KEY` +
+                    `BREVO_FROM_EMAIL`) et que le domaine d’envoi est validé dans Brevo
+                    (Senders &amp; IP / Domains). Le template « Invitation calendrier » doit
+                    aussi être <strong>activé</strong> dans Dashboard → Templates.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 px-5 py-4">
+                <button type="button" className={BTN_SECONDARY} onClick={closeInviteModal}>
+                  Fermer
+                </button>
+                {inviteSendOk ? (
+                  <button type="button" className={BTN_PRIMARY} onClick={closeInviteModal}>
+                    Terminé
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    disabled={sendingInvites || invitedRecipientCount === 0}
+                    onClick={() => void sendInvitations()}
+                  >
+                    {sendingInvites ? "Envoi…" : `Envoyer à ${invitedRecipientCount}`}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         )}
+
+
       </div>
     </div>
   );

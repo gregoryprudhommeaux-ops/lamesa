@@ -11,10 +11,16 @@ type Props = {
     response?: string;
     title?: string;
     when?: string;
+    payBy?: string;
   }>;
 };
 
-function yesCopy(locale: string, title: string, when: string): { title: string; body: string } {
+function yesCopy(
+  locale: string,
+  title: string,
+  when: string,
+  payBy: string,
+): { title: string; body: string } {
   const cancelLocale = locale === "en" || locale === "fr" ? locale : "es";
   const cancel = cancellationPolicyBlock(cancelLocale);
 
@@ -37,6 +43,19 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
               : `le ${when}`
           : "";
 
+  const paymentLine =
+    locale === "en"
+      ? payBy
+        ? `We’re waiting for payment confirmation by ${payBy} to confirm your spot.`
+        : "We’re waiting for payment confirmation by the event payment deadline to confirm your spot."
+      : locale === "es"
+        ? payBy
+          ? `Esperamos recibir la confirmación de tu pago a más tardar el ${payBy} para poder confirmar tu participación.`
+          : "Esperamos recibir la confirmación de tu pago antes de la fecha límite del evento para poder confirmar tu participación."
+        : payBy
+          ? `Nous attendons la confirmation du paiement au plus tard le ${payBy} afin de pouvoir confirmer ta participation.`
+          : "Nous attendons la confirmation du paiement avant la date butoir de l’événement afin de pouvoir confirmer ta participation.";
+
   if (locale === "en") {
     return {
       title: "Thank you for joining!",
@@ -44,7 +63,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
         eventBit
           ? `You’re registered for this event ${eventBit}.`
           : "You’re registered for this event.",
-        "We’re waiting for payment confirmation within 3 days to confirm your spot.",
+        paymentLine,
         "Once that deadline has passed, we will have to offer this seat to another member.",
         cancel,
       ].join("\n\n"),
@@ -57,7 +76,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
         eventBit
           ? `Has quedado registrado/a para este evento ${eventBit}.`
           : "Has quedado registrado/a para este evento.",
-        "Esperamos recibir la confirmación de tu pago en un plazo de 3 días para poder confirmar tu participación.",
+        paymentLine,
         "Transcurrido ese plazo, deberemos ofrecer este lugar a otro miembro.",
         cancel,
       ].join("\n\n"),
@@ -69,7 +88,7 @@ function yesCopy(locale: string, title: string, when: string): { title: string; 
       eventBit
         ? `Tu es bien inscrit(e) à cet événement ${eventBit}.`
         : "Tu es bien inscrit(e) à cet événement.",
-      "Nous attendons la confirmation du paiement sous 3 jours afin de pouvoir confirmer ta participation.",
+      paymentLine,
       "Une fois ce délai passé, nous devrons proposer cette place à un autre membre.",
       cancel,
     ].join("\n\n"),
@@ -84,10 +103,11 @@ export default async function RsvpPage({ params, searchParams }: Props) {
   const response = sp.response ?? "";
   const eventTitle = (sp.title ?? "").trim();
   const eventWhen = (sp.when ?? "").trim();
+  const payBy = (sp.payBy ?? "").trim();
 
   const copy =
     status === "ok" && response === "yes"
-      ? yesCopy(locale, eventTitle, eventWhen)
+      ? yesCopy(locale, eventTitle, eventWhen, payBy)
       : status === "ok" && response === "no"
         ? locale === "en"
           ? {

@@ -40,6 +40,7 @@ const updateSchema = z.object({
   responseMode: z.enum(["rsvp", "interest"]).optional(),
   subtitle: z.string().trim().max(200).optional().nullable(),
   interestDeadlineAt: z.string().optional().nullable(),
+  paymentDeadlineAt: z.string().optional().nullable(),
   allInPriceMinMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   allInPriceMaxMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   mesaNumber: z.number().int().min(1).max(9999).optional().nullable(),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { formatPaymentDeadlineDate } from "@/lib/events/payment-details";
 import { fmtDateTime } from "@/lib/events/utils";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent } from "@/lib/types/events";
@@ -14,6 +15,7 @@ function rsvpOkRedirect(input: {
   response: string;
   eventTitle?: string;
   eventWhen?: string;
+  payBy?: string;
 }) {
   const q = new URLSearchParams({
     status: "ok",
@@ -21,6 +23,7 @@ function rsvpOkRedirect(input: {
   });
   if (input.eventTitle) q.set("title", input.eventTitle);
   if (input.eventWhen) q.set("when", input.eventWhen);
+  if (input.payBy) q.set("payBy", input.payBy);
   return NextResponse.redirect(`${input.base}/${input.locale}/rsvp?${q.toString()}`);
 }
 
@@ -79,6 +82,9 @@ export async function GET(request: Request, { params }: Params) {
     const eventWhen = event?.startsAt
       ? fmtDateTime(event.startsAt, eventLang)
       : "";
+    const payBy = event?.paymentDeadlineAt
+      ? formatPaymentDeadlineDate(event.paymentDeadlineAt, eventLang)
+      : "";
 
     const current = normalizeParticipationStatus(data.status);
     const next = response === "yes" ? "attending" : "not_attending";
@@ -90,6 +96,7 @@ export async function GET(request: Request, { params }: Params) {
         response,
         eventTitle,
         eventWhen,
+        payBy: response === "yes" ? payBy : undefined,
       });
 
     // Idempotent: already at target, or confirmed stays confirmed on YES

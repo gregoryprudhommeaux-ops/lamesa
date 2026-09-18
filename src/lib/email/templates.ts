@@ -11,6 +11,10 @@ import {
   formatNegotiatedMenuBlock,
 } from "@/lib/events/event-pricing-copy";
 import { formatEventWhereLine } from "@/lib/events/format-where";
+import {
+  formatPaymentDeadlineDate,
+  paymentDeadlineBlock,
+} from "@/lib/events/payment-details";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -81,6 +85,10 @@ export type TemplateVars = {
   accessIncludes?: string;
   /** Localized gathering format label (Dîner / Cena / Dinner / …) */
   format?: string;
+  /** Formatted payment due date (e.g. "20 septembre 2026") */
+  paymentDeadline?: string;
+  /** Full ACCESS payment deadline paragraph for invites */
+  paymentDeadlineBlock?: string;
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
@@ -116,7 +124,9 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{totalWithIva}}", vars.totalWithIva ?? "")
     .replaceAll("{{menuIncluded}}", vars.menuIncluded ?? "")
     .replaceAll("{{accessIncludes}}", vars.accessIncludes ?? "")
-    .replaceAll("{{format}}", vars.format ?? "");
+    .replaceAll("{{format}}", vars.format ?? "")
+    .replaceAll("{{paymentDeadline}}", vars.paymentDeadline ?? "")
+    .replaceAll("{{paymentDeadlineBlock}}", vars.paymentDeadlineBlock ?? "");
 }
 
 /** Language used when sending email / WhatsApp for an event. */
@@ -158,6 +168,10 @@ export function buildEventTemplateVars(input: {
     accessIncludes: formatAccessIncludes(input.event, lang),
     menuIncluded: formatNegotiatedMenuBlock(input.event, lang),
     format: labelEventFormat(input.event.format, lang),
+    paymentDeadline: input.event.paymentDeadlineAt
+      ? formatPaymentDeadlineDate(input.event.paymentDeadlineAt, lang)
+      : "",
+    paymentDeadlineBlock: paymentDeadlineBlock(lang, input.event.paymentDeadlineAt),
   };
 }
 

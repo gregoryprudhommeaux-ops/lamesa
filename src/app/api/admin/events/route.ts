@@ -107,6 +107,7 @@ export async function POST(request: Request) {
       responseMode: data.responseMode ?? "rsvp",
       subtitle: data.subtitle ?? "",
       interestDeadlineAt: data.interestDeadlineAt ?? null,
+      paymentDeadlineAt: data.paymentDeadlineAt ?? null,
       allInPriceMinMxn: data.allInPriceMinMxn ?? null,
       allInPriceMaxMxn: data.allInPriceMaxMxn ?? null,
       mesaNumber: data.mesaNumber ?? null,

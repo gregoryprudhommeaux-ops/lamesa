@@ -69,5 +69,5 @@ Noter sur la fiche membre (notes admin) : *no-show sans prévenir* → baisser p
 ## Dry-run avant table 1
 
 1. Inscription test → profil → (simul) invitation → RSVP YES → (simul) paiement.  
-2. Vérifier présence des 4 messages : funnel, délai 3 jours paiement, règle 48 h, composition sans liste nominative.  
+2. Vérifier présence des 4 messages : funnel, date butoir paiement (champ événement), règle 48 h, composition sans liste nominative.  
 3. Simuler J+1 : survey + 1 intro fictive + note CRM.

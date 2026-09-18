@@ -7,23 +7,60 @@ export const EVENT_PAYMENT_BANK = {
   invoiceEmail: "greg@nextstep-services.com",
 } as const;
 
-/** 3-day payment window before the seat is released. */
-export function paymentDeadlineBlock(locale: "es" | "fr" | "en"): string {
+/** Calendar date for payment deadline (America/Mexico_City), e.g. "20 septembre 2026". */
+export function formatPaymentDeadlineDate(
+  iso: string,
+  locale: "es" | "fr" | "en",
+): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString(
+    locale === "en" ? "en-US" : locale === "es" ? "es-MX" : "fr-FR",
+    {
+      timeZone: "America/Mexico_City",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    },
+  );
+}
+
+/**
+ * ACCESS payment deadline copy for invite emails.
+ * Prefer an event-level `paymentDeadlineAt`; otherwise a generic butoir wording (no fixed 3 days).
+ */
+export function paymentDeadlineBlock(
+  locale: "es" | "fr" | "en",
+  deadlineAt?: string | null,
+): string {
+  const dateLabel = deadlineAt?.trim()
+    ? formatPaymentDeadlineDate(deadlineAt.trim(), locale)
+    : "";
+
   if (locale === "fr") {
+    const when = dateLabel
+      ? `au plus tard le ${dateLabel}`
+      : "avant la date butoir indiquée pour cet événement";
     return [
       "Important — règlement ACCESS :",
-      "Ta place ne sera validée que si le ticket ACCESS est réglé d’ici 3 jours. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.",
+      `Ta place ne sera validée que si le ticket ACCESS est réglé ${when}. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.`,
     ].join("\n");
   }
   if (locale === "en") {
+    const when = dateLabel
+      ? `by ${dateLabel}`
+      : "by the payment deadline set for this event";
     return [
       "Important — ACCESS payment:",
-      "Your spot will only be confirmed once the ACCESS ticket is paid within 3 days. If not, we will offer your seat to another member.",
+      `Your spot will only be confirmed once the ACCESS ticket is paid ${when}. If not, we will offer your seat to another member.`,
     ].join("\n");
   }
+  const when = dateLabel
+    ? `a más tardar el ${dateLabel}`
+    : "antes de la fecha límite indicada para este evento";
   return [
     "Importante — pago ACCESS:",
-    "Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga dentro de un plazo de 3 días. De lo contrario, ofreceremos tu lugar a otro miembro.",
+    `Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga ${when}. De lo contrario, ofreceremos tu lugar a otro miembro.`,
   ].join("\n");
 }
 

@@ -2,7 +2,6 @@ import type { EmailTemplateDoc, EmailTemplateKey, TemplateLocale } from "@/lib/t
 import {
   cancellationPolicyBlock,
   paymentBankBlock,
-  paymentDeadlineBlock,
 } from "@/lib/events/payment-details";
 
 export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
@@ -148,7 +147,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "",
         "El ticket ACCESS confirma tu lugar. El menú negociado y el resto de consumos en el lugar van por tu cuenta (salvo lo marcado en ACCESS).",
         "",
-        paymentDeadlineBlock("es"),
+        "{{paymentDeadlineBlock}}",
         "",
         cancellationPolicyBlock("es"),
         "",
@@ -189,7 +188,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "",
         "Le ticket ACCESS confirme ta place. Le menu négocié et le reste des consommations sur place sont à ta charge (sauf ce qui est marqué dans ACCESS).",
         "",
-        paymentDeadlineBlock("fr"),
+        "{{paymentDeadlineBlock}}",
         "",
         cancellationPolicyBlock("fr"),
         "",
@@ -230,7 +229,7 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
         "",
         "The ACCESS ticket confirms your seat. The negotiated menu and other on-site consumptions are on you (except what is marked under ACCESS).",
         "",
-        paymentDeadlineBlock("en"),
+        "{{paymentDeadlineBlock}}",
         "",
         cancellationPolicyBlock("en"),
         "",
