@@ -32,8 +32,8 @@ function displayName(input: {
 }
 
 /**
- * OUI pool for an interest-mode event: form respondents + STD OUI playlist,
- * merged with existing participations (invite / confirmation mail timestamps).
+ * OUI pool for formal invites: CRM playlist `STD {slug} — OUI` only
+ * (sync formulaire + ajouts manuels). Enrichit nom/téléphone depuis le formulaire si présent.
  */
 export async function listFormalInviteRecipients(input: {
   eventId: string;
@@ -56,10 +56,13 @@ export async function listFormalInviteRecipients(input: {
     listProspects({ list: ouiList, limit: 500 }),
   ]);
 
-  const respondents = respondentsSnap.docs.map((d) => ({
-    id: d.id,
-    ...(d.data() as Omit<EventRespondent, "id">),
-  }));
+  const respondentsByEmail = new Map<string, EventRespondent & { id: string }>();
+  for (const d of respondentsSnap.docs) {
+    const r = { id: d.id, ...(d.data() as Omit<EventRespondent, "id">) };
+    const email = normalizeEmail(r.email);
+    if (!email.includes("@")) continue;
+    respondentsByEmail.set(email, r);
+  }
 
   const partsByEmail = new Map<string, AdminEventParticipation>();
   for (const d of partsSnap.docs) {
@@ -69,82 +72,35 @@ export async function listFormalInviteRecipients(input: {
     partsByEmail.set(email, p);
   }
 
-  type Acc = {
-    email: string;
-    fullName: string;
-    company: string;
-    phone: string;
-    fromRespondent: boolean;
-    fromProspect: boolean;
-  };
-  const byEmail = new Map<string, Acc>();
-
-  for (const r of respondents) {
-    if (r.interestResponse !== "yes") continue;
-    const email = normalizeEmail(r.email);
-    if (!email.includes("@")) continue;
-    byEmail.set(email, {
-      email,
-      fullName: displayName({
-        firstName: r.firstName,
-        lastName: r.lastName,
-        email,
-      }),
-      company: r.companyName?.trim() || "",
-      phone: r.whatsapp?.trim() || "",
-      fromRespondent: true,
-      fromProspect: false,
-    });
-  }
-
+  const rows: FormalInviteRecipient[] = [];
   for (const p of ouiProspects) {
     if (isSoftDeleted(p)) continue;
     const email = normalizeEmail(p.email);
     if (!email.includes("@")) continue;
-    const existing = byEmail.get(email);
-    if (existing) {
-      existing.fromProspect = true;
-      if (!existing.fullName || existing.fullName === email) {
-        existing.fullName = p.fullName?.trim() || existing.fullName;
-      }
-      if (!existing.company) existing.company = p.company?.trim() || "";
-      if (!existing.phone) existing.phone = p.phone?.trim() || "";
-    } else {
-      byEmail.set(email, {
-        email,
-        fullName: p.fullName?.trim() || email,
-        company: p.company?.trim() || "",
-        phone: p.phone?.trim() || "",
-        fromRespondent: false,
-        fromProspect: true,
-      });
-    }
+    const form = respondentsByEmail.get(email);
+    const part = partsByEmail.get(email);
+    const fromRespondent = Boolean(form && form.interestResponse === "yes");
+    rows.push({
+      email,
+      fullName:
+        p.fullName?.trim() ||
+        (form
+          ? displayName({
+              firstName: form.firstName,
+              lastName: form.lastName,
+              email,
+            })
+          : email),
+      company: p.company?.trim() || form?.companyName?.trim() || "",
+      phone: p.phone?.trim() || form?.whatsapp?.trim() || "",
+      source: fromRespondent ? "both" : "prospect",
+      participationId: part?.id ?? null,
+      participationStatus: part ? normalizeParticipationStatus(part.status) : null,
+      calendarInviteSentAt: part?.calendarInviteSentAt ?? null,
+      confirmationEmailSentAt: part?.confirmationEmailSentAt ?? null,
+    });
   }
 
-  const rows: FormalInviteRecipient[] = [...byEmail.values()]
-    .map((row) => {
-      const part = partsByEmail.get(row.email);
-      const source: FormalInviteRecipient["source"] =
-        row.fromRespondent && row.fromProspect
-          ? "both"
-          : row.fromRespondent
-            ? "respondent"
-            : "prospect";
-      return {
-        email: row.email,
-        fullName: row.fullName,
-        company: row.company,
-        phone: row.phone,
-        source,
-        participationId: part?.id ?? null,
-        participationStatus: part
-          ? normalizeParticipationStatus(part.status)
-          : null,
-        calendarInviteSentAt: part?.calendarInviteSentAt ?? null,
-        confirmationEmailSentAt: part?.confirmationEmailSentAt ?? null,
-      };
-    })
-    .sort((a, b) => a.fullName.localeCompare(b.fullName, "fr"));
-
+  rows.sort((a, b) => a.fullName.localeCompare(b.fullName, "fr"));
   return rows;
 }

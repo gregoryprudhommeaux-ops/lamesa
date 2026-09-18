@@ -181,9 +181,8 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-ns-secondary">
-        Pipeline : shortlist → STD → sans réponse (relances) → OUI ou NON. Les OUI ne
-        reçoivent plus le STD ; l’invitation officielle (règlement ticket) partira ensuite
-        depuis la liste OUI. Sync met à jour OUI / NON / sans réponse depuis le formulaire.
+        Cette inbox = réponses formulaire. Le dashboard et l’invitation formelle lisent la
+        playlist CRM OUI (après Sync / ajouts manuels). Sync met à jour OUI / NON / sans réponse.
       </p>
 
       {loading ? <p className="mt-3 text-sm text-ns-secondary">Chargement…</p> : null}

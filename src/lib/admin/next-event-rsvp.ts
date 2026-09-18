@@ -161,7 +161,11 @@ function listKeyMatch(lists: string[] | undefined, target: string): boolean {
 
 /**
  * Shared interest-mode email buckets (dashboard + playlist SANS RÉPONSE).
- * Single source of truth for « contactés / OUI / NON / sans réponse ».
+ * Source of truth = CRM Prospects for this STD event:
+ * - OUI = playlist `STD {slug} — OUI` (sync formulaire + ajouts manuels)
+ * - NON = playlist `STD {slug} — NON/AUTRE` ou statut CRM no_*
+ * Formulaire seul ne compte plus (il doit être syncé vers le CRM).
+ * Statut `won` hors playlist OUI ne compte pas comme OUI (évite shortlist « won » fantôme).
  */
 export function computeInterestRsvpEmailSets(input: {
   eventSlug: string;
@@ -190,84 +194,71 @@ export function computeInterestRsvpEmailSets(input: {
       .filter((e) => e.includes("@")),
   );
 
-  for (const r of input.respondents.filter((row) => row.eventId === input.eventId)) {
-    const email = normalizeEmail(r.email);
-    if (!email.includes("@")) continue;
-    if (softDeletedEmails.has(email)) continue;
-    contactedEmails.add(email);
-    if (r.interestResponse === "yes") {
-      yesEmails.add(email);
-      yesGuestsByEmail.set(email, {
-        id: r.id,
-        fullName: respondentName(r),
-        email: r.email ?? "",
-        company: r.companyName?.trim() || "",
-      });
-    } else if (r.interestResponse === "no") {
-      noEmails.add(email);
-    } else if (r.interestResponse === "other") {
-      otherEmails.add(email);
-    }
-  }
-
   for (const p of relatedProspects) {
     const email = normalizeEmail(p.email);
     if (!email.includes("@")) continue;
-    // Soft-deleted twin (same email) wins — drop from OUI/NON/contactés.
     if (softDeletedEmails.has(email)) continue;
 
     const onOui = listKeyMatch(p.lists, listNames.yes);
     const onNon = listKeyMatch(p.lists, listNames.noOther);
 
-    if (onOui || PROSPECT_YES_STATUSES.has(p.status)) {
+    if (onOui) {
       yesEmails.add(email);
-      if (!yesGuestsByEmail.has(email)) {
-        yesGuestsByEmail.set(email, {
-          id: p.id,
-          fullName: p.fullName?.trim() || email,
-          email: p.email,
-          company: p.company?.trim() || "",
-        });
-      }
+      yesGuestsByEmail.set(email, {
+        id: p.id,
+        fullName: p.fullName?.trim() || email,
+        email: p.email,
+        company: p.company?.trim() || "",
+      });
     }
 
     if (onNon || PROSPECT_NO_STATUSES.has(p.status)) {
       noEmails.add(email);
     }
 
-    if (wasProspectApproachedForEvent(p, input.eventSlug)) {
+    if (wasProspectApproachedForEvent(p, input.eventSlug) || onOui || onNon) {
       contactedEmails.add(email);
     }
   }
 
+  // CRM NON statuses always win over OUI list / formulaire.
   for (const p of relatedProspects) {
     const email = normalizeEmail(p.email);
     if (!email.includes("@")) continue;
     if (softDeletedEmails.has(email)) continue;
-    if (PROSPECT_NO_STATUSES.has(p.status)) {
-      yesEmails.delete(email);
-      otherEmails.delete(email);
-      noEmails.add(email);
-      yesGuestsByEmail.delete(email);
-      contactedEmails.add(email);
-    } else if (PROSPECT_YES_STATUSES.has(p.status)) {
+    if (!PROSPECT_NO_STATUSES.has(p.status)) continue;
+    yesEmails.delete(email);
+    otherEmails.delete(email);
+    noEmails.add(email);
+    yesGuestsByEmail.delete(email);
+    contactedEmails.add(email);
+  }
+
+  // Formulaire : enrichit les noms OUI + distingue AUTRE vs NON si déjà sur playlist NON.
+  // Ne crée pas d’OUI/NON hors CRM.
+  for (const r of input.respondents.filter((row) => row.eventId === input.eventId)) {
+    const email = normalizeEmail(r.email);
+    if (!email.includes("@")) continue;
+    if (softDeletedEmails.has(email)) continue;
+    contactedEmails.add(email);
+
+    if (yesEmails.has(email) && r.interestResponse === "yes") {
+      yesGuestsByEmail.set(email, {
+        id: yesGuestsByEmail.get(email)?.id ?? r.id,
+        fullName: respondentName(r),
+        email: r.email ?? "",
+        company: r.companyName?.trim() || yesGuestsByEmail.get(email)?.company || "",
+      });
+    }
+
+    if (noEmails.has(email) && r.interestResponse === "other") {
       noEmails.delete(email);
-      otherEmails.delete(email);
-      yesEmails.add(email);
-      contactedEmails.add(email);
-      if (!yesGuestsByEmail.has(email)) {
-        yesGuestsByEmail.set(email, {
-          id: p.id,
-          fullName: p.fullName?.trim() || email,
-          email: p.email,
-          company: p.company?.trim() || "",
-        });
-      }
+      otherEmails.add(email);
     }
   }
 
   for (const email of input.contactedParticipationEmails ?? []) {
-    if (email.includes("@")) contactedEmails.add(email);
+    if (email.includes("@") && !softDeletedEmails.has(email)) contactedEmails.add(email);
   }
 
   for (const email of noEmails) {
@@ -302,7 +293,7 @@ export function computeInterestRsvpEmailSets(input: {
 
 /**
  * RSVP / interest snapshot for the next dinner to finalize.
- * Interest mode merges event_respondents + Prospects CRM (listes STD / statuts NON).
+ * Interest mode: CRM Prospects (listes STD OUI / NON + statuts no_*) — le formulaire alimente le CRM via sync.
  * Classic RSVP uses participation statuses.
  */
 export function buildNextEventRsvpSummary(input: {

@@ -78,14 +78,15 @@ describe("pickNextUpcomingEvent", () => {
 });
 
 describe("buildNextEventRsvpSummary", () => {
-  it("counts interest STD contacted / yes / no / pending and lists yes guests", () => {
+  it("counts interest STD contacted / yes / no / pending from CRM lists", () => {
     const eventId = "ev1";
+    const slug = "dirigeants-fr-2026-09-24";
     const summary = buildNextEventRsvpSummary({
       nowMs: NOW,
       events: [
         event({
           id: eventId,
-          slug: "dirigeants-fr-2026-09-24",
+          slug,
           title: "Dirigeants FR",
           startsAt: "2026-09-25T02:00:00.000Z",
           responseMode: "interest",
@@ -140,6 +141,30 @@ describe("buildNextEventRsvpSummary", () => {
           interestResponse: "no",
         }),
       ],
+      prospects: [
+        {
+          id: "crm-yes",
+          email: "yes@example.com",
+          fullName: "Marie Dupont",
+          company: "Acme",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "crm-no",
+          email: "no@example.com",
+          fullName: "No Person",
+          company: "",
+          status: "no_not_available",
+          lists: [`STD ${slug} — NON/AUTRE`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+      ],
     });
 
     expect(summary).toMatchObject({
@@ -152,12 +177,58 @@ describe("buildNextEventRsvpSummary", () => {
     });
     expect(summary?.yesGuests).toEqual([
       {
-        id: "r1",
+        id: "crm-yes",
         fullName: "Marie Dupont",
         email: "yes@example.com",
         company: "Acme",
       },
     ]);
+  });
+
+  it("does not count CRM won on shortlist as OUI without OUI playlist", () => {
+    const eventId = "ev-sophie";
+    const slug = "dirigeants-fr-2026-09-24";
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [],
+      respondents: [],
+      prospects: [
+        {
+          id: "sophie",
+          email: "sophie@tequilacalle23.com",
+          fullName: "Sophie Decobecq",
+          company: "Calle 23 Tequila",
+          status: "won",
+          lists: [`STD ${slug} — SHORTLIST FR`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "real-oui",
+          email: "oui@example.com",
+          fullName: "Real Oui",
+          company: "",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [`custom_${slug.replace(/-/g, "_")}`],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(summary?.yes).toBe(1);
+    expect(summary?.yesGuests.map((g) => g.email)).toEqual(["oui@example.com"]);
   });
 
   it("uses classic RSVP statuses when responseMode is rsvp", () => {
