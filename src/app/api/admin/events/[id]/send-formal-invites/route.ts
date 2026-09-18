@@ -5,7 +5,12 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendCalendarInviteEmail } from "@/lib/email/send-calendar-invite";
-import { isOrganizerParticipation } from "@/lib/events/capacity";
+import {
+  countSeatedParticipations,
+  DEFAULT_GUEST_CAPACITY,
+  isOrganizerParticipation,
+  nextInviteStatus,
+} from "@/lib/events/capacity";
 import { listFormalInviteRecipients } from "@/lib/events/formal-invite-recipients";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
@@ -18,7 +23,7 @@ type Params = { params: Promise<{ id: string }> };
 
 const sendSchema = z.object({
   /** Limit send to these emails (normalized). Empty / omitted = all OUI not yet invited. */
-  emails: z.array(z.string().email()).max(200).optional(),
+  emails: z.array(z.string().email()).max(500).optional(),
   /** If true, also re-send to people who already got calendarInviteSentAt. */
   resend: z.boolean().optional(),
   dryRun: z.boolean().optional(),
@@ -119,10 +124,27 @@ export async function POST(request: Request, { params }: Params) {
 
   await ensureOrganizerParticipation(db, eventId);
 
+  const capacity =
+    typeof event.capacity === "number" && event.capacity > 0
+      ? event.capacity
+      : DEFAULT_GUEST_CAPACITY;
+
+  const existingPartsSnap = await db
+    .collection(COLLECTIONS.participations)
+    .where("eventId", "==", eventId)
+    .limit(500)
+    .get();
+  const existingParts = existingPartsSnap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Omit<AdminEventParticipation, "id">),
+  }));
+  let seated = countSeatedParticipations(existingParts);
+
   const now = new Date().toISOString();
   let sent = 0;
   let failed = 0;
   let skipped = 0;
+  let waitlisted = 0;
   const errors: string[] = [];
 
   for (const target of targets) {
@@ -156,6 +178,10 @@ export async function POST(request: Request, { params }: Params) {
           : "fr",
       });
 
+      const status = nextInviteStatus(capacity, seated);
+      if (status === "invited") seated += 1;
+      else waitlisted += 1;
+
       const ref = await db.collection(COLLECTIONS.participations).add({
         eventId,
         email: target.email,
@@ -163,7 +189,7 @@ export async function POST(request: Request, { params }: Params) {
         companyName: target.company || ensured?.company || "",
         phone: target.phone || ensured?.phone || "",
         ...(ensured?.id ? { contactId: ensured.id } : {}),
-        status: "invited",
+        status,
         statusSource: "admin",
         createdAt: now,
         updatedAt: now,
@@ -177,19 +203,23 @@ export async function POST(request: Request, { params }: Params) {
         companyName: target.company || ensured?.company || "",
         phone: target.phone || ensured?.phone || "",
         ...(ensured?.id ? { contactId: ensured.id } : {}),
-        status: "invited",
+        status,
         statusSource: "admin",
         createdAt: now,
         updatedAt: now,
       };
     } else {
       const status = normalizeParticipationStatus(participation.status);
-      if (status === "waitlist") {
+      // Keep existing seated statuses; only lift waitlist → invited if a seat is free.
+      if (status === "waitlist" && seated < capacity) {
         await db.collection(COLLECTIONS.participations).doc(participation.id).set(
           { status: "invited", updatedAt: now },
           { merge: true },
         );
         participation = { ...participation, status: "invited" };
+        seated += 1;
+      } else if (status === "waitlist") {
+        waitlisted += 1;
       }
     }
 
@@ -232,6 +262,8 @@ export async function POST(request: Request, { params }: Params) {
     sent,
     failed,
     skipped,
+    waitlisted,
+    capacity,
     targeted: targets.length,
     errors: errors.slice(0, 20),
   });

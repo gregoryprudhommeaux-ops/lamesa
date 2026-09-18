@@ -3,6 +3,7 @@ import {
   cancellationPolicyBlock,
   formatPaymentDeadlineDate,
   paymentDeadlineBlock,
+  seatScarcityBlock,
 } from "@/lib/events/payment-details";
 import { defaultLocaleContent } from "@/lib/email/template-defaults";
 
@@ -47,6 +48,15 @@ describe("P0 email defaults", () => {
     for (const locale of ["es", "fr", "en"] as const) {
       const { body } = defaultLocaleContent("calendar_invite", locale);
       expect(body).toContain("{{paymentDeadlineBlock}}");
+      expect(body).toContain("{{seatScarcityBlock}}");
+    }
+  });
+
+  it("states first-come payment scarcity copy", () => {
+    for (const locale of ["es", "fr", "en"] as const) {
+      const block = seatScarcityBlock(locale);
+      expect(block.length).toBeGreaterThan(40);
+      expect(block.toLowerCase()).toMatch(/lista de espera|liste d’attente|waitlist/);
     }
   });
 

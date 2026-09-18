@@ -65,6 +65,28 @@ export function paymentDeadlineBlock(
 }
 
 /**
+ * Limited seats + first-come via payment (over-invite / waitlist possible).
+ */
+export function seatScarcityBlock(locale: "es" | "fr" | "en"): string {
+  if (locale === "fr") {
+    return [
+      "Places limitées — premier arrivé, premier servi (selon le règlement) :",
+      "Le nombre de places à table est limité. Plusieurs personnes reçoivent cette invitation : ta place est confirmée dès réception du règlement ACCESS. Si la table est déjà complète au moment de ton paiement, tu seras placé(e) en liste d’attente et contacté(e) dès qu’une place se libère.",
+    ].join("\n");
+  }
+  if (locale === "en") {
+    return [
+      "Limited seats — first come, first served (by payment):",
+      "Seats at the table are limited. Several people receive this invitation: your seat is confirmed once we receive the ACCESS payment. If the table is already full when you pay, you will be waitlisted and contacted as soon as a seat opens.",
+    ].join("\n");
+  }
+  return [
+    "Lugares limitados — primero en pagar, primero en confirmar:",
+    "Hay pocos lugares en la mesa. Varias personas reciben esta invitación: tu lugar se confirma al recibir el pago ACCESS. Si la mesa ya está completa cuando pagues, pasarás a lista de espera y te avisaremos en cuanto se libere un lugar.",
+  ].join("\n");
+}
+
+/**
  * Cancellation / no-show rule — same wording as FAQ (about.faq.absence).
  * Credit = one future eligible dinner, not open-ended cash.
  */

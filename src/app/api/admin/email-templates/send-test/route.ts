@@ -48,6 +48,10 @@ function sampleVars(locale: TemplateLocale): TemplateVars {
       locale === "fr"
         ? "Important — règlement ACCESS :\nTa place ne sera validée que si le ticket ACCESS est réglé au plus tard le 20 septembre 2026."
         : "Important — ACCESS payment:\nYour spot will only be confirmed once paid by September 20, 2026.",
+    seatScarcityBlock:
+      locale === "fr"
+        ? "Places limitées — premier arrivé, premier servi (selon le règlement)."
+        : "Limited seats — first come, first served (by payment).",
   };
 }
 

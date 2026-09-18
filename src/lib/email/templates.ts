@@ -14,6 +14,7 @@ import { formatEventWhereLine } from "@/lib/events/format-where";
 import {
   formatPaymentDeadlineDate,
   paymentDeadlineBlock,
+  seatScarcityBlock,
 } from "@/lib/events/payment-details";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { eventPublicUrl, fmtDateTime } from "@/lib/events/utils";
@@ -89,6 +90,8 @@ export type TemplateVars = {
   paymentDeadline?: string;
   /** Full ACCESS payment deadline paragraph for invites */
   paymentDeadlineBlock?: string;
+  /** Limited seats / first-come via payment paragraph */
+  seatScarcityBlock?: string;
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
@@ -126,7 +129,8 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{accessIncludes}}", vars.accessIncludes ?? "")
     .replaceAll("{{format}}", vars.format ?? "")
     .replaceAll("{{paymentDeadline}}", vars.paymentDeadline ?? "")
-    .replaceAll("{{paymentDeadlineBlock}}", vars.paymentDeadlineBlock ?? "");
+    .replaceAll("{{paymentDeadlineBlock}}", vars.paymentDeadlineBlock ?? "")
+    .replaceAll("{{seatScarcityBlock}}", vars.seatScarcityBlock ?? "");
 }
 
 /** Language used when sending email / WhatsApp for an event. */
@@ -172,6 +176,7 @@ export function buildEventTemplateVars(input: {
       ? formatPaymentDeadlineDate(input.event.paymentDeadlineAt, lang)
       : "",
     paymentDeadlineBlock: paymentDeadlineBlock(lang, input.event.paymentDeadlineAt),
+    seatScarcityBlock: seatScarcityBlock(lang),
   };
 }
 

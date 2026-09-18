@@ -1,6 +1,10 @@
 "use client";
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import {
+  DEFAULT_GUEST_CAPACITY,
+  totalCoversWithAdmin,
+} from "@/lib/events/capacity";
 import type { AdminEvent } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -30,6 +34,12 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const guestCapacity =
+    typeof event.capacity === "number" && event.capacity > 0
+      ? event.capacity
+      : DEFAULT_GUEST_CAPACITY;
+  const tableCovers = totalCoversWithAdmin(guestCapacity);
 
   const loadOui = useCallback(async () => {
     setOuiLoading(true);
@@ -65,6 +75,9 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
     return { ouiCount, ouiPending, ouiSent };
   }, [ouiRecipients]);
 
+  const overCapacity =
+    selectedEmails.size > guestCapacity || stats.ouiCount > guestCapacity;
+
   function toggleEmail(email: string) {
     setSelectedEmails((prev) => {
       const next = new Set(prev);
@@ -80,9 +93,13 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
       setError("Sélectionne au moins un OUI.");
       return;
     }
+    const overNote =
+      emails.length > guestCapacity
+        ? `\n\nTu invites ${emails.length} personnes pour ${guestCapacity} places invités (${tableCovers} couverts dont Gregory). Sur-invite OK : le règlement confirme la place (first come) ; le surplus pourra passer en liste d’attente.`
+        : "";
     if (
       !window.confirm(
-        `Envoyer l’invitation formelle (détails + paiement) à ${emails.length} personne(s) ?`,
+        `Envoyer l’invitation formelle (détails + paiement) à ${emails.length} personne(s) ?${overNote}`,
       )
     ) {
       return;
@@ -100,6 +117,7 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
         sent?: number;
         failed?: number;
         skipped?: number;
+        waitlisted?: number;
         error?: string;
         detail?: string;
       };
@@ -107,7 +125,9 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
         throw new Error(json.detail || json.error || "send_failed");
       }
       setMessage(
-        `Invitation formelle envoyée : ${json.sent ?? 0} · ignorés ${json.skipped ?? 0}` +
+        `Invitation formelle envoyée : ${json.sent ?? 0}` +
+          (json.waitlisted ? ` · dont ${json.waitlisted} en liste d’attente (places dépassées)` : "") +
+          ` · ignorés ${json.skipped ?? 0}` +
           (json.failed ? ` · échecs ${json.failed}` : ""),
       );
       await loadOui();
@@ -128,6 +148,17 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
             {stats.ouiCount} intéressé(s) · {stats.ouiPending} à envoyer · {stats.ouiSent} déjà
             envoyés · {selectedEmails.size} sélectionné(s)
           </p>
+          <p className="mt-1 text-[11px] leading-snug text-ns-secondary">
+            Table : <strong>{guestCapacity}</strong> places invités ({tableCovers} couverts). Pas de
+            plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS valide la place
+            (first come) ; au-delà des places, liste d’attente.
+          </p>
+          {overCapacity ? (
+            <p className="mt-1 text-[11px] font-semibold text-amber-900">
+              Sur-invite : {selectedEmails.size || stats.ouiCount} destinataires pour {guestCapacity}{" "}
+              places — c’est volontaire.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           <button
@@ -148,7 +179,7 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
               )
             }
           >
-            Sélectionner à envoyer
+            Tout sélectionner
           </button>
           <button
             type="button"
