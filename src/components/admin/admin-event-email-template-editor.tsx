@@ -125,6 +125,7 @@ export function EventEmailTemplateEditor({
           body,
           locale: editLocale,
           eventId: event.id,
+          templateKey,
         }),
       });
       const json = (await res.json()) as {

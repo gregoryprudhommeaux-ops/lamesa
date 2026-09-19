@@ -1,4 +1,4 @@
-import { buildCalendarInviteIcs } from "@/lib/email/ics";
+import { buildCalendarInviteIcs, buildGoogleCalendarUrl } from "@/lib/email/ics";
 import { signRsvpToken } from "@/lib/email/rsvp-token";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
@@ -9,6 +9,7 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import {
+  escapeEmailHtml,
   laMesaEmailFooterText,
   wrapLaMesaEmailHtml,
   wrapLaMesaPlainBody,
@@ -18,12 +19,20 @@ import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
 function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+  return escapeEmailHtml(value);
 }
+
+const CALENDAR_CTA: Record<TemplateLocale, string> = {
+  fr: "Ajouter à Google Calendar",
+  es: "Añadir a Google Calendar",
+  en: "Add to Google Calendar",
+};
+
+const ICS_DOWNLOAD_CTA: Record<TemplateLocale, string> = {
+  fr: "Télécharger .ics (rappels J-7 · H-36 · H-1h30)",
+  es: "Descargar .ics (recordatorios J-7 · H-36 · H-1h30)",
+  en: "Download .ics (reminders D-7 · H-36 · H-1.5)",
+};
 
 /** Turn RSVP / event URLs in the template body into short clickable labels in HTML. */
 export function inviteBodyToHtml(
@@ -80,6 +89,7 @@ export async function sendCalendarInviteEmail(input: {
   const encoded = encodeURIComponent(token);
   const yesUrl = `${base}/api/rsvp/${encoded}?response=yes&locale=${locale}`;
   const noUrl = `${base}/api/rsvp/${encoded}?response=no&locale=${locale}`;
+  const icsDownloadUrl = `${base}/api/invite-ics/${encoded}`;
 
   const template = await getEmailTemplate("calendar_invite", input.event, locale);
   const vars = buildEventTemplateVars({
@@ -110,24 +120,48 @@ export async function sendCalendarInviteEmail(input: {
     url: vars.eventUrl,
   });
 
+  const googleCalUrl = buildGoogleCalendarUrl({
+    title: `LA MESA — ${input.event.title}`,
+    description: bodyText.slice(0, 1500),
+    location,
+    startsAt: input.event.startsAt,
+    endsAt: input.event.endsAt,
+  });
+
+  const btnPrimary =
+    "display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin:0 8px 10px 0;";
+  const btnSecondary =
+    "display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin:0 8px 10px 0;";
+  const btnOutline =
+    "display:inline-block;background:#ffffff;color:#111;text-decoration:none;font-weight:700;font-size:13px;padding:10px 16px;border-radius:999px;border:1px solid #cccccc;margin:0 8px 10px 0;";
+
   const html = wrapLaMesaEmailHtml({
     lang: locale,
     bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
     footerHtml: `
-          <a href="${escapeHtml(yesUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin-right:10px;">YES</a>
-          <a href="${escapeHtml(noUrl)}" style="display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;">NO</a>
+          <a href="${escapeHtml(yesUrl)}" style="${btnPrimary}">YES</a>
+          <a href="${escapeHtml(noUrl)}" style="${btnSecondary}">NO</a>
+          <div style="margin-top:14px;">
+            <a href="${escapeHtml(googleCalUrl)}" style="${btnOutline}">${escapeHtml(CALENDAR_CTA[locale])}</a>
+            <a href="${escapeHtml(icsDownloadUrl)}" style="${btnOutline}">${escapeHtml(ICS_DOWNLOAD_CTA[locale])}</a>
+          </div>
         `,
   });
+
+  const icsBase64 = Buffer.from(ics, "utf8").toString("base64");
+  if (!icsBase64 || ics.length < 80) {
+    return { ok: false, error: "ics_build_failed" };
+  }
 
   return sendTransactionalEmail({
     to: input.participation.email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
+    text: `${bodyText}\n\n${CALENDAR_CTA[locale]}: ${googleCalUrl}\n${ICS_DOWNLOAD_CTA[locale]}: ${icsDownloadUrl}\n\n${laMesaEmailFooterText(locale)}`,
     attachments: [
       {
-        name: "invite.ics",
-        content: Buffer.from(ics, "utf8").toString("base64"),
+        name: "la-mesa-invite.ics",
+        content: icsBase64,
       },
     ],
   });

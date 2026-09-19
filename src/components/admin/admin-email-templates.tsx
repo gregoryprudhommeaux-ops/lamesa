@@ -288,6 +288,7 @@ export function AdminEmailTemplatesPanel() {
           body,
           locale: editLocale,
           eventId: eventId || null,
+          templateKey: activeKey,
         }),
       });
       const json = (await res.json()) as {

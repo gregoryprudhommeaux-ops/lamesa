@@ -3,6 +3,8 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
+import { buildAddToCalendarIcs, buildCalendarInviteIcs } from "@/lib/email/ics";
+import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
   buildEventTemplateVars,
@@ -10,10 +12,10 @@ import {
   type TemplateVars,
 } from "@/lib/email/templates";
 import { wrapLaMesaPlainBody, laMesaEmailFooterText } from "@/lib/email/la-mesa-email-shell";
-import { sendTransactionalEmail } from "@/lib/email/send-transactional";
+import { formatEventWhereLine } from "@/lib/events/format-where";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { getSiteUrl } from "@/lib/site-url";
-import type { AdminEvent, TemplateLocale } from "@/lib/types/events";
+import type { AdminEvent, EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
 import { z } from "zod";
 
 const schema = z.object({
@@ -21,6 +23,8 @@ const schema = z.object({
   body: z.string().trim().min(1).max(50_000),
   locale: z.enum(["fr", "es", "en"]).optional(),
   eventId: z.string().trim().min(1).max(80).optional().nullable(),
+  /** When calendar_invite / save_the_date, attach a real .ics for the test. */
+  templateKey: z.string().trim().min(1).max(80).optional().nullable(),
   /** Optional override; defaults to the logged-in admin email. */
   to: z.string().email().optional(),
 });
@@ -55,6 +59,61 @@ function sampleVars(locale: TemplateLocale): TemplateVars {
   };
 }
 
+function buildTestIcsAttachment(input: {
+  templateKey: string | null | undefined;
+  event: AdminEvent | null;
+  to: string;
+  bodyText: string;
+}): { name: string; content: string } | null {
+  const key = (input.templateKey ?? "").trim() as EmailTemplateKey | "";
+  if (key !== "calendar_invite" && key !== "save_the_date") return null;
+
+  const from = brevoFromAddress();
+  const startsAt =
+    input.event?.startsAt && !Number.isNaN(Date.parse(input.event.startsAt))
+      ? input.event.startsAt
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const endsAt = input.event?.endsAt;
+  const title = input.event?.title
+    ? `LA MESA — ${input.event.title}`
+    : "LA MESA — aperçu test";
+  const location = input.event
+    ? formatEventWhereLine(input.event.venueName, input.event.address)
+    : "À préciser";
+  const uid = `test-${key}-${input.event?.id ?? "demo"}-${Date.now()}@lamesa`;
+
+  const ics =
+    key === "calendar_invite"
+      ? buildCalendarInviteIcs({
+          uid,
+          title,
+          description: input.bodyText.slice(0, 1500),
+          location,
+          startsAt,
+          endsAt,
+          organizerEmail: from.email,
+          organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
+          attendeeEmail: input.to,
+          attendeeName: "Test LA MESA",
+          url: input.event ? `${getSiteUrl()}/e/${input.event.slug ?? input.event.id}` : undefined,
+        })
+      : buildAddToCalendarIcs({
+          uid,
+          title,
+          description: input.bodyText.slice(0, 1500),
+          location,
+          startsAt,
+          endsAt,
+          organizerEmail: from.email,
+          organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
+        });
+
+  return {
+    name: key === "calendar_invite" ? "la-mesa-invite.ics" : "la-mesa-save-the-date.ics",
+    content: Buffer.from(ics, "utf8").toString("base64"),
+  };
+}
+
 export async function POST(request: Request) {
   const admin = await requirePlatformAdmin(request);
   if (isNextResponse(admin)) return admin;
@@ -78,12 +137,13 @@ export async function POST(request: Request) {
   }
 
   let vars = sampleVars(locale);
+  let event: AdminEvent | null = null;
   if (parsed.data.eventId && isFirebaseAdminConfigured()) {
     try {
       const db = getAdminFirestore();
       const snap = await db.collection(COLLECTIONS.events).doc(parsed.data.eventId).get();
       if (snap.exists) {
-        const event = { id: snap.id, ...(snap.data() as Omit<AdminEvent, "id">) } as AdminEvent;
+        event = { id: snap.id, ...(snap.data() as Omit<AdminEvent, "id">) } as AdminEvent;
         const base = getSiteUrl();
         vars = {
           ...buildEventTemplateVars({
@@ -106,6 +166,12 @@ export async function POST(request: Request) {
   const subject = `[TEST] ${applyTemplateVars(parsed.data.subject, vars)}`;
   const bodyText = applyTemplateVars(parsed.data.body, vars);
   const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
+  const attachment = buildTestIcsAttachment({
+    templateKey: parsed.data.templateKey,
+    event,
+    to,
+    bodyText,
+  });
 
   const result = await sendTransactionalEmail({
     to,
@@ -113,11 +179,17 @@ export async function POST(request: Request) {
     html,
     text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
     bccAdmins: false,
+    ...(attachment ? { attachments: [attachment] } : {}),
   });
 
   if (!result.ok) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 502 });
   }
 
-  return NextResponse.json({ ok: true, to, subject });
+  return NextResponse.json({
+    ok: true,
+    to,
+    subject,
+    attachedIcs: Boolean(attachment),
+  });
 }
