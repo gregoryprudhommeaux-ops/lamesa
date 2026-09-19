@@ -53,4 +53,31 @@ describe("event-pricing-copy", () => {
       }),
     ).toBe(true);
   });
+
+  it("falls back to all-in range when menu text and menu estimate are empty", () => {
+    const block = formatNegotiatedMenuBlock(
+      {
+        menuIncluded: "",
+        menuPriceMinMxn: null,
+        menuPriceMaxMxn: null,
+        menuIncludesDrinks: null,
+        allInPriceMinMxn: 800,
+        allInPriceMaxMxn: 1000,
+      },
+      "fr",
+    );
+    expect(block).toContain("Fourchette (accès + menu)");
+    expect(block).toMatch(/800/);
+    expect(block).toMatch(/1[\s\u00a0\u202f]?000/);
+    expect(
+      hasNegotiatedMenuInfo({
+        menuIncluded: "",
+        menuPriceMinMxn: null,
+        menuPriceMaxMxn: null,
+        menuIncludesDrinks: null,
+        allInPriceMinMxn: 800,
+        allInPriceMaxMxn: 1000,
+      }),
+    ).toBe(true);
+  });
 });

@@ -23,9 +23,17 @@ type EventPhaseSectionProps = {
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
+  /** Optional actions row (e.g. “Enregistrer cette étape”) at the bottom of the open panel. */
+  footer?: ReactNode;
 };
 
-export function EventPhaseSection({ phase, open, onToggle, children }: EventPhaseSectionProps) {
+export function EventPhaseSection({
+  phase,
+  open,
+  onToggle,
+  children,
+  footer,
+}: EventPhaseSectionProps) {
   const panelId = useId();
   return (
     <section
@@ -58,6 +66,7 @@ export function EventPhaseSection({ phase, open, onToggle, children }: EventPhas
       {open ? (
         <div id={panelId} className="space-y-4 border-t border-gray-100 px-5 py-4">
           {children}
+          {footer ? <div className="border-t border-gray-100 pt-4">{footer}</div> : null}
         </div>
       ) : null}
     </section>

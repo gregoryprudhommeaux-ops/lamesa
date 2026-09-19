@@ -8,6 +8,7 @@ import type {
 import { labelEventFormat } from "@/lib/constants/event-formats";
 import {
   formatAccessIncludes,
+  formatMenuPriceEstimate,
   formatNegotiatedMenuBlock,
 } from "@/lib/events/event-pricing-copy";
 import { formatEventWhereLine } from "@/lib/events/format-where";
@@ -154,6 +155,24 @@ export function buildEventTemplateVars(input: {
   const pricing = hasPrice ? computeEventIva(priceRaw) : null;
   const pending =
     lang === "fr" ? "À confirmer" : lang === "en" ? "To be confirmed" : "Por confirmar";
+
+  // Interest / all-in editions often store a range instead of a single ticket price.
+  const allInRange = !pricing
+    ? formatMenuPriceEstimate(
+        {
+          menuPriceMinMxn: input.event.allInPriceMinMxn,
+          menuPriceMaxMxn: input.event.allInPriceMaxMxn,
+        },
+        lang,
+      )
+    : null;
+  const allInNote =
+    lang === "fr"
+      ? "Fourchette hors IVA (accès + menu)"
+      : lang === "en"
+        ? "Range before tax (access + menu)"
+        : "Rango sin IVA (acceso + menú)";
+
   return {
     fullName: input.fullName,
     email: input.email,
@@ -166,9 +185,25 @@ export function buildEventTemplateVars(input: {
     yesUrl: input.yesUrl,
     noUrl: input.noUrl,
     surveyUrl: input.surveyUrl,
-    priceBeforeTax: pricing ? formatMxn(pricing.priceBeforeTax, lang) : pending,
-    ivaAmount: pricing ? formatMxn(pricing.iva, lang) : pending,
-    totalWithIva: pricing ? formatMxn(pricing.totalWithIva, lang) : pending,
+    priceBeforeTax: pricing
+      ? formatMxn(pricing.priceBeforeTax, lang)
+      : allInRange
+        ? `${allInRange} (${allInNote})`
+        : pending,
+    ivaAmount: pricing
+      ? formatMxn(pricing.iva, lang)
+      : allInRange
+        ? lang === "fr"
+          ? "Selon montant final (16%)"
+          : lang === "en"
+            ? "Depends on final amount (16%)"
+            : "Según monto final (16%)"
+        : pending,
+    totalWithIva: pricing
+      ? formatMxn(pricing.totalWithIva, lang)
+      : allInRange
+        ? allInRange
+        : pending,
     accessIncludes: formatAccessIncludes(input.event, lang),
     menuIncluded: formatNegotiatedMenuBlock(input.event, lang),
     format: labelEventFormat(input.event.format, lang),

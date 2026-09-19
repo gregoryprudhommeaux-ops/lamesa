@@ -72,12 +72,17 @@ function drinksLine(
 
 /**
  * Compose {{menuIncluded}} for emails / public pages from structured menu fields.
- * Falls back to free-text menuIncluded only when no structure is present.
+ * Falls back to all-in price range, then a short “see event page” hint.
  */
 export function formatNegotiatedMenuBlock(
   event: Pick<
     AdminEvent,
-    "menuIncluded" | "menuPriceMinMxn" | "menuPriceMaxMxn" | "menuIncludesDrinks"
+    | "menuIncluded"
+    | "menuPriceMinMxn"
+    | "menuPriceMaxMxn"
+    | "menuIncludesDrinks"
+    | "allInPriceMinMxn"
+    | "allInPriceMaxMxn"
   >,
   lang: Lang,
 ): string {
@@ -89,11 +94,28 @@ export function formatNegotiatedMenuBlock(
   if (estimate) {
     const label =
       lang === "fr"
-        ? "Estimation / personne"
+        ? "Estimation menu / personne"
         : lang === "en"
-          ? "Estimate / person"
-          : "Estimación / persona";
+          ? "Menu estimate / person"
+          : "Estimación menú / persona";
     lines.push(`${label}: ${estimate}`);
+  } else {
+    const allIn = formatMenuPriceEstimate(
+      {
+        menuPriceMinMxn: event.allInPriceMinMxn,
+        menuPriceMaxMxn: event.allInPriceMaxMxn,
+      },
+      lang,
+    );
+    if (allIn) {
+      const label =
+        lang === "fr"
+          ? "Fourchette (accès + menu) / personne, hors IVA"
+          : lang === "en"
+            ? "Range (access + menu) / person, before tax"
+            : "Rango (acceso + menú) / persona, sin IVA";
+      lines.push(`${label}: ${allIn}`);
+    }
   }
 
   const drinks = drinksLine(event.menuIncludesDrinks, lang);
@@ -102,21 +124,28 @@ export function formatNegotiatedMenuBlock(
   if (lines.length > 0) return lines.join("\n");
 
   return lang === "fr"
-    ? "Voir la page de l’événement"
+    ? "Détails du menu à confirmer — voir aussi la page de l’événement"
     : lang === "en"
-      ? "See the event page"
-      : "Ver la página del evento";
+      ? "Menu details to confirm — see also the event page"
+      : "Detalles del menú por confirmar — ver también la página del evento";
 }
 
 export function hasNegotiatedMenuInfo(
   event: Pick<
     AdminEvent,
-    "menuIncluded" | "menuPriceMinMxn" | "menuPriceMaxMxn" | "menuIncludesDrinks"
+    | "menuIncluded"
+    | "menuPriceMinMxn"
+    | "menuPriceMaxMxn"
+    | "menuIncludesDrinks"
+    | "allInPriceMinMxn"
+    | "allInPriceMaxMxn"
   >,
 ): boolean {
   if (event.menuIncluded?.trim()) return true;
   if (optionalNumber(event.menuPriceMinMxn) != null) return true;
   if (optionalNumber(event.menuPriceMaxMxn) != null) return true;
+  if (optionalNumber(event.allInPriceMinMxn) != null) return true;
+  if (optionalNumber(event.allInPriceMaxMxn) != null) return true;
   if (event.menuIncludesDrinks === true || event.menuIncludesDrinks === false) return true;
   return false;
 }

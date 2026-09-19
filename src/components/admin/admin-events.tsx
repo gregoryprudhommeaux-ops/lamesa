@@ -116,6 +116,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveOk, setSaveOk] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [organizerName, setOrganizerName] = useState("LA MESA");
@@ -458,10 +459,16 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     };
   }
 
-  async function saveEvent() {
-    if (!title.trim() || !eventDate || !startTime) return;
+  async function saveEvent(phaseLabel?: string) {
+    if (!title.trim() || !eventDate || !startTime) {
+      setSaveOk(null);
+      setError("Titre, date et heure de début sont obligatoires (phase Save the Date).");
+      jumpToPhase("std");
+      return;
+    }
     setSaving(true);
     setError(null);
+    setSaveOk(null);
     try {
       const payload = eventPayload();
       if (activeId) {
@@ -508,11 +515,42 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         if (json.id) setActiveId(json.id);
       }
       await loadAll();
+      setSaveOk(
+        phaseLabel
+          ? `${phaseLabel} — enregistré.`
+          : "Événement enregistré.",
+      );
+      window.setTimeout(() => setSaveOk(null), 4000);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSaving(false);
     }
+  }
+
+  function phaseSaveFooter(phaseLabel: string, hint?: string) {
+    return (
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={() => void saveEvent(phaseLabel)}
+          disabled={saving}
+          className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+        >
+          <Save className="h-4 w-4" />
+          {saving ? "Enregistrement…" : "Enregistrer cette étape"}
+        </button>
+        {saveOk ? (
+          <span className="text-xs font-medium text-emerald-700" role="status">
+            {saveOk}
+          </span>
+        ) : (
+          <span className="text-xs text-ns-secondary">
+            {hint ?? "Les champs de cette phase sont enregistrés avec l’événement."}
+          </span>
+        )}
+      </div>
+    );
   }
 
   async function deleteEvent() {
@@ -795,6 +833,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-ns-hero">{labels.eventsTitle}</h2>
         {error && <p className={ERROR_TEXT}>{error}</p>}
+        {saveOk && !error ? (
+          <p className="text-sm font-medium text-emerald-700" role="status">
+            {saveOk}
+          </p>
+        ) : null}
 
         <div className="space-y-3">
           <div>
@@ -818,6 +861,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             phase={journeyPhases.find((p) => p.id === "std")!}
             open={openPhases.has("std")}
             onToggle={() => togglePhase("std")}
+            footer={phaseSaveFooter(
+              "Save the Date",
+              "Titre, date, intro, capacité…",
+            )}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -1048,6 +1095,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             phase={journeyPhases.find((p) => p.id === "definitive")!}
             open={openPhases.has("definitive")}
             onToggle={() => togglePhase("definitive")}
+            footer={phaseSaveFooter(
+              "Éléments définitifs",
+              "Lieu, tarif, menu, date butoir paiement…",
+            )}
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
@@ -1862,14 +1913,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             )}
           </EventPhaseSection>
 
-          <div className="sticky bottom-0 z-10 flex flex-wrap gap-2 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm backdrop-blur">
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm backdrop-blur">
             <button
               type="button"
               onClick={() => void saveEvent()}
               disabled={saving}
               className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
             >
-              <Save className="h-4 w-4" /> {labels.save}
+              <Save className="h-4 w-4" />{" "}
+              {saving ? "Enregistrement…" : labels.save}
             </button>
             {activeId && (
               <button
@@ -1880,6 +1932,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 <Trash2 className="h-4 w-4" /> {labels.delete}
               </button>
             )}
+            {saveOk ? (
+              <span className="text-xs font-medium text-emerald-700" role="status">
+                {saveOk}
+              </span>
+            ) : null}
           </div>
         </div>
 
