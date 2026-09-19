@@ -3,6 +3,7 @@ import {
   buildAddToCalendarIcs,
   buildCalendarInviteIcs,
   buildGoogleCalendarUrl,
+  eventCalendarInviteUid,
   plainTextFromRichMarkers,
   toIcsUtc,
 } from "@/lib/email/ics";
@@ -18,7 +19,7 @@ describe("ics", () => {
     expect(toIcsUtc("2026-07-20T19:00:00.000Z")).toBe("20260720T190000Z");
   });
 
-  it("builds METHOD:REQUEST calendar", () => {
+  it("builds METHOD:REQUEST calendar with a single private attendee", () => {
     const ics = buildCalendarInviteIcs({
       uid: "evt-part@lamesa",
       title: "LA MESA — Test",
@@ -33,10 +34,19 @@ describe("ics", () => {
     expect(ics).toContain("BEGIN:VEVENT");
     expect(ics).toContain("UID:evt-part@lamesa");
     expect(ics).toContain("ATTENDEE;");
+    expect(ics).toContain("CLASS:PRIVATE");
+    expect(ics).toContain("mailto:guest@example.com");
+    expect(ics).not.toContain("mailto:other@example.com");
+    expect(ics.match(/ATTENDEE;/g)?.length).toBe(1);
     expect(ics).toContain("BEGIN:VALARM");
     expect(ics).toContain("TRIGGER:-P7D");
     expect(ics).toContain("TRIGGER:-PT36H");
     expect(ics).toContain("TRIGGER:-PT90M");
+  });
+
+  it("uses one shared UID per event for all guests", () => {
+    expect(eventCalendarInviteUid("abc123")).toBe("abc123@event.lamesasecreta.com");
+    expect(eventCalendarInviteUid("abc123")).toBe(eventCalendarInviteUid("abc123"));
   });
 
   it("builds METHOD:PUBLISH hold for interest YES", () => {

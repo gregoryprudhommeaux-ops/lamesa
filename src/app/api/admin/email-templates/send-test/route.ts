@@ -3,7 +3,8 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
-import { buildAddToCalendarIcs, buildCalendarInviteIcs } from "@/lib/email/ics";
+import { buildAddToCalendarIcs, buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
+import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -80,7 +81,10 @@ function buildTestIcsAttachment(input: {
   const location = input.event
     ? formatEventWhereLine(input.event.venueName, input.event.address)
     : "À préciser";
-  const uid = `test-${key}-${input.event?.id ?? "demo"}-${Date.now()}@lamesa`;
+  const uid = input.event?.id
+    ? eventCalendarInviteUid(input.event.id)
+    : `test-${key}-demo-${Date.now()}@lamesa`;
+  const organizerEmail = primaryOrganizerEmail();
 
   const ics =
     key === "calendar_invite"
@@ -91,7 +95,7 @@ function buildTestIcsAttachment(input: {
           location,
           startsAt,
           endsAt,
-          organizerEmail: from.email,
+          organizerEmail,
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
           attendeeEmail: input.to,
           attendeeName: "Test LA MESA",
@@ -104,7 +108,7 @@ function buildTestIcsAttachment(input: {
           location,
           startsAt,
           endsAt,
-          organizerEmail: from.email,
+          organizerEmail,
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
         });
 

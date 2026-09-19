@@ -1957,9 +1957,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   <h3 className="text-lg font-bold text-ns-hero">Lancer les invitations</h3>
                   <p className="mt-1 text-xs text-ns-secondary">
                     Envoie l’invitation calendrier (.ics) avec boutons YES/NO aux invités (statut
-                    Invité), plus une copie organisateur (Gregory). Les templates sont éditables
-                    dans Dashboard → Templates email. La Waiting List n’est pas contactée ici —
-                    utilise INVITER sur une ligne.
+                    Invité). Les templates sont éditables dans Dashboard → Templates email. La
+                    Waiting List n’est pas contactée ici — utilise INVITER sur une ligne.
                   </p>
                 </div>
                 <button

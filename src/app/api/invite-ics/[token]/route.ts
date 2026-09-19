@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { buildCalendarInviteIcs } from "@/lib/email/ics";
+import { buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
+import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress } from "@/lib/email/send-transactional";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { formatEventWhereLine } from "@/lib/events/format-where";
@@ -11,7 +12,7 @@ type Params = { params: Promise<{ token: string }> };
 
 /**
  * Downloadable calendar invite (.ics) with VALARM reminders.
- * Used as a visible fallback when clients hide Brevo attachments.
+ * Same shared event UID as emailed invites; only the requesting guest is ATTENDEE.
  */
 export async function GET(request: Request, { params }: Params) {
   const { token: rawToken } = await params;
@@ -55,13 +56,13 @@ export async function GET(request: Request, { params }: Params) {
   const eventUrl = `${site}/e/${encodeURIComponent(event.slug ?? event.id)}`;
 
   const ics = buildCalendarInviteIcs({
-    uid: `${event.id}-${participation.id}@lamesa`,
+    uid: eventCalendarInviteUid(event.id),
     title: `LA MESA — ${event.title}`,
-    description: `LA MESA — ${event.title}\n${eventUrl}`,
+    description: `LA MESA — ${event.title}\n${location}\n${eventUrl}`,
     location,
     startsAt: event.startsAt,
     endsAt: event.endsAt,
-    organizerEmail: from.email,
+    organizerEmail: primaryOrganizerEmail(),
     organizerName: event.organizerName ?? from.name ?? "LA MESA",
     attendeeEmail: participation.email,
     attendeeName: participation.fullName,
@@ -74,7 +75,7 @@ export async function GET(request: Request, { params }: Params) {
   return new NextResponse(ics, {
     status: 200,
     headers: {
-      "Content-Type": 'text/calendar; charset=utf-8; method=REQUEST',
+      "Content-Type": "text/calendar; charset=utf-8; method=REQUEST",
       "Content-Disposition": `${disposition}; filename="la-mesa-invite.ics"`,
       "Cache-Control": "private, no-store",
     },

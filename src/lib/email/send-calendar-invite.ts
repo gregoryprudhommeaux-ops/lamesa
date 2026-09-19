@@ -1,5 +1,11 @@
-import { buildCalendarInviteIcs, buildGoogleCalendarUrl } from "@/lib/email/ics";
+import {
+  buildCalendarInviteIcs,
+  buildGoogleCalendarUrl,
+  eventCalendarInviteUid,
+  plainTextFromRichMarkers,
+} from "@/lib/email/ics";
 import { signRsvpToken } from "@/lib/email/rsvp-token";
+import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -72,6 +78,17 @@ export function inviteBodyToHtml(
   return html;
 }
 
+/** Shared ICS description (no guest-specific roster). */
+function sharedCalendarDescription(input: {
+  title: string;
+  location: string;
+  eventUrl: string;
+}): string {
+  return plainTextFromRichMarkers(
+    [`LA MESA — ${input.title}`, input.location, input.eventUrl].filter(Boolean).join("\n"),
+  ).slice(0, 1500);
+}
+
 export async function sendCalendarInviteEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
@@ -107,15 +124,23 @@ export async function sendCalendarInviteEmail(input: {
 
   const location = formatEventWhereLine(input.event.venueName, input.event.address);
   const from = brevoFromAddress();
+  // Calendar Accept/Decline replies must hit a real inbox (Greg), not only Brevo From.
+  const organizerEmail = primaryOrganizerEmail();
+  const calendarDescription = sharedCalendarDescription({
+    title: input.event.title,
+    location,
+    eventUrl: vars.eventUrl,
+  });
   const ics = buildCalendarInviteIcs({
-    uid: `${input.event.id}-${input.participation.id}@lamesa`,
+    uid: eventCalendarInviteUid(input.event.id),
     title: `LA MESA — ${input.event.title}`,
-    description: bodyText.slice(0, 1500),
+    description: calendarDescription,
     location,
     startsAt: input.event.startsAt,
     endsAt: input.event.endsAt,
-    organizerEmail: from.email,
+    organizerEmail,
     organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
+    // Only this guest — co-guests must never appear in the ICS (privacy).
     attendeeEmail: input.participation.email,
     attendeeName: input.participation.fullName,
     url: vars.eventUrl,
@@ -123,7 +148,7 @@ export async function sendCalendarInviteEmail(input: {
 
   const googleCalUrl = buildGoogleCalendarUrl({
     title: `LA MESA — ${input.event.title}`,
-    description: bodyText.slice(0, 1500),
+    description: calendarDescription,
     location,
     startsAt: input.event.startsAt,
     endsAt: input.event.endsAt,
@@ -165,6 +190,7 @@ export async function sendCalendarInviteEmail(input: {
         content: icsBase64,
       },
     ],
+    bccAdmins: false,
   });
 }
 
@@ -195,5 +221,6 @@ export async function sendTemplatedEventEmail(input: {
     subject,
     html,
     text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
+    bccAdmins: false,
   });
 }

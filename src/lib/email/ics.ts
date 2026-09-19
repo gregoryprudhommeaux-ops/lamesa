@@ -11,6 +11,17 @@ export function toIcsUtc(iso: string): string {
   );
 }
 
+/**
+ * Shared calendar UID for one LA MESA event.
+ * Every guest invite uses this same UID so it’s one meeting; each outbound ICS
+ * still lists only that guest as ATTENDEE (others never see the participant list).
+ * Calendar Accept/Decline replies go to the ORGANIZER mailbox.
+ */
+export function eventCalendarInviteUid(eventId: string): string {
+  const id = eventId.trim().replace(/[^a-zA-Z0-9_-]/g, "");
+  return `${id || "event"}@event.lamesasecreta.com`;
+}
+
 function foldLine(line: string): string {
   if (line.length <= 70) return line;
   const parts: string[] = [];
@@ -42,6 +53,11 @@ function valarmLines(trigger: string, description: string): string[] {
   ];
 }
 
+/**
+ * Formal calendar invite (METHOD:REQUEST).
+ * Privacy: pass exactly one attendee (the recipient). Do not list co-guests —
+ * otherwise Apple/Google/Outlook would expose the participant roster.
+ */
 export function buildCalendarInviteIcs(input: {
   uid: string;
   title: string;
@@ -54,6 +70,7 @@ export function buildCalendarInviteIcs(input: {
   attendeeEmail: string;
   attendeeName?: string;
   url?: string;
+  sequence?: number;
 }): string {
   const dtStart = toIcsUtc(input.startsAt);
   const endIso =
@@ -62,7 +79,12 @@ export function buildCalendarInviteIcs(input: {
   const dtEnd = toIcsUtc(endIso);
   const dtStamp = toIcsUtc(new Date().toISOString());
   const org = `CN=${esc(input.organizerName ?? "LA MESA")}:mailto:${input.organizerEmail}`;
-  const att = `CN=${esc(input.attendeeName ?? input.attendeeEmail)};RSVP=TRUE;PARTSTAT=NEEDS-ACTION;ROLE=REQ-PARTICIPANT:mailto:${input.attendeeEmail}`;
+  // Single attendee only — never append other guests (privacy).
+  const att = `CN=${esc(input.attendeeName ?? input.attendeeEmail)};CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;X-NUM-GUESTS=0:mailto:${input.attendeeEmail}`;
+  const sequence =
+    typeof input.sequence === "number" && Number.isFinite(input.sequence) && input.sequence >= 0
+      ? Math.floor(input.sequence)
+      : 0;
 
   const lines = [
     "BEGIN:VCALENDAR",
@@ -81,8 +103,10 @@ export function buildCalendarInviteIcs(input: {
     `ORGANIZER;${org}`,
     `ATTENDEE;${att}`,
     input.url ? `URL:${input.url}` : null,
+    "CLASS:PRIVATE",
+    "TRANSP:OPAQUE",
     "STATUS:CONFIRMED",
-    "SEQUENCE:0",
+    `SEQUENCE:${sequence}`,
     // Native reminders — no email cron needed for these
     ...valarmLines("-P7D", "LA MESA — dans 7 jours"),
     ...valarmLines("-PT36H", "LA MESA — dans 36 heures"),
