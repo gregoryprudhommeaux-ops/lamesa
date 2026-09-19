@@ -108,7 +108,7 @@
       },
       "absence": {
         "q": "What if I can’t make it at the last minute?",
-        "a": "Let us know as soon as you can. Cancel more than 48 hours ahead: refund or credit toward one future evening. Within 48 hours: the payment is kept."
+        "a": "Let us know as soon as you can. More than 24 hours ahead: credit toward a future evening. Within 24 hours: the payment is kept if you’ve already paid at the restaurant; otherwise you’ll get credit for a future event."
       },
       "guests": {
         "q": "Is there sometimes a guest speaker or a sponsor?",

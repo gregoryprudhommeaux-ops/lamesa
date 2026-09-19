@@ -108,7 +108,7 @@
       },
       "absence": {
         "q": "Que faire en cas d’absence de dernière minute ?",
-        "a": "Préviens-nous dès que possible. Annulation plus de 48 h avant : remboursement ou crédit pour une prochaine soirée. Moins de 48 h : le règlement est conservé."
+        "a": "Préviens-nous dès que possible. Plus de 24 h avant : crédit pour une prochaine soirée. Moins de 24 h : le règlement sera conservé si le paiement au restaurant a déjà été effectué, sinon crédit pour un prochain événement."
       },
       "guests": {
         "q": "Y a-t-il parfois un intervenant ou un sponsor ?",

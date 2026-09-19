@@ -8,12 +8,14 @@ import {
 import { defaultLocaleContent } from "@/lib/email/template-defaults";
 
 describe("cancellationPolicyBlock", () => {
-  it("mentions 48h in all locales", () => {
+  it("mentions 24h credit rules in all locales", () => {
     for (const locale of ["es", "fr", "en"] as const) {
       const block = cancellationPolicyBlock(locale);
-      expect(block).toMatch(/48/);
+      expect(block).toMatch(/24/);
       expect(block.length).toBeGreaterThan(40);
     }
+    expect(cancellationPolicyBlock("fr")).toContain("crédit pour une prochaine soirée");
+    expect(cancellationPolicyBlock("fr")).toContain("paiement au restaurant");
   });
 });
 

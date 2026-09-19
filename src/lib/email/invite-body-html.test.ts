@@ -21,4 +21,17 @@ describe("inviteBodyToHtml", () => {
     expect(html).not.toContain("YES : https://");
     expect(html).not.toContain("NO : https://");
   });
+
+  it("renders <bold> like test emails (not escaped)", () => {
+    const html = inviteBodyToHtml(
+      "Quand : <bold>24 sept. 2026, 20:00</bold>\nPrix : <bold>1300,00 $MX</bold>",
+      "https://example.com/yes",
+      "https://example.com/no",
+      "https://example.com/e",
+    );
+    expect(html).toContain("<b>24 sept. 2026, 20:00</b>");
+    expect(html).toContain("<b>1300,00 $MX</b>");
+    expect(html).not.toContain("<bold>");
+    expect(html).not.toContain("&lt;bold");
+  });
 });

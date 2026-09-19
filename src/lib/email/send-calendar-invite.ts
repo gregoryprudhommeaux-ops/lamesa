@@ -11,16 +11,13 @@ import {
 import {
   escapeEmailHtml,
   laMesaEmailFooterText,
+  richTextToEmailHtml,
   wrapLaMesaEmailHtml,
   wrapLaMesaPlainBody,
 } from "@/lib/email/la-mesa-email-shell";
 import { formatEventWhereLine } from "@/lib/events/format-where";
 import { getSiteUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
-
-function escapeHtml(value: string): string {
-  return escapeEmailHtml(value);
-}
 
 const CALENDAR_CTA: Record<TemplateLocale, string> = {
   fr: "Ajouter à Google Calendar",
@@ -34,7 +31,10 @@ const ICS_DOWNLOAD_CTA: Record<TemplateLocale, string> = {
   en: "Download .ics (reminders D-7 · H-36 · H-1.5)",
 };
 
-/** Turn RSVP / event URLs in the template body into short clickable labels in HTML. */
+/**
+ * Formal invite body → HTML.
+ * Same rich markers as test emails (`<bold>`, links, …), plus YES/NO/event short links.
+ */
 export function inviteBodyToHtml(
   bodyText: string,
   yesUrl: string,
@@ -54,18 +54,19 @@ export function inviteBodyToHtml(
     .replace(/YES\s*:?\s*__LM_YES__/gi, YES)
     .replace(/NO\s*:?\s*__LM_NO__/gi, NO);
 
-  let html = escapeHtml(prepared).replace(/\n/g, "<br/>");
+  // Same pipeline as wrapLaMesaPlainBody / send-test (maps <bold> → <b>, etc.)
+  let html = richTextToEmailHtml(prepared);
 
   const linkStyle =
     "color:#111111;font-weight:800;text-decoration:underline;letter-spacing:0.04em;";
   html = html
     .split(YES)
-    .join(`<a href="${escapeHtml(yesUrl)}" style="${linkStyle}">YES</a>`)
+    .join(`<a href="${escapeEmailHtml(yesUrl)}" style="${linkStyle}">YES</a>`)
     .split(NO)
-    .join(`<a href="${escapeHtml(noUrl)}" style="${linkStyle}">NO</a>`)
+    .join(`<a href="${escapeEmailHtml(noUrl)}" style="${linkStyle}">NO</a>`)
     .split(EVENT)
     .join(
-      `<a href="${escapeHtml(eventUrl)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${escapeHtml(eventUrl)}</a>`,
+      `<a href="${escapeEmailHtml(eventUrl)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${escapeEmailHtml(eventUrl)}</a>`,
     );
 
   return html;
@@ -139,11 +140,11 @@ export async function sendCalendarInviteEmail(input: {
     lang: locale,
     bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
     footerHtml: `
-          <a href="${escapeHtml(yesUrl)}" style="${btnPrimary}">YES</a>
-          <a href="${escapeHtml(noUrl)}" style="${btnSecondary}">NO</a>
+          <a href="${escapeEmailHtml(yesUrl)}" style="${btnPrimary}">YES</a>
+          <a href="${escapeEmailHtml(noUrl)}" style="${btnSecondary}">NO</a>
           <div style="margin-top:14px;">
-            <a href="${escapeHtml(googleCalUrl)}" style="${btnOutline}">${escapeHtml(CALENDAR_CTA[locale])}</a>
-            <a href="${escapeHtml(icsDownloadUrl)}" style="${btnOutline}">${escapeHtml(ICS_DOWNLOAD_CTA[locale])}</a>
+            <a href="${escapeEmailHtml(googleCalUrl)}" style="${btnOutline}">${escapeEmailHtml(CALENDAR_CTA[locale])}</a>
+            <a href="${escapeEmailHtml(icsDownloadUrl)}" style="${btnOutline}">${escapeEmailHtml(ICS_DOWNLOAD_CTA[locale])}</a>
           </div>
         `,
   });

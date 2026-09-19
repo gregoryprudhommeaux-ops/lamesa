@@ -87,25 +87,31 @@ export function seatScarcityBlock(locale: "es" | "fr" | "en"): string {
 }
 
 /**
- * Cancellation / no-show rule — same wording as FAQ (about.faq.absence).
- * Credit = one future eligible dinner, not open-ended cash.
+ * Cancellation / no-show rule — same wording as FAQ (about.faq.absence)
+ * and formal invite emails.
  */
 export function cancellationPolicyBlock(locale: "es" | "fr" | "en"): string {
   if (locale === "fr") {
     return [
       "Annulation :",
-      "Si tu ne peux pas venir, préviens-nous dès que possible. Plus de 48 h avant : remboursement ou crédit pour une prochaine soirée. Moins de 48 h : le règlement est conservé.",
+      "Si tu ne peux pas venir, préviens-nous dès que possible.",
+      "- Plus de 24 h avant : crédit pour une prochaine soirée.",
+      "- Moins de 24 h : le règlement sera conservé si le paiement au restaurant a déjà été effectué, sinon ce sera un crédit pour un prochain événement.",
     ].join("\n");
   }
   if (locale === "en") {
     return [
       "Cancellation:",
-      "If you can’t make it, tell us as soon as you can. More than 48 hours ahead: refund or credit toward one future evening. Within 48 hours: the payment is kept.",
+      "If you can’t make it, tell us as soon as you can.",
+      "- More than 24 hours ahead: credit toward a future evening.",
+      "- Within 24 hours: the payment is kept if you’ve already paid at the restaurant; otherwise you’ll get credit for a future event.",
     ].join("\n");
   }
   return [
     "Cancelación:",
-    "Si no puedes ir, avísanos lo antes posible. Más de 48 h antes: reembolso o saldo a favor para una próxima cena. Menos de 48 h: se retiene el pago.",
+    "Si no puedes ir, avísanos lo antes posible.",
+    "- Más de 24 h antes: saldo a favor para una próxima cena.",
+    "- Menos de 24 h: se retiene el pago si ya pagaste en el restaurante; si no, será un saldo a favor para un próximo evento.",
   ].join("\n");
 }
 
