@@ -64,9 +64,11 @@ export async function GET(request: Request, { params }: Params) {
     endsAt: event.endsAt,
     organizerEmail: primaryOrganizerEmail(),
     organizerName: event.organizerName ?? from.name ?? "LA MESA",
+    sentByEmail: from.email,
     attendeeEmail: participation.email,
     attendeeName: participation.fullName,
     url: eventUrl,
+    requestRsvp: false,
   });
 
   const disposition =

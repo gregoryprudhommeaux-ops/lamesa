@@ -57,6 +57,11 @@ function valarmLines(trigger: string, description: string): string[] {
  * Formal calendar invite (METHOD:REQUEST).
  * Privacy: pass exactly one attendee (the recipient). Do not list co-guests —
  * otherwise Apple/Google/Outlook would expose the participant roster.
+ *
+ * RSVP: default false — Google/Outlook try to email Accept/Decline to ORGANIZER.
+ * Our Brevo From (e.g. nextstep-services.com) often cannot receive those replies,
+ * which surfaces as “Google wasn't able to send your request to …”.
+ * Official RSVP stays on the email YES/NO links into LA MESA.
  */
 export function buildCalendarInviteIcs(input: {
   uid: string;
@@ -67,10 +72,14 @@ export function buildCalendarInviteIcs(input: {
   endsAt?: string;
   organizerEmail: string;
   organizerName?: string;
+  /** Brevo / SMTP From when it differs from organizer (RFC SENT-BY). */
+  sentByEmail?: string;
   attendeeEmail: string;
   attendeeName?: string;
   url?: string;
   sequence?: number;
+  /** When true, calendar clients email Accept/Decline to ORGANIZER. Prefer false. */
+  requestRsvp?: boolean;
 }): string {
   const dtStart = toIcsUtc(input.startsAt);
   const endIso =
@@ -78,9 +87,16 @@ export function buildCalendarInviteIcs(input: {
     new Date(new Date(input.startsAt).getTime() + 3 * 60 * 60 * 1000).toISOString();
   const dtEnd = toIcsUtc(endIso);
   const dtStamp = toIcsUtc(new Date().toISOString());
-  const org = `CN=${esc(input.organizerName ?? "LA MESA")}:mailto:${input.organizerEmail}`;
+  const requestRsvp = input.requestRsvp === true;
+  const sentBy =
+    input.sentByEmail?.trim() &&
+    input.sentByEmail.trim().toLowerCase() !== input.organizerEmail.trim().toLowerCase()
+      ? `;SENT-BY="mailto:${input.sentByEmail.trim()}"`
+      : "";
+  const org = `CN=${esc(input.organizerName ?? "LA MESA")}${sentBy}:mailto:${input.organizerEmail}`;
   // Single attendee only — never append other guests (privacy).
-  const att = `CN=${esc(input.attendeeName ?? input.attendeeEmail)};CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=TRUE;X-NUM-GUESTS=0:mailto:${input.attendeeEmail}`;
+  const rsvpFlag = requestRsvp ? "TRUE" : "FALSE";
+  const att = `CN=${esc(input.attendeeName ?? input.attendeeEmail)};CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;PARTSTAT=NEEDS-ACTION;RSVP=${rsvpFlag};X-NUM-GUESTS=0:mailto:${input.attendeeEmail}`;
   const sequence =
     typeof input.sequence === "number" && Number.isFinite(input.sequence) && input.sequence >= 0
       ? Math.floor(input.sequence)

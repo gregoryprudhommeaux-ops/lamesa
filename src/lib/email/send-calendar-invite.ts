@@ -83,9 +83,18 @@ function sharedCalendarDescription(input: {
   title: string;
   location: string;
   eventUrl: string;
+  locale: TemplateLocale;
 }): string {
+  const confirmNote =
+    input.locale === "fr"
+      ? "Confirme ta présence avec les boutons YES / NO de l’email LA MESA (pas le Oui du calendrier)."
+      : input.locale === "en"
+        ? "Confirm attendance with the YES / NO buttons in the LA MESA email (not the calendar Yes)."
+        : "Confirma tu asistencia con los botones YES / NO del email LA MESA (no el Sí del calendario).";
   return plainTextFromRichMarkers(
-    [`LA MESA — ${input.title}`, input.location, input.eventUrl].filter(Boolean).join("\n"),
+    [`LA MESA — ${input.title}`, input.location, confirmNote, input.eventUrl]
+      .filter(Boolean)
+      .join("\n"),
   ).slice(0, 1500);
 }
 
@@ -124,12 +133,13 @@ export async function sendCalendarInviteEmail(input: {
 
   const location = formatEventWhereLine(input.event.venueName, input.event.address);
   const from = brevoFromAddress();
-  // Calendar Accept/Decline replies must hit a real inbox (Greg), not only Brevo From.
+  // Calendar replies must not target Brevo From (often nextstep-services.com with no RSVP inbox).
   const organizerEmail = primaryOrganizerEmail();
   const calendarDescription = sharedCalendarDescription({
     title: input.event.title,
     location,
     eventUrl: vars.eventUrl,
+    locale,
   });
   const ics = buildCalendarInviteIcs({
     uid: eventCalendarInviteUid(input.event.id),
@@ -140,10 +150,13 @@ export async function sendCalendarInviteEmail(input: {
     endsAt: input.event.endsAt,
     organizerEmail,
     organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
+    sentByEmail: from.email,
     // Only this guest — co-guests must never appear in the ICS (privacy).
     attendeeEmail: input.participation.email,
     attendeeName: input.participation.fullName,
     url: vars.eventUrl,
+    // Avoid Google “wasn't able to send your request to nextstep-services.com”.
+    requestRsvp: false,
   });
 
   const googleCalUrl = buildGoogleCalendarUrl({

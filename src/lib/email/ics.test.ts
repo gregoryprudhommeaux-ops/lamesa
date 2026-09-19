@@ -19,7 +19,7 @@ describe("ics", () => {
     expect(toIcsUtc("2026-07-20T19:00:00.000Z")).toBe("20260720T190000Z");
   });
 
-  it("builds METHOD:REQUEST calendar with a single private attendee", () => {
+  it("builds METHOD:REQUEST calendar with a single private attendee and no RSVP by default", () => {
     const ics = buildCalendarInviteIcs({
       uid: "evt-part@lamesa",
       title: "LA MESA — Test",
@@ -27,6 +27,7 @@ describe("ics", () => {
       location: "Somewhere",
       startsAt: "2026-07-20T19:00:00.000Z",
       organizerEmail: "host@example.com",
+      sentByEmail: "sender@nextstep-services.com",
       attendeeEmail: "guest@example.com",
       attendeeName: "Guest",
     });
@@ -34,6 +35,8 @@ describe("ics", () => {
     expect(ics).toContain("BEGIN:VEVENT");
     expect(ics).toContain("UID:evt-part@lamesa");
     expect(ics).toContain("ATTENDEE;");
+    expect(ics).toContain("RSVP=FALSE");
+    expect(ics).toContain('SENT-BY="mailto:sender@nextstep-services.com"');
     expect(ics).toContain("CLASS:PRIVATE");
     expect(ics).toContain("mailto:guest@example.com");
     expect(ics).not.toContain("mailto:other@example.com");
@@ -42,6 +45,20 @@ describe("ics", () => {
     expect(ics).toContain("TRIGGER:-P7D");
     expect(ics).toContain("TRIGGER:-PT36H");
     expect(ics).toContain("TRIGGER:-PT90M");
+  });
+
+  it("can enable calendar RSVP when explicitly requested", () => {
+    const ics = buildCalendarInviteIcs({
+      uid: "evt@lamesa",
+      title: "LA MESA — Test",
+      description: "Hello",
+      location: "Somewhere",
+      startsAt: "2026-07-20T19:00:00.000Z",
+      organizerEmail: "host@example.com",
+      attendeeEmail: "guest@example.com",
+      requestRsvp: true,
+    });
+    expect(ics).toContain("RSVP=TRUE");
   });
 
   it("uses one shared UID per event for all guests", () => {

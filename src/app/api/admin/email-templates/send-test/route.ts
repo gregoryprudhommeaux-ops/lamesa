@@ -97,9 +97,11 @@ function buildTestIcsAttachment(input: {
           endsAt,
           organizerEmail,
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
+          sentByEmail: from.email,
           attendeeEmail: input.to,
           attendeeName: "Test LA MESA",
           url: input.event ? `${getSiteUrl()}/e/${input.event.slug ?? input.event.id}` : undefined,
+          requestRsvp: false,
         })
       : buildAddToCalendarIcs({
           uid,

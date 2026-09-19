@@ -65,7 +65,9 @@ export function AutoRemindersPanel({
         <p className="mt-1 text-xs text-ns-secondary">
           Après l’invitation formelle, les rappels natifs du fichier .ics couvrent{" "}
           <strong>J-7 · H-36 · H-1h30</strong>. Pas d’email séparé requis (templates reminder_* =
-          legacy).
+          legacy). La présence officielle se confirme via les boutons{" "}
+          <strong>YES / NO</strong> du mail (pas le Oui/Non du calendrier Google — celui-ci
+          échoue souvent vers le domaine d’envoi Brevo).
         </p>
         <p className="mt-2 text-xs text-ns-secondary">
           ICS / invites déjà envoyés : <strong>{invitesSent}</strong> · Confirmés paiement :{" "}
