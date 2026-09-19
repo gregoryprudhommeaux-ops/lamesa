@@ -29,6 +29,7 @@ export type EventResponseMode = "rsvp" | "interest";
 export type EmailTemplateKey =
   | "calendar_invite"
   | "participation_confirmed"
+  | "payment_relance"
   | "reminder_7d"
   | "reminder_36h"
   | "reminder_90m"
@@ -204,6 +205,8 @@ export interface AdminEventParticipation {
   /** Save the Date email sent (interest / STD editions). */
   saveTheDateSentAt?: string;
   confirmationEmailSentAt?: string;
+  /** Payment follow-up email after formal invite (ACCESS still unpaid). */
+  paymentRelanceSentAt?: string;
   reminder7dSentAt?: string;
   reminder36hSentAt?: string;
   reminder90mSentAt?: string;

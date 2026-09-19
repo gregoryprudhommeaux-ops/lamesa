@@ -3,6 +3,7 @@
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
 import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
+import { AdminEventPaymentFollowupPanel } from "@/components/admin/admin-event-payment-followup";
 import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
 import {
   AutoRemindersPanel,
@@ -174,7 +175,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, paiement" },
         { id: "std_email", number: 3, title: "Email STD + liste", summary: "Template, invités, envoi" },
         { id: "std_relance", number: 4, title: "Relance STD", summary: "Sans réponse → Prospects" },
-        { id: "formal", number: 5, title: "Invitation formelle", summary: "OUI + paiement" },
+        { id: "formal", number: 5, title: "Invitation formelle", summary: "Envoi + suivi paiement" },
         { id: "auto", number: 6, title: "Relances auto", summary: "ICS + satisfaction" },
       ];
     }
@@ -1858,7 +1859,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 <div className="space-y-4">
                   <p className="text-xs text-ns-secondary">
                     Vérifie le prix et la date butoir (phase 2) — ils alimentent{" "}
-                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail.
+                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail. Après envoi,
+                    marque les virements reçus dans <strong>Suivi paiement ACCESS</strong>{" "}
+                    (statut → Payé).
                   </p>
                   <EventEmailTemplateEditor
                     event={activeEvent}
@@ -1869,6 +1872,19 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   <FormalInviteOuiPanel
                     event={activeEvent}
                     onEventUpdated={() => void loadAll()}
+                  />
+                  <EventEmailTemplateEditor
+                    event={activeEvent}
+                    templateKey="payment_relance"
+                    onEventUpdated={() => void loadAll()}
+                    hint="Email de relance pour les membres « À relancer » (paiement ACCESS)."
+                  />
+                  <AdminEventPaymentFollowupPanel
+                    event={activeEvent}
+                    participations={activeParticipations}
+                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                    onUpdated={() => void loadAll()}
                   />
                 </div>
               ) : (
@@ -1887,6 +1903,19 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   >
                     <Mail className="h-4 w-4" /> Lancer les invitations
                   </button>
+                  <EventEmailTemplateEditor
+                    event={activeEvent}
+                    templateKey="payment_relance"
+                    onEventUpdated={() => void loadAll()}
+                    hint="Email de relance pour les membres « À relancer » (paiement ACCESS)."
+                  />
+                  <AdminEventPaymentFollowupPanel
+                    event={activeEvent}
+                    participations={activeParticipations}
+                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                    onUpdated={() => void loadAll()}
+                  />
                 </div>
               )
             ) : (
