@@ -42,7 +42,7 @@ export function paymentDeadlineBlock(
       ? `au plus tard le ${dateLabel}`
       : "avant la date butoir indiquée pour cet événement";
     return [
-      "Important — règlement ACCESS :",
+      "<bold>Important — règlement ACCESS :</bold>",
       `Ta place ne sera validée que si le ticket ACCESS est réglé ${when}. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.`,
     ].join("\n");
   }
@@ -51,7 +51,7 @@ export function paymentDeadlineBlock(
       ? `by ${dateLabel}`
       : "by the payment deadline set for this event";
     return [
-      "Important — ACCESS payment:",
+      "<bold>Important — ACCESS payment:</bold>",
       `Your spot will only be confirmed once the ACCESS ticket is paid ${when}. If not, we will offer your seat to another member.`,
     ].join("\n");
   }
@@ -59,7 +59,7 @@ export function paymentDeadlineBlock(
     ? `a más tardar el ${dateLabel}`
     : "antes de la fecha límite indicada para este evento";
   return [
-    "Importante — pago ACCESS:",
+    "<bold>Importante — pago ACCESS:</bold>",
     `Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga ${when}. De lo contrario, ofreceremos tu lugar a otro miembro.`,
   ].join("\n");
 }
@@ -70,18 +70,18 @@ export function paymentDeadlineBlock(
 export function seatScarcityBlock(locale: "es" | "fr" | "en"): string {
   if (locale === "fr") {
     return [
-      "Places limitées — premier arrivé, premier servi (selon le règlement) :",
+      "<bold>Places limitées — premier arrivé, premier servi (selon le règlement) :</bold>",
       "Le nombre de places à table est limité. Plusieurs personnes reçoivent cette invitation : ta place est confirmée dès réception du règlement ACCESS. Si la table est déjà complète au moment de ton paiement, tu seras placé(e) en liste d’attente et contacté(e) dès qu’une place se libère.",
     ].join("\n");
   }
   if (locale === "en") {
     return [
-      "Limited seats — first come, first served (by payment):",
+      "<bold>Limited seats — first come, first served (by payment):</bold>",
       "Seats at the table are limited. Several people receive this invitation: your seat is confirmed once we receive the ACCESS payment. If the table is already full when you pay, you will be waitlisted and contacted as soon as a seat opens.",
     ].join("\n");
   }
   return [
-    "Lugares limitados — primero en pagar, primero en confirmar:",
+    "<bold>Lugares limitados — primero en pagar, primero en confirmar:</bold>",
     "Hay pocos lugares en la mesa. Varias personas reciben esta invitación: tu lugar se confirma al recibir el pago ACCESS. Si la mesa ya está completa cuando pagues, pasarás a lista de espera y te avisaremos en cuanto se libere un lugar.",
   ].join("\n");
 }
@@ -120,7 +120,7 @@ export function paymentBankBlock(locale: "es" | "fr" | "en"): string {
   const b = EVENT_PAYMENT_BANK;
   if (locale === "fr") {
     return [
-      "Coordonnées bancaires pour le virement :",
+      "<bold>Coordonnées bancaires pour le virement :</bold>",
       `Entidad: ${b.entidad}`,
       `Número CLABE: ${b.clabe}`,
       `Número de cuenta: ${b.cuenta}`,
@@ -131,7 +131,7 @@ export function paymentBankBlock(locale: "es" | "fr" | "en"): string {
   }
   if (locale === "en") {
     return [
-      "Bank details for transfer:",
+      "<bold>Bank details for transfer:</bold>",
       `Entidad: ${b.entidad}`,
       `Número CLABE: ${b.clabe}`,
       `Número de cuenta: ${b.cuenta}`,
@@ -141,7 +141,7 @@ export function paymentBankBlock(locale: "es" | "fr" | "en"): string {
     ].join("\n");
   }
   return [
-    "Datos para transferencia bancaria (SPEI):",
+    "<bold>Datos para transferencia bancaria (SPEI):</bold>",
     `Entidad: ${b.entidad}`,
     `CLABE: ${b.clabe}`,
     `Número de cuenta: ${b.cuenta}`,

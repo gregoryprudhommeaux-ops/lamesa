@@ -50,7 +50,6 @@ describe("P0 email defaults", () => {
     for (const locale of ["es", "fr", "en"] as const) {
       const { body } = defaultLocaleContent("calendar_invite", locale);
       expect(body).toContain("{{paymentDeadlineBlock}}");
-      expect(body).toContain("{{seatScarcityBlock}}");
     }
   });
 

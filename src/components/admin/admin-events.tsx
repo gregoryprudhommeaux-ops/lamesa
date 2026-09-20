@@ -1877,7 +1877,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     event={activeEvent}
                     templateKey="payment_relance"
                     onEventUpdated={() => void loadAll()}
-                    hint="Email de relance pour les membres « À relancer » (paiement ACCESS)."
+                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
                   />
                   <AdminEventPaymentFollowupPanel
                     event={activeEvent}
@@ -1907,7 +1907,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     event={activeEvent}
                     templateKey="payment_relance"
                     onEventUpdated={() => void loadAll()}
-                    hint="Email de relance pour les membres « À relancer » (paiement ACCESS)."
+                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
                   />
                   <AdminEventPaymentFollowupPanel
                     event={activeEvent}

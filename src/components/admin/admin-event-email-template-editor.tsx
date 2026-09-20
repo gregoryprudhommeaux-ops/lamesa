@@ -190,9 +190,11 @@ export function EventEmailTemplateEditor({
           Variables : {"{{fullName}}"}, {"{{eventTitle}}"}, {"{{when}}"}, {"{{where}}"},{" "}
           {"{{eventUrl}}"}, {"{{yesUrl}}"}, {"{{noUrl}}"}, {"{{surveyUrl}}"},{" "}
           {"{{priceBeforeTax}}"}, {"{{ivaAmount}}"}, {"{{totalWithIva}}"},{" "}
-              {"{{accessIncludes}}"}, {"{{menuIncluded}}"}, {"{{paymentDeadline}}"},{" "}
-              {"{{paymentDeadlineBlock}}"}, {"{{seatScarcityBlock}}"}
-            </p>
+          {"{{accessIncludes}}"}, {"{{menuIncluded}}"}, {"{{paymentDeadline}}"},{" "}
+          {"{{paymentDeadlineBlock}}"}, {"{{seatScarcityBlock}}"}
+          {" · "}Mise en forme : {"<bold>…</bold>"}, {"<b>"}, {"<i>"}, liens{" "}
+          {'<a href="https://…">'}
+        </p>
       </div>
       {error && <p className={ERROR_TEXT}>{error}</p>}
       {message && <p className="text-sm font-medium text-ns-primary">{message}</p>}

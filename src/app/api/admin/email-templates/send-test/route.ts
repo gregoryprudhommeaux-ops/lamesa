@@ -24,7 +24,7 @@ const schema = z.object({
   body: z.string().trim().min(1).max(50_000),
   locale: z.enum(["fr", "es", "en"]).optional(),
   eventId: z.string().trim().min(1).max(80).optional().nullable(),
-  /** When calendar_invite / save_the_date, attach a real .ics for the test. */
+  /** When calendar_invite / payment_relance / save_the_date, attach a real .ics for the test. */
   templateKey: z.string().trim().min(1).max(80).optional().nullable(),
   /** Optional override; defaults to the logged-in admin email. */
   to: z.string().email().optional(),
@@ -67,7 +67,9 @@ function buildTestIcsAttachment(input: {
   bodyText: string;
 }): { name: string; content: string } | null {
   const key = (input.templateKey ?? "").trim() as EmailTemplateKey | "";
-  if (key !== "calendar_invite" && key !== "save_the_date") return null;
+  if (key !== "calendar_invite" && key !== "payment_relance" && key !== "save_the_date") {
+    return null;
+  }
 
   const from = brevoFromAddress();
   const startsAt =
@@ -87,8 +89,18 @@ function buildTestIcsAttachment(input: {
   const organizerEmail = primaryOrganizerEmail();
 
   const ics =
-    key === "calendar_invite"
-      ? buildCalendarInviteIcs({
+    key === "save_the_date"
+      ? buildAddToCalendarIcs({
+          uid,
+          title,
+          description: input.bodyText.slice(0, 1500),
+          location,
+          startsAt,
+          endsAt,
+          organizerEmail,
+          organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
+        })
+      : buildCalendarInviteIcs({
           uid,
           title,
           description: input.bodyText.slice(0, 1500),
@@ -102,20 +114,10 @@ function buildTestIcsAttachment(input: {
           attendeeName: "Test LA MESA",
           url: input.event ? `${getSiteUrl()}/e/${input.event.slug ?? input.event.id}` : undefined,
           requestRsvp: false,
-        })
-      : buildAddToCalendarIcs({
-          uid,
-          title,
-          description: input.bodyText.slice(0, 1500),
-          location,
-          startsAt,
-          endsAt,
-          organizerEmail,
-          organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
         });
 
   return {
-    name: key === "calendar_invite" ? "la-mesa-invite.ics" : "la-mesa-save-the-date.ics",
+    name: key === "save_the_date" ? "la-mesa-save-the-date.ics" : "la-mesa-invite.ics",
     content: Buffer.from(ics, "utf8").toString("base64"),
   };
 }

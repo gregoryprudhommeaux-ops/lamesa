@@ -87,15 +87,51 @@ function sharedCalendarDescription(input: {
 }): string {
   const confirmNote =
     input.locale === "fr"
-      ? "Confirme ta présence avec les boutons YES / NO de l’email LA MESA (pas le Oui du calendrier)."
+      ? "Confirme ta présence par réponse à l’email LA MESA."
       : input.locale === "en"
-        ? "Confirm attendance with the YES / NO buttons in the LA MESA email (not the calendar Yes)."
-        : "Confirma tu asistencia con los botones YES / NO del email LA MESA (no el Sí del calendario).";
+        ? "Confirm attendance by replying to the LA MESA email."
+        : "Confirma tu asistencia respondiendo al email LA MESA.";
   return plainTextFromRichMarkers(
     [`LA MESA — ${input.title}`, input.location, confirmNote, input.eventUrl]
       .filter(Boolean)
       .join("\n"),
   ).slice(0, 1500);
+}
+
+/** Same calendar event for every guest (shared UID); only this recipient as ATTENDEE. */
+function buildSharedInviteIcsAttachment(input: {
+  event: AdminEvent;
+  participation: AdminEventParticipation;
+  eventUrl: string;
+  locale: TemplateLocale;
+}): { name: string; content: string } | null {
+  const location = formatEventWhereLine(input.event.venueName, input.event.address);
+  const from = brevoFromAddress();
+  const ics = buildCalendarInviteIcs({
+    uid: eventCalendarInviteUid(input.event.id),
+    title: `LA MESA — ${input.event.title}`,
+    description: sharedCalendarDescription({
+      title: input.event.title,
+      location,
+      eventUrl: input.eventUrl,
+      locale: input.locale,
+    }),
+    location,
+    startsAt: input.event.startsAt,
+    endsAt: input.event.endsAt,
+    organizerEmail: primaryOrganizerEmail(),
+    organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
+    sentByEmail: from.email,
+    attendeeEmail: input.participation.email,
+    attendeeName: input.participation.fullName,
+    url: input.eventUrl,
+    requestRsvp: false,
+  });
+  if (ics.length < 80) return null;
+  return {
+    name: "la-mesa-invite.ics",
+    content: Buffer.from(ics, "utf8").toString("base64"),
+  };
 }
 
 export async function sendCalendarInviteEmail(input: {
@@ -132,32 +168,21 @@ export async function sendCalendarInviteEmail(input: {
   const bodyText = applyTemplateVars(template.body, vars);
 
   const location = formatEventWhereLine(input.event.venueName, input.event.address);
-  const from = brevoFromAddress();
-  // Calendar replies must not target Brevo From (often nextstep-services.com with no RSVP inbox).
-  const organizerEmail = primaryOrganizerEmail();
   const calendarDescription = sharedCalendarDescription({
     title: input.event.title,
     location,
     eventUrl: vars.eventUrl,
     locale,
   });
-  const ics = buildCalendarInviteIcs({
-    uid: eventCalendarInviteUid(input.event.id),
-    title: `LA MESA — ${input.event.title}`,
-    description: calendarDescription,
-    location,
-    startsAt: input.event.startsAt,
-    endsAt: input.event.endsAt,
-    organizerEmail,
-    organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
-    sentByEmail: from.email,
-    // Only this guest — co-guests must never appear in the ICS (privacy).
-    attendeeEmail: input.participation.email,
-    attendeeName: input.participation.fullName,
-    url: vars.eventUrl,
-    // Avoid Google “wasn't able to send your request to nextstep-services.com”.
-    requestRsvp: false,
+  const icsAttachment = buildSharedInviteIcsAttachment({
+    event: input.event,
+    participation: input.participation,
+    eventUrl: vars.eventUrl,
+    locale,
   });
+  if (!icsAttachment) {
+    return { ok: false, error: "ics_build_failed" };
+  }
 
   const googleCalUrl = buildGoogleCalendarUrl({
     title: `LA MESA — ${input.event.title}`,
@@ -167,10 +192,6 @@ export async function sendCalendarInviteEmail(input: {
     endsAt: input.event.endsAt,
   });
 
-  const btnPrimary =
-    "display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin:0 8px 10px 0;";
-  const btnSecondary =
-    "display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 20px;border-radius:999px;margin:0 8px 10px 0;";
   const btnOutline =
     "display:inline-block;background:#ffffff;color:#111;text-decoration:none;font-weight:700;font-size:13px;padding:10px 16px;border-radius:999px;border:1px solid #cccccc;margin:0 8px 10px 0;";
 
@@ -178,31 +199,19 @@ export async function sendCalendarInviteEmail(input: {
     lang: locale,
     bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
     footerHtml: `
-          <a href="${escapeEmailHtml(yesUrl)}" style="${btnPrimary}">YES</a>
-          <a href="${escapeEmailHtml(noUrl)}" style="${btnSecondary}">NO</a>
-          <div style="margin-top:14px;">
+          <div style="margin-top:8px;">
             <a href="${escapeEmailHtml(googleCalUrl)}" style="${btnOutline}">${escapeEmailHtml(CALENDAR_CTA[locale])}</a>
             <a href="${escapeEmailHtml(icsDownloadUrl)}" style="${btnOutline}">${escapeEmailHtml(ICS_DOWNLOAD_CTA[locale])}</a>
           </div>
         `,
   });
 
-  const icsBase64 = Buffer.from(ics, "utf8").toString("base64");
-  if (!icsBase64 || ics.length < 80) {
-    return { ok: false, error: "ics_build_failed" };
-  }
-
   return sendTransactionalEmail({
     to: input.participation.email,
     subject,
     html,
     text: `${bodyText}\n\n${CALENDAR_CTA[locale]}: ${googleCalUrl}\n${ICS_DOWNLOAD_CTA[locale]}: ${icsDownloadUrl}\n\n${laMesaEmailFooterText(locale)}`,
-    attachments: [
-      {
-        name: "la-mesa-invite.ics",
-        content: icsBase64,
-      },
-    ],
+    attachments: [icsAttachment],
     bccAdmins: false,
   });
 }
@@ -234,11 +243,25 @@ export async function sendTemplatedEventEmail(input: {
   const bodyText = applyTemplateVars(template.body, vars);
   const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
 
+  const attachments =
+    input.key === "payment_relance"
+      ? (() => {
+          const ics = buildSharedInviteIcsAttachment({
+            event: input.event,
+            participation: input.participation,
+            eventUrl: vars.eventUrl,
+            locale,
+          });
+          return ics ? [ics] : undefined;
+        })()
+      : undefined;
+
   return sendTransactionalEmail({
     to: input.participation.email,
     subject,
     html,
     text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
     bccAdmins: false,
+    ...(attachments ? { attachments } : {}),
   });
 }
