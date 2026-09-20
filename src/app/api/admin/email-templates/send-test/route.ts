@@ -4,7 +4,6 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { buildAddToCalendarIcs, buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
-import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -86,7 +85,6 @@ function buildTestIcsAttachment(input: {
   const uid = input.event?.id
     ? eventCalendarInviteUid(input.event.id)
     : `test-${key}-demo-${Date.now()}@lamesa`;
-  const organizerEmail = primaryOrganizerEmail();
 
   const ics =
     key === "save_the_date"
@@ -97,7 +95,7 @@ function buildTestIcsAttachment(input: {
           location,
           startsAt,
           endsAt,
-          organizerEmail,
+          organizerEmail: from.email,
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
         })
       : buildCalendarInviteIcs({
@@ -107,9 +105,8 @@ function buildTestIcsAttachment(input: {
           location,
           startsAt,
           endsAt,
-          organizerEmail,
+          organizerEmail: from.email,
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
-          sentByEmail: from.email,
           attendeeEmail: input.to,
           attendeeName: "Test LA MESA",
           url: input.event ? `${getSiteUrl()}/e/${input.event.slug ?? input.event.id}` : undefined,

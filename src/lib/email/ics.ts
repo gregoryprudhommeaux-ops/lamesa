@@ -58,10 +58,10 @@ function valarmLines(trigger: string, description: string): string[] {
  * Privacy: pass exactly one attendee (the recipient). Do not list co-guests —
  * otherwise Apple/Google/Outlook would expose the participant roster.
  *
- * RSVP: default false — Google/Outlook try to email Accept/Decline to ORGANIZER.
- * Our Brevo From (e.g. nextstep-services.com) often cannot receive those replies,
- * which surfaces as “Google wasn't able to send your request to …”.
- * Official RSVP stays on the email YES/NO links into LA MESA.
+ * ORGANIZER must match the SMTP From (Brevo). Gmail shows “Unable to load event”
+ * when ORGANIZER is a different mailbox (e.g. personal Gmail) than the sender.
+ * RSVP stays false so Google does not email Accept/Decline to that From domain.
+ * Official confirmation stays on the LA MESA email reply / admin status.
  */
 export function buildCalendarInviteIcs(input: {
   uid: string;

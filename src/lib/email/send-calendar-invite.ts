@@ -5,7 +5,6 @@ import {
   plainTextFromRichMarkers,
 } from "@/lib/email/ics";
 import { signRsvpToken } from "@/lib/email/rsvp-token";
-import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -107,6 +106,7 @@ function buildSharedInviteIcsAttachment(input: {
 }): { name: string; content: string } | null {
   const location = formatEventWhereLine(input.event.venueName, input.event.address);
   const from = brevoFromAddress();
+  // ORGANIZER must equal Brevo From or Gmail shows “Unable to load event”.
   const ics = buildCalendarInviteIcs({
     uid: eventCalendarInviteUid(input.event.id),
     title: `LA MESA — ${input.event.title}`,
@@ -119,9 +119,8 @@ function buildSharedInviteIcsAttachment(input: {
     location,
     startsAt: input.event.startsAt,
     endsAt: input.event.endsAt,
-    organizerEmail: primaryOrganizerEmail(),
+    organizerEmail: from.email,
     organizerName: input.event.organizerName ?? from.name ?? "LA MESA",
-    sentByEmail: from.email,
     attendeeEmail: input.participation.email,
     attendeeName: input.participation.fullName,
     url: input.eventUrl,

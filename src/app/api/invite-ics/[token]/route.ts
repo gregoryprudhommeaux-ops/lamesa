@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
-import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { brevoFromAddress } from "@/lib/email/send-transactional";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { formatEventWhereLine } from "@/lib/events/format-where";
@@ -62,9 +61,9 @@ export async function GET(request: Request, { params }: Params) {
     location,
     startsAt: event.startsAt,
     endsAt: event.endsAt,
-    organizerEmail: primaryOrganizerEmail(),
+    // Must match Brevo From — Gmail rejects mismatched ORGANIZER (“Unable to load event”).
+    organizerEmail: from.email,
     organizerName: event.organizerName ?? from.name ?? "LA MESA",
-    sentByEmail: from.email,
     attendeeEmail: participation.email,
     attendeeName: participation.fullName,
     url: eventUrl,
