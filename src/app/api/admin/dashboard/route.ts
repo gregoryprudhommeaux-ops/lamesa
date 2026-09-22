@@ -26,7 +26,11 @@ import {
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
   loadLastEmailCampaign,
+  loadRecentEmailCampaigns,
   pickLatestCampaign,
+  toEmailCampaignHistoryRow,
+  type EmailCampaignHistoryRow,
+  type LastEmailCampaignRecord,
 } from "@/lib/admin/last-email-campaign";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
@@ -371,8 +375,15 @@ export async function GET(request: Request) {
     });
 
     let lastEmailResults = null as ReturnType<typeof buildLastEmailResultsSummary> | null;
+    let emailCampaignHistory: EmailCampaignHistoryRow[] = [];
     try {
+      const waitlistEmails = new Set(
+        waitlistActive
+          .map((r) => String(r.email ?? "").trim().toLowerCase())
+          .filter((e) => e.includes("@")),
+      );
       const storedCampaign = await loadLastEmailCampaign();
+      const recentCampaigns = await loadRecentEmailCampaigns(8);
       const inferredFromEvents = inferLastEmailCampaignFromEvents(events, participations);
       const inferredFromProspects = inferLastEmailCampaignFromProspects(
         nextEventProspects,
@@ -380,62 +391,114 @@ export async function GET(request: Request) {
       );
       const campaign = pickLatestCampaign(
         storedCampaign,
+        recentCampaigns[0] ?? null,
         inferredFromEvents,
         inferredFromProspects,
       );
 
-      if (campaign) {
+      const prospectsCache = new Map<string, RsvpProspectRow[]>();
+      const respondentsCache = new Map<string, EventRespondent[]>();
+      if (nextEvent) {
+        prospectsCache.set(nextEvent.slug.toLowerCase(), nextEventProspects);
+        respondentsCache.set(nextEvent.id, nextEventRespondents);
+      }
+
+      async function loadProspectsCached(slug: string): Promise<RsvpProspectRow[]> {
+        const key = slug.trim().toLowerCase();
+        if (!key) return [];
+        if (prospectsCache.has(key)) return prospectsCache.get(key)!;
+        try {
+          const rows = await loadProspectsForEventSlug(db, slug);
+          prospectsCache.set(key, rows);
+          return rows;
+        } catch (error) {
+          console.error("[admin/dashboard] prospects cache", slug, error);
+          prospectsCache.set(key, []);
+          return [];
+        }
+      }
+
+      async function loadRespondentsCached(eventId: string): Promise<EventRespondent[]> {
+        if (!eventId) return [];
+        if (respondentsCache.has(eventId)) return respondentsCache.get(eventId)!;
+        try {
+          const rows = await loadRespondentsForEvent(db, eventId);
+          respondentsCache.set(eventId, rows);
+          return rows;
+        } catch (error) {
+          console.error("[admin/dashboard] respondents cache", eventId, error);
+          respondentsCache.set(eventId, []);
+          return [];
+        }
+      }
+
+      async function summarizeCampaign(c: LastEmailCampaignRecord) {
         const campaignEventId =
-          campaign.eventId ||
+          c.eventId ||
           events.find(
             (e) =>
-              campaign.eventSlug &&
-              e.slug.trim().toLowerCase() === campaign.eventSlug.trim().toLowerCase(),
+              c.eventSlug &&
+              e.slug.trim().toLowerCase() === c.eventSlug.trim().toLowerCase(),
           )?.id ||
           null;
         const campaignSlug =
-          campaign.eventSlug ||
-          (campaign.templateKey
-            ? eventSlugFromOutreachTemplateKey(campaign.templateKey)
-            : null);
-
-        let lastRespondents = nextEventRespondents;
-        let lastProspects = nextEventProspects;
-        const sameAsNext =
-          nextEvent &&
-          ((campaignEventId && campaignEventId === nextEvent.id) ||
-            (campaignSlug &&
-              campaignSlug.toLowerCase() === nextEvent.slug.trim().toLowerCase()));
-
-        if (!sameAsNext && campaignEventId) {
-          try {
-            lastRespondents = await loadRespondentsForEvent(db, campaignEventId);
-          } catch (error) {
-            console.error("[admin/dashboard] last-email respondents", error);
-            lastRespondents = [];
-          }
-        }
-        if (!sameAsNext && campaignSlug) {
-          try {
-            lastProspects = await loadProspectsForEventSlug(db, campaignSlug);
-          } catch (error) {
-            console.error("[admin/dashboard] last-email prospects", error);
-            lastProspects = [];
-          }
-        }
-
-        lastEmailResults = buildLastEmailResultsSummary({
+          c.eventSlug ||
+          (c.templateKey ? eventSlugFromOutreachTemplateKey(c.templateKey) : null);
+        const [lastRespondents, lastProspects] = await Promise.all([
+          campaignEventId ? loadRespondentsCached(campaignEventId) : Promise.resolve([]),
+          campaignSlug ? loadProspectsCached(campaignSlug) : Promise.resolve([]),
+        ]);
+        return buildLastEmailResultsSummary({
           campaign: {
-            ...campaign,
-            eventId: campaign.eventId || campaignEventId,
-            eventSlug: campaign.eventSlug || campaignSlug,
+            ...c,
+            eventId: c.eventId || campaignEventId,
+            eventSlug: c.eventSlug || campaignSlug,
           },
           events,
           participations,
           respondents: lastRespondents,
           prospects: lastProspects,
+          waitlistEmails,
         });
       }
+
+      if (campaign) {
+        lastEmailResults = await summarizeCampaign(campaign);
+      }
+
+      const historySource =
+        recentCampaigns.length > 0
+          ? recentCampaigns
+          : campaign
+            ? [campaign]
+            : [];
+      const historyRows: EmailCampaignHistoryRow[] = [];
+      for (const c of historySource.slice(0, 6)) {
+        // Skip duplicate of the live last-email row when ids match.
+        if (
+          lastEmailResults &&
+          c.id &&
+          lastEmailResults.id &&
+          c.id === lastEmailResults.id
+        ) {
+          historyRows.push(toEmailCampaignHistoryRow(lastEmailResults, c.id));
+          continue;
+        }
+        if (
+          lastEmailResults &&
+          !c.id &&
+          c.templateKey === lastEmailResults.templateKey &&
+          c.sentAt === lastEmailResults.sentAt
+        ) {
+          historyRows.push(
+            toEmailCampaignHistoryRow(lastEmailResults, lastEmailResults.id),
+          );
+          continue;
+        }
+        const summary = await summarizeCampaign(c);
+        historyRows.push(toEmailCampaignHistoryRow(summary, c.id ?? summary.templateKey));
+      }
+      emailCampaignHistory = historyRows;
     } catch (error) {
       console.error("[admin/dashboard] last-email results", error);
     }
@@ -466,6 +529,7 @@ export async function GET(request: Request) {
       opsQueues,
       nextEventRsvp,
       lastEmailResults,
+      emailCampaignHistory,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

@@ -45,6 +45,8 @@ export const COLLECTIONS = {
   contactActivities: "la_mesa_contact_activities",
   /** Singleton ops docs (e.g. `last_email_campaign`). */
   ops: "la_mesa_ops",
+  /** Append-only email blast history for dashboard performance. */
+  emailCampaigns: "la_mesa_email_campaigns",
   events: "events",
   participations: "event_participations",
   respondents: "event_respondents",

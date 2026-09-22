@@ -120,9 +120,47 @@ type LastEmailResults = {
   pending: number;
   confirmed: number;
   inviteSent: number;
+  registered: number;
+  responseRate: number;
+  yesRate: number;
+  confirmedRate: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
+  recipients: EmailCampaignRecipient[];
   source: "cold_outreach" | "save_the_date" | "inferred";
+};
+
+type EmailCampaignRecipient = {
+  id: string;
+  email: string;
+  fullName: string;
+  company: string;
+  outcome:
+    | "confirmed"
+    | "yes"
+    | "invite_sent"
+    | "no"
+    | "other"
+    | "registered"
+    | "pending";
+};
+
+type EmailCampaignHistoryRow = {
+  id: string;
+  templateKey: string;
+  templateLabel: string;
+  sentAt: string;
+  recipientCount: number;
+  yes: number;
+  no: number;
+  pending: number;
+  confirmed: number;
+  registered: number;
+  responseRate: number;
+  yesRate: number;
+  confirmedRate: number;
+  eventTitle: string | null;
+  eventId: string | null;
 };
 
 type DistributionMember = {
@@ -174,6 +212,7 @@ type DashboardPayload = {
   opsQueues?: OpsQueues;
   nextEventRsvp?: NextEventRsvp | null;
   lastEmailResults?: LastEmailResults | null;
+  emailCampaignHistory?: EmailCampaignHistoryRow[];
 };
 
 const CATEGORIES: {
@@ -425,7 +464,7 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
         : "Envoi sans formulaire de réponse";
 
   return (
-    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
@@ -438,9 +477,10 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
             Envoyé le {formatSentAt(results.sentAt)}
             {results.eventTitle ? ` · ${results.eventTitle}` : ""}
           </p>
-          <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
-            OUI = intérêt. Confirmés = places payées. Invité = mail formel envoyé, pas encore
-            payé.
+          <p className="mt-1 max-w-2xl text-[11px] leading-snug text-ns-secondary">
+            Performance du blast : taux de réponse {results.responseRate}% · OUI{" "}
+            {results.yesRate}% · confirmés {results.confirmedRate}%. Sert à apprendre ce
+            qui convertit pour les prochains envois.
           </p>
         </div>
         {eventHref ? (
@@ -462,28 +502,229 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
 
       {results.responseMode === "none" ? (
         <p className="mt-4 text-sm text-ns-secondary">
-          Cet envoi n’est pas lié à un formulaire OUI/NON — pas de décompte de réponses.
+          Cet envoi n’est pas lié à un formulaire OUI/NON — on suit quand même les
+          inscrits plateforme dans la liste ci-dessous.
+        </p>
+      ) : (
+        <ResponseCounters
+          contactedLabel="Envoyés"
+          contacted={results.recipientCount}
+          yes={results.yes}
+          confirmed={results.confirmed}
+          inviteSent={results.inviteSent}
+          noTotal={noTotal}
+          noHint={
+            results.other > 0
+              ? `${results.no} non · ${results.other} autre`
+              : undefined
+          }
+          pending={results.pending}
+          sansReponseListName={results.sansReponseListName}
+        />
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-900">
+            Inscrits
+          </p>
+          <p className="mt-1 text-2xl font-black text-indigo-950">{results.registered}</p>
+          <p className="text-[10px] text-indigo-900/80">Membres waitlist</p>
+        </div>
+        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+            Taux réponse
+          </p>
+          <p className="mt-1 text-2xl font-black text-ns-tertiary">{results.responseRate}%</p>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            Taux OUI
+          </p>
+          <p className="mt-1 text-2xl font-black text-emerald-900">{results.yesRate}%</p>
+        </div>
+        <div className="rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+            Taux confirmés
+          </p>
+          <p className="mt-1 text-2xl font-black text-sky-950">{results.confirmedRate}%</p>
+        </div>
+      </div>
+
+      <ContactedRecipientsList recipients={results.recipients} />
+    </div>
+  );
+}
+
+function outcomeLabel(outcome: EmailCampaignRecipient["outcome"]): string {
+  switch (outcome) {
+    case "confirmed":
+      return "Payé";
+    case "invite_sent":
+      return "Invité";
+    case "yes":
+      return "Oui";
+    case "no":
+      return "Non";
+    case "other":
+      return "Autre";
+    case "registered":
+      return "Inscrit";
+    default:
+      return "Sans réponse";
+  }
+}
+
+function outcomeClass(outcome: EmailCampaignRecipient["outcome"]): string {
+  switch (outcome) {
+    case "confirmed":
+      return "bg-sky-100 text-sky-900";
+    case "invite_sent":
+      return "bg-violet-100 text-violet-900";
+    case "yes":
+      return "bg-emerald-100 text-emerald-900";
+    case "no":
+      return "bg-rose-100 text-rose-900";
+    case "other":
+      return "bg-orange-100 text-orange-900";
+    case "registered":
+      return "bg-indigo-100 text-indigo-900";
+    default:
+      return "bg-amber-100 text-amber-950";
+  }
+}
+
+function ContactedRecipientsList({
+  recipients,
+}: {
+  recipients: EmailCampaignRecipient[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const limit = expanded ? recipients.length : 12;
+  const visible = recipients.slice(0, limit);
+  const hidden = recipients.length - visible.length;
+
+  return (
+    <div className="mt-4 border-t border-gray-100/80 pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+          Gens contactés · résultat
+        </p>
+        <p className="text-[11px] text-ns-secondary">
+          {recipients.length} dans ce blast
+        </p>
+      </div>
+      {recipients.length === 0 ? (
+        <p className="mt-2 text-sm text-ns-secondary">
+          Aucun destinataire enregistré pour ce blast.
         </p>
       ) : (
         <>
-          <ResponseCounters
-            contactedLabel="Envoyés"
-            contacted={results.recipientCount}
-            yes={results.yes}
-            confirmed={results.confirmed}
-            inviteSent={results.inviteSent}
-            noTotal={noTotal}
-            noHint={
-              results.other > 0
-                ? `${results.no} non · ${results.other} autre`
-                : undefined
-            }
-            pending={results.pending}
-            sansReponseListName={results.sansReponseListName}
-          />
-          <YesGuestsList yes={results.yes} yesGuests={results.yesGuests} />
+          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            {visible.map((r) => (
+              <li
+                key={r.id}
+                className="rounded-lg border border-gray-100 bg-white/70 px-2.5 py-1.5"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                      {r.fullName || r.email || "Sans nom"}
+                    </span>
+                    <span className="block truncate text-[11px] text-ns-secondary">
+                      {r.company || r.email}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${outcomeClass(r.outcome)}`}
+                  >
+                    {outcomeLabel(r.outcome)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {hidden > 0 ? (
+            <button
+              type="button"
+              className="mt-2 text-xs font-semibold text-ns-primary hover:underline"
+              onClick={() => setExpanded(true)}
+            >
+              Voir les {hidden} autres →
+            </button>
+          ) : null}
+          {expanded && recipients.length > 12 ? (
+            <button
+              type="button"
+              className="mt-2 block text-xs text-ns-secondary hover:underline"
+              onClick={() => setExpanded(false)}
+            >
+              Réduire
+            </button>
+          ) : null}
         </>
       )}
+    </div>
+  );
+}
+
+function EmailCampaignHistoryTable({ rows }: { rows: EmailCampaignHistoryRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      <div className="mb-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+          Historique des envois
+        </h3>
+        <p className="mt-1 text-xs text-ns-secondary">
+          Compare les taux pour voir quels mails convertissent le mieux.
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+              <th className="py-2 pr-3 font-semibold">Email</th>
+              <th className="py-2 pr-3 font-semibold">Date</th>
+              <th className="py-2 pr-3 font-semibold">Envoyés</th>
+              <th className="py-2 pr-3 font-semibold">OUI</th>
+              <th className="py-2 pr-3 font-semibold">NON</th>
+              <th className="py-2 pr-3 font-semibold">Confirmés</th>
+              <th className="py-2 pr-3 font-semibold">Inscrits</th>
+              <th className="py-2 font-semibold">Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className="border-b border-gray-50 align-top">
+                <td className="py-2.5 pr-3">
+                  <p className="font-semibold text-ns-tertiary">{row.templateLabel}</p>
+                  {row.eventTitle ? (
+                    <p className="mt-0.5 text-[11px] text-ns-secondary">{row.eventTitle}</p>
+                  ) : null}
+                </td>
+                <td className="py-2.5 pr-3 whitespace-nowrap text-ns-secondary">
+                  {formatSentAt(row.sentAt)}
+                </td>
+                <td className="py-2.5 pr-3 font-semibold tabular-nums">{row.recipientCount}</td>
+                <td className="py-2.5 pr-3 tabular-nums text-emerald-800">
+                  {row.yes}
+                  <span className="text-ns-secondary"> · {row.yesRate}%</span>
+                </td>
+                <td className="py-2.5 pr-3 tabular-nums text-rose-800">{row.no}</td>
+                <td className="py-2.5 pr-3 tabular-nums text-sky-900">
+                  {row.confirmed}
+                  <span className="text-ns-secondary"> · {row.confirmedRate}%</span>
+                </td>
+                <td className="py-2.5 pr-3 tabular-nums text-indigo-900">{row.registered}</td>
+                <td className="py-2.5 font-bold tabular-nums text-ns-tertiary">
+                  {row.responseRate}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -869,6 +1110,7 @@ export function AdminDashboardPanel() {
     opsQueues,
     nextEventRsvp = null,
     lastEmailResults = null,
+    emailCampaignHistory = [],
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -893,7 +1135,7 @@ export function AdminDashboardPanel() {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Cockpit ops : dernier email (réponses), prochain dîner, vivier et satisfaction.
+            Cockpit ops : prochain dîner, performance des emails, vivier et satisfaction.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -930,35 +1172,28 @@ export function AdminDashboardPanel() {
             Files ops
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            D’abord les réponses du dernier email — puis le prochain dîner et le vivier
-            (profils, priorités).
+            Dîner en cours (OUI / confirmés / sans réponse) puis vivier à traiter.
           </p>
         </div>
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {lastEmailResults ? (
-            <LastEmailResultsCard results={lastEmailResults} />
+          {nextEventRsvp ? (
+            <NextEventRsvpCard rsvp={nextEventRsvp} />
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
               <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Dernier email
+                Prochain événement
               </p>
               <p className="mt-2 text-sm text-ns-secondary">
-                Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
-                Prospects pour voir les OUI / NON ici.
+                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
               </p>
               <Link
-                href="/admin/prospects"
+                href="/admin/evenements?nouveau=1"
                 className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
               >
-                Prospects →
+                Nouvel événement →
               </Link>
             </div>
           )}
-          {nextEventRsvp &&
-          (!lastEmailResults?.eventId ||
-            lastEmailResults.eventId !== nextEventRsvp.eventId) ? (
-            <NextEventRsvpCard rsvp={nextEventRsvp} />
-          ) : null}
           <OpsQueueCard
             title="Profils incomplets"
             href="/admin/inscrits?profile=incomplete"
@@ -968,6 +1203,38 @@ export function AdminDashboardPanel() {
           <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
           <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Performance emails
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Résultat du dernier blast (OUI / NON / inscrits / confirmés) et historique pour
+            apprendre ce qui marche.
+          </p>
+        </div>
+        {lastEmailResults ? (
+          <LastEmailResultsCard results={lastEmailResults} />
+        ) : (
+          <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Dernier email
+            </p>
+            <p className="mt-2 text-sm text-ns-secondary">
+              Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
+              Prospects pour voir la performance ici.
+            </p>
+            <Link
+              href="/admin/prospects"
+              className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
+            >
+              Prospects →
+            </Link>
+          </div>
+        )}
+        <EmailCampaignHistoryTable rows={emailCampaignHistory} />
       </section>
 
       {needingAttention > 0 ? (
