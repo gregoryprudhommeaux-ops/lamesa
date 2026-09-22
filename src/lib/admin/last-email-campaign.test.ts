@@ -258,8 +258,65 @@ describe("buildLastEmailResultsSummary", () => {
     expect(summary.no).toBe(1);
     expect(summary.pending).toBe(1);
     expect(summary.confirmed).toBe(0);
+    expect(summary.registered).toBe(0);
+    expect(summary.responseRate).toBe(67); // 2 answered / 3
+    expect(summary.yesRate).toBe(33);
     expect(summary.yesGuests.map((g) => g.email)).toEqual(["a@x.com"]);
     expect(summary.yesGuests[0]?.seat).toBe("oui");
     expect(summary.recipientCount).toBe(3);
+    expect(summary.recipients.map((r) => ({ email: r.email, outcome: r.outcome }))).toEqual([
+      { email: "a@x.com", outcome: "yes" },
+      { email: "b@x.com", outcome: "no" },
+      { email: "c@x.com", outcome: "pending" },
+    ]);
+  });
+
+  it("marks waitlist members as registered in the contacted list", () => {
+    const summary = buildLastEmailResultsSummary({
+      campaign: campaign({
+        recipientEmails: ["new@x.com", "member@x.com"],
+        recipientCount: 2,
+      }),
+      events: [
+        event({
+          id: "ev1",
+          slug: SLUG,
+          title: "Dirigeants",
+          startsAt: "2026-09-24T02:00:00.000Z",
+        }),
+      ],
+      participations: [],
+      respondents: [],
+      prospects: [
+        {
+          id: "1",
+          email: "new@x.com",
+          fullName: "New",
+          company: "",
+          status: "no_response",
+          lists: [`STD ${SLUG} — SANS RÉPONSE`],
+          sentTemplateKeys: [TPL],
+          lastContactedAt: "2026-09-10T12:00:00.000Z",
+        },
+        {
+          id: "2",
+          email: "member@x.com",
+          fullName: "Member",
+          company: "",
+          status: "contacted",
+          lists: [`STD ${SLUG} — SANS RÉPONSE`],
+          sentTemplateKeys: [TPL],
+          lastContactedAt: "2026-09-10T12:00:00.000Z",
+        },
+      ],
+      waitlistEmails: new Set(["member@x.com"]),
+    });
+
+    expect(summary.pending).toBe(1);
+    expect(summary.registered).toBe(1);
+    expect(summary.recipients.map((r) => r.outcome).sort()).toEqual([
+      "pending",
+      "registered",
+    ]);
   });
 });
