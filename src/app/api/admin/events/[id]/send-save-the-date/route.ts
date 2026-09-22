@@ -8,9 +8,9 @@ import { sendSaveTheDateEmail } from "@/lib/email/send-save-the-date";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
 import { syncStdSansReponseList } from "@/lib/events/sync-std-sans-reponse-list";
 import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import {
   findProspectByEmail,
   updateProspect,
@@ -83,8 +83,6 @@ export async function POST(request: Request, { params }: Params) {
   }
 
   const event = { id: eventSnap.id, ...(eventSnap.data() as Omit<AdminEvent, "id">) };
-  const locale =
-    event.eventLanguage === "en" || event.eventLanguage === "es" ? event.eventLanguage : "fr";
 
   const partsSnap = await db
     .collection(COLLECTIONS.participations)
@@ -112,29 +110,20 @@ export async function POST(request: Request, { params }: Params) {
   let sent = 0;
   let skipped = 0;
   let failed = 0;
-  let waitlistProvisioned = 0;
   const errors: string[] = [];
   const sentEmails: string[] = [];
 
   for (const participation of recipients) {
     const email = normalizeEmail(participation.email);
-    const ensured = await ensureWaitlistProfileByEmail({
-      email,
-      fullName: participation.fullName,
-      company: participation.companyName,
-      phone: participation.phone,
-      locale,
-      source: "la-mesa-std-invite",
-    });
-
-    if (ensured?.provisioned || ensured?.revived) {
-      waitlistProvisioned += 1;
-    }
-
-    if (ensured && (!participation.contactId || participation.contactId !== ensured.id)) {
+    // Link contactId only if they already signed up — never invent an inscrit.
+    const existingMember = await findWaitlistByEmail(email);
+    if (
+      existingMember &&
+      (!participation.contactId || participation.contactId !== existingMember.id)
+    ) {
       await db.collection(COLLECTIONS.participations).doc(participation.id).set(
         {
-          contactId: ensured.id,
+          contactId: existingMember.id,
           updatedAt: new Date().toISOString(),
         },
         { merge: true },
@@ -163,9 +152,9 @@ export async function POST(request: Request, { params }: Params) {
 
     void markProspectNoResponse({
       email,
-      fullName: participation.fullName ?? ensured?.fullName,
-      company: participation.companyName ?? ensured?.company,
-      phone: participation.phone ?? ensured?.phone,
+      fullName: participation.fullName ?? existingMember?.fullName,
+      company: participation.companyName ?? existingMember?.company,
+      phone: participation.phone ?? existingMember?.phone,
       eventSlug: event.slug,
     }).catch((err) => {
       console.warn("[send-save-the-date] prospect no_response failed", email, err);
@@ -211,7 +200,8 @@ export async function POST(request: Request, { params }: Params) {
     sent,
     skipped,
     failed,
-    waitlistProvisioned,
+    /** Always 0 — admin blasts must never invent waitlist inscrits. */
+    waitlistProvisioned: 0,
     sansReponse,
     errors: errors.slice(0, 20),
   });

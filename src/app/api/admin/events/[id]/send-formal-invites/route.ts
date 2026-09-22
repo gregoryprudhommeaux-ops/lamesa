@@ -15,7 +15,7 @@ import { listFormalInviteRecipients } from "@/lib/events/formal-invite-recipient
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -167,16 +167,8 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     if (!participation) {
-      const ensured = await ensureWaitlistProfileByEmail({
-        email: target.email,
-        fullName: target.fullName,
-        company: target.company,
-        phone: target.phone,
-        source: "la-mesa-std-invite",
-        locale: event.eventLanguage === "en" || event.eventLanguage === "es"
-          ? event.eventLanguage
-          : "fr",
-      });
+      // Never invent a plateforme inscrit — only link an existing member.
+      const existingMember = await findWaitlistByEmail(target.email);
 
       const status = nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
@@ -185,10 +177,10 @@ export async function POST(request: Request, { params }: Params) {
       const ref = await db.collection(COLLECTIONS.participations).add({
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
-        companyName: target.company || ensured?.company || "",
-        phone: target.phone || ensured?.phone || "",
-        ...(ensured?.id ? { contactId: ensured.id } : {}),
+        fullName: target.fullName || existingMember?.fullName || target.email,
+        companyName: target.company || existingMember?.company || "",
+        phone: target.phone || existingMember?.phone || "",
+        ...(existingMember?.id ? { contactId: existingMember.id } : {}),
         status,
         statusSource: "admin",
         createdAt: now,
@@ -199,10 +191,10 @@ export async function POST(request: Request, { params }: Params) {
         id: ref.id,
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
-        companyName: target.company || ensured?.company || "",
-        phone: target.phone || ensured?.phone || "",
-        ...(ensured?.id ? { contactId: ensured.id } : {}),
+        fullName: target.fullName || existingMember?.fullName || target.email,
+        companyName: target.company || existingMember?.company || "",
+        phone: target.phone || existingMember?.phone || "",
+        ...(existingMember?.id ? { contactId: existingMember.id } : {}),
         status,
         statusSource: "admin",
         createdAt: now,
