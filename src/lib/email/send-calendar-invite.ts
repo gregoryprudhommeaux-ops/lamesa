@@ -5,6 +5,7 @@ import {
   plainTextFromRichMarkers,
 } from "@/lib/email/ics";
 import { signRsvpToken } from "@/lib/email/rsvp-token";
+import { buildRsvpClickUrl } from "@/lib/email/rsvp-links";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -152,9 +153,8 @@ export async function sendPlacesAvailableEmail(input: {
     email: input.participation.email,
   });
   const locale = input.locale ?? sendLocaleForEvent(input.event);
-  const encoded = encodeURIComponent(token);
-  const yesUrl = `${base}/api/rsvp/${encoded}?response=yes&locale=${locale}`;
-  const noUrl = `${base}/api/rsvp/${encoded}?response=no&locale=${locale}`;
+  const yesUrl = buildRsvpClickUrl({ token, response: "yes", locale, baseUrl: base });
+  const noUrl = buildRsvpClickUrl({ token, response: "no", locale, baseUrl: base });
 
   const template = await getEmailTemplate("places_available", input.event, locale);
   const vars = buildEventTemplateVars({
@@ -178,7 +178,10 @@ export async function sendPlacesAvailableEmail(input: {
     locationOverride: publicLocation,
   });
 
-  const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
+  const html = wrapLaMesaEmailHtml({
+    lang: locale,
+    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
+  });
 
   return sendTransactionalEmail({
     to: input.participation.email,
@@ -205,10 +208,9 @@ export async function sendCalendarInviteEmail(input: {
     email: input.participation.email,
   });
   const locale = input.locale ?? sendLocaleForEvent(input.event);
-  const encoded = encodeURIComponent(token);
-  const yesUrl = `${base}/api/rsvp/${encoded}?response=yes&locale=${locale}`;
-  const noUrl = `${base}/api/rsvp/${encoded}?response=no&locale=${locale}`;
-  const icsDownloadUrl = `${base}/api/invite-ics/${encoded}`;
+  const yesUrl = buildRsvpClickUrl({ token, response: "yes", locale, baseUrl: base });
+  const noUrl = buildRsvpClickUrl({ token, response: "no", locale, baseUrl: base });
+  const icsDownloadUrl = `${base}/api/invite-ics/${encodeURIComponent(token)}`;
 
   const template = await getEmailTemplate("calendar_invite", input.event, locale);
   const vars = buildEventTemplateVars({

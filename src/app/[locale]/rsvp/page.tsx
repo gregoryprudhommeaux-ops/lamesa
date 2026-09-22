@@ -1,5 +1,4 @@
 import { cancellationPolicyBlock } from "@/lib/events/payment-details";
-import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
@@ -123,6 +122,21 @@ export default async function RsvpPage({ params, searchParams }: Props) {
                 title: "Réponse enregistrée",
                 body: "Tu as indiqué que tu ne participeras pas. Merci d’avoir répondu.",
               }
+        : status === "waitlist"
+          ? locale === "en"
+            ? {
+                title: "You’re on the waitlist",
+                body: "Thanks — the table is full for now. We’ll write if a seat opens.",
+              }
+            : locale === "es"
+              ? {
+                  title: "Estás en lista de espera",
+                  body: "Gracias — la mesa está completa por ahora. Te escribimos si se libera un lugar.",
+                }
+              : {
+                  title: "Tu es sur liste d’attente",
+                  body: "Merci — la table est complète pour le moment. On t’écrit s’il se libère une place.",
+                }
         : status === "not_found"
           ? {
               title:
@@ -155,8 +169,7 @@ export default async function RsvpPage({ params, searchParams }: Props) {
 
   return (
     <LaMesaShell card cardClassName="max-w-lg text-center">
-      <LaMesaLogo size="sm" variant="horizontal" tone="black" className="mx-auto" />
-      <h1 className="mt-4 text-2xl font-bold text-ns-primary">{copy.title}</h1>
+      <h1 className="text-2xl font-bold text-ns-primary">{copy.title}</h1>
       <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ns-secondary">
         {copy.body}
       </p>
