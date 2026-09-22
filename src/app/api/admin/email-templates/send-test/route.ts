@@ -287,7 +287,7 @@ export async function POST(request: Request) {
   const html = wantsRsvpButtons
     ? wrapLaMesaEmailHtml({
         lang: locale,
-        bodyHtml: inviteBodyToHtml(bodyText, rsvp.yesUrl, rsvp.noUrl, vars.eventUrl ?? ""),
+        bodyHtml: inviteBodyToHtml(bodyText, rsvp.yesUrl, rsvp.noUrl, vars.eventUrl ?? "", locale),
         footerHtml: rsvpYesNoButtonsHtml({
           yesUrl: rsvp.yesUrl,
           noUrl: rsvp.noUrl,

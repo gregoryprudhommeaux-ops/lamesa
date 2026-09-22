@@ -46,37 +46,38 @@ export function inviteBodyToHtml(
   yesUrl: string,
   noUrl: string,
   eventUrl: string,
+  locale: TemplateLocale = "fr",
 ): string {
   const YES = "__LM_YES__";
   const NO = "__LM_NO__";
   const EVENT = "__LM_EVENT__";
+  const yesLabel = locale === "es" ? "SÍ" : locale === "en" ? "YES" : "OUI";
+  const noLabel = locale === "fr" ? "NON" : "NO";
 
   let prepared = bodyText;
   if (yesUrl) prepared = prepared.split(yesUrl).join(YES);
   if (noUrl) prepared = prepared.split(noUrl).join(NO);
   if (eventUrl) prepared = prepared.split(eventUrl).join(EVENT);
 
-  // Drop “YES: <url>” / “NO: <url>” lines entirely — buttons/footer carry the CTA.
+  // Drop “YES/OUI: <url>” / “NO/NON: <url>” lines — buttons/footer carry the CTA.
   prepared = prepared
-    .replace(/^[ \t]*YES\s*:?\s*__LM_YES__[ \t]*$/gim, "")
-    .replace(/^[ \t]*NO\s*:?\s*__LM_NO__[ \t]*$/gim, "")
-    .replace(/YES\s*:?\s*__LM_YES__/gi, YES)
-    .replace(/NO\s*:?\s*__LM_NO__/gi, NO)
-    // Any leftover RSVP go links (escaped or not)
+    .replace(/^[ \t]*(YES|OUI|SÍ)\s*:?\s*__LM_YES__[ \t]*$/gim, "")
+    .replace(/^[ \t]*(NO|NON)\s*:?\s*__LM_NO__[ \t]*$/gim, "")
+    .replace(/(YES|OUI|SÍ)\s*:?\s*__LM_YES__/gi, YES)
+    .replace(/(NO|NON)\s*:?\s*__LM_NO__/gi, NO)
     .replace(/https?:\/\/[^\s<>"]*\/api\/rsvp\/[^\s<>"]+/gi, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-  // Same pipeline as wrapLaMesaPlainBody / send-test (maps <bold> → <b>, etc.)
   let html = richTextToEmailHtml(prepared);
 
   const linkStyle =
     "color:#111111;font-weight:800;text-decoration:underline;letter-spacing:0.04em;";
   html = html
     .split(YES)
-    .join(`<a href="${escapeEmailHtml(yesUrl)}" style="${linkStyle}">YES</a>`)
+    .join(`<a href="${escapeEmailHtml(yesUrl)}" style="${linkStyle}">${yesLabel}</a>`)
     .split(NO)
-    .join(`<a href="${escapeEmailHtml(noUrl)}" style="${linkStyle}">NO</a>`)
+    .join(`<a href="${escapeEmailHtml(noUrl)}" style="${linkStyle}">${noLabel}</a>`)
     .split(EVENT)
     .join(
       `<a href="${escapeEmailHtml(eventUrl)}" style="color:#2a6f2b;font-weight:600;text-decoration:underline;">${escapeEmailHtml(eventUrl)}</a>`,
@@ -91,7 +92,7 @@ export function rsvpYesNoButtonsHtml(input: {
   locale: TemplateLocale;
 }): string {
   const yesLabel = input.locale === "es" ? "SÍ" : input.locale === "en" ? "YES" : "OUI";
-  const noLabel = "NO";
+  const noLabel = input.locale === "fr" ? "NON" : "NO";
   const btnYes =
     "display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;margin:0 8px 10px 0;";
   const btnNo =
@@ -206,13 +207,13 @@ export async function sendPlacesAvailableEmail(input: {
 
   const html = wrapLaMesaEmailHtml({
     lang: locale,
-    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
+    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl, locale),
     footerHtml: rsvpYesNoButtonsHtml({ yesUrl, noUrl, locale }),
   });
 
   const plainCta =
     locale === "fr"
-      ? `OUI : ${yesUrl}\nNO : ${noUrl}`
+      ? `OUI : ${yesUrl}\nNON : ${noUrl}`
       : locale === "es"
         ? `SÍ: ${yesUrl}\nNO: ${noUrl}`
         : `YES: ${yesUrl}\nNO: ${noUrl}`;
@@ -289,7 +290,7 @@ export async function sendCalendarInviteEmail(input: {
 
   const html = wrapLaMesaEmailHtml({
     lang: locale,
-    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
+    bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl, locale),
     footerHtml: `
           ${rsvpYesNoButtonsHtml({ yesUrl, noUrl, locale })}
           <div style="margin-top:8px;">

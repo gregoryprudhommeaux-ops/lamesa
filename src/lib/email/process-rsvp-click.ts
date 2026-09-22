@@ -165,6 +165,21 @@ export async function processRsvpClick(input: {
       );
     }
 
+    // Non-members must create a LA MESA account (YES or NO).
+    if (event && guestEmail.includes("@")) {
+      const waitlist = await findWaitlistByEmail(guestEmail);
+      // Stub outreach rows have profileComplete === false → must register on /light.
+      const onMesa = Boolean(waitlist) && waitlist?.profileComplete !== false;
+      if (!onMesa) {
+        const q = new URLSearchParams({
+          from: "places",
+          event: event.slug || event.id,
+          rsvp: response,
+        });
+        return NextResponse.redirect(`${base}/light?${q.toString()}`);
+      }
+    }
+
     if (response === "yes" && event && guestEmail.includes("@")) {
       try {
         const partsSnap = await db
@@ -198,19 +213,8 @@ export async function processRsvpClick(input: {
               }
             : {}),
         } as AdminEventParticipation;
-        const waitlist = await findWaitlistByEmail(guestEmail);
-        // Stub rows from outreach still count as “need /light”; real members have profileComplete true/undefined.
-        const onMesa =
-          Boolean(waitlist) &&
-          waitlist?.profileComplete !== false &&
-          waitlist?.source !== "la-mesa-places-available";
         const seatsLeft = seated <= capacity && next !== "waitlist";
 
-        if (!onMesa) {
-          return NextResponse.redirect(
-            `${base}/light?from=places&event=${encodeURIComponent(event.slug || event.id)}`,
-          );
-        }
         if (seatsLeft && normalizeParticipationStatus(partRow.status) !== "confirmed") {
           void sendTemplatedEventEmail({
             key: "payment_relance",

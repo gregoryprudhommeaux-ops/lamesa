@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { inviteBodyToHtml } from "@/lib/email/send-calendar-invite";
 
 describe("inviteBodyToHtml", () => {
-  it("turns YES/NO URLs into short hyperlinks", () => {
+  it("turns YES/NO URLs into short FR hyperlinks (OUI/NON)", () => {
     const yes = "https://example.com/api/rsvp/token?response=yes&locale=fr";
     const no = "https://example.com/api/rsvp/token?response=no&locale=fr";
     const event = "https://example.com/fr/e/slug";
@@ -14,10 +14,10 @@ describe("inviteBodyToHtml", () => {
       `Page de l’événement : ${event}`,
     ].join("\n");
 
-    const html = inviteBodyToHtml(body, yes, no, event);
+    const html = inviteBodyToHtml(body, yes, no, event, "fr");
     expect(html).toContain(`href="${yes.replace(/&/g, "&amp;")}"`);
-    expect(html).toContain(">YES</a>");
-    expect(html).toContain(">NO</a>");
+    expect(html).toContain(">OUI</a>");
+    expect(html).toContain(">NON</a>");
     expect(html).not.toContain("YES : https://");
     expect(html).not.toContain("NO : https://");
   });
@@ -28,6 +28,7 @@ describe("inviteBodyToHtml", () => {
       "https://example.com/yes",
       "https://example.com/no",
       "https://example.com/e",
+      "fr",
     );
     expect(html).toContain("<b>24 sept. 2026, 20:00</b>");
     expect(html).toContain("<b>1300,00 $MX</b>");
