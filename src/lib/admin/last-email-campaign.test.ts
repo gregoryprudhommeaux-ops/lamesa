@@ -309,14 +309,112 @@ describe("buildLastEmailResultsSummary", () => {
           lastContactedAt: "2026-09-10T12:00:00.000Z",
         },
       ],
-      waitlistEmails: new Set(["member@x.com"]),
+      waitlistByEmail: new Map([
+        [
+          "member@x.com",
+          {
+            email: "member@x.com",
+            fullName: "Member",
+            company: "",
+            source: "inscription",
+            profileComplete: true,
+          },
+        ],
+      ]),
     });
 
     expect(summary.pending).toBe(1);
     expect(summary.registered).toBe(1);
+    expect(summary.registeredComplete).toBe(1);
     expect(summary.recipients.map((r) => r.outcome).sort()).toEqual([
       "pending",
       "registered",
     ]);
+  });
+
+  it("counts places_available OUI/NON from RSVP participation status", () => {
+    const summary = buildLastEmailResultsSummary({
+      campaign: {
+        templateKey: `places_available:${SLUG}`,
+        templateLabel: "Places encore dispo",
+        sentAt: "2026-09-22T21:56:00.000Z",
+        recipientCount: 3,
+        recipientEmails: ["yes@x.com", "no@x.com", "silent@x.com"],
+        eventSlug: SLUG,
+        eventId: "ev1",
+        eventTitle: "Dirigeants",
+        source: "places_available",
+        updatedAt: "2026-09-22T21:56:00.000Z",
+      },
+      events: [
+        event({
+          id: "ev1",
+          slug: SLUG,
+          title: "Dirigeants",
+          startsAt: "2026-09-24T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "yes@x.com",
+          status: "attending",
+          fullName: "Yes Person",
+          companyName: "Co",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+        }),
+        part({
+          id: "p2",
+          eventId: "ev1",
+          email: "no@x.com",
+          status: "not_attending",
+          fullName: "No Person",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+        }),
+        part({
+          id: "p3",
+          eventId: "ev1",
+          email: "silent@x.com",
+          status: "invited",
+          fullName: "Silent",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+        }),
+      ],
+      respondents: [],
+      prospects: [],
+      waitlistByEmail: new Map([
+        [
+          "silent@x.com",
+          {
+            email: "silent@x.com",
+            fullName: "Silent",
+            company: "",
+            source: "light",
+            profileComplete: false,
+          },
+        ],
+        [
+          "yes@x.com",
+          {
+            email: "yes@x.com",
+            fullName: "Yes Person",
+            company: "Co",
+            source: "inscription",
+            profileComplete: true,
+          },
+        ],
+      ]),
+    });
+
+    expect(summary.responseMode).toBe("rsvp");
+    expect(summary.yes).toBe(1);
+    expect(summary.no).toBe(1);
+    expect(summary.pending).toBe(1);
+    expect(summary.registeredExpress).toBe(1);
+    expect(summary.registeredComplete).toBe(1);
+    expect(summary.yesGuests.map((g) => g.email)).toEqual(["yes@x.com"]);
+    expect(summary.noGuests.map((g) => g.email)).toEqual(["no@x.com"]);
   });
 });

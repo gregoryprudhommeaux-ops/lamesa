@@ -25,6 +25,7 @@ import {
   buildLastEmailResultsSummary,
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
+  inferLastPlacesAvailableCampaign,
   loadLastEmailCampaign,
   loadRecentEmailCampaigns,
   pickLatestCampaign,
@@ -377,10 +378,24 @@ export async function GET(request: Request) {
     let lastEmailResults = null as ReturnType<typeof buildLastEmailResultsSummary> | null;
     let emailCampaignHistory: EmailCampaignHistoryRow[] = [];
     try {
-      const waitlistEmails = new Set(
+      const waitlistByEmail = new Map(
         waitlistActive
-          .map((r) => String(r.email ?? "").trim().toLowerCase())
-          .filter((e) => e.includes("@")),
+          .filter((r) => String(r.email ?? "").includes("@"))
+          .map((r) => {
+            const email = String(r.email ?? "").trim().toLowerCase();
+            return [
+              email,
+              {
+                id: r.id,
+                email,
+                fullName: r.fullName ?? "",
+                company: r.company ?? "",
+                source: r.source ?? "",
+                profileComplete: r.profileComplete ?? null,
+                createdAt: r.createdAt ?? "",
+              },
+            ] as const;
+          }),
       );
       const storedCampaign = await loadLastEmailCampaign();
       const recentCampaigns = await loadRecentEmailCampaigns(8);
@@ -389,11 +404,13 @@ export async function GET(request: Request) {
         nextEventProspects,
         events,
       );
+      const inferredPlaces = inferLastPlacesAvailableCampaign(events, participations);
       const campaign = pickLatestCampaign(
         storedCampaign,
         recentCampaigns[0] ?? null,
         inferredFromEvents,
         inferredFromProspects,
+        inferredPlaces,
       );
 
       const prospectsCache = new Map<string, RsvpProspectRow[]>();
@@ -458,7 +475,7 @@ export async function GET(request: Request) {
           participations,
           respondents: lastRespondents,
           prospects: lastProspects,
-          waitlistEmails,
+          waitlistByEmail,
         });
       }
 

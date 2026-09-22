@@ -121,13 +121,16 @@ type LastEmailResults = {
   confirmed: number;
   inviteSent: number;
   registered: number;
+  registeredExpress: number;
+  registeredComplete: number;
   responseRate: number;
   yesRate: number;
   confirmedRate: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
+  noGuests: NextEventRsvpYesGuest[];
   recipients: EmailCampaignRecipient[];
-  source: "cold_outreach" | "save_the_date" | "inferred";
+  source: "cold_outreach" | "save_the_date" | "places_available" | "inferred";
 };
 
 type EmailCampaignRecipient = {
@@ -143,6 +146,7 @@ type EmailCampaignRecipient = {
     | "other"
     | "registered"
     | "pending";
+  signupKind?: "express" | "complete" | null;
 };
 
 type EmailCampaignHistoryRow = {
@@ -456,12 +460,15 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
     ? `/admin/evenements?id=${encodeURIComponent(results.eventId)}`
     : null;
   const noTotal = results.no + results.other;
+  const isPlaces =
+    results.templateKey.includes("places_available") ||
+    results.source === "places_available";
   const modeHint =
-    results.responseMode === "interest"
-      ? "Save the Date / intérêt"
-      : results.responseMode === "rsvp"
-        ? "RSVP classique"
-        : "Envoi sans formulaire de réponse";
+    isPlaces || results.responseMode === "rsvp"
+      ? "Boutons OUI / NON (RSVP)"
+      : results.responseMode === "interest"
+        ? "Save the Date / intérêt"
+        : "Envoi tracké";
 
   return (
     <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
@@ -478,9 +485,13 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
             {results.eventTitle ? ` · ${results.eventTitle}` : ""}
           </p>
           <p className="mt-1 max-w-2xl text-[11px] leading-snug text-ns-secondary">
-            Performance du blast : taux de réponse {results.responseRate}% · OUI{" "}
-            {results.yesRate}% · confirmés {results.confirmedRate}%. Sert à apprendre ce
-            qui convertit pour les prochains envois.
+            {results.recipientCount} mails envoyés · {results.responseRate}% de réponses ·{" "}
+            {results.yes} OUI · {noTotal} NON · {results.registered} inscrits LA MESA (
+            {results.registeredComplete} complet
+            {results.registeredExpress > 0
+              ? ` · ${results.registeredExpress} express`
+              : ""}
+            ).
           </p>
         </div>
         {eventHref ? (
@@ -500,58 +511,111 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
         )}
       </div>
 
-      {results.responseMode === "none" ? (
-        <p className="mt-4 text-sm text-ns-secondary">
-          Cet envoi n’est pas lié à un formulaire OUI/NON — on suit quand même les
-          inscrits plateforme dans la liste ci-dessous.
-        </p>
-      ) : (
-        <ResponseCounters
-          contactedLabel="Envoyés"
-          contacted={results.recipientCount}
-          yes={results.yes}
-          confirmed={results.confirmed}
-          inviteSent={results.inviteSent}
-          noTotal={noTotal}
-          noHint={
-            results.other > 0
-              ? `${results.no} non · ${results.other} autre`
-              : undefined
-          }
-          pending={results.pending}
-          sansReponseListName={results.sansReponseListName}
-        />
-      )}
-
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+            Envoyés
+          </p>
+          <p className="mt-1 text-2xl font-black text-ns-tertiary">
+            {results.recipientCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            Oui
+          </p>
+          <p className="mt-1 text-2xl font-black text-emerald-900">{results.yes}</p>
+          <p className="text-[10px] text-emerald-800/80">{results.yesRate}%</p>
+        </div>
+        <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">Non</p>
+          <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
+        </div>
+        <div className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+            Confirmés
+          </p>
+          <p className="mt-1 text-2xl font-black text-sky-950">{results.confirmed}</p>
+          <p className="text-[10px] text-sky-900/80">Payés</p>
+        </div>
         <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-3 py-2.5">
           <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-900">
             Inscrits
           </p>
           <p className="mt-1 text-2xl font-black text-indigo-950">{results.registered}</p>
-          <p className="text-[10px] text-indigo-900/80">Membres waitlist</p>
-        </div>
-        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-            Taux réponse
+          <p className="text-[10px] text-indigo-900/80">
+            {results.registeredComplete} complet
+            {results.registeredExpress > 0
+              ? ` · ${results.registeredExpress} express`
+              : ""}
           </p>
-          <p className="mt-1 text-2xl font-black text-ns-tertiary">{results.responseRate}%</p>
         </div>
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-            Taux OUI
+        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Sans réponse
           </p>
-          <p className="mt-1 text-2xl font-black text-emerald-900">{results.yesRate}%</p>
-        </div>
-        <div className="rounded-xl border border-sky-100 bg-sky-50/70 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
-            Taux confirmés
-          </p>
-          <p className="mt-1 text-2xl font-black text-sky-950">{results.confirmedRate}%</p>
+          <p className="mt-1 text-2xl font-black text-amber-950">{results.pending}</p>
         </div>
       </div>
 
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <NamedGuestList
+          title="Ont dit oui — à relancer pour le paiement"
+          empty="Aucun OUI pour l’instant."
+          guests={results.yesGuests}
+          tone="yes"
+        />
+        <NamedGuestList
+          title="Ont dit non"
+          empty="Aucun NON pour l’instant."
+          guests={results.noGuests}
+          tone="no"
+        />
+      </div>
+
       <ContactedRecipientsList recipients={results.recipients} />
+    </div>
+  );
+}
+
+function NamedGuestList({
+  title,
+  empty,
+  guests,
+  tone,
+}: {
+  title: string;
+  empty: string;
+  guests: NextEventRsvpYesGuest[];
+  tone: "yes" | "no";
+}) {
+  const border =
+    tone === "yes" ? "border-emerald-100/80 bg-white/70" : "border-rose-100/80 bg-white/70";
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white/50 p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{title}</p>
+      <p className="mt-0.5 text-[11px] text-ns-secondary">{guests.length} personne{guests.length === 1 ? "" : "s"}</p>
+      {guests.length === 0 ? (
+        <p className="mt-2 text-sm text-ns-secondary">{empty}</p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {guests.map((g) => (
+            <li key={g.id} className={`rounded-lg border px-2.5 py-1.5 ${border}`}>
+              <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                {g.fullName || g.email || "Sans nom"}
+              </span>
+              <span className="block truncate text-[11px] text-ns-secondary">
+                {g.company || g.email}
+              </span>
+              {tone === "yes" && g.seat === "confirmed" ? (
+                <span className="mt-1 inline-flex rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-900">
+                  Payé
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -641,6 +705,11 @@ function ContactedRecipientsList({
                     {outcomeLabel(r.outcome)}
                   </span>
                 </div>
+                {r.signupKind ? (
+                  <span className="mt-1 inline-flex rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">
+                    {r.signupKind === "express" ? "Express" : "Profil complet"}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

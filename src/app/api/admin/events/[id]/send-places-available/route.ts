@@ -18,6 +18,8 @@ import {
 } from "@/lib/events/places-available-candidates";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
+import { templateLabel } from "@/lib/email/template-defaults";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -186,6 +188,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const target of targets) {
     if (isOrganizerParticipation({ email: target.email })) {
@@ -253,6 +256,7 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     sent += 1;
+    sentEmails.push(target.email);
     await db.collection(COLLECTIONS.participations).doc(participation.id).set(
       {
         placesAvailableSentAt: now,
@@ -261,6 +265,19 @@ export async function POST(request: Request, { params }: Params) {
       },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: `places_available:${slug}`,
+      templateLabel: templateLabel("places_available"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: slug,
+      eventId,
+      eventTitle: event.title,
+      source: "places_available",
+    });
   }
 
   return NextResponse.json({

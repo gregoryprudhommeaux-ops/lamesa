@@ -55,11 +55,17 @@ export function isStdRelanceTemplateKey(templateKey: string): boolean {
 
 /**
  * Infer event slug from a template key (custom_dirigeants_fr_2026_09_24, relance STD…).
+ * Also supports system keys scoped to an event: `places_available:slug`, `save_the_date:slug`.
  */
 export function eventSlugFromOutreachTemplateKey(templateKey: string): string | null {
   const key = normalizeKey(templateKey);
   if (!key) return null;
   if (key in RELANCE_TEMPLATE_SLUGS) return RELANCE_TEMPLATE_SLUGS[key];
+
+  const scoped = key.match(
+    /^(places_available|save_the_date|calendar_invite|payment_relance):(.+)$/,
+  );
+  if (scoped?.[2]?.trim()) return scoped[2].trim();
 
   const m = key.match(/^custom_(.+)$/);
   if (!m?.[1]) return null;
@@ -68,6 +74,17 @@ export function eventSlugFromOutreachTemplateKey(templateKey: string): string | 
   if (!looksLikeEventSlugBody(body)) return null;
   const slug = body.replace(/_/g, "-");
   return slug || null;
+}
+
+/** True when the blast uses RSVP OUI/NON links (places available, formal invite…). */
+export function isRsvpButtonCampaignKey(templateKey: string): boolean {
+  const key = normalizeKey(templateKey);
+  return (
+    key === "places_available" ||
+    key.startsWith("places_available:") ||
+    key === "calendar_invite" ||
+    key.startsWith("calendar_invite:")
+  );
 }
 
 function looksLikeEventSlugBody(body: string): boolean {
