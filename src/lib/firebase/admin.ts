@@ -43,6 +43,8 @@ export const COLLECTIONS = {
   prospects: "la_mesa_prospects",
   prospectLists: "la_mesa_prospect_lists",
   contactActivities: "la_mesa_contact_activities",
+  /** Singleton ops docs (e.g. `last_email_campaign`). */
+  ops: "la_mesa_ops",
   events: "events",
   participations: "event_participations",
   respondents: "event_respondents",

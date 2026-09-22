@@ -17,6 +17,8 @@ import { listProspectLists } from "@/lib/prospects/lists-store";
 import { isEligibleForTemplateCampaign } from "@/lib/prospects/campaign-eligibility";
 import { syncStdSansReponseListBySlug } from "@/lib/events/sync-std-sans-reponse-list";
 import { eventSlugFromOutreachTemplateKey } from "@/lib/events/std-outreach-templates";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
+import { templateLabel } from "@/lib/email/template-defaults";
 import {
   isDatabasePersoConfigured,
   markLaMesaContacted,
@@ -306,6 +308,16 @@ export async function POST(request: Request) {
       await markProspectsContacted(succeededIds, templateKey, {
         removeFromLists: parsed.data.sourceList ? [parsed.data.sourceList] : undefined,
       });
+      const succeededEmails = succeededIds
+        .map((id) => targets.find((t) => t.id === id)?.email)
+        .filter((e): e is string => Boolean(e?.includes("@")));
+      void recordLastEmailCampaign({
+        templateKey,
+        templateLabel: templateLabel(templateKey),
+        recipientEmails: succeededEmails,
+        eventSlug: eventSlugFromOutreachTemplateKey(templateKey),
+        source: "cold_outreach",
+      });
       for (const id of succeededIds) {
         const p = targets.find((t) => t.id === id);
         if (!p) continue;
@@ -324,10 +336,7 @@ export async function POST(request: Request) {
 
       // Mirror CONTACTÉ on Database Perso (LA MESA - CONTACTER) by email.
       if (isDatabasePersoConfigured()) {
-        const emails = succeededIds
-          .map((id) => targets.find((t) => t.id === id)?.email)
-          .filter((e): e is string => Boolean(e?.includes("@")));
-        void markLaMesaContacted([], emails).catch((error) => {
+        void markLaMesaContacted([], succeededEmails).catch((error) => {
           console.warn("[admin/cold-outreach] database-perso mark-contacted failed:", error);
         });
       }

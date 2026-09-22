@@ -21,6 +21,13 @@ import {
   isStdListForEvent,
   pickNextUpcomingEvent,
 } from "@/lib/admin/next-event-rsvp";
+import {
+  buildLastEmailResultsSummary,
+  inferLastEmailCampaignFromEvents,
+  inferLastEmailCampaignFromProspects,
+  loadLastEmailCampaign,
+  pickLatestCampaign,
+} from "@/lib/admin/last-email-campaign";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -33,6 +40,7 @@ import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type { EventRespondent, WaitlistRegistration } from "@/lib/types/events";
 import type { Prospect } from "@/lib/types/prospects";
 import { normalizeProspectStatus } from "@/lib/prospects/normalize";
+import { eventSlugFromOutreachTemplateKey } from "@/lib/events/std-outreach-templates";
 
 const RECENT_REGISTRANTS_LIMIT = 25;
 
@@ -70,6 +78,83 @@ function sortDistributionMembers(members: DistributionMember[]): DistributionMem
       a.email.localeCompare(b.email, "fr"),
   );
 }
+
+type RsvpProspectRow = Pick<
+  Prospect,
+  | "id"
+  | "email"
+  | "fullName"
+  | "company"
+  | "status"
+  | "lists"
+  | "deletedAt"
+  | "sentTemplateKeys"
+  | "lastContactedAt"
+>;
+
+function prospectFromDoc(
+  id: string,
+  data: Record<string, unknown>,
+): RsvpProspectRow {
+  return {
+    id,
+    email: String(data.email ?? ""),
+    fullName: String(data.fullName ?? ""),
+    company: String(data.company ?? ""),
+    status: normalizeProspectStatus(data.status),
+    lists: Array.isArray(data.lists) ? data.lists.map(String) : [],
+    deletedAt: typeof data.deletedAt === "string" ? data.deletedAt : null,
+    sentTemplateKeys: Array.isArray(data.sentTemplateKeys)
+      ? data.sentTemplateKeys.map(String)
+      : [],
+    lastContactedAt:
+      typeof data.lastContactedAt === "string" ? data.lastContactedAt : null,
+  };
+}
+
+async function loadProspectsForEventSlug(
+  db: FirebaseFirestore,
+  eventSlug: string,
+): Promise<RsvpProspectRow[]> {
+  const listsSnap = await db.collection(COLLECTIONS.prospectLists).limit(200).get();
+  const eventListNames = listsSnap.docs
+    .map((d) => String((d.data() as { name?: string }).name ?? "").trim())
+    .filter((name) => isStdListForEvent(name, eventSlug));
+
+  const byId = new Map<string, RsvpProspectRow>();
+  await Promise.all(
+    eventListNames.map(async (listName) => {
+      const snap = await db
+        .collection(COLLECTIONS.prospects)
+        .where("lists", "array-contains", listName)
+        .limit(400)
+        .get();
+      for (const doc of snap.docs) {
+        if (byId.has(doc.id)) continue;
+        byId.set(doc.id, prospectFromDoc(doc.id, doc.data() as Record<string, unknown>));
+      }
+    }),
+  );
+  return [...byId.values()];
+}
+
+async function loadRespondentsForEvent(
+  db: FirebaseFirestore,
+  eventId: string,
+): Promise<EventRespondent[]> {
+  const respondentsSnap = await db
+    .collection(COLLECTIONS.respondents)
+    .where("eventId", "==", eventId)
+    .limit(500)
+    .get();
+  return respondentsSnap.docs.map((d) => ({
+    id: d.id,
+    ...(d.data() as Omit<EventRespondent, "id">),
+  }));
+}
+
+// Avoid importing Firestore type from firebase-admin in every call site.
+type FirebaseFirestore = ReturnType<typeof getAdminFirestore>;
 
 function buildDistribution(
   rows: WaitlistRegistration[],
@@ -263,84 +348,16 @@ export async function GET(request: Request) {
 
     const nextEvent = pickNextUpcomingEvent(events);
     let nextEventRespondents: EventRespondent[] = [];
-    let nextEventProspects: Array<
-      Pick<
-        Prospect,
-        | "id"
-        | "email"
-        | "fullName"
-        | "company"
-        | "status"
-        | "lists"
-        | "deletedAt"
-        | "sentTemplateKeys"
-        | "lastContactedAt"
-      >
-    > = [];
+    let nextEventProspects: RsvpProspectRow[] = [];
     if (nextEvent) {
       try {
-        const respondentsSnap = await db
-          .collection(COLLECTIONS.respondents)
-          .where("eventId", "==", nextEvent.id)
-          .limit(500)
-          .get();
-        nextEventRespondents = respondentsSnap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<EventRespondent, "id">),
-        }));
+        nextEventRespondents = await loadRespondentsForEvent(db, nextEvent.id);
       } catch (error) {
         console.error("[admin/dashboard] next-event respondents", error);
       }
 
       try {
-        const listsSnap = await db.collection(COLLECTIONS.prospectLists).limit(200).get();
-        const eventListNames = listsSnap.docs
-          .map((d) => String((d.data() as { name?: string }).name ?? "").trim())
-          .filter((name) => isStdListForEvent(name, nextEvent.slug));
-
-        const byId = new Map<
-          string,
-          Pick<
-            Prospect,
-            | "id"
-            | "email"
-            | "fullName"
-            | "company"
-            | "status"
-            | "lists"
-            | "deletedAt"
-            | "sentTemplateKeys"
-            | "lastContactedAt"
-          >
-        >();
-        await Promise.all(
-          eventListNames.map(async (listName) => {
-            const snap = await db
-              .collection(COLLECTIONS.prospects)
-              .where("lists", "array-contains", listName)
-              .limit(400)
-              .get();
-            for (const doc of snap.docs) {
-              if (byId.has(doc.id)) continue;
-              const data = doc.data() as Record<string, unknown>;
-              byId.set(doc.id, {
-                id: doc.id,
-                email: String(data.email ?? ""),
-                fullName: String(data.fullName ?? ""),
-                company: String(data.company ?? ""),
-                status: normalizeProspectStatus(data.status),
-                lists: Array.isArray(data.lists) ? data.lists.map(String) : [],
-                deletedAt: typeof data.deletedAt === "string" ? data.deletedAt : null,
-                sentTemplateKeys: Array.isArray(data.sentTemplateKeys)
-                  ? data.sentTemplateKeys.map(String)
-                  : [],
-                lastContactedAt:
-                  typeof data.lastContactedAt === "string" ? data.lastContactedAt : null,
-              });
-            }
-          }),
-        );
-        nextEventProspects = [...byId.values()];
+        nextEventProspects = await loadProspectsForEventSlug(db, nextEvent.slug);
       } catch (error) {
         console.error("[admin/dashboard] next-event prospects", error);
       }
@@ -352,6 +369,76 @@ export async function GET(request: Request) {
       respondents: nextEventRespondents,
       prospects: nextEventProspects,
     });
+
+    let lastEmailResults = null as ReturnType<typeof buildLastEmailResultsSummary> | null;
+    try {
+      const storedCampaign = await loadLastEmailCampaign();
+      const inferredFromEvents = inferLastEmailCampaignFromEvents(events, participations);
+      const inferredFromProspects = inferLastEmailCampaignFromProspects(
+        nextEventProspects,
+        events,
+      );
+      const campaign = pickLatestCampaign(
+        storedCampaign,
+        inferredFromEvents,
+        inferredFromProspects,
+      );
+
+      if (campaign) {
+        const campaignEventId =
+          campaign.eventId ||
+          events.find(
+            (e) =>
+              campaign.eventSlug &&
+              e.slug.trim().toLowerCase() === campaign.eventSlug.trim().toLowerCase(),
+          )?.id ||
+          null;
+        const campaignSlug =
+          campaign.eventSlug ||
+          (campaign.templateKey
+            ? eventSlugFromOutreachTemplateKey(campaign.templateKey)
+            : null);
+
+        let lastRespondents = nextEventRespondents;
+        let lastProspects = nextEventProspects;
+        const sameAsNext =
+          nextEvent &&
+          ((campaignEventId && campaignEventId === nextEvent.id) ||
+            (campaignSlug &&
+              campaignSlug.toLowerCase() === nextEvent.slug.trim().toLowerCase()));
+
+        if (!sameAsNext && campaignEventId) {
+          try {
+            lastRespondents = await loadRespondentsForEvent(db, campaignEventId);
+          } catch (error) {
+            console.error("[admin/dashboard] last-email respondents", error);
+            lastRespondents = [];
+          }
+        }
+        if (!sameAsNext && campaignSlug) {
+          try {
+            lastProspects = await loadProspectsForEventSlug(db, campaignSlug);
+          } catch (error) {
+            console.error("[admin/dashboard] last-email prospects", error);
+            lastProspects = [];
+          }
+        }
+
+        lastEmailResults = buildLastEmailResultsSummary({
+          campaign: {
+            ...campaign,
+            eventId: campaign.eventId || campaignEventId,
+            eventSlug: campaign.eventSlug || campaignSlug,
+          },
+          events,
+          participations,
+          respondents: lastRespondents,
+          prospects: lastProspects,
+        });
+      }
+    } catch (error) {
+      console.error("[admin/dashboard] last-email results", error);
+    }
 
     return NextResponse.json({
       ok: true,
@@ -378,6 +465,7 @@ export async function GET(request: Request) {
       recentTableDrafts,
       opsQueues,
       nextEventRsvp,
+      lastEmailResults,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);
