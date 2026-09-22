@@ -4,11 +4,15 @@
  */
 import {
   computeInterestRsvpEmailSets,
+  countConfirmedParticipations,
+  countInviteSentNotPaid,
+  enrichYesGuestsWithSeats,
   type NextEventRsvpYesGuest,
   type RsvpProspectSlice,
 } from "@/lib/admin/next-event-rsvp";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { interestSansReponseListName } from "@/lib/events/interest-prospect-lists";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { eventSlugFromOutreachTemplateKey } from "@/lib/events/std-outreach-templates";
 import { templateLabel } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -59,6 +63,10 @@ export type LastEmailResultsSummary = {
   no: number;
   other: number;
   pending: number;
+  /** Places confirmées / payées parmi la cohorte (ou l’événement). */
+  confirmed: number;
+  /** Invitation formelle envoyée, pas encore payée. */
+  inviteSent: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
   source: LastEmailCampaignSource;
@@ -335,7 +343,7 @@ export function buildLastEmailResultsSummary(input: {
   yesLimit?: number;
 }): LastEmailResultsSummary {
   const { campaign } = input;
-  const yesLimit = input.yesLimit ?? 12;
+  const yesLimit = input.yesLimit ?? 40;
   const event = resolveEventForCampaign(campaign, input.events);
   const recipientSet = new Set(uniqEmails(campaign.recipientEmails));
   const hasRecipientList = recipientSet.size > 0;
@@ -359,12 +367,15 @@ export function buildLastEmailResultsSummary(input: {
       no: 0,
       other: 0,
       pending: base.recipientCount,
+      confirmed: 0,
+      inviteSent: 0,
       yesGuests: [],
     };
   }
 
   const mode: "interest" | "rsvp" =
     event.responseMode === "interest" ? "interest" : "rsvp";
+  const emailFilter = hasRecipientList ? recipientSet : undefined;
 
   if (mode === "interest") {
     const sets = computeInterestRsvpEmailSets({
@@ -393,13 +404,13 @@ export function buildLastEmailResultsSummary(input: {
     let no = 0;
     let other = 0;
     let pending = 0;
-    const yesGuests: NextEventRsvpYesGuest[] = [];
+    const yesGuestsRaw: NextEventRsvpYesGuest[] = [];
 
     for (const email of cohort) {
       if (sets.yesEmails.has(email)) {
         yes += 1;
         const guest = sets.yesGuestsByEmail.get(email);
-        if (guest) yesGuests.push(guest);
+        if (guest) yesGuestsRaw.push(guest);
       } else if (sets.noEmails.has(email)) {
         no += 1;
       } else if (sets.otherEmails.has(email)) {
@@ -409,6 +420,12 @@ export function buildLastEmailResultsSummary(input: {
       }
     }
 
+    const yesGuests = enrichYesGuestsWithSeats(
+      yesGuestsRaw,
+      event.id,
+      input.participations,
+    ).slice(0, yesLimit);
+
     return {
       ...base,
       recipientCount: Math.max(base.recipientCount, cohort.size),
@@ -417,8 +434,18 @@ export function buildLastEmailResultsSummary(input: {
       no,
       other,
       pending,
+      confirmed: countConfirmedParticipations(
+        event.id,
+        input.participations,
+        emailFilter ?? cohort,
+      ),
+      inviteSent: countInviteSentNotPaid(
+        event.id,
+        input.participations,
+        emailFilter ?? cohort,
+      ),
       sansReponseListName: interestSansReponseListName(event.slug),
-      yesGuests: yesGuests.slice(0, yesLimit),
+      yesGuests,
     };
   }
 
@@ -429,13 +456,17 @@ export function buildLastEmailResultsSummary(input: {
     ? guests.filter((p) => recipientSet.has(normalizeEmail(p.email)))
     : guests.filter((p) => Boolean(p.calendarInviteSentAt || p.saveTheDateSentAt));
 
-  const yesParts = cohortParts.filter(
-    (p) => p.status === "attending" || p.status === "confirmed",
+  const yesParts = cohortParts.filter((p) => {
+    const s = normalizeParticipationStatus(p.status);
+    return s === "attending" || s === "confirmed";
+  });
+  const noParts = cohortParts.filter(
+    (p) => normalizeParticipationStatus(p.status) === "not_attending",
   );
-  const noParts = cohortParts.filter((p) => p.status === "not_attending");
-  const pendingParts = cohortParts.filter(
-    (p) => p.status === "invited" || p.status === "waitlist",
-  );
+  const pendingParts = cohortParts.filter((p) => {
+    const s = normalizeParticipationStatus(p.status);
+    return s === "invited" || s === "waitlist";
+  });
 
   return {
     ...base,
@@ -445,11 +476,21 @@ export function buildLastEmailResultsSummary(input: {
     no: noParts.length,
     other: 0,
     pending: pendingParts.length,
-    yesGuests: yesParts.slice(0, yesLimit).map((p) => ({
-      id: p.id,
-      fullName: p.fullName?.trim() || p.email || "Sans nom",
-      email: p.email ?? "",
-      company: p.companyName?.trim() || "",
-    })),
+    confirmed: yesParts.length,
+    inviteSent: countInviteSentNotPaid(
+      event.id,
+      input.participations,
+      emailFilter,
+    ),
+    yesGuests: enrichYesGuestsWithSeats(
+      yesParts.map((p) => ({
+        id: p.id,
+        fullName: p.fullName?.trim() || p.email || "Sans nom",
+        email: p.email ?? "",
+        company: p.companyName?.trim() || "",
+      })),
+      event.id,
+      input.participations,
+    ).slice(0, yesLimit),
   };
 }

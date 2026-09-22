@@ -257,7 +257,9 @@ describe("buildLastEmailResultsSummary", () => {
     expect(summary.yes).toBe(1);
     expect(summary.no).toBe(1);
     expect(summary.pending).toBe(1);
+    expect(summary.confirmed).toBe(0);
     expect(summary.yesGuests.map((g) => g.email)).toEqual(["a@x.com"]);
+    expect(summary.yesGuests[0]?.seat).toBe("oui");
     expect(summary.recipientCount).toBe(3);
   });
 });
