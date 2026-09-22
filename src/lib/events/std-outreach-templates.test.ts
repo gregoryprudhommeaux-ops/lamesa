@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   eventSlugFromOutreachTemplateKey,
+  isRsvpButtonCampaignKey,
   isStdRelanceTemplateKey,
   templateKeyMatchesEventSlug,
 } from "./std-outreach-templates";
@@ -19,10 +20,18 @@ describe("std-outreach-templates", () => {
     expect(eventSlugFromOutreachTemplateKey("custom_dirigeants_fr_2026_09_24")).toBe(SLUG);
     expect(eventSlugFromOutreachTemplateKey("custom_relance_a_suivre_std_24_sept")).toBe(SLUG);
     expect(eventSlugFromOutreachTemplateKey("custom_newsletter")).toBeNull();
+    expect(eventSlugFromOutreachTemplateKey(`places_available:${SLUG}`)).toBe(SLUG);
   });
 
   it("detects STD relance template keys", () => {
     expect(isStdRelanceTemplateKey("custom_relance_a_suivre_std_24_sept")).toBe(true);
     expect(isStdRelanceTemplateKey("custom_dirigeants_fr_2026_09_24")).toBe(false);
+  });
+
+  it("detects RSVP-button campaigns (places available / formal invite)", () => {
+    expect(isRsvpButtonCampaignKey(`places_available:${SLUG}`)).toBe(true);
+    expect(isRsvpButtonCampaignKey("places_available")).toBe(true);
+    expect(isRsvpButtonCampaignKey("calendar_invite")).toBe(true);
+    expect(isRsvpButtonCampaignKey("custom_newsletter")).toBe(false);
   });
 });

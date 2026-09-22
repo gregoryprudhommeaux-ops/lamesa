@@ -13,10 +13,11 @@ import {
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { interestSansReponseListName } from "@/lib/events/interest-prospect-lists";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { eventSlugFromOutreachTemplateKey } from "@/lib/events/std-outreach-templates";
+import { eventSlugFromOutreachTemplateKey, isRsvpButtonCampaignKey } from "@/lib/events/std-outreach-templates";
 import { templateLabel } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
+import { isExpressSignup } from "@/lib/member/profile-completion";
 import type {
   AdminEvent,
   AdminEventParticipation,
@@ -35,6 +36,7 @@ const INFER_WAVE_MS = 12 * 60 * 60 * 1000;
 export type LastEmailCampaignSource =
   | "cold_outreach"
   | "save_the_date"
+  | "places_available"
   | "inferred";
 
 /** Outcome of one person who received the blast. */
@@ -53,6 +55,8 @@ export type EmailCampaignRecipientRow = {
   fullName: string;
   company: string;
   outcome: EmailRecipientOutcome;
+  /** Waitlist signup flavour when outcome is registered / also on Mesa. */
+  signupKind?: "express" | "complete" | null;
 };
 
 export type LastEmailCampaignRecord = {
@@ -89,6 +93,8 @@ export type LastEmailResultsSummary = {
   inviteSent: number;
   /** Destinataires devenus membres waitlist (inscrits plateforme). */
   registered: number;
+  registeredExpress: number;
+  registeredComplete: number;
   /** (oui+non+autre) / envoyés · 0–100 */
   responseRate: number;
   /** oui / envoyés · 0–100 */
@@ -97,6 +103,7 @@ export type LastEmailResultsSummary = {
   confirmedRate: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
+  noGuests: NextEventRsvpYesGuest[];
   /** Cohort contacted by this blast, with per-person outcome. */
   recipients: EmailCampaignRecipientRow[];
   source: LastEmailCampaignSource;
@@ -195,19 +202,29 @@ export function normalizeLastEmailCampaignRecord(
   const source: LastEmailCampaignSource =
     sourceRaw === "cold_outreach" ||
     sourceRaw === "save_the_date" ||
+    sourceRaw === "places_available" ||
     sourceRaw === "inferred"
       ? sourceRaw
       : "inferred";
+
+  const eventSlug =
+    String(data.eventSlug ?? "").trim() ||
+    eventSlugFromOutreachTemplateKey(templateKey) ||
+    null;
 
   return {
     templateKey,
     templateLabel:
       String(data.templateLabel ?? "").trim() ||
-      templateLabel(templateKey as EmailTemplateKey),
+      templateLabel(
+        (templateKey.includes(":")
+          ? templateKey.split(":")[0]
+          : templateKey) as EmailTemplateKey,
+      ),
     sentAt,
     recipientCount,
     recipientEmails,
-    eventSlug: String(data.eventSlug ?? "").trim() || null,
+    eventSlug,
     eventId: String(data.eventId ?? "").trim() || null,
     eventTitle: String(data.eventTitle ?? "").trim() || null,
     source,
@@ -238,11 +255,13 @@ export async function recordLastEmailCampaign(input: {
       input.eventSlug?.trim() ||
       eventSlugFromOutreachTemplateKey(templateKey) ||
       null;
+    const labelKey = (
+      templateKey.includes(":") ? templateKey.split(":")[0]! : templateKey
+    ) as EmailTemplateKey;
     const record: LastEmailCampaignRecord = {
       templateKey,
       templateLabel:
-        input.templateLabel?.trim() ||
-        templateLabel(templateKey as EmailTemplateKey),
+        input.templateLabel?.trim() || templateLabel(labelKey),
       sentAt: input.sentAt?.trim() || now,
       recipientCount: emails.length,
       recipientEmails: emails.slice(0, MAX_STORED_RECIPIENT_EMAILS),
@@ -419,6 +438,54 @@ export function inferLastEmailCampaignFromEvents(
   };
 }
 
+/** Infer last “places available” blast from participation stamps. */
+export function inferLastPlacesAvailableCampaign(
+  events: AdminEvent[],
+  participations: AdminEventParticipation[],
+): LastEmailCampaignRecord | null {
+  let bestMs = 0;
+  let bestEventId = "";
+  for (const p of participations) {
+    if (isOrganizerParticipation(p)) continue;
+    const stamp = p.placesAvailableSentAt;
+    if (!stamp) continue;
+    const ms = new Date(stamp).getTime();
+    if (!Number.isFinite(ms) || ms < bestMs) continue;
+    bestMs = ms;
+    bestEventId = p.eventId;
+  }
+  if (!bestEventId || bestMs <= 0) return null;
+  const event = events.find((e) => e.id === bestEventId);
+  if (!event) return null;
+
+  // Wave: same event, stamps within 12h of the latest.
+  const emails = uniqEmails(
+    participations
+      .filter((p) => p.eventId === bestEventId && !isOrganizerParticipation(p))
+      .filter((p) => {
+        const ms = p.placesAvailableSentAt
+          ? new Date(p.placesAvailableSentAt).getTime()
+          : NaN;
+        return Number.isFinite(ms) && bestMs - ms <= INFER_WAVE_MS;
+      })
+      .map((p) => p.email ?? ""),
+  );
+  if (emails.length === 0) return null;
+
+  return {
+    templateKey: `places_available:${event.slug}`,
+    templateLabel: templateLabel("places_available"),
+    sentAt: new Date(bestMs).toISOString(),
+    recipientCount: emails.length,
+    recipientEmails: emails.slice(0, MAX_STORED_RECIPIENT_EMAILS),
+    eventSlug: event.slug,
+    eventId: event.id,
+    eventTitle: event.title,
+    source: "inferred",
+    updatedAt: new Date(bestMs).toISOString(),
+  };
+}
+
 export function pickLatestCampaign(
   ...candidates: Array<LastEmailCampaignRecord | null | undefined>
 ): LastEmailCampaignRecord | null {
@@ -440,11 +507,34 @@ function resolveEventForCampaign(
     const byId = events.find((e) => e.id === campaign.eventId);
     if (byId) return byId;
   }
-  if (campaign.eventSlug) {
-    const slug = campaign.eventSlug.trim().toLowerCase();
-    return events.find((e) => e.slug.trim().toLowerCase() === slug) ?? null;
+  const slug =
+    campaign.eventSlug?.trim() ||
+    eventSlugFromOutreachTemplateKey(campaign.templateKey) ||
+    "";
+  if (slug) {
+    const key = slug.toLowerCase();
+    return events.find((e) => e.slug.trim().toLowerCase() === key) ?? null;
   }
   return null;
+}
+
+export type WaitlistSignupSlice = {
+  id?: string;
+  email: string;
+  fullName?: string;
+  company?: string;
+  source?: string | null;
+  profileComplete?: boolean | null;
+  createdAt?: string | null;
+};
+
+function signupKindForEmail(
+  email: string,
+  waitlistByEmail: Map<string, WaitlistSignupSlice>,
+): "express" | "complete" | null {
+  const row = waitlistByEmail.get(email);
+  if (!row) return null;
+  return isExpressSignup(row) ? "express" : "complete";
 }
 
 /**
@@ -456,18 +546,35 @@ export function buildLastEmailResultsSummary(input: {
   participations: AdminEventParticipation[];
   respondents: EventRespondent[];
   prospects: RsvpProspectSlice[];
-  /** Normalized emails of active waitlist members (inscrits plateforme). */
+  /** Active waitlist members keyed by normalized email (inscrits plateforme). */
+  waitlistByEmail?: Map<string, WaitlistSignupSlice>;
+  /** @deprecated prefer waitlistByEmail */
   waitlistEmails?: Set<string>;
   yesLimit?: number;
   recipientLimit?: number;
 }): LastEmailResultsSummary {
   const { campaign } = input;
   const yesLimit = input.yesLimit ?? 40;
-  const recipientLimit = input.recipientLimit ?? 80;
-  const waitlistEmails = input.waitlistEmails ?? new Set<string>();
+  const recipientLimit = input.recipientLimit ?? 120;
+  const waitlistByEmail: Map<string, WaitlistSignupSlice> =
+    input.waitlistByEmail ??
+    new Map(
+      [...(input.waitlistEmails ?? [])].map((email) => [
+        email,
+        {
+          email,
+          fullName: "",
+          company: "",
+          source: "",
+          profileComplete: true,
+        } satisfies WaitlistSignupSlice,
+      ]),
+    );
+  const waitlistEmails = new Set(waitlistByEmail.keys());
   const event = resolveEventForCampaign(campaign, input.events);
   const recipientSet = new Set(uniqEmails(campaign.recipientEmails));
   const hasRecipientList = recipientSet.size > 0;
+  const forceRsvp = isRsvpButtonCampaignKey(campaign.templateKey);
 
   const base = {
     id: campaign.id,
@@ -476,54 +583,72 @@ export function buildLastEmailResultsSummary(input: {
     sentAt: campaign.sentAt,
     recipientCount: Math.max(campaign.recipientCount, recipientSet.size),
     eventId: event?.id ?? campaign.eventId,
-    eventSlug: event?.slug ?? campaign.eventSlug,
+    eventSlug:
+      event?.slug ??
+      campaign.eventSlug ??
+      eventSlugFromOutreachTemplateKey(campaign.templateKey),
     eventTitle: event?.title ?? campaign.eventTitle,
     source: campaign.source,
   };
 
-  const emptyRates = {
-    registered: 0,
-    responseRate: 0,
-    yesRate: 0,
-    confirmedRate: 0,
-    recipients: [] as EmailCampaignRecipientRow[],
-  };
-
   if (!event) {
-    const pending = base.recipientCount;
     const recipients: EmailCampaignRecipientRow[] = [...recipientSet]
       .slice(0, recipientLimit)
       .map((email) => {
-        const onWaitlist = waitlistEmails.has(email);
+        const kind = signupKindForEmail(email, waitlistByEmail);
         return {
           id: email,
           email,
-          fullName: email,
-          company: "",
-          outcome: onWaitlist ? ("registered" as const) : ("pending" as const),
+          fullName: waitlistByEmail.get(email)?.fullName?.trim() || email,
+          company: waitlistByEmail.get(email)?.company?.trim() || "",
+          outcome: kind ? ("registered" as const) : ("pending" as const),
+          signupKind: kind,
         };
       });
-    const registered = recipients.filter((r) => r.outcome === "registered").length;
+    const registeredExpress = recipients.filter((r) => r.signupKind === "express").length;
+    const registeredComplete = recipients.filter((r) => r.signupKind === "complete").length;
+    const registered = registeredExpress + registeredComplete;
     return {
       ...base,
       responseMode: "none",
       yes: 0,
       no: 0,
       other: 0,
-      pending: Math.max(0, pending - registered),
+      pending: Math.max(0, base.recipientCount - registered),
       confirmed: 0,
       inviteSent: 0,
       registered,
+      registeredExpress,
+      registeredComplete,
       responseRate: pctRate(registered, base.recipientCount),
       yesRate: 0,
       confirmedRate: 0,
       yesGuests: [],
+      noGuests: [],
       recipients,
     };
   }
 
-  const mode: "interest" | "rsvp" =
-    event.responseMode === "interest" ? "interest" : "rsvp";
+  // Places available / formal invite: OUI/NON are RSVP clicks on participations.
+  if (forceRsvp || event.responseMode !== "interest") {
+    return buildRsvpButtonCampaignSummary({
+      base,
+      event,
+      campaign,
+      participations: input.participations,
+      recipientSet,
+      hasRecipientList,
+      waitlistByEmail,
+      waitlistEmails,
+      yesLimit,
+      recipientLimit,
+      stampField: forceRsvp && campaign.templateKey.includes("places_available")
+        ? "placesAvailableSentAt"
+        : "calendarInviteSentAt",
+    });
+  }
+
+  // Interest STD / CRM playlists path…
   const emailFilter = hasRecipientList ? recipientSet : undefined;
   const prospectByEmail = new Map<string, RsvpProspectSlice>();
   for (const p of input.prospects) {
@@ -531,194 +656,324 @@ export function buildLastEmailResultsSummary(input: {
     if (email.includes("@")) prospectByEmail.set(email, p);
   }
 
-  if (mode === "interest") {
-    const sets = computeInterestRsvpEmailSets({
-      eventSlug: event.slug,
-      eventId: event.id,
-      respondents: input.respondents.filter((r) => r.eventId === event.id),
-      prospects: input.prospects,
-      contactedParticipationEmails: input.participations
-        .filter((p) => p.eventId === event.id && Boolean(p.saveTheDateSentAt))
-        .map((p) => normalizeEmail(p.email))
-        .filter((e) => e.includes("@")),
-    });
+  const sets = computeInterestRsvpEmailSets({
+    eventSlug: event.slug,
+    eventId: event.id,
+    respondents: input.respondents.filter((r) => r.eventId === event.id),
+    prospects: input.prospects,
+    contactedParticipationEmails: input.participations
+      .filter((p) => p.eventId === event.id && Boolean(p.saveTheDateSentAt))
+      .map((p) => normalizeEmail(p.email))
+      .filter((e) => e.includes("@")),
+  });
 
-    const cohort = hasRecipientList
-      ? recipientSet
-      : sets.contactedEmails.size > 0
-        ? sets.contactedEmails
-        : new Set(
-            input.participations
-              .filter((p) => p.eventId === event.id && Boolean(p.saveTheDateSentAt))
-              .map((p) => normalizeEmail(p.email))
-              .filter((e) => e.includes("@")),
-          );
+  const cohort = hasRecipientList
+    ? recipientSet
+    : sets.contactedEmails.size > 0
+      ? sets.contactedEmails
+      : new Set(
+          input.participations
+            .filter((p) => p.eventId === event.id && Boolean(p.saveTheDateSentAt))
+            .map((p) => normalizeEmail(p.email))
+            .filter((e) => e.includes("@")),
+        );
 
-    let yes = 0;
-    let no = 0;
-    let other = 0;
-    let pending = 0;
-    let registered = 0;
-    const yesGuestsRaw: NextEventRsvpYesGuest[] = [];
-    const recipientsRaw: EmailCampaignRecipientRow[] = [];
+  let yes = 0;
+  let no = 0;
+  let other = 0;
+  let pending = 0;
+  let registeredExpress = 0;
+  let registeredComplete = 0;
+  const yesGuestsRaw: NextEventRsvpYesGuest[] = [];
+  const noGuests: NextEventRsvpYesGuest[] = [];
+  const recipientsRaw: EmailCampaignRecipientRow[] = [];
 
-    const yesGuestsEnriched = enrichYesGuestsWithSeats(
-      [...sets.yesGuestsByEmail.values()],
-      event.id,
-      input.participations,
-    );
-    const seatByEmail = new Map(
-      yesGuestsEnriched.map((g) => [normalizeEmail(g.email), g.seat ?? "oui"] as const),
-    );
+  const yesGuestsEnriched = enrichYesGuestsWithSeats(
+    [...sets.yesGuestsByEmail.values()],
+    event.id,
+    input.participations,
+  );
+  const seatByEmail = new Map(
+    yesGuestsEnriched.map((g) => [normalizeEmail(g.email), g.seat ?? "oui"] as const),
+  );
 
-    for (const email of cohort) {
-      const prospect = prospectByEmail.get(email);
-      const guest = sets.yesGuestsByEmail.get(email);
-      const fullName =
-        guest?.fullName ||
-        prospect?.fullName?.trim() ||
-        email;
-      const company = guest?.company || prospect?.company?.trim() || "";
-      const id = guest?.id || prospect?.id || email;
-      const onWaitlist = waitlistEmails.has(email);
+  for (const email of cohort) {
+    const prospect = prospectByEmail.get(email);
+    const guest = sets.yesGuestsByEmail.get(email);
+    const wait = waitlistByEmail.get(email);
+    const fullName =
+      guest?.fullName ||
+      prospect?.fullName?.trim() ||
+      wait?.fullName?.trim() ||
+      email;
+    const company =
+      guest?.company || prospect?.company?.trim() || wait?.company?.trim() || "";
+    const id = guest?.id || prospect?.id || wait?.id || email;
+    const kind = signupKindForEmail(email, waitlistByEmail);
 
-      if (sets.yesEmails.has(email)) {
-        yes += 1;
-        if (guest) yesGuestsRaw.push(guest);
-        const seat = seatByEmail.get(email) ?? "oui";
-        const outcome: EmailRecipientOutcome =
-          seat === "confirmed"
-            ? "confirmed"
-            : seat === "invite_sent"
-              ? "invite_sent"
-              : "yes";
-        recipientsRaw.push({ id, email, fullName, company, outcome });
-      } else if (sets.noEmails.has(email)) {
-        no += 1;
-        recipientsRaw.push({ id, email, fullName, company, outcome: "no" });
-      } else if (sets.otherEmails.has(email)) {
-        other += 1;
-        recipientsRaw.push({ id, email, fullName, company, outcome: "other" });
-      } else if (onWaitlist) {
-        registered += 1;
-        recipientsRaw.push({ id, email, fullName, company, outcome: "registered" });
-      } else {
-        pending += 1;
-        recipientsRaw.push({ id, email, fullName, company, outcome: "pending" });
-      }
+    if (sets.yesEmails.has(email)) {
+      yes += 1;
+      if (guest) yesGuestsRaw.push(guest);
+      const seat = seatByEmail.get(email) ?? "oui";
+      const outcome: EmailRecipientOutcome =
+        seat === "confirmed"
+          ? "confirmed"
+          : seat === "invite_sent"
+            ? "invite_sent"
+            : "yes";
+      recipientsRaw.push({ id, email, fullName, company, outcome, signupKind: kind });
+    } else if (sets.noEmails.has(email)) {
+      no += 1;
+      noGuests.push({ id, fullName, email, company });
+      recipientsRaw.push({ id, email, fullName, company, outcome: "no", signupKind: kind });
+    } else if (sets.otherEmails.has(email)) {
+      other += 1;
+      recipientsRaw.push({ id, email, fullName, company, outcome: "other", signupKind: kind });
+    } else if (kind) {
+      if (kind === "express") registeredExpress += 1;
+      else registeredComplete += 1;
+      recipientsRaw.push({
+        id,
+        email,
+        fullName,
+        company,
+        outcome: "registered",
+        signupKind: kind,
+      });
+    } else {
+      pending += 1;
+      recipientsRaw.push({ id, email, fullName, company, outcome: "pending", signupKind: null });
     }
-
-    const sent = Math.max(base.recipientCount, cohort.size);
-    const confirmed = countConfirmedParticipations(
-      event.id,
-      input.participations,
-      emailFilter ?? cohort,
-    );
-    const answered = yes + no + other;
-
-    return {
-      ...base,
-      recipientCount: sent,
-      responseMode: "interest",
-      yes,
-      no,
-      other,
-      pending,
-      confirmed,
-      inviteSent: countInviteSentNotPaid(
-        event.id,
-        input.participations,
-        emailFilter ?? cohort,
-      ),
-      registered,
-      responseRate: pctRate(answered, sent),
-      yesRate: pctRate(yes, sent),
-      confirmedRate: pctRate(confirmed, sent),
-      sansReponseListName: interestSansReponseListName(event.slug),
-      yesGuests: enrichYesGuestsWithSeats(
-        yesGuestsRaw,
-        event.id,
-        input.participations,
-      ).slice(0, yesLimit),
-      recipients: recipientsRaw
-        .sort(
-          (a, b) =>
-            OUTCOME_SORT[a.outcome] - OUTCOME_SORT[b.outcome] ||
-            a.fullName.localeCompare(b.fullName, "fr", { sensitivity: "base" }),
-        )
-        .slice(0, recipientLimit),
-    };
   }
 
-  const guests = input.participations.filter(
-    (p) => p.eventId === event.id && !isOrganizerParticipation(p),
+  const sent = Math.max(base.recipientCount, cohort.size);
+  const confirmed = countConfirmedParticipations(
+    event.id,
+    input.participations,
+    emailFilter ?? cohort,
   );
-  const cohortParts = hasRecipientList
-    ? guests.filter((p) => recipientSet.has(normalizeEmail(p.email)))
-    : guests.filter((p) => Boolean(p.calendarInviteSentAt || p.saveTheDateSentAt));
-
-  const yesParts = cohortParts.filter((p) => {
-    const s = normalizeParticipationStatus(p.status);
-    return s === "attending" || s === "confirmed";
-  });
-  const noParts = cohortParts.filter(
-    (p) => normalizeParticipationStatus(p.status) === "not_attending",
-  );
-  const pendingParts = cohortParts.filter((p) => {
-    const s = normalizeParticipationStatus(p.status);
-    return s === "invited" || s === "waitlist";
-  });
-
-  const sent = Math.max(base.recipientCount, cohortParts.length);
-  const recipients: EmailCampaignRecipientRow[] = cohortParts.map((p) => {
-    const email = normalizeEmail(p.email);
-    const status = normalizeParticipationStatus(p.status);
-    let outcome: EmailRecipientOutcome = "pending";
-    if (status === "confirmed" || status === "attending") outcome = "confirmed";
-    else if (status === "not_attending") outcome = "no";
-    else if (p.calendarInviteSentAt) outcome = "invite_sent";
-    else if (waitlistEmails.has(email)) outcome = "registered";
-    return {
-      id: p.id,
-      email: p.email ?? email,
-      fullName: p.fullName?.trim() || p.email || "Sans nom",
-      company: p.companyName?.trim() || "",
-      outcome,
-    };
-  });
-  const registered = recipients.filter((r) => r.outcome === "registered").length;
+  const answered = yes + no + other;
+  const registered = registeredExpress + registeredComplete;
 
   return {
     ...base,
-    ...emptyRates,
     recipientCount: sent,
-    responseMode: "rsvp",
-    yes: yesParts.length,
-    no: noParts.length,
-    other: 0,
-    pending: pendingParts.length,
-    confirmed: yesParts.length,
-    inviteSent: countInviteSentNotPaid(event.id, input.participations, emailFilter),
+    responseMode: "interest",
+    yes,
+    no,
+    other,
+    pending,
+    confirmed,
+    inviteSent: countInviteSentNotPaid(
+      event.id,
+      input.participations,
+      emailFilter ?? cohort,
+    ),
     registered,
-    responseRate: pctRate(yesParts.length + noParts.length, sent),
-    yesRate: pctRate(yesParts.length, sent),
-    confirmedRate: pctRate(yesParts.length, sent),
+    registeredExpress,
+    registeredComplete,
+    responseRate: pctRate(answered, sent),
+    yesRate: pctRate(yes, sent),
+    confirmedRate: pctRate(confirmed, sent),
+    sansReponseListName: interestSansReponseListName(event.slug),
     yesGuests: enrichYesGuestsWithSeats(
-      yesParts.map((p) => ({
-        id: p.id,
-        fullName: p.fullName?.trim() || p.email || "Sans nom",
-        email: p.email ?? "",
-        company: p.companyName?.trim() || "",
-      })),
+      yesGuestsRaw,
       event.id,
       input.participations,
     ).slice(0, yesLimit),
-    recipients: recipients
+    noGuests: noGuests
+      .sort((a, b) =>
+        (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr", {
+          sensitivity: "base",
+        }),
+      )
+      .slice(0, yesLimit),
+    recipients: recipientsRaw
       .sort(
         (a, b) =>
           OUTCOME_SORT[a.outcome] - OUTCOME_SORT[b.outcome] ||
           a.fullName.localeCompare(b.fullName, "fr", { sensitivity: "base" }),
       )
       .slice(0, recipientLimit),
+  };
+}
+
+function buildRsvpButtonCampaignSummary(input: {
+  base: Omit<
+    LastEmailResultsSummary,
+    | "responseMode"
+    | "yes"
+    | "no"
+    | "other"
+    | "pending"
+    | "confirmed"
+    | "inviteSent"
+    | "registered"
+    | "registeredExpress"
+    | "registeredComplete"
+    | "responseRate"
+    | "yesRate"
+    | "confirmedRate"
+    | "sansReponseListName"
+    | "yesGuests"
+    | "noGuests"
+    | "recipients"
+  >;
+  event: AdminEvent;
+  campaign: LastEmailCampaignRecord;
+  participations: AdminEventParticipation[];
+  recipientSet: Set<string>;
+  hasRecipientList: boolean;
+  waitlistByEmail: Map<string, WaitlistSignupSlice>;
+  waitlistEmails: Set<string>;
+  yesLimit: number;
+  recipientLimit: number;
+  stampField: "placesAvailableSentAt" | "calendarInviteSentAt";
+}): LastEmailResultsSummary {
+  const guests = input.participations.filter(
+    (p) => p.eventId === input.event.id && !isOrganizerParticipation(p),
+  );
+  const stamped = guests.filter((p) => Boolean(p[input.stampField]));
+  const cohortParts = input.hasRecipientList
+    ? guests.filter((p) => input.recipientSet.has(normalizeEmail(p.email)))
+    : stamped.length > 0
+      ? stamped
+      : guests.filter((p) =>
+          input.recipientSet.size > 0
+            ? input.recipientSet.has(normalizeEmail(p.email))
+            : Boolean(p.placesAvailableSentAt || p.calendarInviteSentAt),
+        );
+
+  // If we have recipient emails but no participation rows yet, still list them.
+  const cohortEmails =
+    cohortParts.length > 0
+      ? uniqEmails(cohortParts.map((p) => p.email ?? ""))
+      : [...input.recipientSet];
+
+  const partByEmail = new Map(
+    cohortParts.map((p) => [normalizeEmail(p.email), p] as const),
+  );
+
+  let yes = 0;
+  let no = 0;
+  let pending = 0;
+  let confirmed = 0;
+  let inviteSent = 0;
+  const yesGuests: NextEventRsvpYesGuest[] = [];
+  const noGuests: NextEventRsvpYesGuest[] = [];
+  const recipients: EmailCampaignRecipientRow[] = [];
+
+  for (const email of cohortEmails) {
+    const p = partByEmail.get(email);
+    const wait = input.waitlistByEmail.get(email);
+    const kind = signupKindForEmail(email, input.waitlistByEmail);
+    const fullName =
+      p?.fullName?.trim() || wait?.fullName?.trim() || email;
+    const company = p?.companyName?.trim() || wait?.company?.trim() || "";
+    const id = p?.id || wait?.id || email;
+
+    if (p) {
+      const status = normalizeParticipationStatus(p.status);
+      if (status === "confirmed") {
+        confirmed += 1;
+        yes += 1;
+        yesGuests.push({ id, fullName, email: p.email ?? email, company, seat: "confirmed" });
+        recipients.push({
+          id,
+          email: p.email ?? email,
+          fullName,
+          company,
+          outcome: "confirmed",
+          signupKind: kind,
+        });
+        continue;
+      }
+      if (status === "attending") {
+        yes += 1;
+        yesGuests.push({ id, fullName, email: p.email ?? email, company, seat: "invite_sent" });
+        recipients.push({
+          id,
+          email: p.email ?? email,
+          fullName,
+          company,
+          outcome: "yes",
+          signupKind: kind,
+        });
+        continue;
+      }
+      if (status === "not_attending") {
+        no += 1;
+        noGuests.push({ id, fullName, email: p.email ?? email, company });
+        recipients.push({
+          id,
+          email: p.email ?? email,
+          fullName,
+          company,
+          outcome: "no",
+          signupKind: kind,
+        });
+        continue;
+      }
+      if (p.calendarInviteSentAt && status === "invited") {
+        inviteSent += 1;
+      }
+    }
+
+    pending += 1;
+    recipients.push({
+      id,
+      email: p?.email ?? email,
+      fullName,
+      company,
+      outcome: "pending",
+      signupKind: kind,
+    });
+  }
+
+  const registeredExpress = recipients.filter((r) => r.signupKind === "express").length;
+  const registeredComplete = recipients.filter((r) => r.signupKind === "complete").length;
+  const registered = registeredExpress + registeredComplete;
+  const sent = Math.max(input.base.recipientCount, cohortEmails.length);
+  const answered = yes + no;
+
+  return {
+    ...input.base,
+    recipientCount: sent,
+    responseMode: "rsvp",
+    yes,
+    no,
+    other: 0,
+    pending,
+    confirmed,
+    inviteSent,
+    registered,
+    registeredExpress,
+    registeredComplete,
+    responseRate: pctRate(answered, sent),
+    yesRate: pctRate(yes, sent),
+    confirmedRate: pctRate(confirmed, sent),
+    yesGuests: yesGuests
+      .sort(
+        (a, b) =>
+          (a.seat === "confirmed" ? 0 : 1) - (b.seat === "confirmed" ? 0 : 1) ||
+          (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr", {
+            sensitivity: "base",
+          }),
+      )
+      .slice(0, input.yesLimit),
+    noGuests: noGuests
+      .sort((a, b) =>
+        (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr", {
+          sensitivity: "base",
+        }),
+      )
+      .slice(0, input.yesLimit),
+    recipients: recipients
+      .sort(
+        (a, b) =>
+          OUTCOME_SORT[a.outcome] - OUTCOME_SORT[b.outcome] ||
+          a.fullName.localeCompare(b.fullName, "fr", { sensitivity: "base" }),
+      )
+      .slice(0, input.recipientLimit),
   };
 }
