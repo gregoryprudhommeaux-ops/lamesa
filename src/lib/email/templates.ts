@@ -93,6 +93,10 @@ export type TemplateVars = {
   paymentDeadlineBlock?: string;
   /** Limited seats / first-come via payment paragraph */
   seatScarcityBlock?: string;
+  /** Neighborhood-only location (no restaurant / street address) */
+  wherePublic?: string;
+  /** Express signup URL for non-members */
+  registerUrl?: string;
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
@@ -131,7 +135,9 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{format}}", vars.format ?? "")
     .replaceAll("{{paymentDeadline}}", vars.paymentDeadline ?? "")
     .replaceAll("{{paymentDeadlineBlock}}", vars.paymentDeadlineBlock ?? "")
-    .replaceAll("{{seatScarcityBlock}}", vars.seatScarcityBlock ?? "");
+    .replaceAll("{{seatScarcityBlock}}", vars.seatScarcityBlock ?? "")
+    .replaceAll("{{wherePublic}}", vars.wherePublic ?? vars.where ?? "")
+    .replaceAll("{{registerUrl}}", vars.registerUrl ?? "");
 }
 
 /** Language used when sending email / WhatsApp for an event. */
@@ -179,6 +185,16 @@ export function buildEventTemplateVars(input: {
     eventTitle: input.event.title,
     when: fmtDateTime(input.event.startsAt, lang),
     where: formatEventWhereLine(input.event.venueName, input.event.address),
+    wherePublic:
+      input.event.publicAreaHint?.trim() ||
+      (input.event.city?.trim()
+        ? input.event.city.trim()
+        : lang === "fr"
+          ? "Quartier à confirmer (Guadalajara)"
+          : lang === "en"
+            ? "Area TBC (Guadalajara)"
+            : "Zona por confirmar (Guadalajara)"),
+    registerUrl: `${input.publicBaseUrl.replace(/\/$/, "")}/light`,
     eventUrl: eventPublicUrl(input.publicBaseUrl, input.event.slug, lang, {
       email: input.email,
     }),

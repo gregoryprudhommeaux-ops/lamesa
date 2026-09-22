@@ -20,7 +20,10 @@ export type EnsuredWaitlistProfile = WaitlistRegistration & {
   revived?: boolean;
 };
 
-export type EnsureWaitlistSource = "la-mesa-interest" | "la-mesa-std-invite";
+export type EnsureWaitlistSource =
+  | "la-mesa-interest"
+  | "la-mesa-std-invite"
+  | "la-mesa-places-available";
 
 function stubFullName(email: string, displayName?: string | null): string {
   const fromAuth = displayName?.trim();

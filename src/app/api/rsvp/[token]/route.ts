@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
+import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
+import {
+  countSeatedParticipations,
+  DEFAULT_GUEST_CAPACITY,
+} from "@/lib/events/capacity";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { formatPaymentDeadlineDate } from "@/lib/events/payment-details";
 import { fmtDateTime } from "@/lib/events/utils";
 import { getSiteUrl } from "@/lib/site-url";
-import type { AdminEvent } from "@/lib/types/events";
+import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
 type Params = { params: Promise<{ token: string }> };
 
@@ -139,6 +145,45 @@ export async function GET(request: Request, { params }: Params) {
           },
         }),
       );
+    }
+
+    // Places-available / formal YES → payment coords if seats remain + member on waitlist.
+    if (response === "yes" && event && guestEmail.includes("@")) {
+      try {
+        const partsSnap = await db
+          .collection(COLLECTIONS.participations)
+          .where("eventId", "==", payload.eventId)
+          .limit(500)
+          .get();
+        const parts = partsSnap.docs.map((d) => ({
+          id: d.id,
+          ...(d.data() as Omit<AdminEventParticipation, "id">),
+        }));
+        const capacity =
+          typeof event.capacity === "number" && event.capacity > 0
+            ? event.capacity
+            : DEFAULT_GUEST_CAPACITY;
+        const seated = countSeatedParticipations(parts);
+        const partRow = parts.find((p) => p.id === payload.participationId);
+        const waitlist = await findWaitlistByEmail(guestEmail);
+        const onMesa = Boolean(waitlist) && waitlist?.profileComplete !== false;
+        const seatsLeft = seated <= capacity;
+
+        if (!onMesa) {
+          return NextResponse.redirect(
+            `${base}/light?from=places&event=${encodeURIComponent(event.slug || event.id)}`,
+          );
+        }
+        if (seatsLeft && partRow && normalizeParticipationStatus(partRow.status) !== "confirmed") {
+          void sendTemplatedEventEmail({
+            key: "payment_relance",
+            event,
+            participation: partRow,
+          }).catch((err) => console.error("[rsvp] payment_relance after yes", err));
+        }
+      } catch (err) {
+        console.error("[rsvp] post-yes follow-up", err);
+      }
     }
 
     return okRedirect();

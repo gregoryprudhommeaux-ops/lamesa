@@ -4,6 +4,7 @@ import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-
 import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
 import { AdminEventPaymentFollowupPanel } from "@/components/admin/admin-event-payment-followup";
+import { AdminEventPlacesAvailablePanel } from "@/components/admin/admin-event-places-available-panel";
 import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
 import {
   AutoRemindersPanel,
@@ -1886,6 +1887,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onWhatsApp={(p) => openWhatsAppForParticipation(p)}
                     onUpdated={() => void loadAll()}
                   />
+                  <AdminEventPlacesAvailablePanel
+                    event={activeEvent}
+                    onEventUpdated={() => void loadAll()}
+                  />
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1915,6 +1920,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onStatusChange={(id, status) => void setParticipationStatus(id, status)}
                     onWhatsApp={(p) => openWhatsAppForParticipation(p)}
                     onUpdated={() => void loadAll()}
+                  />
+                  <AdminEventPlacesAvailablePanel
+                    event={activeEvent}
+                    onEventUpdated={() => void loadAll()}
                   />
                 </div>
               )

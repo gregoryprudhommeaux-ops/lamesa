@@ -30,6 +30,7 @@ export type EmailTemplateKey =
   | "calendar_invite"
   | "participation_confirmed"
   | "payment_relance"
+  | "places_available"
   | "reminder_7d"
   | "reminder_36h"
   | "reminder_90m"
@@ -97,6 +98,11 @@ export interface AdminEvent {
   /** Restaurant / venue name */
   venueName?: string;
   address?: string;
+  /**
+   * Public location line for outreach that must not reveal the restaurant
+   * (e.g. "Chapultepec, Guadalajara"). Used by places_available emails / ICS.
+   */
+  publicAreaHint?: string;
   /** Optional city signal used for city-specific event history. */
   city?: string;
   /**
@@ -207,6 +213,8 @@ export interface AdminEventParticipation {
   confirmationEmailSentAt?: string;
   /** Payment follow-up email after formal invite (ACCESS still unpaid). */
   paymentRelanceSentAt?: string;
+  /** “Places still available” last-call outreach. */
+  placesAvailableSentAt?: string;
   reminder7dSentAt?: string;
   reminder36hSentAt?: string;
   reminder90mSentAt?: string;

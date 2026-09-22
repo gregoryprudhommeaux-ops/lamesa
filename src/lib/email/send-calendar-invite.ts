@@ -103,8 +103,12 @@ function buildSharedInviteIcsAttachment(input: {
   participation: AdminEventParticipation;
   eventUrl: string;
   locale: TemplateLocale;
+  /** When set, used instead of venue/address (e.g. neighborhood-only outreach). */
+  locationOverride?: string;
 }): { name: string; content: string } | null {
-  const location = formatEventWhereLine(input.event.venueName, input.event.address);
+  const location =
+    input.locationOverride?.trim() ||
+    formatEventWhereLine(input.event.venueName, input.event.address);
   const from = brevoFromAddress();
   // ORGANIZER must equal Brevo From or Gmail shows “Unable to load event”.
   const ics = buildCalendarInviteIcs({
@@ -131,6 +135,59 @@ function buildSharedInviteIcsAttachment(input: {
     name: "la-mesa-invite.ics",
     content: Buffer.from(ics, "utf8").toString("base64"),
   };
+}
+
+export async function sendPlacesAvailableEmail(input: {
+  event: AdminEvent;
+  participation: AdminEventParticipation;
+  locale?: TemplateLocale;
+}): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {
+  if (!(await isEmailTemplateEnabled("places_available", input.event))) {
+    return { ok: true, skipped: true };
+  }
+  const base = getSiteUrl();
+  const token = signRsvpToken({
+    participationId: input.participation.id,
+    eventId: input.event.id,
+    email: input.participation.email,
+  });
+  const locale = input.locale ?? sendLocaleForEvent(input.event);
+  const encoded = encodeURIComponent(token);
+  const yesUrl = `${base}/api/rsvp/${encoded}?response=yes&locale=${locale}`;
+  const noUrl = `${base}/api/rsvp/${encoded}?response=no&locale=${locale}`;
+
+  const template = await getEmailTemplate("places_available", input.event, locale);
+  const vars = buildEventTemplateVars({
+    event: input.event,
+    publicBaseUrl: base,
+    fullName: input.participation.fullName ?? "",
+    email: input.participation.email,
+    yesUrl,
+    noUrl,
+    locale,
+  });
+  const subject = applyTemplateVars(template.subject, vars);
+  const bodyText = applyTemplateVars(template.body, vars);
+  const publicLocation = vars.wherePublic || vars.where;
+
+  const icsAttachment = buildSharedInviteIcsAttachment({
+    event: input.event,
+    participation: input.participation,
+    eventUrl: vars.eventUrl,
+    locale,
+    locationOverride: publicLocation,
+  });
+
+  const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
+
+  return sendTransactionalEmail({
+    to: input.participation.email,
+    subject,
+    html,
+    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
+    bccAdmins: false,
+    ...(icsAttachment ? { attachments: [icsAttachment] } : {}),
+  });
 }
 
 export async function sendCalendarInviteEmail(input: {

@@ -13,6 +13,7 @@ const updateSchema = z.object({
   introText: z.string().trim().max(2000).optional(),
   venueName: z.string().trim().max(200).optional(),
   address: z.string().trim().max(300).optional(),
+  publicAreaHint: z.string().trim().max(200).optional().nullable(),
   startsAt: z.string().min(1),
   endsAt: z.string().optional().nullable(),
   capacity: z.number().int().min(1).max(100).optional(),

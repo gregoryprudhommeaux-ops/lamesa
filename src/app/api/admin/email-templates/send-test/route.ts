@@ -66,7 +66,7 @@ function buildTestIcsAttachment(input: {
   bodyText: string;
 }): { name: string; content: string } | null {
   const key = (input.templateKey ?? "").trim() as EmailTemplateKey | "";
-  if (key !== "calendar_invite" && key !== "payment_relance" && key !== "save_the_date") {
+  if (key !== "calendar_invite" && key !== "payment_relance" && key !== "places_available" && key !== "save_the_date") {
     return null;
   }
 
