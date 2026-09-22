@@ -22,7 +22,7 @@ import {
   wrapLaMesaPlainBody,
 } from "@/lib/email/la-mesa-email-shell";
 import { formatEventWhereLine } from "@/lib/events/format-where";
-import { getSiteUrl } from "@/lib/site-url";
+import { emailPublicBaseUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation, TemplateLocale } from "@/lib/types/events";
 
 const CALENDAR_CTA: Record<TemplateLocale, string> = {
@@ -146,7 +146,7 @@ export async function sendPlacesAvailableEmail(input: {
   if (!(await isEmailTemplateEnabled("places_available", input.event))) {
     return { ok: true, skipped: true };
   }
-  const base = getSiteUrl();
+  const base = emailPublicBaseUrl();
   const token = signRsvpToken({
     participationId: input.participation.id,
     eventId: input.event.id,
@@ -201,7 +201,7 @@ export async function sendCalendarInviteEmail(input: {
   if (!(await isEmailTemplateEnabled("calendar_invite", input.event))) {
     return { ok: true, skipped: true };
   }
-  const base = getSiteUrl();
+  const base = emailPublicBaseUrl();
   const token = signRsvpToken({
     participationId: input.participation.id,
     eventId: input.event.id,
@@ -287,7 +287,7 @@ export async function sendTemplatedEventEmail(input: {
   if (!(await isEmailTemplateEnabled(input.key, input.event))) {
     return { ok: true, skipped: true };
   }
-  const base = getSiteUrl();
+  const base = emailPublicBaseUrl();
   const locale = sendLocaleForEvent(input.event);
   const template = await getEmailTemplate(input.key, input.event, locale);
   const vars = buildEventTemplateVars({

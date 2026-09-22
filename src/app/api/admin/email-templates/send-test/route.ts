@@ -3,7 +3,10 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
+import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { buildAddToCalendarIcs, buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
+import { buildRsvpClickUrl } from "@/lib/email/rsvp-links";
+import { signRsvpToken } from "@/lib/email/rsvp-token";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -14,8 +17,8 @@ import {
 import { wrapLaMesaPlainBody, laMesaEmailFooterText } from "@/lib/email/la-mesa-email-shell";
 import { formatEventWhereLine } from "@/lib/events/format-where";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { getSiteUrl } from "@/lib/site-url";
-import type { AdminEvent, EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
+import { emailPublicBaseUrl } from "@/lib/site-url";
+import type { AdminEvent, AdminEventParticipation, EmailTemplateKey, TemplateLocale } from "@/lib/types/events";
 import { z } from "zod";
 
 const schema = z.object({
@@ -23,13 +26,45 @@ const schema = z.object({
   body: z.string().trim().min(1).max(50_000),
   locale: z.enum(["fr", "es", "en"]).optional(),
   eventId: z.string().trim().min(1).max(80).optional().nullable(),
-  /** When calendar_invite / payment_relance / save_the_date, attach a real .ics for the test. */
+  /** When calendar_invite / payment_relance / places_available / save_the_date, attach a real .ics. */
   templateKey: z.string().trim().min(1).max(80).optional().nullable(),
   /** Optional override; defaults to the logged-in admin email. */
   to: z.string().email().optional(),
 });
 
-function sampleVars(locale: TemplateLocale): TemplateVars {
+function buildTestRsvpUrls(input: {
+  locale: TemplateLocale;
+  email: string;
+  eventId: string;
+  participationId: string;
+}): { yesUrl: string; noUrl: string } {
+  const token = signRsvpToken({
+    participationId: input.participationId,
+    eventId: input.eventId,
+    email: input.email,
+  });
+  const baseUrl = emailPublicBaseUrl();
+  return {
+    yesUrl: buildRsvpClickUrl({
+      token,
+      response: "yes",
+      locale: input.locale,
+      baseUrl,
+    }),
+    noUrl: buildRsvpClickUrl({
+      token,
+      response: "no",
+      locale: input.locale,
+      baseUrl,
+    }),
+  };
+}
+
+function sampleVars(
+  locale: TemplateLocale,
+  rsvp: { yesUrl: string; noUrl: string },
+): TemplateVars {
+  const base = emailPublicBaseUrl();
   return {
     fullName: "Test LA MESA",
     firstName: "Test",
@@ -37,21 +72,23 @@ function sampleVars(locale: TemplateLocale): TemplateVars {
     eventTitle: "LA MESA — aperçu test",
     when: locale === "en" ? "Fri, Sep 25, 2026, 07:30 PM" : "ven. 25 sept. 2026, 19:30",
     where: "Venue test · Guadalajara",
-    eventUrl: `${getSiteUrl()}/${locale}/e/demo`,
-    yesUrl: `${getSiteUrl()}/api/rsvp/demo?response=yes&locale=${locale}`,
-    noUrl: `${getSiteUrl()}/api/rsvp/demo?response=no&locale=${locale}`,
-    surveyUrl: `${getSiteUrl()}/${locale}/survey/demo`,
+    wherePublic: "Chapultepec, Guadalajara",
+    registerUrl: `${base}/light`,
+    eventUrl: `${base}/${locale}/e/demo`,
+    yesUrl: rsvp.yesUrl,
+    noUrl: rsvp.noUrl,
+    surveyUrl: `${base}/${locale}/survey/demo`,
     priceBeforeTax: "$450.00 MXN",
     ivaAmount: "$72.00 MXN",
     totalWithIva: "$522.00 MXN",
-    accessIncludes: locale === "fr" ? "Welcome drink" : "Welcome drink",
+    accessIncludes: "Welcome drink",
     menuIncluded: locale === "fr" ? "Menu test (entrée + plat)" : "Menú de prueba",
     format: locale === "fr" ? "Dîner" : locale === "en" ? "Dinner" : "Cena",
-    paymentDeadline: locale === "fr" ? "20 septembre 2026" : "September 20, 2026",
+    paymentDeadline: locale === "fr" ? "23 septembre 2026" : "September 23, 2026",
     paymentDeadlineBlock:
       locale === "fr"
-        ? "Important — règlement ACCESS :\nTa place ne sera validée que si le ticket ACCESS est réglé au plus tard le 20 septembre 2026."
-        : "Important — ACCESS payment:\nYour spot will only be confirmed once paid by September 20, 2026.",
+        ? "Important — règlement ACCESS :\nTa place ne sera validée que si le ticket ACCESS est réglé au plus tard le 23 septembre 2026 à 19h."
+        : "Important — ACCESS payment:\nYour spot will only be confirmed once paid by September 23, 2026 at 7pm.",
     seatScarcityBlock:
       locale === "fr"
         ? "Places limitées — premier arrivé, premier servi (selon le règlement)."
@@ -66,7 +103,12 @@ function buildTestIcsAttachment(input: {
   bodyText: string;
 }): { name: string; content: string } | null {
   const key = (input.templateKey ?? "").trim() as EmailTemplateKey | "";
-  if (key !== "calendar_invite" && key !== "payment_relance" && key !== "places_available" && key !== "save_the_date") {
+  if (
+    key !== "calendar_invite" &&
+    key !== "payment_relance" &&
+    key !== "places_available" &&
+    key !== "save_the_date"
+  ) {
     return null;
   }
 
@@ -80,7 +122,10 @@ function buildTestIcsAttachment(input: {
     ? `LA MESA — ${input.event.title}`
     : "LA MESA — aperçu test";
   const location = input.event
-    ? formatEventWhereLine(input.event.venueName, input.event.address)
+    ? formatEventWhereLine(
+        input.event.publicAreaHint || input.event.venueName,
+        input.event.publicAreaHint ? null : input.event.address,
+      )
     : "À préciser";
   const uid = input.event?.id
     ? eventCalendarInviteUid(input.event.id)
@@ -109,13 +154,53 @@ function buildTestIcsAttachment(input: {
           organizerName: input.event?.organizerName ?? from.name ?? "LA MESA",
           attendeeEmail: input.to,
           attendeeName: "Test LA MESA",
-          url: input.event ? `${getSiteUrl()}/e/${input.event.slug ?? input.event.id}` : undefined,
+          url: input.event
+            ? `${emailPublicBaseUrl()}/e/${input.event.slug ?? input.event.id}`
+            : undefined,
           requestRsvp: false,
         });
 
   return {
     name: key === "save_the_date" ? "la-mesa-save-the-date.ics" : "la-mesa-invite.ics",
     content: Buffer.from(ics, "utf8").toString("base64"),
+  };
+}
+
+/** Ensure the test recipient has a participation so YES/NO tokens resolve. */
+async function ensureTestParticipation(input: {
+  eventId: string;
+  email: string;
+  fullName: string;
+}): Promise<AdminEventParticipation> {
+  const db = getAdminFirestore();
+  const email = normalizeEmail(input.email);
+  const existing = await db
+    .collection(COLLECTIONS.participations)
+    .where("eventId", "==", input.eventId)
+    .where("email", "==", email)
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    const d = existing.docs[0]!;
+    return { id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) };
+  }
+  const now = new Date().toISOString();
+  const ref = await db.collection(COLLECTIONS.participations).add({
+    eventId: input.eventId,
+    email,
+    fullName: input.fullName,
+    status: "invited",
+    statusSource: "admin",
+    createdAt: now,
+    updatedAt: now,
+  });
+  return {
+    id: ref.id,
+    eventId: input.eventId,
+    email,
+    fullName: input.fullName,
+    status: "invited",
+    statusSource: "admin",
   };
 }
 
@@ -141,31 +226,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "no_admin_email" }, { status: 400 });
   }
 
-  let vars = sampleVars(locale);
   let event: AdminEvent | null = null;
+  let participationId = `test-${Date.now()}`;
+  let eventIdForToken = "test-event";
+
   if (parsed.data.eventId && isFirebaseAdminConfigured()) {
     try {
       const db = getAdminFirestore();
       const snap = await db.collection(COLLECTIONS.events).doc(parsed.data.eventId).get();
       if (snap.exists) {
         event = { id: snap.id, ...(snap.data() as Omit<AdminEvent, "id">) } as AdminEvent;
-        const base = getSiteUrl();
-        vars = {
-          ...buildEventTemplateVars({
-            event,
-            publicBaseUrl: base,
-            fullName: "Test LA MESA",
-            email: to,
-            locale,
-            yesUrl: `${base}/api/rsvp/demo?response=yes&locale=${locale}`,
-            noUrl: `${base}/api/rsvp/demo?response=no&locale=${locale}`,
-            surveyUrl: `${base}/${locale}/survey/demo`,
-          }),
-        };
+        const part = await ensureTestParticipation({
+          eventId: event.id,
+          email: to,
+          fullName: "Test LA MESA",
+        });
+        participationId = part.id;
+        eventIdForToken = event.id;
       }
     } catch (error) {
       console.warn("[email-templates/send-test] event load failed", error);
     }
+  }
+
+  const rsvp = buildTestRsvpUrls({
+    locale,
+    email: to,
+    eventId: eventIdForToken,
+    participationId,
+  });
+
+  let vars = sampleVars(locale, rsvp);
+  if (event) {
+    const base = emailPublicBaseUrl();
+    vars = {
+      ...buildEventTemplateVars({
+        event,
+        publicBaseUrl: base,
+        fullName: "Test LA MESA",
+        email: to,
+        locale,
+        yesUrl: rsvp.yesUrl,
+        noUrl: rsvp.noUrl,
+        surveyUrl: `${base}/${locale}/survey/demo`,
+      }),
+    };
   }
 
   const subject = `[TEST] ${applyTemplateVars(parsed.data.subject, vars)}`;

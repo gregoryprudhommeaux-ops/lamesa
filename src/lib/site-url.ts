@@ -26,3 +26,12 @@ export function getSiteUrl(requestUrl?: string): string {
 
   return "http://127.0.0.1:3000";
 }
+
+/** Base URL for links inside outbound emails — never localhost. */
+export function emailPublicBaseUrl(requestUrl?: string): string {
+  const raw = getSiteUrl(requestUrl);
+  if (raw.includes("127.0.0.1") || raw.includes("localhost")) {
+    return PRODUCTION_SITE_URL;
+  }
+  return raw;
+}
