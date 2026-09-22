@@ -14,7 +14,8 @@ import {
   resolveTemplateLocale,
   type TemplateVars,
 } from "@/lib/email/templates";
-import { wrapLaMesaPlainBody, laMesaEmailFooterText } from "@/lib/email/la-mesa-email-shell";
+import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml, laMesaEmailFooterText } from "@/lib/email/la-mesa-email-shell";
+import { inviteBodyToHtml, rsvpYesNoButtonsHtml } from "@/lib/email/send-calendar-invite";
 import { formatEventWhereLine } from "@/lib/events/format-where";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { emailPublicBaseUrl } from "@/lib/site-url";
@@ -275,7 +276,25 @@ export async function POST(request: Request) {
 
   const subject = `[TEST] ${applyTemplateVars(parsed.data.subject, vars)}`;
   const bodyText = applyTemplateVars(parsed.data.body, vars);
-  const html = wrapLaMesaPlainBody(bodyText, { lang: locale });
+  const templateKey = (parsed.data.templateKey ?? "").trim();
+  const wantsRsvpButtons =
+    templateKey === "places_available" ||
+    templateKey === "calendar_invite" ||
+    bodyText.includes(rsvp.yesUrl) ||
+    bodyText.includes("{{yesUrl}}") ||
+    /YES\s*:/i.test(parsed.data.body);
+
+  const html = wantsRsvpButtons
+    ? wrapLaMesaEmailHtml({
+        lang: locale,
+        bodyHtml: inviteBodyToHtml(bodyText, rsvp.yesUrl, rsvp.noUrl, vars.eventUrl ?? ""),
+        footerHtml: rsvpYesNoButtonsHtml({
+          yesUrl: rsvp.yesUrl,
+          noUrl: rsvp.noUrl,
+          locale,
+        }),
+      })
+    : wrapLaMesaPlainBody(bodyText, { lang: locale });
   const attachment = buildTestIcsAttachment({
     templateKey: parsed.data.templateKey,
     event,

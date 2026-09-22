@@ -39,7 +39,7 @@ const ICS_DOWNLOAD_CTA: Record<TemplateLocale, string> = {
 
 /**
  * Formal invite body → HTML.
- * Same rich markers as test emails (`<bold>`, links, …), plus YES/NO/event short links.
+ * Hides raw YES/NO URLs (ugly long tokens) and renders short label links.
  */
 export function inviteBodyToHtml(
   bodyText: string,
@@ -56,9 +56,16 @@ export function inviteBodyToHtml(
   if (noUrl) prepared = prepared.split(noUrl).join(NO);
   if (eventUrl) prepared = prepared.split(eventUrl).join(EVENT);
 
+  // Drop “YES: <url>” / “NO: <url>” lines entirely — buttons/footer carry the CTA.
   prepared = prepared
+    .replace(/^[ \t]*YES\s*:?\s*__LM_YES__[ \t]*$/gim, "")
+    .replace(/^[ \t]*NO\s*:?\s*__LM_NO__[ \t]*$/gim, "")
     .replace(/YES\s*:?\s*__LM_YES__/gi, YES)
-    .replace(/NO\s*:?\s*__LM_NO__/gi, NO);
+    .replace(/NO\s*:?\s*__LM_NO__/gi, NO)
+    // Any leftover RSVP go links (escaped or not)
+    .replace(/https?:\/\/[^\s<>"]*\/api\/rsvp\/[^\s<>"]+/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 
   // Same pipeline as wrapLaMesaPlainBody / send-test (maps <bold> → <b>, etc.)
   let html = richTextToEmailHtml(prepared);
@@ -76,6 +83,25 @@ export function inviteBodyToHtml(
     );
 
   return html;
+}
+
+export function rsvpYesNoButtonsHtml(input: {
+  yesUrl: string;
+  noUrl: string;
+  locale: TemplateLocale;
+}): string {
+  const yesLabel = input.locale === "es" ? "SÍ" : input.locale === "en" ? "YES" : "OUI";
+  const noLabel = "NO";
+  const btnYes =
+    "display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;margin:0 8px 10px 0;";
+  const btnNo =
+    "display:inline-block;background:#eeeeee;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;margin:0 8px 10px 0;";
+  return `
+          <div style="margin-top:8px;">
+            <a href="${escapeEmailHtml(input.yesUrl)}" style="${btnYes}">${yesLabel}</a>
+            <a href="${escapeEmailHtml(input.noUrl)}" style="${btnNo}">${noLabel}</a>
+          </div>
+        `;
 }
 
 /** Shared ICS description (no guest-specific roster). */
@@ -181,13 +207,21 @@ export async function sendPlacesAvailableEmail(input: {
   const html = wrapLaMesaEmailHtml({
     lang: locale,
     bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
+    footerHtml: rsvpYesNoButtonsHtml({ yesUrl, noUrl, locale }),
   });
+
+  const plainCta =
+    locale === "fr"
+      ? `OUI : ${yesUrl}\nNO : ${noUrl}`
+      : locale === "es"
+        ? `SÍ: ${yesUrl}\nNO: ${noUrl}`
+        : `YES: ${yesUrl}\nNO: ${noUrl}`;
 
   return sendTransactionalEmail({
     to: input.participation.email,
     subject,
     html,
-    text: `${bodyText}\n\n${laMesaEmailFooterText(locale)}`,
+    text: `${bodyText.replace(yesUrl, "").replace(noUrl, "").trim()}\n\n${plainCta}\n\n${laMesaEmailFooterText(locale)}`,
     bccAdmins: false,
     ...(icsAttachment ? { attachments: [icsAttachment] } : {}),
   });
@@ -257,6 +291,7 @@ export async function sendCalendarInviteEmail(input: {
     lang: locale,
     bodyHtml: inviteBodyToHtml(bodyText, yesUrl, noUrl, vars.eventUrl),
     footerHtml: `
+          ${rsvpYesNoButtonsHtml({ yesUrl, noUrl, locale })}
           <div style="margin-top:8px;">
             <a href="${escapeEmailHtml(googleCalUrl)}" style="${btnOutline}">${escapeEmailHtml(CALENDAR_CTA[locale])}</a>
             <a href="${escapeEmailHtml(icsDownloadUrl)}" style="${btnOutline}">${escapeEmailHtml(ICS_DOWNLOAD_CTA[locale])}</a>
