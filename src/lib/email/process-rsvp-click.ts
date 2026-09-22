@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
 import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
+import { sendAdminRsvpYesEmail } from "@/lib/email/send-admin-rsvp-yes";
 import {
   countSeatedParticipations,
   DEFAULT_GUEST_CAPACITY,
@@ -76,6 +77,9 @@ export async function processRsvpClick(input: {
       eventId?: string;
       email?: string;
       status?: string;
+      fullName?: string;
+      companyName?: string;
+      phone?: string;
     };
     if (data.eventId !== payload.eventId) {
       return redirect("invalid");
@@ -147,6 +151,7 @@ export async function processRsvpClick(input: {
     );
 
     const guestEmail = String(data.email ?? "").trim();
+    const guestName = String(data.fullName ?? "").trim() || guestEmail;
     if (guestEmail.includes("@")) {
       void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
         recordContactActivity({
@@ -163,6 +168,28 @@ export async function processRsvpClick(input: {
           },
         }),
       );
+    }
+
+    if (response === "yes" && guestEmail.includes("@")) {
+      void sendAdminRsvpYesEmail({
+        fullName: guestName,
+        email: guestEmail,
+        company: data.companyName,
+        phone: data.phone,
+        eventTitle: eventTitle || payload.eventId,
+        eventSlug: event?.slug,
+        channel: "rsvp_button",
+        status: next,
+      }).then((adminMail) => {
+        if (!adminMail.ok) {
+          console.error("[rsvp] admin OUI notify FAILED:", adminMail.error, {
+            to: "gregory.prudhommeaux@gmail.com",
+            email: guestEmail,
+          });
+        } else {
+          console.info("[rsvp] admin OUI notify sent", { email: guestEmail });
+        }
+      });
     }
 
     // Non-members must create a LA MESA account (YES or NO).
