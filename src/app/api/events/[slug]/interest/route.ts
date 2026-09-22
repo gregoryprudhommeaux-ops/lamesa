@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isPlatformAdminIdentity, normalizeEmail } from "@/lib/auth/platform-admin";
 import { requireVerifiedUser } from "@/lib/auth/member.server";
 import { sendInterestAckEmail } from "@/lib/email/send-interest-ack";
+import { sendAdminRsvpYesEmail } from "@/lib/email/send-admin-rsvp-yes";
 import {
   eventInterestSchema,
   isInterestDeadlinePassed,
@@ -128,6 +129,12 @@ export async function POST(request: Request, { params }: Params) {
   const existingDoc =
     existingByEmail.docs.find((d) => String(d.data().eventId ?? "") === eventDoc.id) ?? null;
 
+  const previousInterest = existingDoc
+    ? String(existingDoc.data().interestResponse ?? "").toLowerCase()
+    : "";
+  const isFirstYes =
+    data.interestResponse === "yes" && previousInterest !== "yes";
+
   let id: string;
   let respondentRef = existingDoc?.ref;
   if (existingDoc) {
@@ -146,6 +153,28 @@ export async function POST(request: Request, { params }: Params) {
     id: eventDoc.id,
     ...(eventData as Omit<AdminEvent, "id">),
   };
+
+  if (isFirstYes) {
+    void sendAdminRsvpYesEmail({
+      fullName: waitlist.fullName || `${firstName} ${lastName}`.trim() || email,
+      email,
+      company: waitlist.company,
+      phone: waitlist.phone,
+      eventTitle: event.title?.trim() || slug,
+      eventSlug: slug,
+      channel: "interest_form",
+      status: "interest_yes",
+    }).then((adminMail) => {
+      if (!adminMail.ok) {
+        console.error("[interest] admin OUI notify FAILED:", adminMail.error, {
+          to: "gregory.prudhommeaux@gmail.com",
+          email,
+        });
+      } else {
+        console.info("[interest] admin OUI notify sent", { email });
+      }
+    });
+  }
 
   const mail = await sendInterestAckEmail({
     event,
