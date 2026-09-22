@@ -41,7 +41,11 @@ import {
   isExpressSignup,
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
-import { isSoftDeleted } from "@/lib/member/soft-delete";
+import { isLegitimateWaitlistMember } from "@/lib/member/waitlist-legitimacy";
+import {
+  PLACES_AVAILABLE_AUTO_INSCRIT_KEEP_NAMES,
+  softDeleteAdminProvisionedWaitlistStubs,
+} from "@/lib/member/revoke-admin-waitlist-stubs";
 import type { EventRespondent, WaitlistRegistration } from "@/lib/types/events";
 import type { Prospect } from "@/lib/types/prospects";
 import { normalizeProspectStatus } from "@/lib/prospects/normalize";
@@ -244,7 +248,22 @@ export async function GET(request: Request) {
 
     const { events, participations } = core;
     const waitlistAll = core.waitlist;
-    const waitlistActive = waitlistAll.filter((r) => !isSoftDeleted(r));
+
+    // One-shot cleanup: soft-delete waitlist stubs invented by places_available blast.
+    // Keeps Julian TORRES + Alice MUZELLEC (NON). Idempotent.
+    void softDeleteAdminProvisionedWaitlistStubs(waitlistAll, {
+      sources: ["la-mesa-places-available"],
+      keepNameTokenGroups: PLACES_AVAILABLE_AUTO_INSCRIT_KEEP_NAMES,
+      deletedReason: "places-available-auto-inscrit-revoked",
+    })
+      .then((result) => {
+        if (result.revoked > 0) {
+          console.info("[admin/dashboard] revoked auto-inscrit stubs", result);
+        }
+      })
+      .catch((err) => console.warn("[admin/dashboard] revoke auto-inscrit failed", err));
+
+    const waitlistActive = waitlistAll.filter((r) => isLegitimateWaitlistMember(r));
 
     const recentMembers = [...waitlistActive]
       .sort(

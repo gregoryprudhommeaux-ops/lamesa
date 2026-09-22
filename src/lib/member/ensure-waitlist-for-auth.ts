@@ -42,7 +42,9 @@ export function waitlistStubFullNameForAuth(
 
 /**
  * Ensure an active waitlist row exists for this email (revive or create stub).
- * Used by STD send ops and by Auth interest heal.
+ * Used by Auth interest heal when the person themselves acts.
+ *
+ * NEVER call from admin email blasts / invite sends — contacting ≠ inscription.
  */
 export async function ensureWaitlistProfileByEmail(input: {
   email: string;

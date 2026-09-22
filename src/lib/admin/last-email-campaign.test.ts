@@ -417,4 +417,78 @@ describe("buildLastEmailResultsSummary", () => {
     expect(summary.yesGuests.map((g) => g.email)).toEqual(["yes@x.com"]);
     expect(summary.noGuests.map((g) => g.email)).toEqual(["no@x.com"]);
   });
+
+  it("does not count admin-blast waitlist stubs as inscrits", () => {
+    const summary = buildLastEmailResultsSummary({
+      campaign: {
+        templateKey: `places_available:${SLUG}`,
+        templateLabel: "Places encore dispo",
+        sentAt: "2026-09-22T21:56:00.000Z",
+        recipientCount: 2,
+        recipientEmails: ["stub@x.com", "real@x.com"],
+        eventSlug: SLUG,
+        eventId: "ev1",
+        eventTitle: "Dirigeants",
+        source: "places_available",
+        updatedAt: "2026-09-22T21:56:00.000Z",
+      },
+      events: [
+        event({
+          id: "ev1",
+          slug: SLUG,
+          title: "Dirigeants",
+          startsAt: "2026-09-24T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "stub@x.com",
+          status: "invited",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+        }),
+        part({
+          id: "p2",
+          eventId: "ev1",
+          email: "real@x.com",
+          status: "invited",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+        }),
+      ],
+      respondents: [],
+      prospects: [],
+      waitlistByEmail: new Map([
+        [
+          "stub@x.com",
+          {
+            email: "stub@x.com",
+            fullName: "Auto Stub",
+            company: "",
+            source: "la-mesa-places-available",
+            profileComplete: false,
+          },
+        ],
+        [
+          "real@x.com",
+          {
+            email: "real@x.com",
+            fullName: "Real Member",
+            company: "",
+            source: "la-mesa-registration",
+            profileComplete: true,
+          },
+        ],
+      ]),
+    });
+
+    expect(summary.registered).toBe(1);
+    expect(summary.registeredComplete).toBe(1);
+    expect(summary.registeredExpress).toBe(0);
+    expect(summary.recipients.find((r) => r.email === "stub@x.com")?.signupKind).toBeNull();
+    expect(summary.recipients.find((r) => r.email === "real@x.com")?.signupKind).toBe(
+      "complete",
+    );
+  });
 });

@@ -18,6 +18,7 @@ import { templateLabel } from "@/lib/email/template-defaults";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import { isExpressSignup } from "@/lib/member/profile-completion";
+import { isLegitimateWaitlistMember } from "@/lib/member/waitlist-legitimacy";
 import type {
   AdminEvent,
   AdminEventParticipation,
@@ -534,6 +535,15 @@ function signupKindForEmail(
 ): "express" | "complete" | null {
   const row = waitlistByEmail.get(email);
   if (!row) return null;
+  // Admin blast stubs are not self-signups — never count as "inscrit".
+  if (
+    !isLegitimateWaitlistMember({
+      source: row.source,
+      profileComplete: row.profileComplete,
+    })
+  ) {
+    return null;
+  }
   return isExpressSignup(row) ? "express" : "complete";
 }
 
