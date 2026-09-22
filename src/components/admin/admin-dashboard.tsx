@@ -102,6 +102,24 @@ type NextEventRsvp = {
   yesGuests: NextEventRsvpYesGuest[];
 };
 
+type LastEmailResults = {
+  templateKey: string;
+  templateLabel: string;
+  sentAt: string;
+  recipientCount: number;
+  eventId: string | null;
+  eventSlug: string | null;
+  eventTitle: string | null;
+  responseMode: "interest" | "rsvp" | "none";
+  yes: number;
+  no: number;
+  other: number;
+  pending: number;
+  sansReponseListName?: string;
+  yesGuests: NextEventRsvpYesGuest[];
+  source: "cold_outreach" | "save_the_date" | "inferred";
+};
+
 type DistributionMember = {
   id: string;
   fullName: string;
@@ -150,6 +168,7 @@ type DashboardPayload = {
   recentTableDrafts?: RecentTableDraft[];
   opsQueues?: OpsQueues;
   nextEventRsvp?: NextEventRsvp | null;
+  lastEmailResults?: LastEmailResults | null;
 };
 
 const CATEGORIES: {
@@ -231,6 +250,153 @@ function formatNextEventWhen(iso: string): string {
     year: "numeric",
     timeZone: "America/Mexico_City",
   });
+}
+
+function formatSentAt(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Mexico_City",
+  });
+}
+
+function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
+  const eventHref = results.eventId
+    ? `/admin/evenements?id=${encodeURIComponent(results.eventId)}`
+    : null;
+  const noTotal = results.no + results.other;
+  const modeHint =
+    results.responseMode === "interest"
+      ? "Save the Date / intérêt"
+      : results.responseMode === "rsvp"
+        ? "RSVP classique"
+        : "Envoi sans formulaire de réponse";
+
+  return (
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+            Dernier email · {modeHint}
+          </p>
+          <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">
+            {results.templateLabel || results.templateKey}
+          </h4>
+          <p className="mt-0.5 text-sm text-ns-secondary">
+            Envoyé le {formatSentAt(results.sentAt)}
+            {results.eventTitle ? ` · ${results.eventTitle}` : ""}
+          </p>
+          <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
+            Résultats des réponses pour la cohorte de ce blast (
+            {results.recipientCount} destinataire
+            {results.recipientCount === 1 ? "" : "s"}).
+          </p>
+        </div>
+        {eventHref ? (
+          <Link
+            href={eventHref}
+            className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+          >
+            Ouvrir l’événement →
+          </Link>
+        ) : (
+          <Link
+            href="/admin/templates"
+            className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+          >
+            Templates →
+          </Link>
+        )}
+      </div>
+
+      {results.responseMode === "none" ? (
+        <p className="mt-4 text-sm text-ns-secondary">
+          Cet envoi n’est pas lié à un formulaire OUI/NON — pas de décompte de réponses.
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                Envoyés
+              </p>
+              <p className="mt-1 text-2xl font-black text-ns-tertiary">
+                {results.recipientCount}
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                Oui
+              </p>
+              <p className="mt-1 text-2xl font-black text-emerald-900">{results.yes}</p>
+            </div>
+            <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">
+                Non{results.other > 0 ? " / autre" : ""}
+              </p>
+              <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
+              {results.other > 0 ? (
+                <p className="text-[10px] text-rose-800/80">
+                  {results.no} non · {results.other} autre
+                </p>
+              ) : null}
+            </div>
+            <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+                Sans réponse
+              </p>
+              <p className="mt-1 text-2xl font-black text-amber-950">{results.pending}</p>
+              {results.sansReponseListName ? (
+                <Link
+                  href={`/admin/prospects?list=${encodeURIComponent(results.sansReponseListName)}`}
+                  className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
+                >
+                  Liste relance →
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="mt-4 border-t border-gray-100/80 pt-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Ont dit oui
+              </p>
+              {results.yes > results.yesGuests.length ? (
+                <p className="text-[11px] text-ns-secondary">
+                  {results.yesGuests.length} affichés · {results.yes} au total
+                </p>
+              ) : null}
+            </div>
+            {results.yesGuests.length === 0 ? (
+              <p className="mt-2 text-sm text-ns-secondary">Aucun oui pour l’instant.</p>
+            ) : (
+              <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+                {results.yesGuests.map((g) => (
+                  <li
+                    key={g.id}
+                    className="rounded-lg border border-emerald-100/80 bg-white/70 px-2.5 py-1.5"
+                  >
+                    <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                      {g.fullName || g.email || "Sans nom"}
+                    </span>
+                    <span className="block truncate text-[11px] text-ns-secondary">
+                      {g.company || g.email}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
@@ -668,6 +834,7 @@ export function AdminDashboardPanel() {
     recentTableDrafts = [],
     opsQueues,
     nextEventRsvp = null,
+    lastEmailResults = null,
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -692,7 +859,7 @@ export function AdminDashboardPanel() {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Cockpit ops : prochain dîner (RSVP), vivier, volumes et satisfaction.
+            Cockpit ops : dernier email (réponses), prochain dîner, vivier et satisfaction.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -729,29 +896,35 @@ export function AdminDashboardPanel() {
             Files ops
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            D’abord le dîner en cours — puis le vivier (profils, priorités). Hygiène Auth et
-            jamais invités restent dans Inscrits.
+            D’abord les réponses du dernier email — puis le prochain dîner et le vivier
+            (profils, priorités).
           </p>
         </div>
         <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {nextEventRsvp ? (
-            <NextEventRsvpCard rsvp={nextEventRsvp} />
+          {lastEmailResults ? (
+            <LastEmailResultsCard results={lastEmailResults} />
           ) : (
             <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
               <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Prochain événement
+                Dernier email
               </p>
               <p className="mt-2 text-sm text-ns-secondary">
-                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
+                Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
+                Prospects pour voir les OUI / NON ici.
               </p>
               <Link
-                href="/admin/evenements?nouveau=1"
+                href="/admin/prospects"
                 className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
               >
-                Nouvel événement →
+                Prospects →
               </Link>
             </div>
           )}
+          {nextEventRsvp &&
+          (!lastEmailResults?.eventId ||
+            lastEmailResults.eventId !== nextEventRsvp.eventId) ? (
+            <NextEventRsvpCard rsvp={nextEventRsvp} />
+          ) : null}
           <OpsQueueCard
             title="Profils incomplets"
             href="/admin/inscrits?profile=incomplete"

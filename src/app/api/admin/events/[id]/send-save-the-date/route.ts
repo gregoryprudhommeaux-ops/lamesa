@@ -10,6 +10,7 @@ import { normalizeParticipationStatus } from "@/lib/events/participation-status"
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
 import { syncStdSansReponseList } from "@/lib/events/sync-std-sans-reponse-list";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import {
   findProspectByEmail,
   updateProspect,
@@ -113,6 +114,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let waitlistProvisioned = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const participation of recipients) {
     const email = normalizeEmail(participation.email);
@@ -150,6 +152,7 @@ export async function POST(request: Request, { params }: Params) {
       continue;
     }
     sent += 1;
+    sentEmails.push(email);
     await db.collection(COLLECTIONS.participations).doc(participation.id).set(
       {
         saveTheDateSentAt: new Date().toISOString(),
@@ -169,13 +172,26 @@ export async function POST(request: Request, { params }: Params) {
     });
   }
 
+  const stdSentAt = new Date().toISOString();
   await db.collection(COLLECTIONS.events).doc(eventId).set(
     {
-      saveTheDateSentAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      saveTheDateSentAt: stdSentAt,
+      updatedAt: stdSentAt,
     },
     { merge: true },
   );
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "save_the_date",
+      sentAt: stdSentAt,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId: event.id,
+      eventTitle: event.title,
+      source: "save_the_date",
+    });
+  }
 
   let sansReponse: { added: number; removed: number; total: number; listName: string } | null =
     null;

@@ -179,6 +179,8 @@ export interface AdminEvent {
   inviteEmailSubject?: string;
   inviteEmailBody?: string;
   inviteEmailSentAt?: string;
+  /** Last Save the Date / interest blast (event-level stamp). */
+  saveTheDateSentAt?: string;
   /** Per-event overrides of global email templates (per locale) */
   emailTemplateOverrides?: Partial<
     Record<
