@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { inviteBodyToHtml } from "@/lib/email/send-calendar-invite";
+import { inviteBodyToHtml, rsvpYesNoButtonsHtml } from "@/lib/email/send-calendar-invite";
 
 describe("inviteBodyToHtml", () => {
-  it("turns YES/NO URLs into short FR hyperlinks (OUI/NON)", () => {
-    const yes = "https://example.com/api/rsvp/token?response=yes&locale=fr";
-    const no = "https://example.com/api/rsvp/token?response=no&locale=fr";
+  it("strips YES/NO URL lines from the body (buttons carry the CTA)", () => {
+    const yes = "https://example.com/api/rsvp/go?t=abc&r=yes&l=fr";
+    const no = "https://example.com/api/rsvp/go?t=abc&r=no&l=fr";
     const event = "https://example.com/fr/e/slug";
     const body = [
       "Confirme ta présence :",
@@ -15,11 +15,20 @@ describe("inviteBodyToHtml", () => {
     ].join("\n");
 
     const html = inviteBodyToHtml(body, yes, no, event, "fr");
-    expect(html).toContain(`href="${yes.replace(/&/g, "&amp;")}"`);
+    expect(html).not.toContain("api/rsvp/go");
+    expect(html).not.toContain("YES :");
+    expect(html).not.toContain("NO :");
+    expect(html).toContain(`href="${event}"`);
+  });
+
+  it("renders FR pill labels OUI / NON", () => {
+    const html = rsvpYesNoButtonsHtml({
+      yesUrl: "https://example.com/yes",
+      noUrl: "https://example.com/no",
+      locale: "fr",
+    });
     expect(html).toContain(">OUI</a>");
     expect(html).toContain(">NON</a>");
-    expect(html).not.toContain("YES : https://");
-    expect(html).not.toContain("NO : https://");
   });
 
   it("renders <bold> like test emails (not escaped)", () => {
