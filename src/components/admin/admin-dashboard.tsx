@@ -85,6 +85,7 @@ type NextEventRsvpYesGuest = {
   fullName: string;
   email: string;
   company: string;
+  seat?: "oui" | "invite_sent" | "confirmed";
 };
 
 type NextEventRsvp = {
@@ -98,6 +99,8 @@ type NextEventRsvp = {
   no: number;
   other: number;
   pending: number;
+  confirmed: number;
+  inviteSent: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
 };
@@ -115,6 +118,8 @@ type LastEmailResults = {
   no: number;
   other: number;
   pending: number;
+  confirmed: number;
+  inviteSent: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
   source: "cold_outreach" | "save_the_date" | "inferred";
@@ -265,6 +270,148 @@ function formatSentAt(iso: string): string {
   });
 }
 
+function SeatBadge({ seat }: { seat?: NextEventRsvpYesGuest["seat"] }) {
+  if (seat === "confirmed") {
+    return (
+      <span className="mt-1 inline-flex rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-900">
+        Payé
+      </span>
+    );
+  }
+  if (seat === "invite_sent") {
+    return (
+      <span className="mt-1 inline-flex rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900">
+        Invité
+      </span>
+    );
+  }
+  return (
+    <span className="mt-1 inline-flex rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900">
+      Oui
+    </span>
+  );
+}
+
+function YesGuestsList({
+  yes,
+  yesGuests,
+}: {
+  yes: number;
+  yesGuests: NextEventRsvpYesGuest[];
+}) {
+  const confirmedCount = yesGuests.filter((g) => g.seat === "confirmed").length;
+  return (
+    <div className="mt-4 border-t border-gray-100/80 pt-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+          Ont dit oui
+        </p>
+        <p className="text-[11px] text-ns-secondary">
+          {confirmedCount} payé{confirmedCount === 1 ? "" : "s"}
+          {yes > yesGuests.length
+            ? ` · ${yesGuests.length} affichés · ${yes} au total`
+            : yes > 0
+              ? ` · ${yes} au total`
+              : ""}
+        </p>
+      </div>
+      {yesGuests.length === 0 ? (
+        <p className="mt-2 text-sm text-ns-secondary">Aucun oui pour l’instant.</p>
+      ) : (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {yesGuests.map((g) => (
+            <li
+              key={g.id}
+              className="rounded-lg border border-emerald-100/80 bg-white/70 px-2.5 py-1.5"
+            >
+              <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                {g.fullName || g.email || "Sans nom"}
+              </span>
+              <span className="block truncate text-[11px] text-ns-secondary">
+                {g.company || g.email}
+              </span>
+              <SeatBadge seat={g.seat} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function ResponseCounters({
+  contactedLabel,
+  contacted,
+  contactedHint,
+  yes,
+  confirmed,
+  inviteSent,
+  noTotal,
+  noHint,
+  pending,
+  sansReponseListName,
+}: {
+  contactedLabel: string;
+  contacted: number;
+  contactedHint?: string;
+  yes: number;
+  confirmed: number;
+  inviteSent: number;
+  noTotal: number;
+  noHint?: string;
+  pending: number;
+  sansReponseListName?: string;
+}) {
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+          {contactedLabel}
+        </p>
+        <p className="mt-1 text-2xl font-black text-ns-tertiary">{contacted}</p>
+        {contactedHint ? (
+          <p className="text-[10px] text-ns-secondary">{contactedHint}</p>
+        ) : null}
+      </div>
+      <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+          Oui
+        </p>
+        <p className="mt-1 text-2xl font-black text-emerald-900">{yes}</p>
+        <p className="text-[10px] text-emerald-800/80">Intérêt STD</p>
+      </div>
+      <div className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+          Confirmés
+        </p>
+        <p className="mt-1 text-2xl font-black text-sky-950">{confirmed}</p>
+        <p className="text-[10px] text-sky-900/80">
+          {inviteSent > 0 ? `${inviteSent} invité·e·s en attente` : "Payés / places OK"}
+        </p>
+      </div>
+      <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">Non</p>
+        <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
+        {noHint ? <p className="text-[10px] text-rose-800/80">{noHint}</p> : null}
+      </div>
+      <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+          Sans réponse
+        </p>
+        <p className="mt-1 text-2xl font-black text-amber-950">{pending}</p>
+        {sansReponseListName ? (
+          <Link
+            href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+            className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
+          >
+            Liste relance →
+          </Link>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
   const eventHref = results.eventId
     ? `/admin/evenements?id=${encodeURIComponent(results.eventId)}`
@@ -292,9 +439,8 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
             {results.eventTitle ? ` · ${results.eventTitle}` : ""}
           </p>
           <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
-            Résultats des réponses pour la cohorte de ce blast (
-            {results.recipientCount} destinataire
-            {results.recipientCount === 1 ? "" : "s"}).
+            OUI = intérêt. Confirmés = places payées. Invité = mail formel envoyé, pas encore
+            payé.
           </p>
         </div>
         {eventHref ? (
@@ -320,79 +466,22 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
         </p>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-                Envoyés
-              </p>
-              <p className="mt-1 text-2xl font-black text-ns-tertiary">
-                {results.recipientCount}
-              </p>
-            </div>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-                Oui
-              </p>
-              <p className="mt-1 text-2xl font-black text-emerald-900">{results.yes}</p>
-            </div>
-            <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">
-                Non{results.other > 0 ? " / autre" : ""}
-              </p>
-              <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
-              {results.other > 0 ? (
-                <p className="text-[10px] text-rose-800/80">
-                  {results.no} non · {results.other} autre
-                </p>
-              ) : null}
-            </div>
-            <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
-                Sans réponse
-              </p>
-              <p className="mt-1 text-2xl font-black text-amber-950">{results.pending}</p>
-              {results.sansReponseListName ? (
-                <Link
-                  href={`/admin/prospects?list=${encodeURIComponent(results.sansReponseListName)}`}
-                  className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
-                >
-                  Liste relance →
-                </Link>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-4 border-t border-gray-100/80 pt-4">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Ont dit oui
-              </p>
-              {results.yes > results.yesGuests.length ? (
-                <p className="text-[11px] text-ns-secondary">
-                  {results.yesGuests.length} affichés · {results.yes} au total
-                </p>
-              ) : null}
-            </div>
-            {results.yesGuests.length === 0 ? (
-              <p className="mt-2 text-sm text-ns-secondary">Aucun oui pour l’instant.</p>
-            ) : (
-              <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-                {results.yesGuests.map((g) => (
-                  <li
-                    key={g.id}
-                    className="rounded-lg border border-emerald-100/80 bg-white/70 px-2.5 py-1.5"
-                  >
-                    <span className="block truncate text-sm font-semibold text-ns-tertiary">
-                      {g.fullName || g.email || "Sans nom"}
-                    </span>
-                    <span className="block truncate text-[11px] text-ns-secondary">
-                      {g.company || g.email}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <ResponseCounters
+            contactedLabel="Envoyés"
+            contacted={results.recipientCount}
+            yes={results.yes}
+            confirmed={results.confirmed}
+            inviteSent={results.inviteSent}
+            noTotal={noTotal}
+            noHint={
+              results.other > 0
+                ? `${results.no} non · ${results.other} autre`
+                : undefined
+            }
+            pending={results.pending}
+            sansReponseListName={results.sansReponseListName}
+          />
+          <YesGuestsList yes={results.yes} yesGuests={results.yesGuests} />
         </>
       )}
     </div>
@@ -422,8 +511,8 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
           </p>
           {rsvp.responseMode === "interest" ? (
             <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
-              Lecture ops : OUI / NON = playlists CRM STD (sync formulaire + manuels).
-              Contactés = mail STD + approches. Sans réponse = encore en jeu.
+              OUI / NON = playlists CRM STD. Confirmés = places payées (pas seulement un
+              oui). Contactés = mail STD + approches. Sans réponse = encore en jeu.
             </p>
           ) : null}
         </div>
@@ -435,78 +524,23 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
         </Link>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-            Contactés
-          </p>
-          <p className="mt-1 text-2xl font-black text-ns-tertiary">{rsvp.contacted}</p>
-          <p className="text-[10px] text-ns-secondary">Mail STD + approches</p>
-        </div>
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
-            Oui
-          </p>
-          <p className="mt-1 text-2xl font-black text-emerald-900">{rsvp.yes}</p>
-        </div>
-        <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">
-            Non{rsvp.other > 0 ? " / autre" : ""}
-          </p>
-          <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
-          <p className="text-[10px] text-rose-800/80">
-            {rsvp.other > 0
-              ? `${rsvp.no} non · ${rsvp.other} autre`
-              : "Formulaire + CRM Prospects"}
-          </p>
-        </div>
-        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
-            Sans réponse
-          </p>
-          <p className="mt-1 text-2xl font-black text-amber-950">{rsvp.pending}</p>
-          {rsvp.sansReponseListName ? (
-            <Link
-              href={`/admin/prospects?list=${encodeURIComponent(rsvp.sansReponseListName)}`}
-              className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
-            >
-              Liste relance →
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="mt-4 border-t border-gray-100/80 pt-4">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-            Ont dit oui
-          </p>
-          {rsvp.yes > rsvp.yesGuests.length ? (
-            <p className="text-[11px] text-ns-secondary">
-              {rsvp.yesGuests.length} affichés · {rsvp.yes} au total
-            </p>
-          ) : null}
-        </div>
-        {rsvp.yesGuests.length === 0 ? (
-          <p className="mt-2 text-sm text-ns-secondary">Aucun oui pour l’instant.</p>
-        ) : (
-          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            {rsvp.yesGuests.map((g) => (
-              <li
-                key={g.id}
-                className="rounded-lg border border-emerald-100/80 bg-white/70 px-2.5 py-1.5"
-              >
-                <span className="block truncate text-sm font-semibold text-ns-tertiary">
-                  {g.fullName || g.email || "Sans nom"}
-                </span>
-                <span className="block truncate text-[11px] text-ns-secondary">
-                  {g.company || g.email}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      <ResponseCounters
+        contactedLabel="Contactés"
+        contacted={rsvp.contacted}
+        contactedHint="Mail STD + approches"
+        yes={rsvp.yes}
+        confirmed={rsvp.confirmed}
+        inviteSent={rsvp.inviteSent}
+        noTotal={noTotal}
+        noHint={
+          rsvp.other > 0
+            ? `${rsvp.no} non · ${rsvp.other} autre`
+            : "Formulaire + CRM Prospects"
+        }
+        pending={rsvp.pending}
+        sansReponseListName={rsvp.sansReponseListName}
+      />
+      <YesGuestsList yes={rsvp.yes} yesGuests={rsvp.yesGuests} />
     </div>
   );
 }

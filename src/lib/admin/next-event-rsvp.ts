@@ -13,6 +13,7 @@ import {
   interestProspectListNames,
   interestSansReponseListName,
 } from "@/lib/events/interest-prospect-lists";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { templateKeyMatchesEventSlug } from "@/lib/events/std-outreach-templates";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import type {
@@ -22,11 +23,16 @@ import type {
 } from "@/lib/types/events";
 import type { Prospect, ProspectStatus } from "@/lib/types/prospects";
 
+/** Pipeline after interest OUI → formal invite → paid seat. */
+export type NextEventSeatStatus = "oui" | "invite_sent" | "confirmed";
+
 export type NextEventRsvpYesGuest = {
   id: string;
   fullName: string;
   email: string;
   company: string;
+  /** Seat progress after saying OUI (interest editions). */
+  seat?: NextEventSeatStatus;
 };
 
 export type NextEventRsvpSummary = {
@@ -41,6 +47,13 @@ export type NextEventRsvpSummary = {
   /** Interest-only: réponses « autre » (hors oui/non strict). */
   other: number;
   pending: number;
+  /**
+   * Places confirmées / payées (participation `confirmed` ou `attending`).
+   * Distinct from interest OUI — a “oui” may still be unpaid.
+   */
+  confirmed: number;
+  /** Formal calendar invite sent, not yet paid/confirmed. */
+  inviteSent: number;
   /** Playlist Prospects alignée sur « sans réponse » (relances STD). */
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
@@ -157,6 +170,86 @@ function wasContacted(p: AdminEventParticipation): boolean {
 function listKeyMatch(lists: string[] | undefined, target: string): boolean {
   const key = target.trim().toLowerCase();
   return (lists ?? []).some((l) => l.trim().toLowerCase() === key);
+}
+
+function seatStatusFromParticipation(
+  p: AdminEventParticipation | undefined,
+): NextEventSeatStatus {
+  if (!p) return "oui";
+  const status = normalizeParticipationStatus(p.status);
+  if (status === "confirmed" || status === "attending") return "confirmed";
+  if (p.calendarInviteSentAt) return "invite_sent";
+  return "oui";
+}
+
+const SEAT_SORT: Record<NextEventSeatStatus, number> = {
+  confirmed: 0,
+  invite_sent: 1,
+  oui: 2,
+};
+
+/** Paid / present seats for an event (excludes organizer). */
+export function countConfirmedParticipations(
+  eventId: string,
+  participations: AdminEventParticipation[],
+  emailFilter?: Set<string>,
+): number {
+  let n = 0;
+  for (const p of guestParticipations(eventId, participations)) {
+    const email = normalizeEmail(p.email);
+    if (emailFilter && !emailFilter.has(email)) continue;
+    const status = normalizeParticipationStatus(p.status);
+    if (status === "confirmed" || status === "attending") n += 1;
+  }
+  return n;
+}
+
+export function countInviteSentNotPaid(
+  eventId: string,
+  participations: AdminEventParticipation[],
+  emailFilter?: Set<string>,
+): number {
+  let n = 0;
+  for (const p of guestParticipations(eventId, participations)) {
+    const email = normalizeEmail(p.email);
+    if (emailFilter && !emailFilter.has(email)) continue;
+    if (seatStatusFromParticipation(p) === "invite_sent") n += 1;
+  }
+  return n;
+}
+
+export function enrichYesGuestsWithSeats(
+  guests: NextEventRsvpYesGuest[],
+  eventId: string,
+  participations: AdminEventParticipation[],
+): NextEventRsvpYesGuest[] {
+  const partsByEmail = participationByEmail(eventId, participations);
+  return guests
+    .map((g) => {
+      const email = normalizeEmail(g.email);
+      const seat = seatStatusFromParticipation(partsByEmail.get(email));
+      return { ...g, seat };
+    })
+    .sort(
+      (a, b) =>
+        SEAT_SORT[a.seat ?? "oui"] - SEAT_SORT[b.seat ?? "oui"] ||
+        (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr", {
+          sensitivity: "base",
+        }),
+    );
+}
+
+function participationByEmail(
+  eventId: string,
+  participations: AdminEventParticipation[],
+): Map<string, AdminEventParticipation> {
+  const map = new Map<string, AdminEventParticipation>();
+  for (const p of guestParticipations(eventId, participations)) {
+    const email = normalizeEmail(p.email);
+    if (!email.includes("@")) continue;
+    map.set(email, p);
+  }
+  return map;
 }
 
 /**
@@ -319,7 +412,7 @@ export function buildNextEventRsvpSummary(input: {
         guests.length;
 
   const eventRespondents = input.respondents.filter((r) => r.eventId === event.id);
-  const yesLimit = input.yesLimit ?? 12;
+  const yesLimit = input.yesLimit ?? 40;
 
   if (mode === "interest") {
     const sets = computeInterestRsvpEmailSets({
@@ -333,6 +426,13 @@ export function buildNextEventRsvpSummary(input: {
     });
 
     const contacted = Math.max(contactedRows.length, sets.contactedEmails.size);
+    const confirmed = countConfirmedParticipations(event.id, input.participations);
+    const inviteSent = countInviteSentNotPaid(event.id, input.participations);
+    const yesGuests = enrichYesGuestsWithSeats(
+      [...sets.yesGuestsByEmail.values()],
+      event.id,
+      input.participations,
+    ).slice(0, yesLimit);
 
     return {
       eventId: event.id,
@@ -345,18 +445,25 @@ export function buildNextEventRsvpSummary(input: {
       no: sets.noEmails.size,
       other: sets.otherEmails.size,
       pending: sets.pendingEmails.size,
+      confirmed,
+      inviteSent,
       sansReponseListName: interestSansReponseListName(event.slug),
-      yesGuests: [...sets.yesGuestsByEmail.values()].slice(0, yesLimit),
+      yesGuests,
     };
   }
 
-  const yesParts = guests.filter(
-    (p) => p.status === "attending" || p.status === "confirmed",
+  const yesParts = guests.filter((p) => {
+    const s = normalizeParticipationStatus(p.status);
+    return s === "attending" || s === "confirmed";
+  });
+  const noParts = guests.filter(
+    (p) => normalizeParticipationStatus(p.status) === "not_attending",
   );
-  const noParts = guests.filter((p) => p.status === "not_attending");
-  const pendingParts = guests.filter(
-    (p) => p.status === "invited" || p.status === "waitlist",
-  );
+  const pendingParts = guests.filter((p) => {
+    const s = normalizeParticipationStatus(p.status);
+    return s === "invited" || s === "waitlist";
+  });
+  const inviteSent = countInviteSentNotPaid(event.id, input.participations);
 
   return {
     eventId: event.id,
@@ -369,11 +476,17 @@ export function buildNextEventRsvpSummary(input: {
     no: noParts.length,
     other: 0,
     pending: pendingParts.length,
-    yesGuests: yesParts.slice(0, yesLimit).map((p) => ({
-      id: p.id,
-      fullName: p.fullName?.trim() || p.email || "Sans nom",
-      email: p.email ?? "",
-      company: p.companyName?.trim() || "",
-    })),
+    confirmed: yesParts.length,
+    inviteSent,
+    yesGuests: enrichYesGuestsWithSeats(
+      yesParts.map((p) => ({
+        id: p.id,
+        fullName: p.fullName?.trim() || p.email || "Sans nom",
+        email: p.email ?? "",
+        company: p.companyName?.trim() || "",
+      })),
+      event.id,
+      input.participations,
+    ).slice(0, yesLimit),
   };
 }

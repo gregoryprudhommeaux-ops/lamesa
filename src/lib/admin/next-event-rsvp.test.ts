@@ -174,6 +174,8 @@ describe("buildNextEventRsvpSummary", () => {
       no: 1,
       other: 0,
       pending: 1,
+      confirmed: 0,
+      inviteSent: 0,
     });
     expect(summary?.yesGuests).toEqual([
       {
@@ -181,7 +183,98 @@ describe("buildNextEventRsvpSummary", () => {
         fullName: "Marie Dupont",
         email: "yes@example.com",
         company: "Acme",
+        seat: "oui",
       },
+    ]);
+  });
+
+  it("separates interest OUI from confirmed/paid seats", () => {
+    const eventId = "ev-paid";
+    const slug = "dirigeants-fr-2026-09-24";
+    const summary = buildNextEventRsvpSummary({
+      nowMs: NOW,
+      events: [
+        event({
+          id: eventId,
+          slug,
+          title: "Dirigeants FR",
+          startsAt: "2026-09-25T02:00:00.000Z",
+          responseMode: "interest",
+        }),
+      ],
+      participations: [
+        part({
+          id: "p-paid",
+          eventId,
+          email: "paid@example.com",
+          status: "confirmed",
+          fullName: "Paid Person",
+          companyName: "Co",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+        }),
+        part({
+          id: "p-invited",
+          eventId,
+          email: "invited@example.com",
+          status: "invited",
+          fullName: "Invited Person",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+        }),
+        part({
+          id: "p-oui-only",
+          eventId,
+          email: "oui-only@example.com",
+          status: "invited",
+          fullName: "Oui Only",
+        }),
+      ],
+      respondents: [],
+      prospects: [
+        {
+          id: "1",
+          email: "paid@example.com",
+          fullName: "Paid Person",
+          company: "Co",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "2",
+          email: "invited@example.com",
+          fullName: "Invited Person",
+          company: "",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+        {
+          id: "3",
+          email: "oui-only@example.com",
+          fullName: "Oui Only",
+          company: "",
+          status: "won",
+          lists: [`STD ${slug} — OUI`],
+          deletedAt: null,
+          sentTemplateKeys: [],
+          lastContactedAt: "2026-09-01T00:00:00.000Z",
+        },
+      ],
+    });
+
+    expect(summary).toMatchObject({
+      yes: 3,
+      confirmed: 1,
+      inviteSent: 1,
+    });
+    expect(summary?.yesGuests.map((g) => ({ email: g.email, seat: g.seat }))).toEqual([
+      { email: "paid@example.com", seat: "confirmed" },
+      { email: "invited@example.com", seat: "invite_sent" },
+      { email: "oui-only@example.com", seat: "oui" },
     ]);
   });
 
@@ -277,8 +370,10 @@ describe("buildNextEventRsvpSummary", () => {
       yes: 1,
       no: 1,
       pending: 1,
+      confirmed: 1,
     });
     expect(summary?.yesGuests[0]?.fullName).toBe("A");
+    expect(summary?.yesGuests[0]?.seat).toBe("confirmed");
   });
 
   it("merges Prospects CRM NON pas disponible into interest no count", () => {
