@@ -222,7 +222,7 @@ type DashboardPayload = {
 const CATEGORIES: {
   key: keyof Pick<
     SatisfactionAverages,
-    "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn"
+    "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn" | "wouldRecommend"
   >;
   label: string;
 }[] = [
@@ -230,6 +230,7 @@ const CATEGORIES: {
   { key: "menuQuality", label: "Menu" },
   { key: "guestsQuality", label: "Autres invités" },
   { key: "wouldReturn", label: "Reviendrait" },
+  { key: "wouldRecommend", label: "Recommanderait" },
 ];
 
 function KpiCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
@@ -1556,9 +1557,11 @@ export function AdminDashboardPanel() {
               <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
             </div>
             <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
-              <span className="text-ns-secondary">Taux « inviter un ami »</span>
+              <span className="text-ns-secondary">Reco. concept</span>
               <span className="font-semibold tabular-nums text-ns-tertiary">
-                {satisfaction.inviteYesRate === null ? "—" : `${satisfaction.inviteYesRate}%`}
+                {satisfaction.wouldRecommend === null
+                  ? "—"
+                  : `${formatScore(satisfaction.wouldRecommend)}/5`}
               </span>
             </div>
           </div>
@@ -1606,7 +1609,8 @@ export function AdminDashboardPanel() {
                   <th className="py-2 pr-3 font-semibold">Lieu</th>
                   <th className="py-2 pr-3 font-semibold">Menu</th>
                   <th className="py-2 pr-3 font-semibold">Invités</th>
-                  <th className="py-2 font-semibold">Retour</th>
+                  <th className="py-2 pr-3 font-semibold">Retour</th>
+                  <th className="py-2 font-semibold">Reco</th>
                 </tr>
               </thead>
               <tbody>
@@ -1642,7 +1646,8 @@ export function AdminDashboardPanel() {
                       <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
                       <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
                       <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
-                      <td className="py-2.5">{formatScore(s.wouldReturn)}</td>
+                      <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
+                      <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
                     </tr>
                   );
                 })}
