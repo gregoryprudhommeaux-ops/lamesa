@@ -77,7 +77,12 @@ export type SatisfactionSurveyAnswers = {
   menuQuality: number;
   guestsQuality: number;
   wouldReturn: number;
-  wantInviteOther: boolean;
+  /** 0–5: would recommend the LA MESA concept (new surveys). */
+  wouldRecommend?: number;
+  /** Optional free-text constructive feedback. */
+  comment?: string;
+  /** @deprecated Prefer wouldRecommend. Kept for older submissions. */
+  wantInviteOther?: boolean;
   invitedEmail?: string;
   submittedAt: string;
 };

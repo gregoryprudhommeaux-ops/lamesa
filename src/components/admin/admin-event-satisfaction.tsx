@@ -7,13 +7,16 @@ import {
 import type { AdminEventParticipation } from "@/lib/types/events";
 import { FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 
-const CATEGORIES: { key: "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn"; label: string }[] =
-  [
-    { key: "venueQuality", label: "Endroit" },
-    { key: "menuQuality", label: "Menu" },
-    { key: "guestsQuality", label: "Autres invités" },
-    { key: "wouldReturn", label: "Reviendrait" },
-  ];
+const CATEGORIES: {
+  key: "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn" | "wouldRecommend";
+  label: string;
+}[] = [
+  { key: "venueQuality", label: "Endroit" },
+  { key: "menuQuality", label: "Menu" },
+  { key: "guestsQuality", label: "Autres invités" },
+  { key: "wouldReturn", label: "Reviendrait" },
+  { key: "wouldRecommend", label: "Recommanderait" },
+];
 
 function ScoreBar({ score, label }: { score: number | null; label: string }) {
   const pct = score === null ? 0 : Math.max(0, Math.min(100, (score / 5) * 100));
@@ -75,13 +78,11 @@ export function AdminEventSatisfactionResults({
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-ns-secondary">
-                Inviterait quelqu’un
+                Recommanderait le concept
               </p>
               <p className="mt-1 text-2xl font-bold text-ns-primary">
-                {stats.inviteYesRate ?? 0}%
-                <span className="ml-1 text-sm font-medium text-ns-secondary">
-                  ({stats.inviteYesCount}/{stats.responseCount})
-                </span>
+                {formatScore(stats.wouldRecommend)}
+                <span className="ml-1 text-sm font-medium text-ns-secondary">/ 5</span>
               </p>
             </div>
           </div>
@@ -101,18 +102,27 @@ export function AdminEventSatisfactionResults({
                 const s = r.survey;
                 const localAvg =
                   Math.round(
-                    ((s.venueQuality + s.menuQuality + s.guestsQuality + s.wouldReturn) / 4) * 10,
+                    ((s.venueQuality +
+                      s.menuQuality +
+                      s.guestsQuality +
+                      s.wouldReturn +
+                      (typeof s.wouldRecommend === "number" ? s.wouldRecommend : s.wouldReturn)) /
+                      5) *
+                      10,
                   ) / 10;
                 return (
-                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                    <span className="text-ns-tertiary">{r.name}</span>
-                    <span className="text-xs text-ns-secondary">
-                      {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
-                      {s.guestsQuality} · retour {s.wouldReturn}
-                      {s.wantInviteOther
-                        ? ` · invite ${s.invitedEmail ?? "oui"}`
-                        : ""}
-                    </span>
+                  <li key={r.id} className="space-y-1 px-3 py-2 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-ns-tertiary">{r.name}</span>
+                      <span className="text-xs text-ns-secondary">
+                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
+                        {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
+                        {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
+                      </span>
+                    </div>
+                    {s.comment?.trim() ? (
+                      <p className="text-xs italic text-ns-secondary">« {s.comment.trim()} »</p>
+                    ) : null}
                   </li>
                 );
               })}

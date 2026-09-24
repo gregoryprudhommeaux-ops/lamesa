@@ -5,15 +5,26 @@ import { BTN_PRIMARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/next
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
+const COMMENT_MAX = 1000;
+
 const SCORES = [0, 1, 2, 3, 4, 5] as const;
 
-type ScoreField = "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn";
+type ScoreField =
+  | "venueQuality"
+  | "menuQuality"
+  | "guestsQuality"
+  | "wouldReturn"
+  | "wouldRecommend";
 
 const QUESTIONS: { key: ScoreField; label: string }[] = [
   { key: "venueQuality", label: "Calidad del lugar" },
   { key: "menuQuality", label: "Calidad del menú" },
   { key: "guestsQuality", label: "Calidad de los demás invitados" },
   { key: "wouldReturn", label: "¿Asistirías a una próxima cena?" },
+  {
+    key: "wouldRecommend",
+    label: "¿Recomendarías el concepto LA MESA?",
+  },
 ];
 
 export function SatisfactionSurveyForm() {
@@ -25,21 +36,17 @@ export function SatisfactionSurveyForm() {
     menuQuality: null,
     guestsQuality: null,
     wouldReturn: null,
+    wouldRecommend: null,
   });
-  const [wantInviteOther, setWantInviteOther] = useState<"yes" | "no" | null>(null);
-  const [invitedEmail, setInvitedEmail] = useState("");
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [inviteSent, setInviteSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
     if (!token) return false;
-    if (Object.values(scores).some((v) => v === null)) return false;
-    if (wantInviteOther === null) return false;
-    if (wantInviteOther === "yes" && !invitedEmail.trim().includes("@")) return false;
-    return true;
-  }, [token, scores, wantInviteOther, invitedEmail]);
+    return Object.values(scores).every((v) => v !== null);
+  }, [token, scores]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -56,20 +63,18 @@ export function SatisfactionSurveyForm() {
           menuQuality: scores.menuQuality,
           guestsQuality: scores.guestsQuality,
           wouldReturn: scores.wouldReturn,
-          wantInviteOther: wantInviteOther === "yes",
-          invitedEmail: wantInviteOther === "yes" ? invitedEmail.trim() : "",
+          wouldRecommend: scores.wouldRecommend,
+          comment: comment.trim(),
         }),
       });
       const json = (await res.json()) as {
         ok?: boolean;
         alreadySubmitted?: boolean;
-        inviteSent?: boolean;
         error?: string;
       };
       if (!res.ok || !json.ok) {
         throw new Error(json.error ?? "submit_failed");
       }
-      setInviteSent(Boolean(json.inviteSent));
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -93,11 +98,6 @@ export function SatisfactionSurveyForm() {
         <p className="text-sm text-ns-secondary">
           Gracias. Lo leemos antes de armar la siguiente mesa.
         </p>
-        {inviteSent && (
-          <p className="text-sm text-ns-primary">
-            Se envió una invitación de registro a LA MESA.
-          </p>
-        )}
       </div>
     );
   }
@@ -134,46 +134,23 @@ export function SatisfactionSurveyForm() {
         </fieldset>
       ))}
 
-      <fieldset className="space-y-2">
-        <legend className={LABEL_CLASS}>¿Te gustaría invitar a otra persona?</legend>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              wantInviteOther === "yes" ? "bg-[#b4e600] text-[#111]" : "border border-ns-alternate"
-            }`}
-            onClick={() => setWantInviteOther("yes")}
-          >
-            Sí
-          </button>
-          <button
-            type="button"
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              wantInviteOther === "no" ? "bg-[#b4e600] text-[#111]" : "border border-ns-alternate"
-            }`}
-            onClick={() => setWantInviteOther("no")}
-          >
-            No
-          </button>
-        </div>
-      </fieldset>
-
-      {wantInviteOther === "yes" && (
-        <div>
-          <label className={LABEL_CLASS} htmlFor="invitedEmail">
-            Correo electrónico de la persona a invitar
-          </label>
-          <input
-            id="invitedEmail"
-            type="email"
-            className={INPUT_CLASS}
-            value={invitedEmail}
-            onChange={(e) => setInvitedEmail(e.target.value)}
-            placeholder="nombre@empresa.com"
-            required
-          />
-        </div>
-      )}
+      <div>
+        <label className={LABEL_CLASS} htmlFor="satisfaction-comment">
+          Todos los comentarios constructivos son bienvenidos
+        </label>
+        <textarea
+          id="satisfaction-comment"
+          className={`${INPUT_CLASS} mt-1 min-h-[88px] resize-y`}
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
+          maxLength={COMMENT_MAX}
+          placeholder="Opcional — cuéntanos qué mejorar o qué te gustó."
+          rows={3}
+        />
+        <p className="mt-1 text-xs text-ns-secondary">
+          {comment.length}/{COMMENT_MAX} · opcional
+        </p>
+      </div>
 
       {error && <p className={ERROR_TEXT}>{error}</p>}
 
