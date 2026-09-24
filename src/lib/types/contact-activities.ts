@@ -9,6 +9,9 @@ export const CONTACT_ACTIVITY_TYPES = [
   "rsvp_no",
   "confirmed_seat",
   "seen_marked",
+  "interest_yes",
+  "interest_no",
+  "survey_submitted",
 ] as const;
 
 export type ContactActivityType = (typeof CONTACT_ACTIVITY_TYPES)[number];
@@ -48,12 +51,31 @@ export type ContactActivityInput = {
   meta?: Record<string, string | number | boolean | null>;
 };
 
+export type ContactSurveySnapshot = {
+  venueQuality: number;
+  menuQuality: number;
+  guestsQuality: number;
+  wouldReturn: number;
+  wouldRecommend: number | null;
+  comment?: string;
+  submittedAt: string;
+  /** Mean of available 0–5 scores. */
+  overall: number;
+};
+
 export type ContactEventRow = {
   eventId: string;
   title: string;
   startsAt: string | null;
   status: string;
-  participationId: string;
+  participationId: string | null;
+  /** MXN TTC attributed when seat is confirmed; else 0. */
+  revenueMxn: number;
+  rsvpAt: string | null;
+  inviteSentAt: string | null;
+  /** STD / interest form answer when present. */
+  interestResponse: string | null;
+  survey: ContactSurveySnapshot | null;
 };
 
 export type ContactStats = {
@@ -63,6 +85,9 @@ export type ContactStats = {
   confirmedCount: number;
   declinedCount: number;
   revenueMxn: number;
+  surveyCount: number;
+  avgOverall: number | null;
+  avgWouldRecommend: number | null;
   lastOutreachAt: string | null;
   events: ContactEventRow[];
 };

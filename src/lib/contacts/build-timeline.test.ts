@@ -39,6 +39,44 @@ describe("deriveContactActivities", () => {
     expect(rows.some((r) => r.type === "added_prospect")).toBe(true);
     expect(rows.some((r) => r.type === "email_sent")).toBe(true);
   });
+
+  it("derives survey and interest responses", () => {
+    const rows = deriveContactActivities({
+      email: "ada@example.com",
+      waitlist: null,
+      prospect: null,
+      events: [{ id: "e1", title: "Mesa GDL", startsAt: "2026-02-01T00:00:00.000Z" }],
+      participations: [
+        {
+          id: "part1",
+          email: "ada@example.com",
+          eventId: "e1",
+          status: "confirmed",
+          confirmationEmailSentAt: "2026-01-20T00:00:00.000Z",
+          satisfactionSurvey: {
+            venueQuality: 5,
+            menuQuality: 5,
+            guestsQuality: 4,
+            wouldReturn: 5,
+            wouldRecommend: 4,
+            submittedAt: "2026-02-02T12:00:00.000Z",
+          },
+        },
+      ],
+      respondents: [
+        {
+          id: "r1",
+          eventId: "e1",
+          email: "ada@example.com",
+          interestResponse: "yes",
+          updatedAt: "2026-01-15T00:00:00.000Z",
+        },
+      ],
+    });
+    expect(rows.some((r) => r.type === "survey_submitted")).toBe(true);
+    expect(rows.some((r) => r.type === "interest_yes")).toBe(true);
+    expect(rows.some((r) => r.type === "confirmed_seat")).toBe(true);
+  });
 });
 
 describe("buildContactTimeline", () => {
