@@ -6,7 +6,7 @@ import {
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { buildAddToCalendarIcs, buildCalendarInviteIcs, eventCalendarInviteUid } from "@/lib/email/ics";
 import { buildRsvpClickUrl } from "@/lib/email/rsvp-links";
-import { signRsvpToken } from "@/lib/email/rsvp-token";
+import { signRsvpToken, signSurveyToken } from "@/lib/email/rsvp-token";
 import { brevoFromAddress, sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -61,9 +61,24 @@ function buildTestRsvpUrls(input: {
   };
 }
 
+function buildTestSurveyUrl(input: {
+  locale: TemplateLocale;
+  email: string;
+  eventId: string;
+  participationId: string;
+}): string {
+  const token = signSurveyToken({
+    participationId: input.participationId,
+    eventId: input.eventId,
+    email: input.email,
+  });
+  return `${emailPublicBaseUrl()}/${input.locale}/satisfaction?token=${encodeURIComponent(token)}`;
+}
+
 function sampleVars(
   locale: TemplateLocale,
   rsvp: { yesUrl: string; noUrl: string },
+  surveyUrl: string,
 ): TemplateVars {
   const base = emailPublicBaseUrl();
   return {
@@ -78,7 +93,7 @@ function sampleVars(
     eventUrl: `${base}/${locale}/e/demo`,
     yesUrl: rsvp.yesUrl,
     noUrl: rsvp.noUrl,
-    surveyUrl: `${base}/${locale}/survey/demo`,
+    surveyUrl,
     priceBeforeTax: "$450.00 MXN",
     ivaAmount: "$72.00 MXN",
     totalWithIva: "$522.00 MXN",
@@ -256,8 +271,14 @@ export async function POST(request: Request) {
     eventId: eventIdForToken,
     participationId,
   });
+  const surveyUrl = buildTestSurveyUrl({
+    locale,
+    email: to,
+    eventId: eventIdForToken,
+    participationId,
+  });
 
-  let vars = sampleVars(locale, rsvp);
+  let vars = sampleVars(locale, rsvp, surveyUrl);
   if (event) {
     const base = emailPublicBaseUrl();
     vars = {
@@ -269,7 +290,7 @@ export async function POST(request: Request) {
         locale,
         yesUrl: rsvp.yesUrl,
         noUrl: rsvp.noUrl,
-        surveyUrl: `${base}/${locale}/survey/demo`,
+        surveyUrl,
       }),
     };
   }
