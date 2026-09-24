@@ -17,6 +17,7 @@ const submitSchema = z.object({
   guestsQuality: score,
   wouldReturn: score,
   wouldRecommend: score,
+  comment: z.string().max(1000).optional(),
 });
 
 export async function POST(request: Request) {
@@ -66,12 +67,14 @@ export async function POST(request: Request) {
   }
 
   const now = new Date().toISOString();
+  const comment = parsed.data.comment?.trim() || undefined;
   const survey: SatisfactionSurveyAnswers = {
     venueQuality: parsed.data.venueQuality,
     menuQuality: parsed.data.menuQuality,
     guestsQuality: parsed.data.guestsQuality,
     wouldReturn: parsed.data.wouldReturn,
     wouldRecommend: parsed.data.wouldRecommend,
+    ...(comment ? { comment } : {}),
     submittedAt: now,
   };
 

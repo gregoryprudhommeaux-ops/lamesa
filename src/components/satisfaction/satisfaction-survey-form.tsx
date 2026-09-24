@@ -1,9 +1,11 @@
 "use client";
 
 import { LaMesaLogo } from "@/components/la-mesa-logo";
-import { BTN_PRIMARY, ERROR_TEXT, LABEL_CLASS } from "@/lib/ui/nextstep";
+import { BTN_PRIMARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
+
+const COMMENT_MAX = 1000;
 
 const SCORES = [0, 1, 2, 3, 4, 5] as const;
 
@@ -36,6 +38,7 @@ export function SatisfactionSurveyForm() {
     wouldReturn: null,
     wouldRecommend: null,
   });
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +64,7 @@ export function SatisfactionSurveyForm() {
           guestsQuality: scores.guestsQuality,
           wouldReturn: scores.wouldReturn,
           wouldRecommend: scores.wouldRecommend,
+          comment: comment.trim(),
         }),
       });
       const json = (await res.json()) as {
@@ -129,6 +133,24 @@ export function SatisfactionSurveyForm() {
           </div>
         </fieldset>
       ))}
+
+      <div>
+        <label className={LABEL_CLASS} htmlFor="satisfaction-comment">
+          Todos los comentarios constructivos son bienvenidos
+        </label>
+        <textarea
+          id="satisfaction-comment"
+          className={`${INPUT_CLASS} mt-1 min-h-[88px] resize-y`}
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
+          maxLength={COMMENT_MAX}
+          placeholder="Opcional — cuéntanos qué mejorar o qué te gustó."
+          rows={3}
+        />
+        <p className="mt-1 text-xs text-ns-secondary">
+          {comment.length}/{COMMENT_MAX} · opcional
+        </p>
+      </div>
 
       {error && <p className={ERROR_TEXT}>{error}</p>}
 

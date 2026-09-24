@@ -111,13 +111,18 @@ export function AdminEventSatisfactionResults({
                       10,
                   ) / 10;
                 return (
-                  <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                    <span className="text-ns-tertiary">{r.name}</span>
-                    <span className="text-xs text-ns-secondary">
-                      {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
-                      {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
-                      {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
-                    </span>
+                  <li key={r.id} className="space-y-1 px-3 py-2 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-ns-tertiary">{r.name}</span>
+                      <span className="text-xs text-ns-secondary">
+                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
+                        {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
+                        {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
+                      </span>
+                    </div>
+                    {s.comment?.trim() ? (
+                      <p className="text-xs italic text-ns-secondary">« {s.comment.trim()} »</p>
+                    ) : null}
                   </li>
                 );
               })}
