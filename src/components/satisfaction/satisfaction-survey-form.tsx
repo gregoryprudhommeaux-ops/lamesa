@@ -1,6 +1,5 @@
 "use client";
 
-import { LaMesaLogo } from "@/components/la-mesa-logo";
 import { BTN_PRIMARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
@@ -105,8 +104,7 @@ export function SatisfactionSurveyForm() {
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
       <div className="text-center">
-        <LaMesaLogo size="sm" variant="horizontal" tone="black" className="mx-auto" />
-        <h1 className="mt-3 text-2xl font-bold text-ns-primary">¿Cómo estuvo el evento?</h1>
+        <h1 className="text-2xl font-bold text-ns-primary">¿Cómo estuvo el evento?</h1>
         <p className="mt-2 text-sm text-ns-secondary">
           Gracias por participar. Califica de 0 a 5 (5 = excelente).
         </p>
