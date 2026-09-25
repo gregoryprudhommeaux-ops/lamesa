@@ -2,7 +2,14 @@
 
 import { ColdOutreachPanel } from "@/components/admin/cold-outreach-panel";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
+import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
+import {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/send-satisfaction-survey";
+import { applyTemplateVars } from "@/lib/email/templates";
+import { emailPublicBaseUrl } from "@/lib/site-url";
 import {
   DEFAULT_SEND_LOCALE,
   EMAIL_TEMPLATE_LABELS,
@@ -61,13 +68,29 @@ export function AdminEmailTemplatesPanel() {
     return () => window.clearTimeout(t);
   }, [body]);
 
-  const previewHtml = useMemo(
-    () =>
-      wrapLaMesaPlainBody(previewBody || "(Aperçu du corps…)", {
+  const previewHtml = useMemo(() => {
+    const raw = previewBody || "(Aperçu du corps…)";
+    if (activeKey === "satisfaction_survey") {
+      const surveyUrl = satisfactionTestSurveyUrl(emailPublicBaseUrl(), editLocale);
+      const bodyText = applyTemplateVars(raw, {
+        fullName: "Test LA MESA",
+        firstName: "Test",
+        email: "test@example.com",
+        eventTitle: "LA MESA — aperçu test",
+        when: "",
+        where: "",
+        eventUrl: "",
+        surveyUrl,
+        format: editLocale === "fr" ? "Dîner" : editLocale === "en" ? "Dinner" : "Cena",
+      });
+      return wrapLaMesaEmailHtml({
         lang: editLocale,
-      }),
-    [previewBody, editLocale],
-  );
+        bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),
+        footerHtml: satisfactionSurveyButtonHtml(surveyUrl, editLocale),
+      });
+    }
+    return wrapLaMesaPlainBody(raw, { lang: editLocale });
+  }, [previewBody, editLocale, activeKey]);
   const previewFooterHint =
     editLocale === "en"
       ? "How it works"
