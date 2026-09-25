@@ -140,6 +140,23 @@ describe("generateTableIdeas", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("throws ai_not_configured when AI Gateway key lacks base URL", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw-key");
+    vi.stubEnv("AI_GATEWAY_BASE_URL", "");
+    const fetchImpl = vi.fn();
+
+    await expect(
+      generateTableIdeas({
+        mode: "spontaneous",
+        candidates: [card()],
+        fetchImpl,
+      }),
+    ).rejects.toMatchObject({ code: "ai_not_configured" });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("throws ai_invalid when model JSON fails the schema", async () => {
     configureEnv();
     const fetchImpl = vi.fn().mockResolvedValue(

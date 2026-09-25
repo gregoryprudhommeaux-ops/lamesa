@@ -69,6 +69,7 @@ describe("buildContactStats", () => {
           eventId: "e2",
           email: "ada@example.com",
           interestResponse: "no",
+          attendance: "other",
         },
       ],
     });
@@ -101,6 +102,7 @@ describe("buildContactStats", () => {
           eventId: "e3",
           email: "bob@example.com",
           interestResponse: "yes",
+          attendance: "other",
           createdAt: "2026-03-20T00:00:00.000Z",
         },
       ],

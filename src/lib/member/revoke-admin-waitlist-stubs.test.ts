@@ -28,6 +28,8 @@ describe("softDeleteAdminProvisionedWaitlistStubs", () => {
         city: "",
         phone: "",
         invitationMotivation: "",
+        locale: "es",
+        tags: ["la-mesa", "waitlist"],
         source: "la-mesa-places-available",
         profileComplete: false,
         createdAt: "",

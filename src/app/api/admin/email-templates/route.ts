@@ -24,6 +24,9 @@ import type {
 } from "@/lib/types/events";
 import { z } from "zod";
 
+/** Align with TRANSLATE_FETCH_TIMEOUT_MS (30s) × parallel locale calls. */
+export const maxDuration = 60;
+
 const TEMPLATE_KEY_SCHEMA = z
   .string()
   .min(3)
@@ -52,7 +55,9 @@ async function buildSyncedLocales(input: {
     return { ok: true, locales };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: `translate_failed:${msg}` };
+    console.error("[email-templates] translate failed:", msg);
+    // Never leak upstream provider bodies to the client.
+    return { ok: false, error: "translate_failed" };
   }
 }
 

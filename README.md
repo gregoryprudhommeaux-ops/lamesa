@@ -7,38 +7,60 @@ Plateforme pour dîners thématiques exclusifs à Guadalajara : landing, inscrip
 - **Next.js 16** + React 19 + TypeScript
 - **NS Calque** (`@ns-suite/ui`) — design system Ultra Content Maker
 - **next-intl** — FR (défaut) / EN / ES
-- **Firebase Firestore** — événements, participations, waitlist
+- **Firebase Auth + Firestore** — membres, événements, participations, waitlist
 - **Database Perso** — recherche contacts + upsert inscriptions (si endpoint configuré)
+- **Brevo** — emails transactionnels
+- **OpenAI / Perplexity / AI Gateway** — Table Builder + traduction templates
 
 ## Routes
 
 | Route | Description |
 |---|---|
 | `/fr` | Landing — intro + CTA inscription |
-| `/fr/inscription` | Formulaire profil waitlist |
+| `/fr/light` | Inscription express (nom / email / WhatsApp) |
+| `/fr/inscription` | Formulaire profil waitlist complet |
+| `/fr/connexion` | Connexion membre (Google ou email+mot de passe) |
+| `/fr/compte` | Espace membre |
 | `/fr/e/{slug}` | Page publique dîner + RSVP |
-| `/admin/login` | Connexion organisateur |
-| `/admin/evenements` | CRUD dîners + sélection contacts |
+| `/admin/login` | Connexion organisateur (Firebase — email allowlist) |
+| `/admin/dashboard` | Cockpit ops |
+| `/admin/evenements` | CRUD dîners + blancs |
+| `/admin/templates` | Templates email + blast profils incomplets |
 
-## Setup
+## Setup local
 
 ```bash
 cp .env.example .env.local
-# Renseigner Firebase + ADMIN_PASSWORD + Database Perso
+# Remplir Firebase client + Admin, BREVO_*, RSVP_TOKEN_SECRET (obligatoire en prod)
+# Pour Table Builder / traductions : OPENAI_API_KEY ou PERPLEXITY_API_KEY
+# (AI Gateway : AI_GATEWAY_API_KEY + AI_GATEWAY_BASE_URL ensemble)
 npm install
 npm run dev
 ```
 
 Ouvrir [http://127.0.0.1:3000/fr](http://127.0.0.1:3000/fr)
 
+### Firebase Auth (local)
+
+1. Console Firebase → Authentication → Sign-in method → activer **Google** + **Email/Password**.
+2. Authentication → Settings → **Authorized domains** : ajouter `127.0.0.1` et `localhost`.
+3. Les admins sont les emails dans `configuredAdminEmails()` (`gregory.prudhommeaux@gmail.com` + `NEXT_PUBLIC_PLATFORM_ADMIN_EMAILS`).
+4. Popup Google est préféré ; si bloqué, fallback redirect (nécessite le domaine autorisé).
+
+### Scripts utiles
+
+```bash
+npm run lint
+npm test
+npm run build
+```
+
 ## Variables d'environnement
 
-Voir [.env.example](.env.example).
+Voir [.env.example](.env.example) (liste complète + commentaires).
 
-- `ADMIN_PASSWORD` — accès back-office
-- `DATABASE_PERSO_*` — API contacts (search + upsert)
-- `FIREBASE_*` / `NEXT_PUBLIC_FIREBASE_*` — Firestore
-- `FRANCONETWORK_IMPORT_SECRET` — sync silencieux FrancoNetwork → waitlist
+**Client (NEXT_PUBLIC_*)** : Firebase web config, `NEXT_PUBLIC_APP_URL`, admin emails optionnels.  
+**Server only** : `FIREBASE_*`, `BREVO_*`, `RSVP_TOKEN_SECRET`, `OPENAI_*` / `PERPLEXITY_*`, `DATABASE_PERSO_*`, `CRON_SECRET`, secrets FN.
 
 ## FrancoNetwork → waitlist
 
@@ -56,7 +78,7 @@ npm run import:franconetwork
 npm run import:franconetwork:apply
 ```
 
-Requiert aussi `FN_FIREBASE_*` (voir `.env.example`). Endpoint runtime : `POST /api/admin/import/franconetwork` (header `x-franconetwork-import-secret`).
+Requiert `FN_FIREBASE_*` (voir `.env.example`). Endpoint runtime : `POST /api/admin/import/franconetwork` (header `x-franconetwork-import-secret`).
 
 ## Crons (Vercel)
 

@@ -13,18 +13,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { safeMemberNextPath } from "@/lib/auth/safe-next-path";
 import { useEffect, useState, type FormEvent } from "react";
-
-/** Relative app path only — blocks open redirects. */
-function safeNextPath(raw: string | null): string | null {
-  if (!raw) return null;
-  const path = raw.trim();
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) return null;
-  if (path.includes("\\")) return null;
-  // Admin lives outside [locale]
-  if (path === "/admin" || path.startsWith("/admin/")) return null;
-  return path;
-}
 
 type AuthMode = "signin" | "signup";
 
@@ -137,12 +127,13 @@ export function MemberLoginPanel() {
   const { user, loading, configured } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
-  const completeProfileIntent =
-    Boolean(nextPath) &&
-    (nextPath === "/compte" ||
-      nextPath.startsWith("/compte?") ||
-      nextPath.startsWith("/compte/"));
+  const nextPath = safeMemberNextPath(searchParams.get("next"));
+  const completeProfileIntent = Boolean(
+    nextPath &&
+      (nextPath === "/compte" ||
+        nextPath.startsWith("/compte?") ||
+        nextPath.startsWith("/compte/")),
+  );
   const [mode, setMode] = useState<AuthMode>(
     searchParams.get("mode") === "signup" ? "signup" : "signin",
   );
