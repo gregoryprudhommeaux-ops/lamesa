@@ -1,72 +1,49 @@
 # Jack — Ancres multi-projets
 
-Jack est **cross-project**. Adapter le langage métier ; garder les mêmes principes (parcours progressifs, étape active, mémoire relationnelle).
+Jack est **cross-project** (DOC : apprendre entre projets sans copier mécaniquement).  
+Adapter le langage métier ; garder parcours progressifs, étape active, mémoire relationnelle.
+
+Avant de réemployer un pattern : utilisateurs · risque · volume · device · contraintes business/tech.
 
 ## LA MESA (`lamesa` · lamesasecreta.com)
 
 | Dimension | Ancre |
 |-----------|--------|
-| Objets métier | Événement / dîner, participation, waitlist, prospect, template email, table draft |
+| Objets métier | Événement, participation, waitlist, prospect, template email, table draft, paiement, feedback |
 | Rôles | Organisateur (admin), membre, prospect / inscrit express |
-| Parcours dominant | **Opérationnel** (ops dîner) + **Consommateur** (membre RSVP → paiement → feedback) + **Commercial** (outreach / STD) |
-| Phases événement | Préparation → Audience → STD → Qualification → Invitation formelle → Confirmation & paiement → Prépa dîner → Check-in → Feedback / réactivation |
-| Mémoire contact | Waitlist + activités + RSVP + satisfaction + source (ex. FrancoNetwork) |
-| Surfaces clés | `/admin/dashboard`, fiche contact, event journey panels, `/compte`, pages publiques `/e/{slug}` |
+| Parcours | **Opérationnel** (ops dîner) + **Consommateur** (RSVP → paiement → feedback) + **Commercial** (outreach / STD) |
+| UI cible | Centre de commande événement (pilotage → aperçu → config → audience → coms → participants → after) |
+| Surfaces | `/admin/*`, fiche contact, journey panels, `/compte`, `/e/{slug}` |
+| Mémoire | `docs/product/PROJECT_MEMORY.md` |
 
 ## Database Perso
 
-| Dimension | Ancre |
-|-----------|--------|
-| Objets | Contact, liste, activité, sync / upsert |
-| Rôles | Opérateur relationnel, fondateur |
-| Parcours | **Commercial** + **Opérationnel** (hygiène data) |
-| Focus Jack | Profil unifié 4 couches ; pas de “fiche plate” ; next action sur lead/contact |
+Commercial + opérationnel (hygiène data) · profil unifié 4 couches · next action sur lead/contact.
 
 ## Financial Cockpit
 
-| Dimension | Ancre |
-|-----------|--------|
-| Objets | Compte, période, transaction, forecast, décision cash |
-| Rôles | Fondateur, ops finance |
-| Parcours | **Opérationnel** + **Projet** (clôture / revue) |
-| Focus Jack | Étape active de la période (saisie → revue → décision) ; blocages (manquants, non-réconciliés) |
+Opérationnel + projet (clôture) · étape active de période · blocages (manquants, non-réconciliés).
 
 ## Action Learning Workbook
 
-| Dimension | Ancre |
-|-----------|--------|
-| Objets | Session, engagement, réflexion, feedback, itération |
-| Rôles | Facilitateur, participant |
-| Parcours | **Projet** + **Consommateur** (apprentissage) |
-| Focus Jack | Où en est l’apprenant dans le cycle ; prochaine question / action d’apprentissage |
+Projet + consommateur (apprentissage) · où en est l’apprenant · prochaine question/action.
 
 ## Annuaire Guadalajara
 
-| Dimension | Ancre |
-|-----------|--------|
-| Objets | Profil, validation, recherche, mise en relation |
-| Rôles | Membre annuaire, admin validation |
-| Parcours | **Consommateur** + **Commercial** (networking) |
-| Focus Jack | Découverte → confiance → contact ; gouvernance (validation, consentement) |
+Consommateur + commercial · découverte → confiance → contact · gouvernance validation/consentement.
 
 ## Ultra Content Maker (UCM)
 
-| Dimension | Ancre |
-|-----------|--------|
-| Objets | Projet contenu, brief, draft, canal, publication |
-| Rôles | Solo founder / créateur |
-| Parcours | **Projet** + **Opérationnel** (pipeline contenu) |
-| Focus Jack | Étape active du contenu (idée → draft → humanize → publish) ; ne pas exposer tous les outils au même niveau ; coordonner avec Jerry (packaging) et anti-linkedin-slop (copy) |
+Projet + opérationnel (pipeline contenu) · étape active idée→draft→humanize→publish · Jerry (packaging) + anti-linkedin-slop (copy).
 
 ## Sync vers d’autres repos
 
-Dans ce Cloud Agent, seul **LA MESA** est monté. Pour propager Jack :
+Ce Cloud Agent n’a que LA MESA. Propager :
 
 ```bash
-# depuis une machine avec tous les repos + ~/.cursor/skills comme source de vérité
 cp -R .cursor/skills/jack-ux-product-design /path/to/other-repo/.cursor/skills/
-# ou, si le script existe :
+# ou :
 ~/.cursor/scripts/sync-skills-to-project.sh /path/to/other-repo
 ```
 
-Puis commit `.cursor/skills/jack-ux-product-design/` dans chaque repo Cloud Agent.
+Commit `.cursor/skills/jack-ux-product-design/` dans chaque repo Cloud Agent.
