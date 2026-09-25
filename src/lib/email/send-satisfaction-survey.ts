@@ -20,8 +20,10 @@ import { getSiteUrl } from "@/lib/site-url";
 export async function sendSatisfactionSurveyEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
+  /** Admin manual blast — bypasses template “enabled” gate used by cron. */
+  force?: boolean;
 }): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string } | { ok: true; skipped: true; surveyUrl?: string }> {
-  if (!(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
+  if (!input.force && !(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
     return { ok: true, skipped: true };
   }
   const base = getSiteUrl();
