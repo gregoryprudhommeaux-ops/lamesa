@@ -248,6 +248,15 @@ export function AutoRemindersPanel({
           {surveysSent} envoyés · {surveysDone} réponses · {pendingSurvey} en attente d’envoi
         </p>
 
+        <div className="mb-4">
+          <EventEmailTemplateEditor
+            event={event}
+            templateKey="satisfaction_survey"
+            onEventUpdated={onEventUpdated}
+            hint="Template de l’email (pas des questions). Les questions du formulaire sont juste en dessous."
+          />
+        </div>
+
         <div className="mb-4 space-y-4 rounded-xl border border-ns-alternate bg-white p-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-ns-secondary">
@@ -360,13 +369,6 @@ export function AutoRemindersPanel({
           {message ? <p className="text-xs font-medium text-ns-primary">{message}</p> : null}
           {error ? <p className={ERROR_TEXT}>{error}</p> : null}
         </div>
-
-        <EventEmailTemplateEditor
-          event={event}
-          templateKey="satisfaction_survey"
-          onEventUpdated={onEventUpdated}
-          hint="Template de l’email (pas des questions). Les questions du formulaire sont ci-dessus."
-        />
       </div>
     </div>
   );
