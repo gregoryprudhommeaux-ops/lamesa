@@ -133,7 +133,6 @@ export interface AdminEvent {
   capacity?: number;
   /**
    * ACCESS ticket before IVA (MXN) — amount charged to confirm the seat.
-   * Typical default ~450 MXN.
    */
   priceMxn?: number | null;
   /** ACCESS includes a welcome drink */
