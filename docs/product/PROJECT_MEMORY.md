@@ -41,12 +41,12 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 
 Événement · Contact/waitlist · Prospect · Participation · Paiement · Communication/template · Waitlist/places · Feedback/satisfaction · Tâche ops (implicite).
 
-_Owner, statuses, relations — refine as Jack audits deepen._
-
 ## UX/UI principles (project-specific)
 
 - Centre de commande par phase (pas fiche événement infinie)
 - Next best action + blocages visibles
+- Roster participants unifié + filtres
+- Templates email en drawer (CTA Envoyer reste primaire)
 - FR / EN / ES
 - Mémoire contact : ne pas mélanger déclaré / observé / inféré
 
@@ -55,10 +55,13 @@ _Owner, statuses, relations — refine as Jack audits deepen._
 | Date | Décision | Raison |
 |------|----------|--------|
 | 2026-09-25 | Agent Jack v2 + `PROJECT_MEMORY.md` | Capitaliser parcours + mémoire relationnelle |
+| 2026-09-25 | Command center événement tranches 1–2 | Étape active + roster + drawers |
 
 ## Reusable components / patterns
 
-_Admin shell, RequireAuth, table builder, email templates, contact fiche — document patterns Jack validates._
+- `suggestOpsPhase` + `EventCommandHeader` / `EventCommandPhaseNav`
+- `AdminEventParticipantRoster` + `EventTemplateDrawer`
+- Admin shell, RequireAuth, table builder, contact fiche
 
 ## Data, signals & governance
 
@@ -75,22 +78,24 @@ _Admin shell, RequireAuth, table builder, email templates, contact fiche — doc
 
 | Item | Status |
 |------|--------|
-| Monolithe `admin-events.tsx` (~2k lines) | En cours — shell command center (tranche 1) |
-| Listes participants dupliquées (roster / OUI / paiement / places) | Ouvert — tranche 2 |
-| Templates full-width avant CTA Envoyer | Ouvert — drawer P1 |
-| Page publique `/e` bifurcée interest/RSVP | Ouvert — vague 2 |
+| Monolithe `admin-events.tsx` | En cours — shell + roster |
+| FormalInviteOui / Places encore séparés du roster | Ouvert |
+| Labels 9 phases produit | Ouvert |
+| Page publique `/e` bifurquée | Ouvert — vague 2 |
 
 ## Jack findings log
 
 | Date | P | Finding | Status |
 |------|---|---------|--------|
-| 2026-09-25 | P0 | Pas d’étape active dérivée ; 3 phases ouvertes | Tranche 1 : `suggestOpsPhase` + focus unique + en-tête NBA |
-| 2026-09-25 | P0 | `?id=` effacé au load | Tranche 1 : `?id=` + `?phase=` persistés |
-| 2026-09-25 | P1 | 4 listes participants / vocabulaires | Backlog |
+| 2026-09-25 | P0 | Pas d’étape active dérivée | Tranche 1 done |
+| 2026-09-25 | P0 | `?id=` effacé | Tranche 1 done |
+| 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done |
+| 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done |
 
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-09-25 | Bootstrap mémoire produit alignée DOC Jack |
-| 2026-09-25 | Tranche 1 command center événement (shell + suggestion phase + deep link) |
+| 2026-09-25 | Tranche 1 command center événement |
+| 2026-09-25 | Tranche 2 roster unifié + template drawers |
