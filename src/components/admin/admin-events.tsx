@@ -1,11 +1,12 @@
 "use client";
 
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
-import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
 import { AdminEventPaymentFollowupPanel } from "@/components/admin/admin-event-payment-followup";
 import { AdminEventPlacesAvailablePanel } from "@/components/admin/admin-event-places-available-panel";
+import { AdminEventParticipantRoster } from "@/components/admin/admin-event-participant-roster";
 import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
+import { EventTemplateDrawer } from "@/components/admin/event-template-drawer";
 import {
   AutoRemindersPanel,
   StdRelancePanel,
@@ -54,15 +55,13 @@ import {
 } from "@/lib/events/utils";
 import { applyInviteTemplateVars } from "@/lib/email/build-event-invite-template";
 import {
-  countSeatedParticipations,
   DEFAULT_TOTAL_COVERS,
   guestCapacityFromTotalCovers,
   totalCoversFromGuestCapacity,
-  totalCoversWithAdmin,
 } from "@/lib/events/capacity";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
-import { Copy, Mail, MessageCircle, Plus, Save, Trash2, X } from "lucide-react";
+import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminEventsProps = {
@@ -1736,11 +1735,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       </button>
                     </div>
                   </div>
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="save_the_date"
+                    label="Éditer le modèle Save the Date"
                     onEventUpdated={() => void loadAll()}
-                    hint="Personnalise le Save the Date avant l’envoi blast."
+                    hint="Personnalise avant l’envoi blast."
                   />
                   <button
                     type="button"
@@ -1758,99 +1758,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
                   </button>
                   <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
-            <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
-                <button
-                  type="button"
-                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
-                  onClick={() => void openWhatsAppForAll()}
-                  disabled={activeParticipations.length === 0}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp à tous
-                </button>
-              </div>
-              {(() => {
-                const seatCap =
-                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
-                const seated = countSeatedParticipations(activeParticipations);
-                const waitlistCount = activeParticipations.filter(
-                  (p) => p.status === "waitlist",
-                ).length;
-                const summary =
-                  labels.seatingSummary
-                    ?.replace("{seated}", String(seated))
-                    .replace("{capacity}", String(seatCap))
-                    .replace("{waitlist}", String(waitlistCount))
-                    .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
-                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
-                return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
-              })()}
-              <ul className="mt-3 space-y-2">
-                {activeParticipations.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 flex-1">
-                      {p.fullName ?? p.email}
-                      {p.companyName ? ` · ${p.companyName}` : ""}
-                      {p.phone ? (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
-                      ) : (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">
-                          Pas de téléphone
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.status === "waitlist" && (
-                        <button
-                          type="button"
-                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
-                          onClick={() => void inviteFromWaitlist(p.id)}
-                          title="Passer en Invité et envoyer l’invitation calendrier"
-                        >
-                          INVITER
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
-                        onClick={() => openWhatsAppForParticipation(p)}
-                        title="Envoyer l’invitation par WhatsApp"
-                        aria-label="WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <select
-                        value={
-                          p.status === "present"
-                            ? "confirmed"
-                            : p.status === "declined"
-                              ? "not_attending"
-                              : p.status
-                        }
-                        onChange={(e) =>
-                          void setParticipationStatus(
-                            p.id,
-                            e.target.value as AdminEventParticipation["status"],
-                          )
-                        }
-                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
-                      >
-                      <option value="invited">{labels["statuses.invited"]}</option>
-                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
-                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
-                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
-                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                      </select>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                        <AdminEventParticipantRoster
+              participations={activeParticipations}
+              capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+              title={labels.selectedContacts}
+              labels={{
+                invited: labels["statuses.invited"],
+                attending: labels["statuses.attending"] ?? "Attending",
+                confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                waitlist: labels["statuses.waitlist"],
+                seatedSummary: labels.seatingSummary,
+              }}
+              onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+              onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+              onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+              onWhatsAppAll={() => void openWhatsAppForAll()}
+            />
                 </>
               ) : (
                 <p className="text-sm text-ns-secondary">
@@ -1880,99 +1804,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 }}
               />
               {activeEvent ? (
-            <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
-                <button
-                  type="button"
-                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
-                  onClick={() => void openWhatsAppForAll()}
-                  disabled={activeParticipations.length === 0}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp à tous
-                </button>
-              </div>
-              {(() => {
-                const seatCap =
-                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
-                const seated = countSeatedParticipations(activeParticipations);
-                const waitlistCount = activeParticipations.filter(
-                  (p) => p.status === "waitlist",
-                ).length;
-                const summary =
-                  labels.seatingSummary
-                    ?.replace("{seated}", String(seated))
-                    .replace("{capacity}", String(seatCap))
-                    .replace("{waitlist}", String(waitlistCount))
-                    .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
-                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
-                return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
-              })()}
-              <ul className="mt-3 space-y-2">
-                {activeParticipations.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 flex-1">
-                      {p.fullName ?? p.email}
-                      {p.companyName ? ` · ${p.companyName}` : ""}
-                      {p.phone ? (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
-                      ) : (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">
-                          Pas de téléphone
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.status === "waitlist" && (
-                        <button
-                          type="button"
-                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
-                          onClick={() => void inviteFromWaitlist(p.id)}
-                          title="Passer en Invité et envoyer l’invitation calendrier"
-                        >
-                          INVITER
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
-                        onClick={() => openWhatsAppForParticipation(p)}
-                        title="Envoyer l’invitation par WhatsApp"
-                        aria-label="WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <select
-                        value={
-                          p.status === "present"
-                            ? "confirmed"
-                            : p.status === "declined"
-                              ? "not_attending"
-                              : p.status
-                        }
-                        onChange={(e) =>
-                          void setParticipationStatus(
-                            p.id,
-                            e.target.value as AdminEventParticipation["status"],
-                          )
-                        }
-                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
-                      >
-                      <option value="invited">{labels["statuses.invited"]}</option>
-                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
-                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
-                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
-                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                      </select>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
+                        <AdminEventParticipantRoster
+              participations={activeParticipations}
+              capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+              title={labels.selectedContacts}
+              labels={{
+                invited: labels["statuses.invited"],
+                attending: labels["statuses.attending"] ?? "Attending",
+                confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                waitlist: labels["statuses.waitlist"],
+                seatedSummary: labels.seatingSummary,
+              }}
+              onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+              onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+              onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+              onWhatsAppAll={() => void openWhatsAppForAll()}
+            />
               ) : null}
             </EventPhaseSection>
           )}
@@ -2005,21 +1853,40 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     marque les virements reçus dans <strong>Suivi paiement ACCESS</strong>{" "}
                     (statut → Payé).
                   </p>
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="calendar_invite"
+                    label="Éditer le modèle invitation formelle"
                     onEventUpdated={() => void loadAll()}
-                    hint="Invitation formelle : détails, prix, coordonnées bancaires."
+                    hint="Détails, prix, coordonnées bancaires."
                   />
                   <FormalInviteOuiPanel
                     event={activeEvent}
                     onEventUpdated={() => void loadAll()}
                   />
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="payment_relance"
+                    label="Éditer le modèle relance paiement"
                     onEventUpdated={() => void loadAll()}
-                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
+                    hint="Relance ACCESS — bold/liens supportés."
+                  />
+                  <AdminEventParticipantRoster
+                    participations={activeParticipations}
+                    capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                    title="Suivi participants"
+                    initialFilter="unpaid_invite"
+                    labels={{
+                      invited: labels["statuses.invited"],
+                      attending: labels["statuses.attending"] ?? "Attending",
+                      confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                      not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                      waitlist: labels["statuses.waitlist"],
+                      seatedSummary: labels.seatingSummary,
+                    }}
+                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                    onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
                   />
                   <AdminEventPaymentFollowupPanel
                     event={activeEvent}
@@ -2035,9 +1902,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="calendar_invite"
+                    label="Éditer le modèle invitation"
                     onEventUpdated={() => void loadAll()}
                   />
                   <button
@@ -2049,11 +1917,29 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   >
                     <Mail className="h-4 w-4" /> Lancer les invitations
                   </button>
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="payment_relance"
+                    label="Éditer le modèle relance paiement"
                     onEventUpdated={() => void loadAll()}
-                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
+                    hint="Relance ACCESS — bold/liens supportés."
+                  />
+                  <AdminEventParticipantRoster
+                    participations={activeParticipations}
+                    capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                    title="Suivi participants"
+                    initialFilter="unpaid_invite"
+                    labels={{
+                      invited: labels["statuses.invited"],
+                      attending: labels["statuses.attending"] ?? "Attending",
+                      confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                      not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                      waitlist: labels["statuses.waitlist"],
+                      seatedSummary: labels.seatingSummary,
+                    }}
+                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                    onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
                   />
                   <AdminEventPaymentFollowupPanel
                     event={activeEvent}

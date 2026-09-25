@@ -1,6 +1,6 @@
 "use client";
 
-import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
+import { EventTemplateDrawer } from "@/components/admin/event-template-drawer";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { interestSansReponseListName } from "@/lib/events/interest-prospect-lists";
@@ -279,11 +279,12 @@ export function AutoRemindersPanel({
         </p>
 
         <div className="mb-4">
-          <EventEmailTemplateEditor
+          <EventTemplateDrawer
             event={event}
             templateKey="satisfaction_survey"
+            label="Éditer le modèle email satisfaction"
             onEventUpdated={onEventUpdated}
-            hint="Template de l’email (pas des questions). Les questions du formulaire sont juste en dessous."
+            hint="Template de l’email (pas des questions). Les questions sont juste en dessous."
           />
         </div>
 
