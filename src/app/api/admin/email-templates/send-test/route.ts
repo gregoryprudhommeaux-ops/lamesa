@@ -16,6 +16,11 @@ import {
 } from "@/lib/email/templates";
 import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml, laMesaEmailFooterText } from "@/lib/email/la-mesa-email-shell";
 import { inviteBodyToHtml, rsvpYesNoButtonsHtml } from "@/lib/email/send-calendar-invite";
+import {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/send-satisfaction-survey";
 import { formatEventWhereLine } from "@/lib/events/format-where";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { emailPublicBaseUrl } from "@/lib/site-url";
@@ -78,7 +83,7 @@ function sampleVars(
     eventUrl: `${base}/${locale}/e/demo`,
     yesUrl: rsvp.yesUrl,
     noUrl: rsvp.noUrl,
-    surveyUrl: `${base}/${locale}/survey/demo`,
+    surveyUrl: satisfactionTestSurveyUrl(base, locale),
     priceBeforeTax: "$450.00 MXN",
     ivaAmount: "$72.00 MXN",
     totalWithIva: "$522.00 MXN",
@@ -269,7 +274,7 @@ export async function POST(request: Request) {
         locale,
         yesUrl: rsvp.yesUrl,
         noUrl: rsvp.noUrl,
-        surveyUrl: `${base}/${locale}/survey/demo`,
+        surveyUrl: satisfactionTestSurveyUrl(base, locale),
       }),
     };
   }
@@ -283,6 +288,7 @@ export async function POST(request: Request) {
     bodyText.includes(rsvp.yesUrl) ||
     bodyText.includes("{{yesUrl}}") ||
     /YES\s*:/i.test(parsed.data.body);
+  const wantsSurveyButton = templateKey === "satisfaction_survey";
 
   const html = wantsRsvpButtons
     ? wrapLaMesaEmailHtml({
@@ -294,7 +300,13 @@ export async function POST(request: Request) {
           locale,
         }),
       })
-    : wrapLaMesaPlainBody(bodyText, { lang: locale });
+    : wantsSurveyButton
+      ? wrapLaMesaEmailHtml({
+          lang: locale,
+          bodyHtml: satisfactionBodyToHtml(bodyText, vars.surveyUrl ?? ""),
+          footerHtml: satisfactionSurveyButtonHtml(vars.surveyUrl ?? "", locale),
+        })
+      : wrapLaMesaPlainBody(bodyText, { lang: locale });
   const attachment = buildTestIcsAttachment({
     templateKey: parsed.data.templateKey,
     event,
