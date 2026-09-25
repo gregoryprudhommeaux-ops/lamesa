@@ -63,6 +63,7 @@ export async function sendSatisfactionSurveyEmail(input: {
     subject,
     html,
     text: `${bodyText}\n\n${surveyUrl}\n\n${laMesaEmailFooterText(locale)}`,
+    bccAdmins: false,
   });
   if (!result.ok) return result;
   return { ok: true, surveyUrl };
