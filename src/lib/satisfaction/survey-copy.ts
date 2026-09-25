@@ -36,7 +36,7 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     questions: {
       venueQuality: "Calidad del lugar",
       menuQuality: "Calidad del menú",
-      guestsQuality: "Calidad de los demás invitados",
+      guestsQuality: "Calidad de la selección de los demás participantes en general",
       wouldReturn: "¿Asistirías a una próxima cena?",
       wouldRecommend: "¿Recomendarías el concepto LA MESA?",
     },
@@ -62,7 +62,7 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     questions: {
       venueQuality: "Qualité du lieu",
       menuQuality: "Qualité du menu",
-      guestsQuality: "Qualité des autres invités",
+      guestsQuality: "Qualité de la sélection des autres participants en général",
       wouldReturn: "Reviendrais-tu à un prochain dîner ?",
       wouldRecommend: "Recommanderais-tu le concept LA MESA ?",
     },
@@ -88,7 +88,7 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     questions: {
       venueQuality: "Venue quality",
       menuQuality: "Menu quality",
-      guestsQuality: "Quality of the other guests",
+      guestsQuality: "Quality of the overall guest selection",
       wouldReturn: "Would you attend another dinner?",
       wouldRecommend: "Would you recommend the LA MESA concept?",
     },

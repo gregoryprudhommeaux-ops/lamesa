@@ -13,7 +13,7 @@ const CATEGORIES: {
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
-  { key: "guestsQuality", label: "Autres invités" },
+  { key: "guestsQuality", label: "Sélection participants" },
   { key: "wouldReturn", label: "Reviendrait" },
   { key: "wouldRecommend", label: "Recommanderait" },
 ];
@@ -115,7 +115,7 @@ export function AdminEventSatisfactionResults({
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-ns-tertiary">{r.name}</span>
                       <span className="text-xs text-ns-secondary">
-                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
+                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · sélection{" "}
                         {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
                         {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
                       </span>

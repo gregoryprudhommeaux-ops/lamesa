@@ -228,7 +228,7 @@ const CATEGORIES: {
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
-  { key: "guestsQuality", label: "Autres invités" },
+  { key: "guestsQuality", label: "Sélection participants" },
   { key: "wouldReturn", label: "Reviendrait" },
   { key: "wouldRecommend", label: "Recommanderait" },
 ];
@@ -1608,7 +1608,7 @@ export function AdminDashboardPanel() {
                   <th className="py-2 pr-3 font-semibold">Moy.</th>
                   <th className="py-2 pr-3 font-semibold">Lieu</th>
                   <th className="py-2 pr-3 font-semibold">Menu</th>
-                  <th className="py-2 pr-3 font-semibold">Invités</th>
+                      <th className="py-2 pr-3 font-semibold">Sélection</th>
                   <th className="py-2 pr-3 font-semibold">Retour</th>
                   <th className="py-2 font-semibold">Reco</th>
                 </tr>
