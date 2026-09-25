@@ -9,7 +9,7 @@ import {
 } from "@/lib/ui/nextstep";
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
-import { isValidLinkedInUrl } from "@/lib/linkedin";
+import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
 import { PhoneInput, isValidFullPhone } from "@/components/phone-input";
 import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -45,7 +45,10 @@ export function ProfileRegistrationForm({
     const form = event.currentTarget;
     const data = new FormData(form);
 
-    const linkedinUrl = String(data.get("linkedinUrl") ?? "").trim();
+    const linkedinRaw = String(data.get("linkedinUrl") ?? "").trim();
+    const linkedinUrl = linkedinRaw
+      ? normalizeLinkedInUrl(linkedinRaw) || linkedinRaw
+      : "";
     if (linkedinUrl && !isValidLinkedInUrl(linkedinUrl)) {
       setState("error");
       setErrorDetail("invalid_linkedin");
