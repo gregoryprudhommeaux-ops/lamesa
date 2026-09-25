@@ -11,15 +11,19 @@ import {
   StdRelancePanel,
 } from "@/components/admin/admin-event-journey-panels";
 import {
-  EventPhaseNav,
   EventPhaseSection,
   type EventPhaseId,
   type EventPhaseMeta,
 } from "@/components/admin/admin-event-phase-section";
+import {
+  EventCommandHeader,
+  EventCommandPhaseNav,
+} from "@/components/admin/event-command-header";
 import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest-inbox";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { consumePendingEventSeed } from "@/lib/admin/pending-invitees";
+import { suggestOpsPhase } from "@/lib/admin/suggest-ops-phase";
 import { DRESS_CODES, PARKING_OPTIONS } from "@/lib/constants/form-options";
 import {
   DEFAULT_EVENT_FORMAT,
@@ -162,10 +166,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [sendingSaveTheDate, setSendingSaveTheDate] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
   const [inviteSendOk, setInviteSendOk] = useState(false);
-  const [openPhases, setOpenPhases] = useState<Set<EventPhaseId>>(
-    () => new Set<EventPhaseId>(["std", "definitive", "std_email"]),
-  );
-  const [activePhaseNav, setActivePhaseNav] = useState<EventPhaseId | null>("std");
+  /** Command-center focus: only one phase open in the work zone. */
+  const [focusPhase, setFocusPhase] = useState<EventPhaseId>("std");
+  /** When set, user overrode the suggested phase — show “revenir à la suggestion”. */
+  const [phaseOverride, setPhaseOverride] = useState(false);
 
   const isInterestMode = responseMode === "interest";
 
@@ -189,24 +193,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     ];
   }, [isInterestMode]);
 
-  function togglePhase(id: EventPhaseId) {
-    setOpenPhases((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setActivePhaseNav(id);
-  }
-
-  function jumpToPhase(id: EventPhaseId) {
-    setOpenPhases((prev) => new Set(prev).add(id));
-    setActivePhaseNav(id);
-    requestAnimationFrame(() => {
-      document.getElementById(`phase-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
   const activeEvent = useMemo(
     () => events.find((e) => e.id === activeId) ?? null,
     [events, activeId],
@@ -216,6 +202,85 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     () => participations.filter((p) => p.eventId === activeId),
     [participations, activeId],
   );
+
+  const opsSuggestion = useMemo(() => {
+    const eventForSuggest = activeEvent ?? {
+      title,
+      startsAt: combineLocal(eventDate, startTime) || new Date().toISOString(),
+      venueName,
+      address,
+      status,
+      responseMode,
+      saveTheDateSentAt: undefined,
+      capacity: guestCapacityFromTotalCovers(capacity),
+    };
+    return suggestOpsPhase({
+      event: {
+        ...eventForSuggest,
+        title: title.trim() || eventForSuggest.title,
+        venueName,
+        address,
+        status,
+        responseMode,
+        capacity: guestCapacityFromTotalCovers(capacity),
+        saveTheDateSentAt: activeEvent?.saveTheDateSentAt,
+      },
+      draft: { title, eventDate, venueName, address },
+      participations: activeParticipations,
+    });
+  }, [
+    activeEvent,
+    activeParticipations,
+    title,
+    eventDate,
+    startTime,
+    venueName,
+    address,
+    status,
+    responseMode,
+    capacity,
+  ]);
+
+  function syncUrl(eventId: string | null, phase: EventPhaseId) {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (eventId) url.searchParams.set("id", eventId);
+    else url.searchParams.delete("id");
+    url.searchParams.set("phase", phase);
+    url.searchParams.delete("nouveau");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  }
+
+  function focusOnPhase(id: EventPhaseId, opts?: { fromSuggestion?: boolean }) {
+    setFocusPhase(id);
+    if (opts?.fromSuggestion) setPhaseOverride(false);
+    else setPhaseOverride(true);
+    syncUrl(activeId, id);
+    requestAnimationFrame(() => {
+      document.getElementById("event-command-workzone")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function jumpToPhase(id: EventPhaseId) {
+    focusOnPhase(id);
+  }
+
+  function applySuggestedPhase() {
+    focusOnPhase(opsSuggestion.phaseId, { fromSuggestion: true });
+  }
+
+  // If mode flips (interest ↔ rsvp), drop focus on phases that no longer exist.
+  useEffect(() => {
+    if (!journeyPhases.some((p) => p.id === focusPhase)) {
+      setFocusPhase(opsSuggestion.phaseId);
+      setPhaseOverride(false);
+      syncUrl(activeId, opsSuggestion.phaseId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when mode/phases change
+  }, [isInterestMode, journeyPhases]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -250,19 +315,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     void loadAll();
   }, [loadAll]);
 
-  /** Open event from ?id= (calendar deep-link) once list is loaded. */
+  /** Open event from ?id= (calendar / command-center deep-link) once list is loaded. */
   useEffect(() => {
     if (loading || events.length === 0) return;
     if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("id");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const phaseParam = params.get("phase") as EventPhaseId | null;
     if (!id) return;
     const event = events.find((e) => e.id === id);
     if (!event) return;
-    if (activeId === id) return;
-    openEdit(event);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("id");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    if (activeId !== id) {
+      openEdit(event, { preserveUrl: true, phaseFromUrl: phaseParam });
+      return;
+    }
+    if (
+      phaseParam &&
+      ["std", "definitive", "std_email", "std_relance", "formal", "auto"].includes(phaseParam)
+    ) {
+      setFocusPhase(phaseParam);
+      setPhaseOverride(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
   }, [loading, events]);
 
@@ -345,9 +418,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
   function openCreate() {
     resetForm([]);
+    setFocusPhase("std");
+    setPhaseOverride(false);
+    syncUrl(null, "std");
   }
 
-  function openEdit(event: AdminEvent) {
+  function openEdit(
+    event: AdminEvent,
+    opts?: { preserveUrl?: boolean; phaseFromUrl?: EventPhaseId | null },
+  ) {
     const start = splitLocal(event.startsAt);
     const end = splitLocal(event.endsAt);
     setActiveId(event.id);
@@ -414,6 +493,32 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         : "",
     );
     setSelectedInvitees([]);
+
+    const parts = participations.filter((p) => p.eventId === event.id);
+    const suggested = suggestOpsPhase({
+      event,
+      draft: {
+        title: event.title,
+        eventDate: start.date,
+        venueName: event.venueName ?? "",
+        address: event.address ?? "",
+      },
+      participations: parts,
+    });
+    const urlPhase = opts?.phaseFromUrl;
+    const validUrlPhase =
+      urlPhase &&
+      ["std", "definitive", "std_email", "std_relance", "formal", "auto"].includes(urlPhase)
+        ? urlPhase
+        : null;
+    const nextPhase = validUrlPhase ?? suggested.phaseId;
+    setFocusPhase(nextPhase);
+    setPhaseOverride(Boolean(validUrlPhase));
+    if (!opts?.preserveUrl || !validUrlPhase) {
+      syncUrl(event.id, nextPhase);
+    } else {
+      syncUrl(event.id, nextPhase);
+    }
   }
 
   function eventPayload() {
@@ -849,20 +954,46 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 : labels.newEvent}
             </h3>
             <p className="mt-1 text-sm text-ns-secondary">
-              Parcours en phases : Save the Date → définitif → emails → invitation formelle.
+              Une étape à la fois — en-tête = situation + action prioritaire.
             </p>
           </div>
 
-          <EventPhaseNav
+          <EventCommandHeader
+            title={title.trim() || (activeEvent?.title ?? "")}
+            modeLabel={isInterestMode ? "Save the Date / interest" : "RSVP classique"}
+            phaseLabel={
+              journeyPhases.find((p) => p.id === focusPhase)?.title ?? focusPhase
+            }
+            phaseSummary={journeyPhases.find((p) => p.id === focusPhase)?.summary}
+            kpis={opsSuggestion.kpis}
+            blockers={opsSuggestion.blockers}
+            nextBestAction={opsSuggestion.nextBestAction}
+            onDoNextBestAction={() =>
+              focusOnPhase(opsSuggestion.nextBestAction.phaseId, {
+                fromSuggestion: true,
+              })
+            }
+            showResetSuggested={
+              phaseOverride && focusPhase !== opsSuggestion.phaseId
+            }
+            onResetToSuggested={applySuggestedPhase}
+          />
+
+          <EventCommandPhaseNav
             phases={journeyPhases}
-            activeId={activePhaseNav}
+            activeId={focusPhase}
+            completedIds={opsSuggestion.completedPhaseIds}
+            suggestedId={opsSuggestion.phaseId}
             onJump={jumpToPhase}
           />
 
+          <div id="event-command-workzone" className="scroll-mt-28 space-y-3">
           <EventPhaseSection
+            hideWhenCollapsed
+            
             phase={journeyPhases.find((p) => p.id === "std")!}
-            open={openPhases.has("std")}
-            onToggle={() => togglePhase("std")}
+            open={focusPhase === "std"}
+            onToggle={() => jumpToPhase("std")}
             footer={phaseSaveFooter(
               "Save the Date",
               "Titre, date, intro, capacité…",
@@ -1094,9 +1225,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           </EventPhaseSection>
 
           <EventPhaseSection
+            hideWhenCollapsed
+            
             phase={journeyPhases.find((p) => p.id === "definitive")!}
-            open={openPhases.has("definitive")}
-            onToggle={() => togglePhase("definitive")}
+            open={focusPhase === "definitive"}
+            onToggle={() => jumpToPhase("definitive")}
             footer={phaseSaveFooter(
               "Éléments définitifs",
               "Lieu, tarif, menu, date butoir paiement…",
@@ -1546,9 +1679,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
           {isInterestMode ? (
             <EventPhaseSection
+            hideWhenCollapsed
+            
               phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={openPhases.has("std_email")}
-              onToggle={() => togglePhase("std_email")}
+              open={focusPhase === "std_email"}
+              onToggle={() => jumpToPhase("std_email")}
             >
               <div>
                 <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
@@ -1725,9 +1860,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             </EventPhaseSection>
           ) : (
             <EventPhaseSection
+            hideWhenCollapsed
+            
               phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={openPhases.has("std_email")}
-              onToggle={() => togglePhase("std_email")}
+              open={focusPhase === "std_email"}
+              onToggle={() => jumpToPhase("std_email")}
             >
               <ContactPicker
                 selected={selectedInvitees}
@@ -1842,18 +1979,22 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
           {isInterestMode && activeEvent ? (
             <EventPhaseSection
+            hideWhenCollapsed
+            
               phase={journeyPhases.find((p) => p.id === "std_relance")!}
-              open={openPhases.has("std_relance")}
-              onToggle={() => togglePhase("std_relance")}
+              open={focusPhase === "std_relance"}
+              onToggle={() => jumpToPhase("std_relance")}
             >
               <StdRelancePanel event={activeEvent} />
             </EventPhaseSection>
           ) : null}
 
           <EventPhaseSection
+            hideWhenCollapsed
+            
             phase={journeyPhases.find((p) => p.id === "formal")!}
-            open={openPhases.has("formal")}
-            onToggle={() => togglePhase("formal")}
+            open={focusPhase === "formal"}
+            onToggle={() => jumpToPhase("formal")}
           >
             {activeEvent ? (
               isInterestMode ? (
@@ -1933,9 +2074,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           </EventPhaseSection>
 
           <EventPhaseSection
+            hideWhenCollapsed
+            
             phase={journeyPhases.find((p) => p.id === "auto")!}
-            open={openPhases.has("auto")}
-            onToggle={() => togglePhase("auto")}
+            open={focusPhase === "auto"}
+            onToggle={() => jumpToPhase("auto")}
           >
             {activeEvent ? (
               <div className="space-y-4">
@@ -1950,6 +2093,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
             )}
           </EventPhaseSection>
+          </div>
 
           <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm backdrop-blur">
             <button
