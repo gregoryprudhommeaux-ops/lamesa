@@ -22,7 +22,7 @@ const CATEGORIES: {
   { key: "guestsQuality", label: "Sélection participants" },
   { key: "valueForMoney", label: "Qualité / prix" },
   { key: "wouldReturn", label: "Autres tables" },
-  { key: "wouldRecommend", label: "Recommanderait" },
+  { key: "wouldRecommend", label: "En parlerait" },
 ];
 
 function ScoreBar({ score, label }: { score: number | null; label: string }) {
@@ -85,7 +85,7 @@ export function AdminEventSatisfactionResults({
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-ns-secondary">
-                Recommanderait le concept
+                En parlerait à d’autres
               </p>
               <p className="mt-1 text-2xl font-bold text-ns-primary">
                 {formatScore(stats.wouldRecommend)}
@@ -127,7 +127,7 @@ export function AdminEventSatisfactionResults({
                         {typeof s.valueForMoney === "number"
                           ? ` · Q/P ${s.valueForMoney}`
                           : ""}{" "}
-                        · tables {s.wouldReturn} · reco{" "}
+                        · tables {s.wouldReturn} · bouche{" "}
                         {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
                       </span>
                     </div>

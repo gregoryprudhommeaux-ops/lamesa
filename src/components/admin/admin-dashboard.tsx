@@ -236,7 +236,7 @@ const CATEGORIES: {
   { key: "guestsQuality", label: "Sélection participants" },
   { key: "valueForMoney", label: "Qualité / prix" },
   { key: "wouldReturn", label: "Autres tables" },
-  { key: "wouldRecommend", label: "Recommanderait" },
+  { key: "wouldRecommend", label: "En parlerait" },
 ];
 
 function KpiCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
@@ -1563,7 +1563,7 @@ export function AdminDashboardPanel() {
               <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
             </div>
             <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
-              <span className="text-ns-secondary">Reco. concept</span>
+              <span className="text-ns-secondary">En parlerait</span>
               <span className="font-semibold tabular-nums text-ns-tertiary">
                 {satisfaction.wouldRecommend === null
                   ? "—"
@@ -1617,7 +1617,7 @@ export function AdminDashboardPanel() {
                   <th className="py-2 pr-3 font-semibold">Sélection</th>
                   <th className="py-2 pr-3 font-semibold">Q/P</th>
                   <th className="py-2 pr-3 font-semibold">Tables</th>
-                  <th className="py-2 font-semibold">Reco</th>
+                  <th className="py-2 font-semibold">Bouche</th>
                 </tr>
               </thead>
               <tbody>

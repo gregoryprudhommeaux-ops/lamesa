@@ -22,9 +22,9 @@ describe("survey-copy", () => {
     expect(SURVEY_COPY.fr.questions.valueForMoney).toContain("prix payé");
   });
 
-  it("keeps FR recommend question distinct from ES", () => {
-    expect(SURVEY_COPY.fr.questions.wouldRecommend).toContain("LA MESA");
-    expect(SURVEY_COPY.es.questions.wouldRecommend).toContain("LA MESA");
+  it("keeps FR word-of-mouth question distinct from ES", () => {
+    expect(SURVEY_COPY.fr.questions.wouldRecommend).toContain("expérience");
+    expect(SURVEY_COPY.es.questions.wouldRecommend).toContain("experiencia");
     expect(SURVEY_COPY.fr.questions.wouldRecommend).not.toBe(
       SURVEY_COPY.es.questions.wouldRecommend,
     );

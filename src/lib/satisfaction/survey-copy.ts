@@ -40,7 +40,8 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
       guestsQuality: "Calidad de la selección de los demás participantes en general",
       valueForMoney: "Calidad de la experiencia respecto al precio pagado",
       wouldReturn: "¿Te gustaría que te invitemos a otras mesas en el futuro (según la temática)?",
-      wouldRecommend: "¿Recomendarías el concepto LA MESA?",
+      wouldRecommend:
+        "¿Crees que hablarías de tu experiencia para que otros puedan ser invitados algún día?",
     },
     commentLabel: "Todos los comentarios constructivos son bienvenidos",
     commentPlaceholder: "Opcional — cuéntanos qué mejorar o qué te gustó.",
@@ -68,7 +69,8 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
       valueForMoney: "Qualité de l’expérience par rapport au prix payé",
       wouldReturn:
         "Aimerais-tu qu’on t’invite à d’autres tables dans l’avenir (selon la thématique) ?",
-      wouldRecommend: "Recommanderais-tu le concept LA MESA ?",
+      wouldRecommend:
+        "Penses-tu parler de ton expérience pour que d’autres puissent un jour être invités ?",
     },
     commentLabel: "Tous les commentaires constructifs sont les bienvenus",
     commentPlaceholder: "Optionnel — dis-nous quoi améliorer ou ce qui t’a plu.",
@@ -96,7 +98,8 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
       valueForMoney: "Quality of the experience relative to the price paid",
       wouldReturn:
         "Would you like us to invite you to other tables in the future (depending on the theme)?",
-      wouldRecommend: "Would you recommend the LA MESA concept?",
+      wouldRecommend:
+        "Would you talk about your experience so others might be invited one day?",
     },
     commentLabel: "All constructive comments are welcome",
     commentPlaceholder: "Optional — tell us what to improve or what you liked.",
