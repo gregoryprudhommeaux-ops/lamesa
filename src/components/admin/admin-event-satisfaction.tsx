@@ -116,7 +116,7 @@ export function AdminEventSatisfactionResults({
                       <span className="text-ns-tertiary">{r.name}</span>
                       <span className="text-xs text-ns-secondary">
                         {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · sélection{" "}
-                        {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
+                        {s.guestsQuality} · tables {s.wouldReturn} · reco{" "}
                         {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
                       </span>
                     </div>

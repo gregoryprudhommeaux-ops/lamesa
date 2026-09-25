@@ -1609,7 +1609,7 @@ export function AdminDashboardPanel() {
                   <th className="py-2 pr-3 font-semibold">Lieu</th>
                   <th className="py-2 pr-3 font-semibold">Menu</th>
                       <th className="py-2 pr-3 font-semibold">Sélection</th>
-                  <th className="py-2 pr-3 font-semibold">Retour</th>
+                  <th className="py-2 pr-3 font-semibold">Tables</th>
                   <th className="py-2 font-semibold">Reco</th>
                 </tr>
               </thead>
