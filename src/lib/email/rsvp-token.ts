@@ -1,8 +1,22 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-function secret(): string {
+function isProductionRuntime(): boolean {
   return (
-    process.env.RSVP_TOKEN_SECRET?.trim() ||
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
+}
+
+function secret(): string {
+  const explicit = process.env.RSVP_TOKEN_SECRET?.trim();
+  if (explicit) return explicit;
+
+  // Production must never fall back to a predictable HMAC key.
+  if (isProductionRuntime()) {
+    throw new Error("RSVP_TOKEN_SECRET is required in production");
+  }
+
+  return (
     process.env.FIREBASE_PRIVATE_KEY?.trim()?.slice(0, 64) ||
     "la-mesa-dev-rsvp-secret"
   );
@@ -46,7 +60,12 @@ export function signRsvpToken(
 export function verifyRsvpToken(token: string): RsvpTokenPayload | null {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
-  const expected = createHmac("sha256", secret()).update(body).digest();
+  let expected: Buffer;
+  try {
+    expected = createHmac("sha256", secret()).update(body).digest();
+  } catch {
+    return null;
+  }
   const got = fromB64url(sig);
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null;
   try {
@@ -70,7 +89,12 @@ export function signSurveyToken(
 export function verifySurveyToken(token: string): RsvpTokenPayload | null {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
-  const expected = createHmac("sha256", secret()).update(body).digest();
+  let expected: Buffer;
+  try {
+    expected = createHmac("sha256", secret()).update(body).digest();
+  } catch {
+    return null;
+  }
   const got = fromB64url(sig);
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null;
   try {

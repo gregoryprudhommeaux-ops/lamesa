@@ -1,3 +1,5 @@
+import "server-only";
+
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
@@ -27,6 +29,8 @@ export function getAdminFirestore(): Firestore {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
     });
+  } else {
+    app = getApps()[0]!;
   }
 
   const databaseId =
@@ -34,7 +38,7 @@ export function getAdminFirestore(): Firestore {
     process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() ||
     undefined;
 
-  db = databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   return db;
 }
 

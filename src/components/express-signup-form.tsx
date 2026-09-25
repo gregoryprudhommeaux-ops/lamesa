@@ -2,21 +2,12 @@
 
 import { PhoneInput } from "@/components/phone-input";
 import { Link, useRouter } from "@/i18n/navigation";
+import { safeMemberNextPath } from "@/lib/auth/safe-next-path";
 import { isValidFullPhone } from "@/lib/constants/phone-countries";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
-
-/** Relative app path only — blocks open redirects. */
-function safeNextPath(raw: string | null): string | null {
-  if (!raw) return null;
-  const path = raw.trim();
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) return null;
-  if (path.includes("\\")) return null;
-  if (path === "/admin" || path.startsWith("/admin/")) return null;
-  return path;
-}
 
 export function ExpressSignupForm() {
   const t = useTranslations("light");
@@ -24,7 +15,10 @@ export function ExpressSignupForm() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = useMemo(() => safeNextPath(searchParams.get("next")), [searchParams]);
+  const nextPath = useMemo(
+    () => safeMemberNextPath(searchParams.get("next")),
+    [searchParams],
+  );
 
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);

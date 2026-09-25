@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAddToCalendarIcs,
   buildCalendarInviteIcs,
@@ -13,6 +13,10 @@ import {
   verifyRsvpToken,
   verifySurveyToken,
 } from "@/lib/email/rsvp-token";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("ics", () => {
   it("formats utc timestamps", () => {
@@ -142,5 +146,19 @@ describe("rsvp-token", () => {
       email: "a@b.com",
     });
     expect(verifyRsvpToken(`${token}x`)).toBeNull();
+  });
+
+  it("requires RSVP_TOKEN_SECRET in production", () => {
+    vi.stubEnv("RSVP_TOKEN_SECRET", "");
+    vi.stubEnv("FIREBASE_PRIVATE_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(() =>
+      signRsvpToken({
+        participationId: "p1",
+        eventId: "e1",
+        email: "a@b.com",
+      }),
+    ).toThrow(/RSVP_TOKEN_SECRET/);
   });
 });

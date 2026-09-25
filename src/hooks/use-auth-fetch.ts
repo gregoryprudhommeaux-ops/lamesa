@@ -9,8 +9,11 @@ export function useAuthFetch() {
   return useCallback(
     async (input: string, init: RequestInit = {}) => {
       const token = await getIdToken();
+      if (!token) {
+        throw new Error("auth_required");
+      }
       const headers = new Headers(init.headers);
-      if (token) headers.set("Authorization", `Bearer ${token}`);
+      headers.set("Authorization", `Bearer ${token}`);
       if (init.body && !headers.has("Content-Type")) {
         headers.set("Content-Type", "application/json");
       }

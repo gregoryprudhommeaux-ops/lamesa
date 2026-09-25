@@ -23,4 +23,3 @@ dist/
 # Reference copy (large)
 reference/
 .vercel
-.env*

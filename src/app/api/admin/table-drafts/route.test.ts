@@ -132,7 +132,10 @@ describe("/api/admin/table-drafts", () => {
         })),
       ],
     });
-    collection.mockReturnValue({ get });
+    collection.mockReturnValue({
+      limit: () => ({ get }),
+      get,
+    });
     getAdminFirestore.mockReturnValue({ collection });
 
     const response = await GET(new Request("http://localhost/api/admin/table-drafts"));
@@ -164,7 +167,10 @@ describe("/api/admin/table-drafts", () => {
       ],
     });
     getAdminFirestore.mockReturnValue({
-      collection: vi.fn(() => ({ get })),
+      collection: vi.fn(() => ({
+        limit: () => ({ get }),
+        get,
+      })),
     });
 
     const response = await GET(new Request("http://localhost/api/admin/table-drafts"));
@@ -203,7 +209,10 @@ describe("/api/admin/table-drafts", () => {
       ],
     });
     getAdminFirestore.mockReturnValue({
-      collection: vi.fn(() => ({ get })),
+      collection: vi.fn(() => ({
+        limit: () => ({ get }),
+        get,
+      })),
     });
 
     const response = await GET(

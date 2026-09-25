@@ -8,6 +8,9 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 
+/** Align with PROVIDER_FETCH_TIMEOUT_MS (45s) + Firestore load headroom. */
+export const maxDuration = 60;
+
 const TABLE_IDEAS_ERROR_STATUS: Record<TableIdeasError["code"], number> = {
   validation: 400,
   pool_too_small: 422,
