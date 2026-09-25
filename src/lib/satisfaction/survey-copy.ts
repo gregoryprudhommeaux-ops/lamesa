@@ -132,3 +132,29 @@ export function surveyQuestionsList(locale: SurveyLocale): Array<{ key: SurveySc
   const copy = SURVEY_COPY[locale];
   return SURVEY_SCORE_FIELDS.map((key) => ({ key, label: copy.questions[key] }));
 }
+
+/** Scored questions only — free-text comment is never required. */
+export function countMissingSurveyScores(
+  scores: Record<SurveyScoreField, number | null>,
+): number {
+  return SURVEY_SCORE_FIELDS.filter((key) => scores[key] === null).length;
+}
+
+/** Guide shown when submit is blocked because scored answers are missing. */
+export function incompleteSurveyMessage(locale: SurveyLocale, missingCount: number): string {
+  const n = Math.max(0, Math.floor(missingCount));
+  if (n <= 0) return "";
+  if (locale === "fr") {
+    return n === 1
+      ? "Impossible de valider : 1 réponse n’a pas été donnée."
+      : `Impossible de valider : ${n} réponses n’ont pas été données.`;
+  }
+  if (locale === "en") {
+    return n === 1
+      ? "Can't submit yet: 1 answer is still missing."
+      : `Can't submit yet: ${n} answers are still missing.`;
+  }
+  return n === 1
+    ? "No se puede validar: falta 1 respuesta."
+    : `No se puede validar: faltan ${n} respuestas.`;
+}
