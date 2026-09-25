@@ -19,6 +19,9 @@ type Props = {
   locale: TemplateLocale;
   subject: string;
   body: string;
+  /** When true, show recipient list (opened via Envoyer in the parent). */
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 };
 
 const SUPPORTED = new Set(["light_signup", "profile_incomplete"]);
@@ -28,16 +31,19 @@ export function IncompleteProfilesBlastPanel({
   locale,
   subject,
   body,
+  open,
+  onOpenChange,
 }: Props) {
   const authFetch = useAuthFetch();
   const [recipients, setRecipients] = useState<IncompleteRecipient[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [batchLimit, setBatchLimit] = useState(80);
   const [scanCapped, setScanCapped] = useState(false);
+  const [loadedOnce, setLoadedOnce] = useState(false);
 
   const supported = SUPPORTED.has(templateKey);
 
@@ -62,6 +68,7 @@ export function IncompleteProfilesBlastPanel({
       setScanCapped(Boolean(json.scanCapped));
       setRecipients(list);
       setSelected(new Set(list.slice(0, limit).map((r) => r.id)));
+      setLoadedOnce(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -70,8 +77,17 @@ export function IncompleteProfilesBlastPanel({
   }, [authFetch, supported, templateKey]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!open || !supported) return;
+    if (!loadedOnce) void load();
+  }, [open, supported, loadedOnce, load]);
+
+  useEffect(() => {
+    setLoadedOnce(false);
+    setRecipients([]);
+    setSelected(new Set());
+    setMessage(null);
+    setError(null);
+  }, [templateKey]);
 
   const selectableIds = useMemo(
     () => recipients.slice(0, batchLimit).map((r) => r.id),
@@ -154,6 +170,7 @@ export function IncompleteProfilesBlastPanel({
       if ((json.errors?.length ?? 0) > 0) {
         setError(json.errors!.slice(0, 5).join(" · "));
       }
+      setLoadedOnce(false);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -162,40 +179,51 @@ export function IncompleteProfilesBlastPanel({
     }
   }
 
-  if (!supported) return null;
+  if (!supported || !open) return null;
 
   return (
-    <div className="mt-6 space-y-3 rounded-2xl border border-ns-alternate bg-ns-brand-light/40 p-4">
+    <div
+      id="incomplete-profiles-blast"
+      className="mt-4 space-y-3 rounded-2xl border border-ns-alternate bg-ns-brand-light/40 p-4"
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-hero">
-            Envoyer maintenant · profils incomplets
+            Destinataires · profils incomplets
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Membres waitlist &lt; 100 %. Tu envoies le template actuel (
-            {templateKey === "light_signup" ? "inscription express" : "rappel profil"}) à la
-            sélection.
+            Coche les membres (&lt; 100 %), puis clique <strong>Envoyer</strong>.
           </p>
         </div>
-        <button
-          type="button"
-          className={BTN_SECONDARY}
-          disabled={loading || busy}
-          onClick={() => void load()}
-        >
-          {loading ? "Chargement…" : "Rafraîchir"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            disabled={loading || busy}
+            onClick={() => void load()}
+          >
+            {loading ? "Chargement…" : "Rafraîchir"}
+          </button>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            disabled={busy}
+            onClick={() => onOpenChange(false)}
+          >
+            Fermer
+          </button>
+        </div>
       </div>
 
       {error ? <p className={ERROR_TEXT}>{error}</p> : null}
       {message ? <p className="text-sm font-medium text-ns-primary">{message}</p> : null}
       {scanCapped ? (
         <p className="text-xs text-amber-800">
-          Scan plafonné — la liste peut être partielle. Relance ou filtre côté Inscrits si besoin.
+          Scan plafonné — la liste peut être partielle.
         </p>
       ) : null}
 
-      {loading ? (
+      {loading && !loadedOnce ? (
         <p className="text-sm text-ns-secondary">Chargement des profils incomplets…</p>
       ) : recipients.length === 0 ? (
         <p className="text-sm text-ns-secondary">Aucun profil incomplet trouvé.</p>
@@ -247,7 +275,10 @@ export function IncompleteProfilesBlastPanel({
                         <div className="text-xs text-ns-secondary">{r.email}</div>
                       </td>
                       <td className="px-3 py-2 font-mono text-xs">{r.percent}%</td>
-                      <td className="max-w-[220px] truncate px-3 py-2 text-xs text-ns-secondary" title={r.missingFields}>
+                      <td
+                        className="max-w-[220px] truncate px-3 py-2 text-xs text-ns-secondary"
+                        title={r.missingFields}
+                      >
                         {r.missingFields}
                       </td>
                     </tr>
@@ -259,7 +290,7 @@ export function IncompleteProfilesBlastPanel({
 
           {selectedPreview.length > 0 ? (
             <p className="text-[11px] text-ns-secondary">
-              Aperçu sélection :{" "}
+              Sélection :{" "}
               {selectedPreview
                 .slice(0, 5)
                 .map((r) => r.email)
@@ -274,9 +305,7 @@ export function IncompleteProfilesBlastPanel({
             disabled={busy || loading || selected.size === 0 || overBatch}
             onClick={() => void sendNow()}
           >
-            {busy
-              ? "Envoi…"
-              : `Envoyer maintenant (${selected.size})`}
+            {busy ? "Envoi…" : selected.size > 0 ? `Envoyer (${selected.size})` : "Envoyer"}
           </button>
         </>
       )}

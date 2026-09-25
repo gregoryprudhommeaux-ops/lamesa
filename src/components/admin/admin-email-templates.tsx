@@ -44,6 +44,7 @@ export function AdminEmailTemplatesPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [showIncompleteBlast, setShowIncompleteBlast] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
@@ -60,7 +61,13 @@ export function AdminEmailTemplatesPanel() {
     [templates, activeKey],
   );
   const isCustom = isCustomEmailTemplateKey(activeKey);
+  const supportsIncompleteBlast =
+    activeKey === "light_signup" || activeKey === "profile_incomplete";
   const selectionKey = `${activeKey}|${editLocale}|${eventId}`;
+
+  useEffect(() => {
+    setShowIncompleteBlast(false);
+  }, [activeKey]);
 
   // Debounce preview so typing doesn't remount the iframe (layout jump)
   useEffect(() => {
@@ -788,6 +795,23 @@ export function AdminEmailTemplatesPanel() {
             >
               {sendingTest ? "Envoi test…" : "Envoyer un email test"}
             </button>
+            {supportsIncompleteBlast ? (
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={saving || sendingTest}
+                onClick={() => {
+                  setShowIncompleteBlast(true);
+                  window.requestAnimationFrame(() => {
+                    document
+                      .getElementById("incomplete-profiles-blast")
+                      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  });
+                }}
+              >
+                Envoyer
+              </button>
+            ) : null}
             <button
               type="button"
               className={BTN_SECONDARY}
@@ -797,12 +821,14 @@ export function AdminEmailTemplatesPanel() {
             </button>
           </div>
 
-          {activeKey === "light_signup" || activeKey === "profile_incomplete" ? (
+          {supportsIncompleteBlast ? (
             <IncompleteProfilesBlastPanel
               templateKey={activeKey}
               locale={editLocale}
               subject={subject}
               body={body}
+              open={showIncompleteBlast}
+              onOpenChange={setShowIncompleteBlast}
             />
           ) : null}
 
