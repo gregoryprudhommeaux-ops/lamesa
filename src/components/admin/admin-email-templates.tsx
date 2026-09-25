@@ -7,9 +7,8 @@ import {
   satisfactionBodyToHtml,
   satisfactionSurveyButtonHtml,
   satisfactionTestSurveyUrl,
-} from "@/lib/email/send-satisfaction-survey";
-import { applyTemplateVars } from "@/lib/email/templates";
-import { emailPublicBaseUrl } from "@/lib/site-url";
+} from "@/lib/email/satisfaction-survey-html";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import {
   DEFAULT_SEND_LOCALE,
   EMAIL_TEMPLATE_LABELS,
@@ -71,18 +70,16 @@ export function AdminEmailTemplatesPanel() {
   const previewHtml = useMemo(() => {
     const raw = previewBody || "(Aperçu du corps…)";
     if (activeKey === "satisfaction_survey") {
-      const surveyUrl = satisfactionTestSurveyUrl(emailPublicBaseUrl(), editLocale);
-      const bodyText = applyTemplateVars(raw, {
-        fullName: "Test LA MESA",
-        firstName: "Test",
-        email: "test@example.com",
-        eventTitle: "LA MESA — aperçu test",
-        when: "",
-        where: "",
-        eventUrl: "",
-        surveyUrl,
-        format: editLocale === "fr" ? "Dîner" : editLocale === "en" ? "Dinner" : "Cena",
-      });
+      const surveyUrl = satisfactionTestSurveyUrl(PRODUCTION_SITE_URL, editLocale);
+      const format =
+        editLocale === "fr" ? "Dîner" : editLocale === "en" ? "Dinner" : "Cena";
+      const bodyText = raw
+        .replaceAll("{{fullName}}", "Test LA MESA")
+        .replaceAll("{{firstName}}", "Test")
+        .replaceAll("{{email}}", "test@example.com")
+        .replaceAll("{{eventTitle}}", "LA MESA — aperçu test")
+        .replaceAll("{{format}}", format)
+        .replaceAll("{{surveyUrl}}", surveyUrl);
       return wrapLaMesaEmailHtml({
         lang: editLocale,
         bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),

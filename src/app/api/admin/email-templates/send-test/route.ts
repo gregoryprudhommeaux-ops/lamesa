@@ -20,7 +20,7 @@ import {
   satisfactionBodyToHtml,
   satisfactionSurveyButtonHtml,
   satisfactionTestSurveyUrl,
-} from "@/lib/email/send-satisfaction-survey";
+} from "@/lib/email/satisfaction-survey-html";
 import { formatEventWhereLine } from "@/lib/events/format-where";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { emailPublicBaseUrl } from "@/lib/site-url";
