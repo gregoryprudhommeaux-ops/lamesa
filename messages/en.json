@@ -465,6 +465,7 @@
   "account": {
     "loginTitle": "Member sign-in",
     "loginHint": "Use the same email as your invitation or signup. If you already signed in with Google, use Google again — no need to create a password.",
+    "loginHintCompleteProfile": "Last step: Continue with Google (same email), then complete your profile (~2 min). Password only if you don’t use Google.",
     "googleLogin": "Continue with Google",
     "googleRedirecting": "Redirecting to Google…",
     "emailAuth": {
