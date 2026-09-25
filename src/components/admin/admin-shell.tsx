@@ -30,7 +30,7 @@ const SITE_NAV = [
   { href: "/" as const, label: "Accueil" },
   { href: "/fonctionnement" as const, label: "Fonctionnement" },
   { href: "/light" as const, label: "Inscription express" },
-  { href: "/connexion" as const, label: "Espace membre" },
+  { href: "/compte?tab=profil" as const, label: "Espace membre" },
 ];
 
 export function AdminShell({
