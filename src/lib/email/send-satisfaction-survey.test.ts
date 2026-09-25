@@ -3,7 +3,7 @@ import {
   satisfactionBodyToHtml,
   satisfactionSurveyButtonHtml,
   satisfactionSurveyCtaLabel,
-} from "@/lib/email/send-satisfaction-survey";
+} from "@/lib/email/satisfaction-survey-html";
 
 describe("satisfaction survey email HTML", () => {
   it("exposes localized CTA labels", () => {
