@@ -154,7 +154,12 @@ async function buildExpressFromTemplate(input: {
   locale: TemplateLocale;
 }): Promise<{ subject: string; html: string; text: string }> {
   const locale = input.locale;
-  const loginUrl = `${getSiteUrl()}/${locale}/connexion?next=${encodeURIComponent("/compte?tab=profil")}`;
+  const nextPath = "/compte?tab=profil";
+  const loginParams = new URLSearchParams({
+    next: nextPath,
+    email: input.email.trim().toLowerCase(),
+  });
+  const loginUrl = `${getSiteUrl()}/${locale}/connexion?${loginParams.toString()}`;
   const template = await getEmailTemplate("light_signup", null, locale);
   const vars: TemplateVars = {
     fullName: input.fullName,
@@ -169,10 +174,10 @@ async function buildExpressFromTemplate(input: {
   const bodyText = applyTemplateVars(template.body, vars);
   const ctaLabel =
     locale === "fr"
-      ? "Se connecter et compléter mon profil"
+      ? "Compléter mon profil maintenant (2 min)"
       : locale === "en"
-        ? "Sign in and complete my profile"
-        : "Iniciar sesión y completar mi perfil";
+        ? "Complete my profile now (2 min)"
+        : "Completar mi perfil ahora (2 min)";
   const bodyHtml = textToHtml(bodyText, loginUrl, ctaLabel);
   const html = wrapLaMesaEmailHtml({
     lang: locale,

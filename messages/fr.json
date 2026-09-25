@@ -465,6 +465,7 @@
   "account": {
     "loginTitle": "Connexion membre",
     "loginHint": "Utilise le même email que ton invitation ou ton inscription. Si tu t’es déjà connecté avec Google, reprends Google — pas besoin de créer un mot de passe.",
+    "loginHintCompleteProfile": "Dernière étape : Continuer avec Google (même email), puis complète ton profil (~2 min). Le mot de passe, seulement si tu n’utilises pas Google.",
     "googleLogin": "Continuer avec Google",
     "googleRedirecting": "Redirection Google…",
     "emailAuth": {
