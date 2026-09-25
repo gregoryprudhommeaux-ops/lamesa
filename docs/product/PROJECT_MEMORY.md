@@ -87,8 +87,8 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 
 | Date | P | Finding | Status |
 |------|---|---------|--------|
-| 2026-09-25 | P0 | Pas d’étape active dérivée | Tranche 1 done |
-| 2026-09-25 | P0 | `?id=` effacé | Tranche 1 done |
+| 2026-09-25 | P0 | Pas d’étape active dérivée | Tranche 1 done (#32) |
+| 2026-09-25 | P0 | `?id=` effacé | Tranche 1 done (#32) |
 | 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done |
 | 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done |
 
@@ -97,5 +97,5 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 | Date | Change |
 |------|--------|
 | 2026-09-25 | Bootstrap mémoire produit alignée DOC Jack |
-| 2026-09-25 | Tranche 1 command center événement |
+| 2026-09-25 | Tranche 1 command center événement (#32) |
 | 2026-09-25 | Tranche 2 roster unifié + template drawers |
