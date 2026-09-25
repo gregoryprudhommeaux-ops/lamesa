@@ -29,6 +29,8 @@ const QUESTIONS: { key: ScoreField; label: string }[] = [
 export function SatisfactionSurveyForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token") ?? "";
+  const isPreview =
+    searchParams.get("preview") === "1" || searchParams.get("preview") === "true";
 
   const [scores, setScores] = useState<Record<ScoreField, number | null>>({
     venueQuality: null,
@@ -43,13 +45,20 @@ export function SatisfactionSurveyForm() {
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
+    if (isPreview) return Object.values(scores).every((v) => v !== null);
     if (!token) return false;
     return Object.values(scores).every((v) => v !== null);
-  }, [token, scores]);
+  }, [token, scores, isPreview]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+
+    if (isPreview) {
+      setDone(true);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -82,7 +91,7 @@ export function SatisfactionSurveyForm() {
     }
   }
 
-  if (!token) {
+  if (!token && !isPreview) {
     return (
       <p className={ERROR_TEXT}>
         Enlace no válido. Abre el cuestionario desde el correo de agradecimiento.
@@ -93,9 +102,13 @@ export function SatisfactionSurveyForm() {
   if (done) {
     return (
       <div className="space-y-3 text-center">
-        <h1 className="text-2xl font-bold text-ns-primary">Gracias</h1>
+        <h1 className="text-2xl font-bold text-ns-primary">
+          {isPreview ? "Aperçu OK" : "Gracias"}
+        </h1>
         <p className="text-sm text-ns-secondary">
-          Gracias. Lo leemos antes de armar la siguiente mesa.
+          {isPreview
+            ? "Mode aperçu — rien n’a été enregistré. Ferme cet onglet quand tu as validé le contenu."
+            : "Gracias. Lo leemos antes de armar la siguiente mesa."}
         </p>
       </div>
     );
@@ -103,6 +116,12 @@ export function SatisfactionSurveyForm() {
 
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
+      {isPreview ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-950">
+          Aperçu admin — tu peux tout cliquer ; rien n’est envoyé en base.
+        </div>
+      ) : null}
+
       <div className="text-center">
         <h1 className="text-2xl font-bold text-ns-primary">¿Cómo estuvo el evento?</h1>
         <p className="mt-2 text-sm text-ns-secondary">
@@ -153,7 +172,7 @@ export function SatisfactionSurveyForm() {
       {error && <p className={ERROR_TEXT}>{error}</p>}
 
       <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={!canSubmit || submitting}>
-        {submitting ? "Enviando…" : "Enviar"}
+        {submitting ? "Enviando…" : isPreview ? "Valider l’aperçu" : "Enviar"}
       </button>
     </form>
   );

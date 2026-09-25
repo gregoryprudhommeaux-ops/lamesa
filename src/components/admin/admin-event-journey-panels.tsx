@@ -192,6 +192,14 @@ export function AutoRemindersPanel({
             >
               {sending ? "Envoi…" : `Envoyer maintenant (${pendingSurvey})`}
             </button>
+            <a
+              href={`/${event.eventLanguage ?? "es"}/satisfaction?preview=1`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${BTN_SECONDARY} inline-flex items-center`}
+            >
+              Voir / valider le questionnaire →
+            </a>
           </div>
           {message ? <p className="mt-2 text-xs font-medium text-ns-primary">{message}</p> : null}
           {error ? <p className={`mt-2 ${ERROR_TEXT}`}>{error}</p> : null}
