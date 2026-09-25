@@ -58,6 +58,10 @@ export function AutoRemindersPanel({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setAutoSend(event.satisfactionSurveyAutoSend === true);
+  }, [event.id, event.satisfactionSurveyAutoSend]);
+
   const invitesSent = participations.filter((p) => Boolean(p.calendarInviteSentAt)).length;
   const confirmed = participations.filter(
     (p) => normalizeParticipationStatus(p.status) === "confirmed",
