@@ -2,8 +2,9 @@
 
 import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { interestSansReponseListName } from "@/lib/events/interest-prospect-lists";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import {
   SURVEY_COPY,
   surveyLocaleFrom,
@@ -13,7 +14,7 @@ import {
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type StdRelancePanelProps = {
   event: AdminEvent;
@@ -106,12 +107,35 @@ export function AutoRemindersPanel({
   const surveysDone = participations.filter((p) =>
     Boolean(p.satisfactionSurvey?.submittedAt),
   ).length;
-  const pendingSurvey = participations.filter((p) => {
-    if (p.isOrganizer) return false;
-    const status = normalizeParticipationStatus(p.status);
-    if (status !== "confirmed" && status !== "attending") return false;
-    return !p.satisfactionSurveySentAt;
-  }).length;
+
+  const pendingRecipients = useMemo(() => {
+    return participations
+      .filter((p) => {
+        if (isOrganizerParticipation(p)) return false;
+        const status = normalizeParticipationStatus(p.status);
+        if (status !== "confirmed" && status !== "attending") return false;
+        if (p.satisfactionSurveySentAt) return false;
+        return String(p.email ?? "").includes("@");
+      })
+      .slice()
+      .sort((a, b) =>
+        String(a.fullName || a.email).localeCompare(String(b.fullName || b.email), "fr"),
+      );
+  }, [participations]);
+
+  const alreadySentRecipients = useMemo(() => {
+    return participations
+      .filter((p) => {
+        if (isOrganizerParticipation(p)) return false;
+        return Boolean(p.satisfactionSurveySentAt);
+      })
+      .slice()
+      .sort((a, b) =>
+        String(a.fullName || a.email).localeCompare(String(b.fullName || b.email), "fr"),
+      );
+  }, [participations]);
+
+  const pendingSurvey = pendingRecipients.length;
 
   const contentValidated =
     Boolean(validatedAt) && validatedLocale === sendLocale;
@@ -180,14 +204,20 @@ export function AutoRemindersPanel({
   }
 
   async function sendNow() {
+    const namesPreview = pendingRecipients
+      .slice(0, 8)
+      .map((p) => p.fullName?.trim() || p.email)
+      .join(", ");
+    const more =
+      pendingRecipients.length > 8 ? ` (+${pendingRecipients.length - 8} autres)` : "";
     if (!contentValidated) {
       const ok = window.confirm(
-        `Tu n’as pas encore validé la langue (${LOCALE_LABELS[sendLocale]}) et les questions.\n\nEnvoyer quand même à ${pendingSurvey} personne(s) ?`,
+        `Tu n’as pas encore validé la langue (${LOCALE_LABELS[sendLocale]}) et les questions.\n\nEnvoyer quand même à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`,
       );
       if (!ok) return;
     } else if (
       !window.confirm(
-        `Envoyer le questionnaire de satisfaction à ${pendingSurvey} personne(s) éligible(s) ?`,
+        `Envoyer le questionnaire de satisfaction à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`,
       )
     ) {
       return;
@@ -355,6 +385,58 @@ export function AutoRemindersPanel({
               </span>
             </span>
           </label>
+
+          <div className="space-y-2 border-t border-gray-100 pt-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-ns-secondary">
+              Destinataires ({pendingSurvey})
+            </p>
+            <p className="text-xs text-ns-secondary">
+              Confirmés / présents, questionnaire pas encore envoyé. Organisateur exclu.
+            </p>
+            {pendingSurvey === 0 ? (
+              <p className="text-sm text-ns-secondary">
+                Personne en attente
+                {alreadySentRecipients.length > 0
+                  ? ` — ${alreadySentRecipients.length} déjà contacté(s).`
+                  : "."}
+              </p>
+            ) : (
+              <ul className="max-h-56 overflow-y-auto rounded-xl border border-ns-alternate divide-y divide-gray-100 bg-ns-brand-light/30">
+                {pendingRecipients.map((p) => {
+                  const status = normalizeParticipationStatus(p.status);
+                  return (
+                    <li
+                      key={p.id}
+                      className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium text-ns-tertiary">
+                        {p.fullName?.trim() || "—"}
+                      </span>
+                      <span className="text-xs text-ns-secondary">{p.email}</span>
+                      <span className="w-full text-[11px] text-ns-secondary">
+                        {status === "attending" ? "Présent" : "Confirmé"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {alreadySentRecipients.length > 0 ? (
+              <details className="text-xs text-ns-secondary">
+                <summary className="cursor-pointer font-semibold hover:text-ns-tertiary">
+                  Déjà envoyé ({alreadySentRecipients.length})
+                </summary>
+                <ul className="mt-2 space-y-1 pl-1">
+                  {alreadySentRecipients.map((p) => (
+                    <li key={p.id}>
+                      {(p.fullName?.trim() || "—") + " · " + p.email}
+                      {p.satisfactionSurvey?.submittedAt ? " · a répondu" : ""}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ) : null}
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <button
