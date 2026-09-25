@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import {
   findWaitlistByEmail,
@@ -166,14 +166,19 @@ export async function PATCH(request: Request) {
     profileComplete: nextProfileComplete,
   };
 
-  // External sync must not block / fail the member save (mobile → "Failed to fetch").
-  void syncWaitlistMemberToDatabasePerso(merged, "[me/profile]")
-    .then((sync) => persistDatabasePersoSyncStatus(profile.id, sync))
-    .catch((error) => {
+  // External sync after response — must use after() or Vercel kills the work.
+  after(async () => {
+    try {
+      const sync = await syncWaitlistMemberToDatabasePerso(merged, "[me/profile]");
+      await persistDatabasePersoSyncStatus(profile.id, sync);
+    } catch (error) {
       console.warn("[me/profile] database-perso sync failed:", error);
-    });
-  void syncWaitlistMemberToProspects(merged, "[me/profile]").catch((error) => {
-    console.warn("[me/profile] prospects sync failed:", error);
+    }
+    try {
+      await syncWaitlistMemberToProspects(merged, "[me/profile]");
+    } catch (error) {
+      console.warn("[me/profile] prospects sync failed:", error);
+    }
   });
 
   return NextResponse.json({ ok: true, id: profile.id });

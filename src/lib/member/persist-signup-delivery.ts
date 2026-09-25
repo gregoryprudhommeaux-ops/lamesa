@@ -9,6 +9,7 @@ export type DatabasePersoSyncResult = {
   ok: boolean;
   id?: string;
   skipped?: boolean;
+  error?: string;
 };
 
 /** Persist Database Perso upsert outcome on the waitlist doc. */
@@ -30,6 +31,11 @@ export async function persistDatabasePersoSyncStatus(
               databasePersoSyncedAt: now,
             }
           : {}),
+        ...(status === "failed"
+          ? {
+              databasePersoSyncError: (sync.error?.trim() || "unknown").slice(0, 500),
+            }
+          : { databasePersoSyncError: FieldValue.delete() }),
       },
       { merge: true },
     );
