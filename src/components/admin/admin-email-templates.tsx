@@ -1,6 +1,7 @@
 "use client";
 
 import { ColdOutreachPanel } from "@/components/admin/cold-outreach-panel";
+import { IncompleteProfilesBlastPanel } from "@/components/admin/incomplete-profiles-blast-panel";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
 import {
@@ -795,6 +796,15 @@ export function AdminEmailTemplatesPanel() {
               {showPreview ? "Masquer l’aperçu" : "Aperçu design"}
             </button>
           </div>
+
+          {activeKey === "light_signup" || activeKey === "profile_incomplete" ? (
+            <IncompleteProfilesBlastPanel
+              templateKey={activeKey}
+              locale={editLocale}
+              subject={subject}
+              body={body}
+            />
+          ) : null}
 
           {showPreview ? (
             <div className="max-w-full overflow-hidden rounded-xl border border-gray-200">
