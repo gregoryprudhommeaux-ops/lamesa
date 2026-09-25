@@ -154,7 +154,7 @@ async function buildExpressFromTemplate(input: {
   locale: TemplateLocale;
 }): Promise<{ subject: string; html: string; text: string }> {
   const locale = input.locale;
-  const loginUrl = `${getSiteUrl()}/${locale}/connexion`;
+  const loginUrl = `${getSiteUrl()}/${locale}/connexion?next=${encodeURIComponent("/compte?tab=profil")}`;
   const template = await getEmailTemplate("light_signup", null, locale);
   const vars: TemplateVars = {
     fullName: input.fullName,
