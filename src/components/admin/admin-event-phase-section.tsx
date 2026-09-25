@@ -33,8 +33,11 @@ export function EventPhaseSection({
   onToggle,
   children,
   footer,
-}: EventPhaseSectionProps) {
+  /** Command-center mode: hide the section entirely when not focused. */
+  hideWhenCollapsed = false,
+}: EventPhaseSectionProps & { hideWhenCollapsed?: boolean }) {
   const panelId = useId();
+  if (hideWhenCollapsed && !open) return null;
   return (
     <section
       id={`phase-${phase.id}`}

@@ -73,29 +73,24 @@ _Admin shell, RequireAuth, table builder, email templates, contact fiche — doc
 
 ## Known UX/product debt
 
-_À remplir après audits Jack (P0–P3)._
-
-## Metrics / signals to watch
-
-Conversion profil · taux réponse intérêt · confirmation · paiement · satisfaction · relances en retard.
-
-## Learnings transferable to other products
-
-- Command center + active phase (ops tools)
-- Insight contact format (CRM / Database Perso)
-- Progressive disclosure over “all modules equal”
-
-## Open questions / hypotheses
-
-_À tester._
+| Item | Status |
+|------|--------|
+| Monolithe `admin-events.tsx` (~2k lines) | En cours — shell command center (tranche 1) |
+| Listes participants dupliquées (roster / OUI / paiement / places) | Ouvert — tranche 2 |
+| Templates full-width avant CTA Envoyer | Ouvert — drawer P1 |
+| Page publique `/e` bifurcée interest/RSVP | Ouvert — vague 2 |
 
 ## Jack findings log
 
 | Date | P | Finding | Status |
 |------|---|---------|--------|
+| 2026-09-25 | P0 | Pas d’étape active dérivée ; 3 phases ouvertes | Tranche 1 : `suggestOpsPhase` + focus unique + en-tête NBA |
+| 2026-09-25 | P0 | `?id=` effacé au load | Tranche 1 : `?id=` + `?phase=` persistés |
+| 2026-09-25 | P1 | 4 listes participants / vocabulaires | Backlog |
 
 ## Changelog
 
 | Date | Change |
 |------|--------|
 | 2026-09-25 | Bootstrap mémoire produit alignée DOC Jack |
+| 2026-09-25 | Tranche 1 command center événement (shell + suggestion phase + deep link) |
