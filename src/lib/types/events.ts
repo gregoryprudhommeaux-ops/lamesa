@@ -191,6 +191,10 @@ export interface AdminEvent {
    * Default / omitted = OFF — admin sends manually.
    */
   satisfactionSurveyAutoSend?: boolean;
+  /** ISO stamp when admin validated survey language + questions before first send. */
+  satisfactionContentValidatedAt?: string | null;
+  /** Locale that was validated (es | fr | en). */
+  satisfactionContentValidatedLocale?: "es" | "fr" | "en" | null;
   /** Per-event overrides of global email templates (per locale) */
   emailTemplateOverrides?: Partial<
     Record<
