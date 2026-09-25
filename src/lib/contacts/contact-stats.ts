@@ -38,11 +38,14 @@ export function surveySnapshot(
           ? 5
           : 0
         : null;
+  const valueForMoney =
+    typeof survey.valueForMoney === "number" ? survey.valueForMoney : null;
   const parts = [
     survey.venueQuality,
     survey.menuQuality,
     survey.guestsQuality,
     survey.wouldReturn,
+    ...(valueForMoney === null ? [] : [valueForMoney]),
     ...(recommend === null ? [] : [recommend]),
   ];
   const overall = Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
@@ -52,6 +55,7 @@ export function surveySnapshot(
     guestsQuality: survey.guestsQuality,
     wouldReturn: survey.wouldReturn,
     wouldRecommend: recommend,
+    valueForMoney,
     comment: survey.comment?.trim() || undefined,
     submittedAt: survey.submittedAt,
     overall,

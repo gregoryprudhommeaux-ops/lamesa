@@ -57,6 +57,8 @@ export type ContactSurveySnapshot = {
   guestsQuality: number;
   wouldReturn: number;
   wouldRecommend: number | null;
+  /** 0–5 when present on newer surveys. */
+  valueForMoney?: number | null;
   comment?: string;
   submittedAt: string;
   /** Mean of available 0–5 scores. */

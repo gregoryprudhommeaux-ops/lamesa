@@ -2,7 +2,13 @@
 
 import { ColdOutreachPanel } from "@/components/admin/cold-outreach-panel";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
+import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
+import {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/satisfaction-survey-html";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import {
   DEFAULT_SEND_LOCALE,
   EMAIL_TEMPLATE_LABELS,
@@ -61,13 +67,27 @@ export function AdminEmailTemplatesPanel() {
     return () => window.clearTimeout(t);
   }, [body]);
 
-  const previewHtml = useMemo(
-    () =>
-      wrapLaMesaPlainBody(previewBody || "(Aperçu du corps…)", {
+  const previewHtml = useMemo(() => {
+    const raw = previewBody || "(Aperçu du corps…)";
+    if (activeKey === "satisfaction_survey") {
+      const surveyUrl = satisfactionTestSurveyUrl(PRODUCTION_SITE_URL, editLocale);
+      const format =
+        editLocale === "fr" ? "Dîner" : editLocale === "en" ? "Dinner" : "Cena";
+      const bodyText = raw
+        .replaceAll("{{fullName}}", "Test LA MESA")
+        .replaceAll("{{firstName}}", "Test")
+        .replaceAll("{{email}}", "test@example.com")
+        .replaceAll("{{eventTitle}}", "LA MESA — aperçu test")
+        .replaceAll("{{format}}", format)
+        .replaceAll("{{surveyUrl}}", surveyUrl);
+      return wrapLaMesaEmailHtml({
         lang: editLocale,
-      }),
-    [previewBody, editLocale],
-  );
+        bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),
+        footerHtml: satisfactionSurveyButtonHtml(surveyUrl, editLocale),
+      });
+    }
+    return wrapLaMesaPlainBody(raw, { lang: editLocale });
+  }, [previewBody, editLocale, activeKey]);
   const previewFooterHint =
     editLocale === "en"
       ? "How it works"

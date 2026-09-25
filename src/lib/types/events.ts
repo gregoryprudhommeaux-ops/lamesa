@@ -79,6 +79,8 @@ export type SatisfactionSurveyAnswers = {
   wouldReturn: number;
   /** 0–5: would recommend the LA MESA concept (new surveys). */
   wouldRecommend?: number;
+  /** 0–5: experience quality vs price paid (new surveys). */
+  valueForMoney?: number;
   /** Optional free-text constructive feedback. */
   comment?: string;
   /** @deprecated Prefer wouldRecommend. Kept for older submissions. */
@@ -186,6 +188,15 @@ export interface AdminEvent {
   inviteEmailSentAt?: string;
   /** Last Save the Date / interest blast (event-level stamp). */
   saveTheDateSentAt?: string;
+  /**
+   * When true, the daily cron sends satisfaction surveys 12–48h after startsAt.
+   * Default / omitted = OFF — admin sends manually.
+   */
+  satisfactionSurveyAutoSend?: boolean;
+  /** ISO stamp when admin validated survey language + questions before first send. */
+  satisfactionContentValidatedAt?: string | null;
+  /** Locale that was validated (es | fr | en). */
+  satisfactionContentValidatedLocale?: "es" | "fr" | "en" | null;
   /** Per-event overrides of global email templates (per locale) */
   emailTemplateOverrides?: Partial<
     Record<

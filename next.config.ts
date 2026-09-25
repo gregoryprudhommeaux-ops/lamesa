@@ -10,6 +10,21 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  async redirects() {
+    // Legacy admin test emails used /survey/demo (never a real page).
+    return [
+      {
+        source: "/:locale(es|fr|en)/survey/demo",
+        destination: "/:locale/satisfaction?preview=1",
+        permanent: false,
+      },
+      {
+        source: "/:locale(es|fr|en)/survey/:slug",
+        destination: "/:locale/satisfaction?preview=1",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {

@@ -9,19 +9,27 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import {
-  escapeEmailHtml,
-  laMesaEmailFooterText,
-  plainTextToEmailHtml,
-  wrapLaMesaEmailHtml,
-} from "@/lib/email/la-mesa-email-shell";
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+} from "@/lib/email/satisfaction-survey-html";
+import { laMesaEmailFooterText, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { getSiteUrl } from "@/lib/site-url";
+
+export {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionSurveyCtaLabel,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/satisfaction-survey-html";
 
 export async function sendSatisfactionSurveyEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
+  /** Admin manual blast — bypasses template “enabled” gate used by cron. */
+  force?: boolean;
 }): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string } | { ok: true; skipped: true; surveyUrl?: string }> {
-  if (!(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
+  if (!input.force && !(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
     return { ok: true, skipped: true };
   }
   const base = getSiteUrl();
@@ -44,12 +52,10 @@ export async function sendSatisfactionSurveyEmail(input: {
   });
   const subject = applyTemplateVars(template.subject, vars);
   const bodyText = applyTemplateVars(template.body, vars);
-  const cta =
-    locale === "en" ? "Share feedback" : locale === "fr" ? "Donner mon avis" : "Dar mi opinión";
   const html = wrapLaMesaEmailHtml({
     lang: locale,
-    bodyHtml: plainTextToEmailHtml(bodyText),
-    footerHtml: `<a href="${escapeEmailHtml(surveyUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 18px;border-radius:999px;">${escapeEmailHtml(cta)}</a>`,
+    bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),
+    footerHtml: satisfactionSurveyButtonHtml(surveyUrl, locale),
   });
 
   const result = await sendTransactionalEmail({

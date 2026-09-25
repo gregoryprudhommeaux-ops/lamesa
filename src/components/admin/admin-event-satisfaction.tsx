@@ -8,14 +8,21 @@ import type { AdminEventParticipation } from "@/lib/types/events";
 import { FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 
 const CATEGORIES: {
-  key: "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn" | "wouldRecommend";
+  key:
+    | "venueQuality"
+    | "menuQuality"
+    | "guestsQuality"
+    | "valueForMoney"
+    | "wouldReturn"
+    | "wouldRecommend";
   label: string;
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
-  { key: "guestsQuality", label: "Autres invités" },
-  { key: "wouldReturn", label: "Reviendrait" },
-  { key: "wouldRecommend", label: "Recommanderait" },
+  { key: "guestsQuality", label: "Sélection participants" },
+  { key: "valueForMoney", label: "Qualité / prix" },
+  { key: "wouldReturn", label: "Autres tables" },
+  { key: "wouldRecommend", label: "En parlerait" },
 ];
 
 function ScoreBar({ score, label }: { score: number | null; label: string }) {
@@ -78,7 +85,7 @@ export function AdminEventSatisfactionResults({
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-ns-secondary">
-                Recommanderait le concept
+                En parlerait à d’autres
               </p>
               <p className="mt-1 text-2xl font-bold text-ns-primary">
                 {formatScore(stats.wouldRecommend)}
@@ -100,23 +107,27 @@ export function AdminEventSatisfactionResults({
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
               {responses.map((r) => {
                 const s = r.survey;
+                const parts = [
+                  s.venueQuality,
+                  s.menuQuality,
+                  s.guestsQuality,
+                  s.wouldReturn,
+                  ...(typeof s.valueForMoney === "number" ? [s.valueForMoney] : []),
+                  ...(typeof s.wouldRecommend === "number" ? [s.wouldRecommend] : []),
+                ];
                 const localAvg =
-                  Math.round(
-                    ((s.venueQuality +
-                      s.menuQuality +
-                      s.guestsQuality +
-                      s.wouldReturn +
-                      (typeof s.wouldRecommend === "number" ? s.wouldRecommend : s.wouldReturn)) /
-                      5) *
-                      10,
-                  ) / 10;
+                  Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
                 return (
                   <li key={r.id} className="space-y-1 px-3 py-2 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-ns-tertiary">{r.name}</span>
                       <span className="text-xs text-ns-secondary">
-                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · invités{" "}
-                        {s.guestsQuality} · retour {s.wouldReturn} · reco{" "}
+                        {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · sélection{" "}
+                        {s.guestsQuality}
+                        {typeof s.valueForMoney === "number"
+                          ? ` · Q/P ${s.valueForMoney}`
+                          : ""}{" "}
+                        · tables {s.wouldReturn} · bouche{" "}
                         {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
                       </span>
                     </div>
