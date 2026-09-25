@@ -9,6 +9,7 @@ import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
  * Daily follow-up only (satisfaction survey).
  * Pre-event reminders live in the ICS VALARM (native calendar), not email cron.
  *
+ * Opt-in per event: `satisfactionSurveyAutoSend === true`.
  * Window: 12h–48h after startsAt, so a once-daily job still catches dinners
  * regardless of exact start time.
  */
@@ -43,6 +44,7 @@ async function runDailyFollowups() {
   const errors: string[] = [];
 
   for (const event of events) {
+    if (event.satisfactionSurveyAutoSend !== true) continue;
     if (!event.startsAt) continue;
     const startMs = new Date(event.startsAt).getTime();
     if (Number.isNaN(startMs)) continue;

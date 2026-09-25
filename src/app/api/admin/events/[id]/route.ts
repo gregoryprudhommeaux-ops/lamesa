@@ -38,6 +38,7 @@ const updateSchema = z.object({
     .nullable(),
   parking: z.enum(["secure_nearby", "valet", "on_site", "unknown"]).optional().nullable(),
   shareEnabled: z.boolean().optional(),
+  satisfactionSurveyAutoSend: z.boolean().optional(),
   responseMode: z.enum(["rsvp", "interest"]).optional(),
   subtitle: z.string().trim().max(200).optional().nullable(),
   interestDeadlineAt: z.string().optional().nullable(),

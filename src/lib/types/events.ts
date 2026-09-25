@@ -186,6 +186,11 @@ export interface AdminEvent {
   inviteEmailSentAt?: string;
   /** Last Save the Date / interest blast (event-level stamp). */
   saveTheDateSentAt?: string;
+  /**
+   * When true, the daily cron sends satisfaction surveys 12–48h after startsAt.
+   * Default / omitted = OFF — admin sends manually.
+   */
+  satisfactionSurveyAutoSend?: boolean;
   /** Per-event overrides of global email templates (per locale) */
   emailTemplateOverrides?: Partial<
     Record<
