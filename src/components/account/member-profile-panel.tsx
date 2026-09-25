@@ -378,8 +378,22 @@ export function MemberProfilePanel({
             id="member-linkedin"
             className={fieldInputClass(errorField === "linkedinUrl")}
             value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
-            onBlur={() => normalizeLinkedinField()}
+            onChange={(e) => {
+              setLinkedinUrl(e.target.value);
+              if (errorField === "linkedinUrl") {
+                setErrorField(null);
+                setError(null);
+              }
+            }}
+            onBlur={() => {
+              const normalized = normalizeLinkedinField();
+              if (normalized || !linkedinUrl.trim()) {
+                if (errorField === "linkedinUrl") {
+                  setErrorField(null);
+                  setError(null);
+                }
+              }
+            }}
             placeholder={tReg("fields.linkedinPlaceholder")}
             aria-invalid={errorField === "linkedinUrl"}
             aria-describedby="member-linkedin-hint"

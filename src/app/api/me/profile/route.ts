@@ -30,7 +30,7 @@ const profilePatchSchema = z
       .transform((v) => {
         if (v === undefined) return undefined;
         if (!v) return "";
-        return normalizeLinkedInUrl(v) || v;
+        return normalizeLinkedInUrl(v);
       })
       .refine((v) => v === undefined || v === "" || isValidLinkedInUrl(v), {
         message: "invalid_linkedin",
