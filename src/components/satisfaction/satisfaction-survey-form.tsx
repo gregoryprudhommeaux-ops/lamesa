@@ -3,6 +3,8 @@
 import {
   SURVEY_COPY,
   SURVEY_SCORE_FIELDS,
+  countMissingSurveyScores,
+  incompleteSurveyMessage,
   surveyLocaleFrom,
   type SurveyScoreField,
 } from "@/lib/satisfaction/survey-copy";
@@ -35,15 +37,33 @@ export function SatisfactionSurveyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const missingCount = useMemo(() => countMissingSurveyScores(scores), [scores]);
+  const answeredCount = SURVEY_SCORE_FIELDS.length - missingCount;
+  const allScoresAnswered = missingCount === 0;
+  const hasStarted = answeredCount > 0;
 
   const canSubmit = useMemo(() => {
-    if (isPreview) return Object.values(scores).every((v) => v !== null);
-    if (!token) return false;
-    return Object.values(scores).every((v) => v !== null);
-  }, [token, scores, isPreview]);
+    if (!allScoresAnswered) return false;
+    if (isPreview) return true;
+    return Boolean(token);
+  }, [allScoresAnswered, token, isPreview]);
+
+  const showIncompleteHint =
+    missingCount > 0 && (hasStarted || attemptedSubmit);
+  const incompleteHint = showIncompleteHint
+    ? incompleteSurveyMessage(locale, missingCount)
+    : null;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    setAttemptedSubmit(true);
+
+    if (!allScoresAnswered) {
+      setError(null);
+      return;
+    }
     if (!canSubmit) return;
 
     if (isPreview) {
@@ -102,7 +122,7 @@ export function SatisfactionSurveyForm() {
   }
 
   return (
-    <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
+    <form onSubmit={(e) => void onSubmit(e)} className="space-y-6" noValidate>
       {isPreview ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-950">
           {copy.previewBanner}
@@ -154,9 +174,10 @@ export function SatisfactionSurveyForm() {
         </p>
       </div>
 
+      {incompleteHint ? <p className={ERROR_TEXT}>{incompleteHint}</p> : null}
       {error && <p className={ERROR_TEXT}>{error}</p>}
 
-      <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={!canSubmit || submitting}>
+      <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={submitting}>
         {submitting ? copy.submitting : isPreview ? copy.previewSubmit : copy.submit}
       </button>
     </form>
