@@ -8,12 +8,19 @@ import type { AdminEventParticipation } from "@/lib/types/events";
 import { FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 
 const CATEGORIES: {
-  key: "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn" | "wouldRecommend";
+  key:
+    | "venueQuality"
+    | "menuQuality"
+    | "guestsQuality"
+    | "valueForMoney"
+    | "wouldReturn"
+    | "wouldRecommend";
   label: string;
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
   { key: "guestsQuality", label: "Sélection participants" },
+  { key: "valueForMoney", label: "Qualité / prix" },
   { key: "wouldReturn", label: "Autres tables" },
   { key: "wouldRecommend", label: "Recommanderait" },
 ];
@@ -100,23 +107,27 @@ export function AdminEventSatisfactionResults({
             <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-100">
               {responses.map((r) => {
                 const s = r.survey;
+                const parts = [
+                  s.venueQuality,
+                  s.menuQuality,
+                  s.guestsQuality,
+                  s.wouldReturn,
+                  ...(typeof s.valueForMoney === "number" ? [s.valueForMoney] : []),
+                  ...(typeof s.wouldRecommend === "number" ? [s.wouldRecommend] : []),
+                ];
                 const localAvg =
-                  Math.round(
-                    ((s.venueQuality +
-                      s.menuQuality +
-                      s.guestsQuality +
-                      s.wouldReturn +
-                      (typeof s.wouldRecommend === "number" ? s.wouldRecommend : s.wouldReturn)) /
-                      5) *
-                      10,
-                  ) / 10;
+                  Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 10) / 10;
                 return (
                   <li key={r.id} className="space-y-1 px-3 py-2 text-sm">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-ns-tertiary">{r.name}</span>
                       <span className="text-xs text-ns-secondary">
                         {localAvg}/5 · lieu {s.venueQuality} · menu {s.menuQuality} · sélection{" "}
-                        {s.guestsQuality} · tables {s.wouldReturn} · reco{" "}
+                        {s.guestsQuality}
+                        {typeof s.valueForMoney === "number"
+                          ? ` · Q/P ${s.valueForMoney}`
+                          : ""}{" "}
+                        · tables {s.wouldReturn} · reco{" "}
                         {typeof s.wouldRecommend === "number" ? s.wouldRecommend : "—"}
                       </span>
                     </div>

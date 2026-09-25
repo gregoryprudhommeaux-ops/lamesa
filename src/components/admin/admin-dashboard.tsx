@@ -222,13 +222,19 @@ type DashboardPayload = {
 const CATEGORIES: {
   key: keyof Pick<
     SatisfactionAverages,
-    "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn" | "wouldRecommend"
+    | "venueQuality"
+    | "menuQuality"
+    | "guestsQuality"
+    | "valueForMoney"
+    | "wouldReturn"
+    | "wouldRecommend"
   >;
   label: string;
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
   { key: "guestsQuality", label: "Sélection participants" },
+  { key: "valueForMoney", label: "Qualité / prix" },
   { key: "wouldReturn", label: "Autres tables" },
   { key: "wouldRecommend", label: "Recommanderait" },
 ];
@@ -1608,7 +1614,8 @@ export function AdminDashboardPanel() {
                   <th className="py-2 pr-3 font-semibold">Moy.</th>
                   <th className="py-2 pr-3 font-semibold">Lieu</th>
                   <th className="py-2 pr-3 font-semibold">Menu</th>
-                      <th className="py-2 pr-3 font-semibold">Sélection</th>
+                  <th className="py-2 pr-3 font-semibold">Sélection</th>
+                  <th className="py-2 pr-3 font-semibold">Q/P</th>
                   <th className="py-2 pr-3 font-semibold">Tables</th>
                   <th className="py-2 font-semibold">Reco</th>
                 </tr>
@@ -1646,6 +1653,7 @@ export function AdminDashboardPanel() {
                       <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
                       <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
                       <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
+                      <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
                       <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
                       <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
                     </tr>
