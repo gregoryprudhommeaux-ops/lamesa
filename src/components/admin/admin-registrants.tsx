@@ -1369,7 +1369,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                         href={`/admin/contacts?email=${encodeURIComponent(active.email)}`}
                         className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100"
                       >
-                        Mémoire contact
+                        Parcours · surveys · CA
                       </Link>
                     ) : null}
                   </dd>

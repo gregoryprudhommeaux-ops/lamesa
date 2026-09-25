@@ -21,7 +21,20 @@ export type TimelineParticipation = Pick<
   | "rsvpAt"
   | "confirmationEmailSentAt"
   | "calendarInviteSentAt"
+  | "saveTheDateSentAt"
+  | "satisfactionSurvey"
+  | "satisfactionSurveySentAt"
 >;
+
+export type TimelineRespondent = {
+  id: string;
+  eventId: string;
+  email: string;
+  interestResponse?: string | null;
+  attendance?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
 
 function dayKey(iso: string): string {
   return String(iso ?? "").slice(0, 10);
@@ -70,6 +83,7 @@ export function deriveContactActivities(input: {
   prospect: Prospect | null;
   participations: TimelineParticipation[];
   events: TimelineEventLite[];
+  respondents?: TimelineRespondent[];
 }): ContactActivity[] {
   const email = normalizeProspectEmail(input.email);
   const out: ContactActivity[] = [];
@@ -160,7 +174,7 @@ export function deriveContactActivities(input: {
     if (normalizeProspectEmail(p.email) !== email) continue;
     const status = normalizeParticipationStatus(p.status);
     const title = eventTitle(input.events, p.eventId);
-    const invitedAt = p.calendarInviteSentAt || p.createdAt;
+    const invitedAt = p.calendarInviteSentAt || p.saveTheDateSentAt || p.createdAt;
     if (invitedAt && countsAsInvitation(status)) {
       out.push(
         derived({
@@ -213,6 +227,67 @@ export function deriveContactActivities(input: {
         }),
       );
     }
+    const survey = p.satisfactionSurvey;
+    if (survey?.submittedAt) {
+      const reco =
+        typeof survey.wouldRecommend === "number" ? survey.wouldRecommend : null;
+      out.push(
+        derived({
+          email,
+          idSuffix: `survey:${p.id}`,
+          type: "survey_submitted",
+          at: survey.submittedAt,
+          source: "guest",
+          summary:
+            reco === null
+              ? `Satisfaction · ${title}`
+              : `Satisfaction · ${title} · reco ${reco}/5`,
+          refs: { eventId: p.eventId, participationId: p.id },
+          meta: {
+            venueQuality: survey.venueQuality,
+            menuQuality: survey.menuQuality,
+            guestsQuality: survey.guestsQuality,
+            wouldReturn: survey.wouldReturn,
+            wouldRecommend: reco,
+          },
+        }),
+      );
+    } else if (p.satisfactionSurveySentAt) {
+      out.push(
+        derived({
+          email,
+          idSuffix: `survey-sent:${p.id}`,
+          type: "email_sent",
+          at: p.satisfactionSurveySentAt,
+          source: "system",
+          summary: `Questionnaire satisfaction envoyé · ${title}`,
+          refs: {
+            eventId: p.eventId,
+            participationId: p.id,
+            templateKey: "satisfaction_survey",
+          },
+        }),
+      );
+    }
+  }
+
+  for (const r of input.respondents ?? []) {
+    if (normalizeProspectEmail(r.email) !== email) continue;
+    const answer = String(r.interestResponse || "").trim().toLowerCase();
+    if (answer !== "yes" && answer !== "no") continue;
+    const title = eventTitle(input.events, r.eventId);
+    const at = r.updatedAt || r.createdAt || new Date(0).toISOString();
+    out.push(
+      derived({
+        email,
+        idSuffix: `interest:${r.id}`,
+        type: answer === "yes" ? "interest_yes" : "interest_no",
+        at,
+        source: "guest",
+        summary: answer === "yes" ? `Intérêt OUI · ${title}` : `Intérêt NON · ${title}`,
+        refs: { eventId: r.eventId },
+      }),
+    );
   }
 
   return out;
@@ -248,6 +323,9 @@ export function activityTypeLabel(type: ContactActivityType): string {
     rsvp_no: "Refus",
     confirmed_seat: "Confirmé",
     seen_marked: "Vu",
+    interest_yes: "Intérêt oui",
+    interest_no: "Intérêt non",
+    survey_submitted: "Satisfaction",
   };
   return labels[type] ?? type;
 }
