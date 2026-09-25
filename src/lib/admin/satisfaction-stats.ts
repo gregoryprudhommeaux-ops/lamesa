@@ -5,6 +5,7 @@ export type SatisfactionAverages = {
   venueQuality: number | null;
   menuQuality: number | null;
   guestsQuality: number | null;
+  valueForMoney: number | null;
   wouldReturn: number | null;
   wouldRecommend: number | null;
   responseCount: number;
@@ -25,6 +26,14 @@ function recommendScore(s: SatisfactionSurveyAnswers): number | null {
   return null;
 }
 
+function surveyParts(s: SatisfactionSurveyAnswers): number[] {
+  const parts = [s.venueQuality, s.menuQuality, s.guestsQuality, s.wouldReturn];
+  if (typeof s.valueForMoney === "number") parts.push(s.valueForMoney);
+  const rec = recommendScore(s);
+  if (rec !== null) parts.push(rec);
+  return parts;
+}
+
 export function surveysFromParticipations(
   parts: Array<Pick<AdminEventParticipation, "satisfactionSurvey">>,
 ): SatisfactionSurveyAnswers[] {
@@ -43,6 +52,7 @@ export function computeSatisfactionAverages(
       venueQuality: null,
       menuQuality: null,
       guestsQuality: null,
+      valueForMoney: null,
       wouldReturn: null,
       wouldRecommend: null,
       responseCount: 0,
@@ -55,18 +65,16 @@ export function computeSatisfactionAverages(
   const menu = surveys.map((s) => s.menuQuality);
   const guests = surveys.map((s) => s.guestsQuality);
   const ret = surveys.map((s) => s.wouldReturn);
+  const value = surveys
+    .map((s) => s.valueForMoney)
+    .filter((n): n is number => typeof n === "number");
   const recommend = surveys
     .map((s) => recommendScore(s))
     .filter((n): n is number => n !== null);
 
   const perSurveyOverall = surveys.map((s) => {
-    const rec = recommendScore(s);
-    if (rec === null) {
-      return (s.venueQuality + s.menuQuality + s.guestsQuality + s.wouldReturn) / 4;
-    }
-    return (
-      (s.venueQuality + s.menuQuality + s.guestsQuality + s.wouldReturn + rec) / 5
-    );
+    const parts = surveyParts(s);
+    return parts.reduce((a, b) => a + b, 0) / parts.length;
   });
 
   return {
@@ -74,6 +82,7 @@ export function computeSatisfactionAverages(
     venueQuality: avg(venue),
     menuQuality: avg(menu),
     guestsQuality: avg(guests),
+    valueForMoney: avg(value),
     wouldReturn: avg(ret),
     wouldRecommend: avg(recommend),
     responseCount,

@@ -79,6 +79,8 @@ export type SatisfactionSurveyAnswers = {
   wouldReturn: number;
   /** 0–5: would recommend the LA MESA concept (new surveys). */
   wouldRecommend?: number;
+  /** 0–5: experience quality vs price paid (new surveys). */
+  valueForMoney?: number;
   /** Optional free-text constructive feedback. */
   comment?: string;
   /** @deprecated Prefer wouldRecommend. Kept for older submissions. */

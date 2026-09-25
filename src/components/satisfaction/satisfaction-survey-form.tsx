@@ -27,6 +27,7 @@ export function SatisfactionSurveyForm() {
     venueQuality: null,
     menuQuality: null,
     guestsQuality: null,
+    valueForMoney: null,
     wouldReturn: null,
     wouldRecommend: null,
   });
@@ -61,6 +62,7 @@ export function SatisfactionSurveyForm() {
           venueQuality: scores.venueQuality,
           menuQuality: scores.menuQuality,
           guestsQuality: scores.guestsQuality,
+          valueForMoney: scores.valueForMoney,
           wouldReturn: scores.wouldReturn,
           wouldRecommend: scores.wouldRecommend,
           comment: comment.trim(),
