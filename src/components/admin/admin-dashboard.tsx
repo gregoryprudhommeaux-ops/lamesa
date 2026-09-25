@@ -229,7 +229,7 @@ const CATEGORIES: {
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
   { key: "guestsQuality", label: "Sélection participants" },
-  { key: "wouldReturn", label: "Reviendrait" },
+  { key: "wouldReturn", label: "Autres tables" },
   { key: "wouldRecommend", label: "Recommanderait" },
 ];
 
