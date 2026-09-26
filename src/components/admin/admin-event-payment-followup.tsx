@@ -248,7 +248,7 @@ export function AdminEventPaymentFollowupPanel({
       {visible.length === 0 ? (
         <p className="text-sm text-ns-secondary">
           {rows.length === 0
-            ? "Personne n’a encore reçu l’invitation formelle — envoie-la ci-dessus."
+            ? "Personne n’a encore reçu l’invitation formelle — envoie-la en phase Invitation."
             : "Aucun membre dans ce filtre."}
         </p>
       ) : (
