@@ -139,6 +139,8 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 
 `places_available` reste l’exception Prépa dîner.
 
+**Dernier email (2026-09-26) :** la carte dashboard suit le tampon le plus récent sur les participations (invitation, relance paiement, confirmation, questionnaire), pas seulement l’archive du dernier appel. Les envois suivants écrivent aussi cette archive.
+
 ## Jack findings log
 
 | Date | P | Finding | Status |
@@ -155,6 +157,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
 | 2026-09-26 | P1 | Relance STD custom + reminders dans « Automatiques » | Fait — `std_relance` + bibliothèque scindée |
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
+| 2026-09-26 | P0 | Carte « Dernier email » figée sur places dispo | Fait — tampon d’envoi le plus récent |
 
 ## Changelog
 
@@ -170,3 +173,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
+| 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |

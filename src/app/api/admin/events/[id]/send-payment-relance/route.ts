@@ -4,7 +4,9 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { splitPaymentRelanceBatch } from "@/lib/events/payment-relance-batch";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
@@ -94,6 +96,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const p of targets) {
     const result = await sendTemplatedEventEmail({
@@ -111,10 +114,24 @@ export async function POST(request: Request, { params }: Params) {
       continue;
     }
     sent += 1;
+    sentEmails.push(p.email);
     await db.collection(COLLECTIONS.participations).doc(p.id).set(
       { paymentRelanceSentAt: now, updatedAt: now },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "payment_relance",
+      templateLabel: templateLabel("payment_relance"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "payment_relance",
+    });
   }
 
   return NextResponse.json({

@@ -26,8 +26,10 @@ import {
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
   inferLastPlacesAvailableCampaign,
+  inferLatestOutboundEmail,
   loadLastEmailCampaign,
   loadRecentEmailCampaigns,
+  mergeCampaignHistory,
   pickLatestCampaign,
   toEmailCampaignHistoryRow,
   type EmailCampaignHistoryRow,
@@ -424,12 +426,14 @@ export async function GET(request: Request) {
         events,
       );
       const inferredPlaces = inferLastPlacesAvailableCampaign(events, participations);
+      const inferredOutbound = inferLatestOutboundEmail(events, participations);
       const campaign = pickLatestCampaign(
         storedCampaign,
         recentCampaigns[0] ?? null,
         inferredFromEvents,
         inferredFromProspects,
         inferredPlaces,
+        inferredOutbound,
       );
 
       const prospectsCache = new Map<string, RsvpProspectRow[]>();
@@ -502,12 +506,14 @@ export async function GET(request: Request) {
         lastEmailResults = await summarizeCampaign(campaign);
       }
 
-      const historySource =
-        recentCampaigns.length > 0
-          ? recentCampaigns
-          : campaign
-            ? [campaign]
-            : [];
+      const historySource = mergeCampaignHistory(recentCampaigns, [
+        campaign,
+        inferredOutbound,
+        inferredFromEvents,
+        inferredFromProspects,
+        inferredPlaces,
+        storedCampaign,
+      ]);
       const historyRows: EmailCampaignHistoryRow[] = [];
       for (const c of historySource.slice(0, 6)) {
         // Skip duplicate of the live last-email row when ids match.
