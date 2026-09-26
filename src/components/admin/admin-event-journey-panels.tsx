@@ -34,7 +34,7 @@ export function StdRelancePanel({ event }: StdRelancePanelProps) {
       </div>
       <div className="flex flex-wrap gap-2">
         <Link
-          href={`/admin/prospects?list=${encodeURIComponent(listName)}`}
+          href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(listName)}`}
           className={`${BTN_SECONDARY} inline-flex items-center`}
         >
           Ouvrir liste relance →

@@ -895,7 +895,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   {hygiene.authWithoutProfile.slice(0, 40).map((u) => (
                     <li key={u.uid}>
                       <a
-                        href={`/admin/contacts?email=${encodeURIComponent(u.email)}`}
+                        href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(u.email)}`}
                         className="font-medium underline-offset-2 hover:underline"
                       >
                         {u.email}
@@ -1366,7 +1366,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                     </a>
                     {active.email?.includes("@") ? (
                       <Link
-                        href={`/admin/contacts?email=${encodeURIComponent(active.email)}`}
+                        href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(active.email)}`}
                         className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100"
                       >
                         Parcours · surveys · CA

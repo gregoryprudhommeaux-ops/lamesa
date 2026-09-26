@@ -1,10 +1,13 @@
+import { AdminCalendarPanel } from "@/components/admin/admin-calendar";
+import { AdminDinersViewToggle } from "@/components/admin/admin-diners-view-toggle";
 import { AdminEventsPanel } from "@/components/admin/admin-events";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { getSiteUrl } from "@/lib/site-url";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
-  title: "Événements",
+  title: "Dîners",
 };
 
 function flattenAdminLabels(messages: Record<string, unknown>, prefix = ""): Record<string, string> {
@@ -20,16 +23,29 @@ function flattenAdminLabels(messages: Record<string, unknown>, prefix = ""): Rec
   return out;
 }
 
-export default async function AdminEventsPage() {
+export default async function AdminDinersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const sp = await searchParams;
+  const calendarView = sp.view === "calendrier";
+
   const messages = (await import("../../../../messages/fr.json")).default as Record<string, unknown>;
   const adminMessages = messages.admin as Record<string, unknown>;
   const labels = flattenAdminLabels(adminMessages);
-
   const publicBaseUrl = getSiteUrl();
 
   return (
-    <AdminShell>
-      <AdminEventsPanel labels={labels} locale="fr" publicBaseUrl={publicBaseUrl} />
+    <AdminShell title="Dîners">
+      <Suspense fallback={<p className="text-sm text-ns-secondary">Chargement…</p>}>
+        <AdminDinersViewToggle />
+        {calendarView ? (
+          <AdminCalendarPanel title="Calendrier" />
+        ) : (
+          <AdminEventsPanel labels={labels} locale="fr" publicBaseUrl={publicBaseUrl} />
+        )}
+      </Suspense>
     </AdminShell>
   );
 }

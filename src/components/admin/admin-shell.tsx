@@ -12,19 +12,31 @@ import type { ReactNode } from "react";
 type AdminShellProps = {
   children: ReactNode;
   title?: string;
-  /** Full-bleed denser chrome for data-heavy admin (Prospects CRM). */
+  /** Full-bleed denser chrome for data-heavy admin (Personnes CRM). */
   density?: "default" | "workspace";
 };
 
-const ADMIN_NAV = [
-  { href: "/admin/dashboard", label: "Dashboard" },
-  { href: "/admin/inscrits", label: "Membres" },
-  { href: "/admin/prospects", label: "Prospects" },
-  { href: "/admin/calendrier", label: "Calendrier" },
-  { href: "/admin/evenements", label: "Événements" },
-  { href: "/admin/tables", label: "Tables" },
-  { href: "/admin/templates", label: "Templates" },
-] as const;
+/** Top-level destinations — Dashboard is the front door; everything else is a métier hub. */
+const ADMIN_NAV: Array<{
+  href: string;
+  label: string;
+  /** Path prefixes that mark this item active (legacy redirects included). */
+  match: string[];
+}> = [
+  { href: "/admin/dashboard", label: "Dashboard", match: ["/admin/dashboard"] },
+  {
+    href: "/admin/evenements",
+    label: "Dîners",
+    match: ["/admin/evenements", "/admin/calendrier"],
+  },
+  {
+    href: "/admin/personnes",
+    label: "Personnes",
+    match: ["/admin/personnes", "/admin/inscrits", "/admin/prospects", "/admin/contacts"],
+  },
+  { href: "/admin/tables", label: "Tables", match: ["/admin/tables"] },
+  { href: "/admin/templates", label: "Coms", match: ["/admin/templates"] },
+];
 
 const SITE_NAV = [
   { href: "/" as const, label: "Accueil" },
@@ -32,6 +44,12 @@ const SITE_NAV = [
   { href: "/light" as const, label: "Inscription express" },
   { href: "/compte?tab=profil" as const, label: "Espace membre" },
 ];
+
+function navItemActive(pathname: string, match: string[]): boolean {
+  return match.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 export function AdminShell({
   children,
@@ -105,8 +123,7 @@ export function AdminShell({
                   aria-label="Administration"
                 >
                   {ADMIN_NAV.map((item) => {
-                    const active =
-                      pathname === item.href || pathname.startsWith(`${item.href}/`);
+                    const active = navItemActive(pathname, item.match);
                     return (
                       <Link
                         key={item.href}

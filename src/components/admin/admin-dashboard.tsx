@@ -10,7 +10,7 @@ import {
   formatRegistrantDate,
   registrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -276,7 +276,7 @@ function OpsQueueCard({
           {rows.slice(0, 5).map((row) => (
             <li key={row.id}>
               <Link
-                href={`/admin/inscrits?id=${encodeURIComponent(row.id)}`}
+                href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.id)}`}
                 className="block rounded-lg px-2 py-1.5 hover:bg-ns-brand-light/60"
               >
                 <span className="block truncate text-sm font-semibold text-ns-tertiary">
@@ -451,7 +451,7 @@ function ResponseCounters({
         <p className="mt-1 text-2xl font-black text-amber-950">{pending}</p>
         {sansReponseListName ? (
           <Link
-            href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+            href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(sansReponseListName)}`}
             className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
           >
             Liste relance →
@@ -946,7 +946,7 @@ function DistributionDetailModal({
               {selection.members.map((m) => (
                 <li key={m.id}>
                   <Link
-                    href={`/admin/inscrits?id=${encodeURIComponent(m.id)}`}
+                    href={`/admin/personnes?tab=membres&id=${encodeURIComponent(m.id)}`}
                     className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
                     onClick={onClose}
                   >
@@ -1211,21 +1211,174 @@ export function AdminDashboardPanel() {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Cockpit ops : prochain dîner, performance des emails, vivier et satisfaction.
+            Porte d’entrée ops — situation, prochaines actions, accès aux hubs.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
             Rafraîchir
           </button>
-          <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
-            Templates email
-          </Link>
-          <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
+          <Link href="/admin/evenements?nouveau=1" className={`${BTN_PRIMARY} text-sm`}>
             Nouvel événement
           </Link>
         </div>
       </div>
+
+      {/* Bande 1 — Maintenant */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Maintenant
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Le dîner en cours et l’action prioritaire.
+          </p>
+        </div>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {nextEventRsvp ? (
+            <NextEventRsvpCard rsvp={nextEventRsvp} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Prochain événement
+              </p>
+              <p className="mt-2 text-sm text-ns-secondary">
+                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
+              </p>
+              <Link
+                href="/admin/evenements?nouveau=1"
+                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Nouvel événement →
+              </Link>
+            </div>
+          )}
+          {lastEmailResults ? (
+            <LastEmailResultsCard results={lastEmailResults} />
+          ) : (
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Dernier email
+              </p>
+              <p className="mt-2 text-sm text-ns-secondary">
+                Aucun envoi tracké — lance un STD ou une campagne depuis Coms / Personnes.
+              </p>
+              <Link
+                href="/admin/personnes?tab=prospects"
+                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Personnes · Prospects →
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Bande 2 — À traiter */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            À traiter
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Files prioritaires — un clic vers Personnes.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <OpsQueueCard
+            title="Profils incomplets"
+            href="/admin/personnes?tab=membres&profile=incomplete"
+            rows={queues.incomplete}
+          />
+          <OpsQueueCard
+            title="À prioriser"
+            href="/admin/personnes?tab=membres"
+            rows={queues.priority}
+          />
+          <OpsQueueCard
+            title="À revoir"
+            href="/admin/personnes?tab=membres"
+            rows={queues.review}
+          />
+          <OpsQueueCard
+            title="No-show"
+            href="/admin/personnes?tab=membres"
+            rows={queues.noShow}
+          />
+        </div>
+        {needingAttention > 0 ? (
+          <Link
+            href="/admin/personnes?tab=membres&profile=incomplete"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
+          >
+            <div>
+              <p className="text-sm font-bold text-amber-950">
+                {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
+              </p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-amber-900">Ouvrir Personnes →</span>
+          </Link>
+        ) : null}
+      </section>
+
+      {/* Bande 3 — Accès */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Accès
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Les hubs du backend — tout part d’ici.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/admin/evenements"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Dîners</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {kpis.eventsUpcoming} à venir
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">
+              {kpis.eventsPublished} publiés · pilotage par phase
+            </p>
+          </Link>
+          <Link
+            href="/admin/personnes"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Personnes
+            </p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{kpis.waitlistUsers}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Membres · Prospects · Mémoire</p>
+          </Link>
+          <Link
+            href="/admin/templates"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Coms</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {emailCampaignHistory.length > 0
+                ? `${emailCampaignHistory.length} envoi${emailCampaignHistory.length > 1 ? "s" : ""}`
+                : "Templates"}
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">Bibliothèque · blasts · nurture</p>
+          </Link>
+          <Link
+            href="/admin/tables"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Tables</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{recentTableDrafts.length}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Brouillons récents · composition</p>
+          </Link>
+        </div>
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
@@ -1242,93 +1395,17 @@ export function AdminDashboardPanel() {
         />
       </section>
 
-      <section>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Files ops
-          </h3>
-          <p className="mt-1 text-xs text-ns-secondary">
-            Dîner en cours (OUI / confirmés / sans réponse) puis vivier à traiter.
-          </p>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {nextEventRsvp ? (
-            <NextEventRsvpCard rsvp={nextEventRsvp} />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Prochain événement
-              </p>
-              <p className="mt-2 text-sm text-ns-secondary">
-                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
-              </p>
-              <Link
-                href="/admin/evenements?nouveau=1"
-                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-              >
-                Nouvel événement →
-              </Link>
-            </div>
-          )}
-          <OpsQueueCard
-            title="Profils incomplets"
-            href="/admin/inscrits?profile=incomplete"
-            rows={queues.incomplete}
-          />
-          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
-          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
-          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
-        </div>
-      </section>
-
       <section className="space-y-4">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Performance emails
+            Approfondir · emails
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Résultat du dernier blast (OUI / NON / inscrits / confirmés) et historique pour
-            apprendre ce qui marche.
+            Historique des blasts pour apprendre ce qui marche.
           </p>
         </div>
-        {lastEmailResults ? (
-          <LastEmailResultsCard results={lastEmailResults} />
-        ) : (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-              Dernier email
-            </p>
-            <p className="mt-2 text-sm text-ns-secondary">
-              Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
-              Prospects pour voir la performance ici.
-            </p>
-            <Link
-              href="/admin/prospects"
-              className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-            >
-              Prospects →
-            </Link>
-          </div>
-        )}
         <EmailCampaignHistoryTable rows={emailCampaignHistory} />
       </section>
-
-      {needingAttention > 0 ? (
-        <Link
-          href="/admin/inscrits?profile=incomplete"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
-        >
-          <div>
-            <p className="text-sm font-bold text-amber-950">
-              {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
-            </p>
-            <p className="mt-0.5 text-xs text-amber-900/80">
-              Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
-        </Link>
-      ) : null}
 
       <section>
         <div className="mb-3">
@@ -1450,7 +1527,7 @@ export function AdminDashboardPanel() {
               {avgCompletion !== null ? ` · complétion moyenne ${avgCompletion}%` : ""}
             </p>
           </div>
-          <Link href="/admin/inscrits" className="text-xs font-semibold text-ns-primary hover:underline">
+          <Link href="/admin/personnes?tab=membres" className="text-xs font-semibold text-ns-primary hover:underline">
             Voir tous les membres →
           </Link>
         </div>
@@ -1482,12 +1559,12 @@ export function AdminDashboardPanel() {
                       key={r.id}
                       className="cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60"
                       onClick={() => {
-                        router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
+                        router.push(`/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
+                          router.push(`/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`);
                         }
                       }}
                       tabIndex={0}

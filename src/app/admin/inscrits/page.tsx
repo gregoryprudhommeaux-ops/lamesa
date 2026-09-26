@@ -1,18 +1,27 @@
-import { AdminRegistrantsPanel } from "@/components/admin/admin-registrants";
-import { AdminShell } from "@/components/admin/admin-shell";
 import type { Metadata } from "next";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Membres",
 };
 
-export default function AdminMembresPage() {
-  return (
-    <AdminShell title="Membres">
-      <Suspense fallback={<p className="text-sm text-ns-secondary">Chargement…</p>}>
-        <AdminRegistrantsPanel title="Membres" />
-      </Suspense>
-    </AdminShell>
-  );
+function firstString(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v;
+}
+
+/** Legacy route → Personnes hub (onglet Membres). */
+export default async function AdminMembresRedirectPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const params = new URLSearchParams();
+  params.set("tab", "membres");
+  for (const key of ["id", "profile", "source"] as const) {
+    const val = firstString(sp[key]);
+    if (val) params.set(key, val);
+  }
+  redirect(`/admin/personnes?${params.toString()}`);
 }
