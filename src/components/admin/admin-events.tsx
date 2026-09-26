@@ -1897,23 +1897,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   onEventUpdated={() => void loadAll()}
                   hint="Relance ACCESS — bold/liens supportés."
                 />
-                <AdminEventParticipantRoster
-                  participations={activeParticipations}
-                  capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
-                  title="À relancer (invitation sans paiement)"
-                  initialFilter="unpaid_invite"
-                  labels={{
-                    invited: labels["statuses.invited"],
-                    attending: labels["statuses.attending"] ?? "Attending",
-                    confirmed: labels["statuses.confirmed"] ?? "Confirmé",
-                    not_attending: labels["statuses.not_attending"] ?? "Not attending",
-                    waitlist: labels["statuses.waitlist"],
-                    seatedSummary: labels.seatingSummary,
-                  }}
-                  onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-                  onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
-                  onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                />
                 <AdminEventPaymentFollowupPanel
                   event={activeEvent}
                   participations={activeParticipations}
