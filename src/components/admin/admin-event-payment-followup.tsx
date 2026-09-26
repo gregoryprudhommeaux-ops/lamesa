@@ -149,6 +149,7 @@ export function AdminEventPaymentFollowupPanel({
         sent?: number;
         failed?: number;
         skipped?: number;
+        alreadySent?: number;
         error?: string;
         detail?: string;
       };
@@ -157,6 +158,7 @@ export function AdminEventPaymentFollowupPanel({
       }
       setMessage(
         `Relance paiement envoyée : ${json.sent ?? 0}` +
+          (json.alreadySent ? ` · déjà relancés ${json.alreadySent}` : "") +
           (json.failed ? ` · échecs ${json.failed}` : "") +
           (json.skipped ? ` · ignorés ${json.skipped}` : ""),
       );
@@ -188,7 +190,7 @@ export function AdminEventPaymentFollowupPanel({
             Trois statuts : <strong>À relancer</strong> (paiement en attente),{" "}
             <strong>A payé</strong> (place confirmée + email auto),{" "}
             <strong>Ne viendra pas</strong>. Tu peux envoyer un email de relance à tous les « À
-            relancer » (ex. demain).
+            relancer » (ex. demain). Une personne déjà relancée n’est pas renvoyée.
           </p>
           {deadlineLabel ? (
             <p className="mt-1 text-xs text-ns-secondary">

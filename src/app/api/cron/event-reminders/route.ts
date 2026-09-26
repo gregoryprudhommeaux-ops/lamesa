@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendSatisfactionSurveyEmail } from "@/lib/email/send-satisfaction-survey";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
@@ -63,13 +63,12 @@ async function runDailyFollowups() {
         ...(doc.data() as Omit<AdminEventParticipation, "id">),
       };
       checked += 1;
-      const status = normalizeParticipationStatus(p.status);
 
       if (isOrganizerParticipation(p)) {
         skipped += 1;
         continue;
       }
-      if (status !== "confirmed" && status !== "attending") {
+      if (!isPaidGuestStatus(p.status)) {
         skipped += 1;
         continue;
       }

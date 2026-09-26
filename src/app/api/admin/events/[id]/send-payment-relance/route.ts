@@ -6,6 +6,7 @@ import {
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
+import { splitPaymentRelanceBatch } from "@/lib/events/payment-relance-batch";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
@@ -63,24 +64,27 @@ export async function POST(request: Request, { params }: Params) {
     ? new Set(parsed.data.emails.map((e) => normalizeEmail(e)))
     : null;
 
-  const targets = partsSnap.docs
+  const awaiting = partsSnap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) }))
     .filter((p) => isAwaitingPayment(p))
     .filter((p) => (emailFilter ? emailFilter.has(normalizeEmail(p.email)) : true))
     .filter((p) => String(p.email ?? "").includes("@"));
 
-  if (targets.length === 0) {
+  if (awaiting.length === 0) {
     return NextResponse.json(
       { ok: false, error: "no_recipients", detail: "Personne en statut « À relancer »." },
       { status: 400 },
     );
   }
 
+  const { toSend: targets, alreadySent } = splitPaymentRelanceBatch(awaiting);
+
   if (parsed.data.dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
       count: targets.length,
+      alreadySent: alreadySent.length,
       emails: targets.map((t) => t.email),
     });
   }
@@ -118,6 +122,7 @@ export async function POST(request: Request, { params }: Params) {
     sent,
     failed,
     skipped,
+    alreadySent: alreadySent.length,
     targeted: targets.length,
     errors: errors.slice(0, 20),
   });

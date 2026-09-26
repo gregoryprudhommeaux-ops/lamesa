@@ -5,21 +5,39 @@ import {
   seatScarcityBlock,
 } from "@/lib/events/payment-details";
 
-export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
+/** Dinner sequence, in send order. Shown together in Coms. */
+export const DINNER_FUNNEL_TEMPLATE_KEYS = [
+  "save_the_date",
+  "std_relance",
+  "interest_ack",
   "calendar_invite",
-  "participation_confirmed",
   "payment_relance",
+  "participation_confirmed",
   "places_available",
+  "satisfaction_survey",
+] as const;
+
+/** Member / acquisition mail, outside a single dinner. */
+export const OUTSIDE_DINNER_TEMPLATE_KEYS = [
+  "light_signup",
+  "profile_incomplete",
+  "fn_announcement",
+  "referral_invite",
+] as const;
+
+/**
+ * Retired email reminders. Presence alerts live in the invitation .ics (VALARM).
+ * Not seeded and not listed.
+ */
+export const ARCHIVED_EMAIL_TEMPLATE_KEYS = [
   "reminder_7d",
   "reminder_36h",
   "reminder_90m",
-  "satisfaction_survey",
-  "light_signup",
-  "referral_invite",
-  "fn_announcement",
-  "profile_incomplete",
-  "save_the_date",
-  "interest_ack",
+] as const;
+
+export const SYSTEM_EMAIL_TEMPLATE_KEYS = [
+  ...DINNER_FUNNEL_TEMPLATE_KEYS,
+  ...OUTSIDE_DINNER_TEMPLATE_KEYS,
 ] as const;
 
 export type SystemEmailTemplateKey = (typeof SYSTEM_EMAIL_TEMPLATE_KEYS)[number];
@@ -37,9 +55,6 @@ export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
   participation_confirmed: "Confirmation après paiement",
   payment_relance: "Relance paiement ACCESS (après invitation formelle)",
   places_available: "Places encore dispo (dernier appel + ICS + prix)",
-  reminder_7d: "Rappel J-7 (legacy email — préférer VALARM ICS)",
-  reminder_36h: "Rappel H-36 (legacy email — préférer VALARM ICS)",
-  reminder_90m: "Rappel H-1h30 (legacy email — préférer VALARM ICS)",
   satisfaction_survey: "Questionnaire satisfaction (+12h, cron 1×/jour)",
   light_signup: "Inscription express (/light) — compléter le profil",
   referral_invite:
@@ -50,6 +65,7 @@ export const EMAIL_TEMPLATE_LABELS: Record<SystemEmailTemplateKey, string> = {
     "Profil incomplet — rappel mensuel (ES, cron 1er du mois)",
   save_the_date:
     "Save the Date / intérêt (nominatif — OUI/NON/AUTRE sur la page événement)",
+  std_relance: "Relance Save the Date — une fois, liste sans réponse",
   interest_ack:
     "Accusé Save the Date — email auto après validation de la réponse",
 };
@@ -506,149 +522,59 @@ const DEFAULTS: Record<SystemEmailTemplateKey, Record<TemplateLocale, LocalePair
       ].join("\n"),
     },
   },
-  reminder_7d: {
-    es: {
-      subject: "Recordatorio — {{eventTitle}} (falta 1 semana)",
-      body: [
-        "Estimado/a {{fullName}}:",
-        "",
-        "Te recordamos que LA MESA « {{eventTitle}} » ({{format}}) tendrá lugar en una semana.",
-        "",
-        "Fecha y hora: {{when}}",
-        "Lugar: {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "Quedamos a tus órdenes,",
-        "LA MESA",
-      ].join("\n"),
-    },
+  std_relance: {
     fr: {
-      subject: "Rappel J-7 — {{eventTitle}}",
+      subject: "LA MESA — toujours partant ? {{eventTitle}}",
       body: [
         "Bonjour {{fullName}},",
         "",
-        "Rappel : LA MESA « {{eventTitle}} » ({{format}}) a lieu dans une semaine.",
+        "Je n’ai pas eu ta réponse pour {{eventTitle}}.",
         "",
         "Quand : {{when}}",
         "Où : {{where}}",
         "",
+        "Si tu veux l’invitation formelle, réponds ici :",
         "{{eventUrl}}",
         "",
-        "LA MESA",
+        "Si ce n’est pas pour cette fois, dis-le sur la même page.",
+        "",
+        "Greg | LA MESA",
       ].join("\n"),
     },
-    en: {
-      subject: "Reminder 7 days — {{eventTitle}}",
-      body: [
-        "Hi {{fullName}},",
-        "",
-        "Reminder: LA MESA “{{eventTitle}}” ({{format}}) is in one week.",
-        "",
-        "When: {{when}}",
-        "Where: {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "LA MESA",
-      ].join("\n"),
-    },
-  },
-  reminder_36h: {
     es: {
-      subject: "Recordatorio — {{eventTitle}} (en 36 horas)",
+      subject: "LA MESA — ¿sigues? {{eventTitle}}",
       body: [
-        "Estimado/a {{fullName}}:",
+        "Hola {{fullName}},",
         "",
-        "LA MESA « {{eventTitle}} » ({{format}}) tendrá lugar en aproximadamente 36 horas.",
+        "No tengo tu respuesta para {{eventTitle}}.",
         "",
-        "Fecha y hora: {{when}}",
-        "Lugar: {{where}}",
+        "Cuándo: {{when}}",
+        "Dónde: {{where}}",
         "",
+        "Si quieres la invitación formal, responde aquí:",
         "{{eventUrl}}",
         "",
-        "Quedamos a tus órdenes,",
-        "LA MESA",
-      ].join("\n"),
-    },
-    fr: {
-      subject: "Rappel — {{eventTitle}} dans 36h",
-      body: [
-        "Bonjour {{fullName}},",
+        "Si no es para esta vez, dímelo en la misma página.",
         "",
-        "LA MESA « {{eventTitle}} » ({{format}}) a lieu dans environ 36 heures.",
-        "",
-        "Quand : {{when}}",
-        "Où : {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "LA MESA",
+        "Greg | LA MESA",
       ].join("\n"),
     },
     en: {
-      subject: "Reminder — {{eventTitle}} in 36h",
+      subject: "LA MESA — still in? {{eventTitle}}",
       body: [
         "Hi {{fullName}},",
         "",
-        "LA MESA “{{eventTitle}}” ({{format}}) is in about 36 hours.",
+        "I don’t have your reply for {{eventTitle}}.",
         "",
         "When: {{when}}",
         "Where: {{where}}",
         "",
+        "If you want the formal invitation, reply here:",
         "{{eventUrl}}",
         "",
-        "LA MESA",
-      ].join("\n"),
-    },
-  },
-  reminder_90m: {
-    es: {
-      subject: "Último recordatorio — {{eventTitle}} (en 1 h 30)",
-      body: [
-        "Estimado/a {{fullName}}:",
+        "If not this time, say so on the same page.",
         "",
-        "Te esperamos en 1 hora y 30 minutos para « {{eventTitle}} ».",
-        "",
-        "Fecha y hora: {{when}}",
-        "Lugar: {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "Hasta pronto,",
-        "LA MESA",
-      ].join("\n"),
-    },
-    fr: {
-      subject: "Dernier rappel — {{eventTitle}} dans 1h30",
-      body: [
-        "Bonjour {{fullName}},",
-        "",
-        "Rendez-vous dans 1h30 pour {{eventTitle}}.",
-        "",
-        "Quand : {{when}}",
-        "Où : {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "À tout de suite,",
-        "LA MESA",
-      ].join("\n"),
-    },
-    en: {
-      subject: "Final reminder — {{eventTitle}} in 90 min",
-      body: [
-        "Hi {{fullName}},",
-        "",
-        "See you in 90 minutes for {{eventTitle}}.",
-        "",
-        "When: {{when}}",
-        "Where: {{where}}",
-        "",
-        "{{eventUrl}}",
-        "",
-        "See you soon,",
-        "LA MESA",
+        "Greg | LA MESA",
       ].join("\n"),
     },
   },

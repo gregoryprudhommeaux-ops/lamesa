@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
-import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
 import { sendAdminRsvpYesEmail } from "@/lib/email/send-admin-rsvp-yes";
 import {
   countSeatedParticipations,
@@ -207,54 +206,10 @@ export async function processRsvpClick(input: {
       }
     }
 
-    if (response === "yes" && event && guestEmail.includes("@")) {
-      try {
-        const partsSnap = await db
-          .collection(COLLECTIONS.participations)
-          .where("eventId", "==", payload.eventId)
-          .limit(500)
-          .get();
-        const parts = partsSnap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<AdminEventParticipation, "id">),
-        }));
-        const capacity =
-          typeof event.capacity === "number" && event.capacity > 0
-            ? event.capacity
-            : DEFAULT_GUEST_CAPACITY;
-        const seated = countSeatedParticipations(parts);
-        const existing = parts.find((p) => p.id === payload.participationId);
-        const partRow = {
-          id: payload.participationId,
-          eventId: payload.eventId,
-          email: guestEmail,
-          fullName: existing?.fullName,
-          status: next,
-          statusSource: "guest" as const,
-          ...(existing
-            ? {
-                companyName: existing.companyName,
-                phone: existing.phone,
-                calendarInviteSentAt: existing.calendarInviteSentAt,
-                placesAvailableSentAt: existing.placesAvailableSentAt,
-              }
-            : {}),
-        } as AdminEventParticipation;
-        const seatsLeft = seated <= capacity && next !== "waitlist";
-
-        if (seatsLeft && normalizeParticipationStatus(partRow.status) !== "confirmed") {
-          void sendTemplatedEventEmail({
-            key: "payment_relance",
-            event,
-            participation: partRow,
-          }).catch((err) => console.error("[rsvp] payment_relance after yes", err));
-        }
-        if (next === "waitlist") {
-          return okRedirect("waitlist");
-        }
-      } catch (err) {
-        console.error("[rsvp] post-yes follow-up", err);
-      }
+    // Payment copy stays on the formal invite and the RSVP page.
+    // payment_relance is a manual follow-up from the payment phase, once per guest.
+    if (response === "yes" && next === "waitlist") {
+      return okRedirect("waitlist");
     }
 
     return okRedirect();

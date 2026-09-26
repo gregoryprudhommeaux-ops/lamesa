@@ -127,7 +127,7 @@ type LastEmailResults = {
   yesGuests: NextEventRsvpYesGuest[];
   noGuests: NextEventRsvpYesGuest[];
   recipients: EmailCampaignRecipient[];
-  source: "cold_outreach" | "save_the_date" | "places_available" | "inferred";
+  source: "cold_outreach" | "save_the_date" | "std_relance" | "places_available" | "inferred";
 };
 
 type EmailCampaignRecipient = {
@@ -731,17 +731,47 @@ function ContactedRecipientsList({
   );
 }
 
+function newestEmailCampaignsFirst(
+  rows: EmailCampaignHistoryRow[],
+): EmailCampaignHistoryRow[] {
+  return [...rows].sort((a, b) => {
+    const am = new Date(a.sentAt).getTime();
+    const bm = new Date(b.sentAt).getTime();
+    return (Number.isFinite(bm) ? bm : 0) - (Number.isFinite(am) ? am : 0);
+  });
+}
+
 function EmailCampaignHistoryTable({ rows }: { rows: EmailCampaignHistoryRow[] }) {
+  const [showArchive, setShowArchive] = useState(false);
   if (rows.length === 0) return null;
+  const ordered = newestEmailCampaignsFirst(rows);
+  const archiveCount = ordered.length - 1;
+  const visible = showArchive ? ordered : ordered.slice(0, 1);
   return (
     <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-      <div className="mb-3">
-        <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-          Historique des envois
-        </h3>
-        <p className="mt-1 text-xs text-ns-secondary">
-          Compare les taux pour voir quels mails convertissent le mieux.
-        </p>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Historique des envois
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Le dernier envoi. Les précédents restent dans les archives.
+          </p>
+        </div>
+        {archiveCount > 0 ? (
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+            aria-expanded={showArchive}
+            onClick={() => setShowArchive((open) => !open)}
+          >
+            {showArchive
+              ? "Masquer les archives"
+              : archiveCount === 1
+                ? "Archives · 1 envoi précédent"
+                : `Archives · ${archiveCount} envois précédents`}
+          </button>
+        ) : null}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -758,10 +788,17 @@ function EmailCampaignHistoryTable({ rows }: { rows: EmailCampaignHistoryRow[] }
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {visible.map((row, index) => (
               <tr key={row.id} className="border-b border-gray-50 align-top">
                 <td className="py-2.5 pr-3">
-                  <p className="font-semibold text-ns-tertiary">{row.templateLabel}</p>
+                  <p className="font-semibold text-ns-tertiary">
+                    {row.templateLabel}
+                    {index === 0 ? (
+                      <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wide text-ns-primary">
+                        Dernier
+                      </span>
+                    ) : null}
+                  </p>
                   {row.eventTitle ? (
                     <p className="mt-0.5 text-[11px] text-ns-secondary">{row.eventTitle}</p>
                   ) : null}

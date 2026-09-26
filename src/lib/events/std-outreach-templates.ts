@@ -46,9 +46,23 @@ function dateFragmentsFromSlug(slug: string): string[] {
 }
 
 /** True for follow-up templates tied to a Save the Date (not the initial blast). */
+/** Prospect stamp for the one system STD follow-up of an event. */
+export function stdRelanceStampKey(eventSlug: string): string {
+  return `std_relance:${eventSlug.trim()}`;
+}
+
+export function hasStdRelanceStamp(
+  sentTemplateKeys: string[] | undefined,
+  eventSlug: string,
+): boolean {
+  const stamp = stdRelanceStampKey(eventSlug);
+  return (sentTemplateKeys ?? []).some((k) => k.trim() === stamp);
+}
+
 export function isStdRelanceTemplateKey(templateKey: string): boolean {
   const key = normalizeKey(templateKey);
   if (!key) return false;
+  if (key === "std_relance" || key.startsWith("std_relance:")) return true;
   if (key in RELANCE_TEMPLATE_SLUGS) return true;
   return key.includes("_std_") && (key.includes("relance") || key.includes("follow"));
 }
@@ -63,7 +77,7 @@ export function eventSlugFromOutreachTemplateKey(templateKey: string): string | 
   if (key in RELANCE_TEMPLATE_SLUGS) return RELANCE_TEMPLATE_SLUGS[key];
 
   const scoped = key.match(
-    /^(places_available|save_the_date|calendar_invite|payment_relance):(.+)$/,
+    /^(places_available|save_the_date|calendar_invite|payment_relance|std_relance):(.+)$/,
   );
   if (scoped?.[2]?.trim()) return scoped[2].trim();
 
@@ -99,7 +113,8 @@ export function templateKeyMatchesEventSlug(
   const key = normalizeKey(templateKey);
   const slug = eventSlug.trim().toLowerCase();
   if (!key || !slug) return false;
-  if (key === "save_the_date") return true;
+  if (key === "save_the_date" || key === "std_relance") return true;
+  if (key.startsWith("std_relance:")) return key.slice("std_relance:".length) === slug;
 
   const slugUnderscore = slug.replace(/-/g, "_");
   if (key.includes(slug) || key.includes(slugUnderscore)) return true;
