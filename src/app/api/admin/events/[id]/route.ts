@@ -4,6 +4,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
 import { z } from "zod";
 
@@ -91,14 +92,17 @@ export async function PATCH(request: Request, { params }: Params) {
       eventSlugFromTitleAndDate(data.title, data.startsAt) ||
       slugify(data.title);
 
+    const now = new Date().toISOString();
     await db.collection(COLLECTIONS.events).doc(id).set(
       {
         ...data,
         slug: nextSlug,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       },
       { merge: true },
     );
+    // Normalize organizer seat to Invité (comped) — COST yes, CA no.
+    await ensureOrganizerParticipation(db, id, now);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error("[admin/events PATCH]", error);

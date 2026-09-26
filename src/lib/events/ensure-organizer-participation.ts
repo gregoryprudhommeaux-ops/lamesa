@@ -5,6 +5,7 @@ import type { Firestore } from "firebase-admin/firestore";
 
 /**
  * Ensures the platform organizer is seated on the event (does not use a guest seat).
+ * Status is always **Invité** (`comped`): COST yes, CA no — seat absorbed by event margin.
  * Calendar invite / ICS reminders go to this participation when invitations are launched.
  */
 export async function ensureOrganizerParticipation(
@@ -24,8 +25,12 @@ export async function ensureOrganizerParticipation(
 
   if (hit) {
     const data = hit.data();
-    if (!data.isOrganizer) {
-      await hit.ref.set({ isOrganizer: true, updatedAt: now }, { merge: true });
+    const patch: Record<string, unknown> = { updatedAt: now };
+    if (!data.isOrganizer) patch.isOrganizer = true;
+    // Organizer is never a paying seat — normalize legacy `confirmed` → Invité.
+    if (String(data.status ?? "") !== "comped") patch.status = "comped";
+    if (Object.keys(patch).length > 1) {
+      await hit.ref.set(patch, { merge: true });
     }
     return;
   }
@@ -35,7 +40,7 @@ export async function ensureOrganizerParticipation(
     email,
     fullName: "Gregory Prudhommeaux",
     companyName: "LA MESA",
-    status: "confirmed",
+    status: "comped",
     statusSource: "admin",
     isOrganizer: true,
     createdAt: now,

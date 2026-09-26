@@ -2,6 +2,7 @@
  * Recap of the latest dinner that has already started.
  * Counts are observed (email stamps, paid seat, ticket price, submitted survey).
  * CA = paid seats only; complimentary (Invité) seats add COST, zero revenue.
+ * Organizer (Gregory) is always Invité for P&L: COST yes, CA no — absorbed by margin.
  */
 import { countsAsConfirmed, countsAsComplimentary } from "@/lib/admin/member-engagement";
 import {
@@ -136,9 +137,9 @@ export function buildLastEventRecap(
   const event = pickLastPastEvent(events, nowMs);
   if (!event) return null;
 
-  const guests = participations.filter(
-    (p) => p.eventId === event.id && !isOrganizerParticipation(p),
-  );
+  const eventParts = participations.filter((p) => p.eventId === event.id);
+  const guests = eventParts.filter((p) => !isOrganizerParticipation(p));
+  const organizers = eventParts.filter((p) => isOrganizerParticipation(p));
   const price = ticketPrice(event);
   const cost = ticketCost(event);
   const priceIncludesIva = resolveIncludesFlag(event.priceIncludesIva);
@@ -181,6 +182,22 @@ export function buildLastEventRecap(
       complimentaryPeople.push(person);
       compCount += 1;
     }
+  }
+
+  // Organizer cover: always Invité for economics (legacy `confirmed` still = COST, never CA).
+  for (const p of organizers) {
+    const person: LastEventRecapPerson = {
+      id: p.id,
+      contactId: p.contactId?.trim() || null,
+      fullName: p.fullName?.trim() || p.email || "Sans nom",
+      email: p.email ?? "",
+      company: p.companyName?.trim() || "",
+      status: "comped",
+      channels: channelsFor(p),
+      amountMxn: 0,
+    };
+    complimentaryPeople.push(person);
+    compCount += 1;
   }
 
   contactedPeople.sort(byName);
