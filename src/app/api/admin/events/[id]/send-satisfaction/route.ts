@@ -6,7 +6,7 @@ import {
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendSatisfactionSurveyEmail } from "@/lib/email/send-satisfaction-survey";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
@@ -21,8 +21,7 @@ const schema = z.object({
 
 function isEligible(p: AdminEventParticipation): boolean {
   if (isOrganizerParticipation(p)) return false;
-  const status = normalizeParticipationStatus(p.status);
-  if (status !== "confirmed" && status !== "attending") return false;
+  if (!isPaidGuestStatus(p.status)) return false;
   if (p.satisfactionSurveySentAt) return false;
   return String(p.email ?? "").includes("@");
 }
@@ -76,7 +75,7 @@ export async function POST(request: Request, { params }: Params) {
       {
         ok: false,
         error: "no_recipients",
-        detail: "Personne éligible (confirmé/présent, questionnaire pas encore envoyé).",
+        detail: "Personne éligible (place payée, questionnaire pas encore envoyé).",
       },
       { status: 400 },
     );

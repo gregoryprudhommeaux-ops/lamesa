@@ -31,9 +31,6 @@ export type EmailTemplateKey =
   | "participation_confirmed"
   | "payment_relance"
   | "places_available"
-  | "reminder_7d"
-  | "reminder_36h"
-  | "reminder_90m"
   | "satisfaction_survey"
   | "light_signup"
   | "referral_invite"
@@ -43,6 +40,8 @@ export type EmailTemplateKey =
   | "profile_incomplete"
   /** Nominative Save the Date / interest invite */
   | "save_the_date"
+  /** One follow-up to STD contacts still without OUI/NON */
+  | "std_relance"
   /** Auto ack after member validates Save the Date interest reply */
   | "interest_ack"
   /** Custom admin-created templates: custom_<slug> */

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifySurveyToken } from "@/lib/email/rsvp-token";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type {
   AdminEventParticipation,
@@ -58,8 +58,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
   }
 
-  const status = normalizeParticipationStatus(participation.status);
-  if (status !== "confirmed" && status !== "attending") {
+  if (!isPaidGuestStatus(participation.status)) {
     return NextResponse.json({ ok: false, error: "not_eligible" }, { status: 403 });
   }
 

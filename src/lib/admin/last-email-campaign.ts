@@ -37,6 +37,7 @@ const INFER_WAVE_MS = 12 * 60 * 60 * 1000;
 export type LastEmailCampaignSource =
   | "cold_outreach"
   | "save_the_date"
+  | "std_relance"
   | "places_available"
   | "inferred";
 
@@ -203,6 +204,7 @@ export function normalizeLastEmailCampaignRecord(
   const source: LastEmailCampaignSource =
     sourceRaw === "cold_outreach" ||
     sourceRaw === "save_the_date" ||
+    sourceRaw === "std_relance" ||
     sourceRaw === "places_available" ||
     sourceRaw === "inferred"
       ? sourceRaw

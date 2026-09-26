@@ -5,6 +5,7 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { interestSansReponseListName } from "@/lib/events/interest-prospect-lists";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import {
   SURVEY_COPY,
   surveyLocaleFrom,
@@ -21,28 +22,91 @@ type StdRelancePanelProps = {
 };
 
 export function StdRelancePanel({ event }: StdRelancePanelProps) {
+  const authFetch = useAuthFetch();
   const listName = interestSansReponseListName(event.slug);
+  const [sending, setSending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function sendRelance() {
+    if (!event.slug?.trim()) {
+      setError("Slug d’événement manquant.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Envoyer la relance Save the Date aux « ${listName} » qui ne l’ont pas encore reçue ?`,
+      )
+    ) {
+      return;
+    }
+    setSending(true);
+    setMessage(null);
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/events/${event.id}/send-std-relance`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        sent?: number;
+        failed?: number;
+        skipped?: number;
+        alreadySent?: number;
+        error?: string;
+        detail?: string;
+      };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.detail || json.error || "send_failed");
+      }
+      setMessage(
+        `Relance envoyée : ${json.sent ?? 0}` +
+          (json.alreadySent ? ` · déjà relancés ${json.alreadySent}` : "") +
+          (json.failed ? ` · échecs ${json.failed}` : "") +
+          (json.skipped ? ` · ignorés ${json.skipped}` : ""),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSending(false);
+    }
+  }
+
   return (
     <div className="space-y-3">
       <p className="text-sm text-ns-secondary">
-        Relance les contactés qui n’ont pas encore répondu OUI/NON. L’envoi se fait via un template
-        custom dans Prospects (playlist auto-sync « SANS RÉPONSE »).
+        Une relance, aux contactés sans OUI/NON. Le modèle est celui de cet événement. Les
+        personnes déjà relancées ne sont pas renvoyées.
       </p>
+      <EventTemplateDrawer
+        event={event}
+        templateKey="std_relance"
+        label="Éditer le modèle relance STD"
+        hint="Lien vers la page d’intérêt. Un envoi par personne."
+      />
       <div className="rounded-xl border border-ns-alternate bg-white px-4 py-3">
         <p className="text-xs font-bold uppercase tracking-wide text-ns-secondary">Playlist</p>
         <p className="mt-1 font-mono text-sm text-ns-tertiary">{listName}</p>
       </div>
       <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={BTN_PRIMARY}
+          disabled={sending || !event.slug?.trim()}
+          onClick={() => void sendRelance()}
+        >
+          {sending ? "Envoi…" : "Envoyer la relance"}
+        </button>
         <Link
           href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(listName)}`}
           className={`${BTN_SECONDARY} inline-flex items-center`}
         >
-          Ouvrir liste relance →
-        </Link>
-        <Link href="/admin/templates" className={`${BTN_SECONDARY} inline-flex items-center`}>
-          Templates email / custom
+          Ouvrir la liste →
         </Link>
       </div>
+      {message ? <p className="text-xs font-medium text-emerald-700">{message}</p> : null}
+      {error ? <p className={ERROR_TEXT}>{error}</p> : null}
     </div>
   );
 }
@@ -112,8 +176,7 @@ export function AutoRemindersPanel({
     return participations
       .filter((p) => {
         if (isOrganizerParticipation(p)) return false;
-        const status = normalizeParticipationStatus(p.status);
-        if (status !== "confirmed" && status !== "attending") return false;
+        if (!isPaidGuestStatus(p.status)) return false;
         if (p.satisfactionSurveySentAt) return false;
         return String(p.email ?? "").includes("@");
       })
@@ -257,25 +320,21 @@ export function AutoRemindersPanel({
       <div className="rounded-xl border border-ns-alternate bg-white p-4 text-sm text-ns-tertiary">
         <p className="font-bold text-ns-hero">Rappels calendrier (ICS)</p>
         <p className="mt-1 text-xs text-ns-secondary">
-          Après l’invitation formelle, les rappels natifs du fichier .ics couvrent{" "}
-          <strong>J-7 · H-36 · H-1h30</strong>. Pas d’email séparé requis (templates reminder_* =
-          legacy). La présence officielle se confirme via les boutons{" "}
-          <strong>YES / NO</strong> du mail (pas le Oui/Non du calendrier Google — celui-ci
-          échoue souvent vers le domaine d’envoi Brevo).
+          Après l’invitation formelle, les rappels du fichier calendrier couvrent{" "}
+          <strong>J-7 · H-36 · H-1h30</strong>. Pas d’email de rappel. La présence se confirme
+          via les boutons <strong>YES / NO</strong> du mail.
         </p>
         <p className="mt-2 text-xs text-ns-secondary">
           ICS / invites déjà envoyés : <strong>{invitesSent}</strong> · Confirmés paiement :{" "}
           <strong>{confirmed}</strong>
         </p>
-        <Link href="/admin/templates" className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline">
-          Voir templates reminder legacy →
-        </Link>
       </div>
 
       <div>
         <p className="mb-2 text-sm font-bold text-ns-hero">Satisfaction</p>
         <p className="mb-3 text-xs text-ns-secondary">
-          {surveysSent} envoyés · {surveysDone} réponses · {pendingSurvey} en attente d’envoi
+          {surveysSent} envoyés · {surveysDone} réponses · {pendingSurvey} en attente d’envoi.
+          Destinataires : places payées.
         </p>
 
         <div className="mb-4">

@@ -113,6 +113,34 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
 
+## Email funnel — audit 2026-09-26
+
+Séquence voulue (mode intérêt) : **STD → Relance STD → Invitation → Relance paiement → Confirmation paiement → Rappels présence → Survey**.
+
+Faits code (pas de logs d’envoi prod consultés) :
+
+| Moment | Clé | Déclencheur réel | Verdict |
+|--------|-----|------------------|---------|
+| STD | `save_the_date` | Manuel, phase événement | Garder |
+| Accusé réponse | `interest_ack` | Auto après formulaire intérêt | Garder, hors étape campagne |
+| Relance STD | `std_relance` | Manuel depuis Qualification, une fois, playlist « SANS RÉPONSE » | P1 fait |
+| Invitation | `calendar_invite` | Manuel ; corps déjà = prix + IBAN + ICS | Garder |
+| Relance paiement | `payment_relance` | Manuel, phase paiement, une fois (`paymentRelanceSentAt`) | P0 fait : plus d’envoi au clic OUI ; second blast ignoré |
+| Confirmation | `participation_confirmed` | Auto quand statut → `confirmed` | Garder |
+| Rappels J-7 / H-36 / H-1h30 | ICS VALARM dans l’invitation | Calendrier natif | C’est le vrai mécanisme |
+| Rappels email | `reminder_*` | Archivés, hors bibliothèque | P1 fait — seul le calendrier rappelle |
+| Survey | `satisfaction_survey` | Cron / manuel, places payées (`confirmed`, y compris `present`) | P1 fait — plus d’envoi aux OUI non payés |
+| Dernier appel | `places_available` | Manuel | Exception, pas une étape du funnel |
+| Hors dîner | `light_signup`, `profile_incomplete` (cron 1er du mois), `fn_announcement`, `referral_invite` | Divers | Garder dans une bibliothèque séparée |
+
+Les 9 phases placent STD, qualification, invitation, paiement, places et feedback au bon endroit. Coms sépare **Funnel dîner** et **Hors dîner**. L’explication ICS (J-7 / H-36 / H-1h30) est dans Feedback. La phase paiement montre encore le roster « impayés » et le panneau relance en double. Pas de cron de relance STD ni de relance paiement.
+
+**P0 fait (2026-09-26) :** le clic OUI n’envoie plus `payment_relance`. La route manuelle saute les participations déjà horodatées.
+
+**P1 fait (2026-09-26) :** `std_relance` s’envoie depuis Qualification (une fois, liste sans réponse) ; le survey auto et manuel ne part qu’aux places payées ; `reminder_*` sort de la bibliothèque active.
+
+`places_available` reste l’exception Prépa dîner.
+
 ## Jack findings log
 
 | Date | P | Finding | Status |
@@ -127,6 +155,9 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | P0 | Files À traiter sans filtre | Done — `queue=` |
 | 2026-09-26 | P1 | Pas de NBA unique / contexte Tables perdu | Done — NBA + `eventId` |
 | 2026-09-26 | P0 | Dashboard trop dense / blocs blancs / pas de moment T | Done — `resolveDashboardMoment` + pastEventFocus |
+| 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
+| 2026-09-26 | P1 | Relance STD custom + reminders dans « Automatiques » | Fait — `std_relance` + bibliothèque scindée |
+| 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
 
 ## Changelog
 
@@ -139,4 +170,10 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
 | 2026-09-26 | Continuité — queue filters, NBA Dashboard, Tables eventId |
+<<<<<<< HEAD
 | 2026-09-26 | Dashboard moment T — un focus Maintenant (email / post-dîner CA+sat) |
+=======
+| 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
+| 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
+| 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
+>>>>>>> origin/main
