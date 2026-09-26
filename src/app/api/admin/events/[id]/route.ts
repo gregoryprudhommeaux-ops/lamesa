@@ -19,6 +19,8 @@ const updateSchema = z.object({
   capacity: z.number().int().min(1).max(100).optional(),
   priceMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   costMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  priceIncludesService: z.boolean().optional().nullable(),
+  costIncludesService: z.boolean().optional().nullable(),
   accessIncludesWelcomeDrink: z.boolean().optional(),
   accessIncludesAmuseBouche: z.boolean().optional(),
   menuIncluded: z.string().trim().max(4000).optional().nullable(),

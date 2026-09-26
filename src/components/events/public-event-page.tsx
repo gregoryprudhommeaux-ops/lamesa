@@ -90,7 +90,11 @@ function PriceBlock({
   if (!hasAccess && !hasMenu) return null;
 
   const pricing =
-    hasAccess && typeof priceMxn === "number" ? computeEventIva(priceMxn) : null;
+    hasAccess && typeof priceMxn === "number"
+      ? computeEventIva(priceMxn, {
+          includeService: event.priceIncludesService !== false,
+        })
+      : null;
   const estimate = formatMenuPriceEstimate(event, locale);
   const accessLine = formatAccessIncludes(event, locale);
   const showAccessIncludes =
@@ -107,8 +111,11 @@ function PriceBlock({
               {t("priceAllIn")} · {formatMxn(pricing.priceBeforeTax, locale)}
             </p>
             <p className="mt-1 text-xs text-ns-secondary">
-              {t("iva")}: {formatMxn(pricing.iva, locale)} · Service (15%):{" "}
-              {formatMxn(pricing.service, locale)} · {t("totalWithIva")}:{" "}
+              {t("iva")}: {formatMxn(pricing.iva, locale)}
+              {pricing.serviceIncluded
+                ? ` · Service (15%): ${formatMxn(pricing.service, locale)}`
+                : ""}{" "}
+              · {t("totalWithIva")}:{" "}
               <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
             </p>
             <p className="mt-2 text-xs text-ns-secondary">{t("priceAllInHint")}</p>
@@ -143,8 +150,11 @@ function PriceBlock({
             {t("price")} · {formatMxn(pricing.priceBeforeTax, locale)}
           </p>
           <p className="mt-1 text-xs text-ns-secondary">
-            {t("iva")}: {formatMxn(pricing.iva, locale)} · Service (15%):{" "}
-            {formatMxn(pricing.service, locale)} · {t("totalWithIva")}:{" "}
+            {t("iva")}: {formatMxn(pricing.iva, locale)}
+            {pricing.serviceIncluded
+              ? ` · Service (15%): ${formatMxn(pricing.service, locale)}`
+              : ""}{" "}
+            · {t("totalWithIva")}:{" "}
             <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
           </p>
           {showAccessIncludes ? (
