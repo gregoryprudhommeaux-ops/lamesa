@@ -3,6 +3,8 @@ import {
   buildLastEmailResultsSummary,
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
+  inferLatestOutboundEmail,
+  mergeCampaignHistory,
   normalizeLastEmailCampaignRecord,
   pickLatestCampaign,
   type LastEmailCampaignRecord,
@@ -180,6 +182,142 @@ describe("pickLatestCampaign", () => {
       templateKey: "custom_newer",
     });
     expect(pickLatestCampaign(a, b)?.templateKey).toBe("custom_newer");
+  });
+
+  it("lets a later participation stamp beat the stored places archive", () => {
+    const stored = campaign({
+      templateKey: `places_available:${SLUG}`,
+      sentAt: "2026-09-22T21:56:00.000Z",
+      source: "places_available",
+    });
+    const survey = campaign({
+      templateKey: "satisfaction_survey",
+      sentAt: "2026-09-25T16:00:00.000Z",
+      source: "inferred",
+    });
+    expect(pickLatestCampaign(stored, survey)?.templateKey).toBe("satisfaction_survey");
+  });
+});
+
+describe("inferLatestOutboundEmail", () => {
+  const dinner = event({
+    id: "ev1",
+    slug: SLUG,
+    title: "Dirigeants",
+    startsAt: "2026-09-24T02:00:00.000Z",
+  });
+
+  it("prefers a later survey over the places blast", () => {
+    const inferred = inferLatestOutboundEmail(
+      [dinner],
+      [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "a@x.com",
+          status: "confirmed",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+          calendarInviteSentAt: "2026-09-22T21:56:00.000Z",
+          satisfactionSurveySentAt: "2026-09-25T16:00:00.000Z",
+        }),
+        part({
+          id: "p2",
+          eventId: "ev1",
+          email: "b@x.com",
+          status: "confirmed",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+          satisfactionSurveySentAt: "2026-09-25T16:02:00.000Z",
+        }),
+      ],
+    );
+    expect(inferred?.templateKey).toBe("satisfaction_survey");
+    expect(inferred?.sentAt).toBe("2026-09-25T16:02:00.000Z");
+    expect(inferred?.recipientEmails).toEqual(["a@x.com", "b@x.com"]);
+  });
+
+  it("does not count the places send as a separate formal invite", () => {
+    const inferred = inferLatestOutboundEmail(
+      [dinner],
+      [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "a@x.com",
+          status: "invited",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+          calendarInviteSentAt: "2026-09-22T21:56:30.000Z",
+        }),
+      ],
+    );
+    expect(inferred?.templateKey).toBe(`places_available:${SLUG}`);
+  });
+
+  it("keeps a formal invite sent after the places blast", () => {
+    const inferred = inferLatestOutboundEmail(
+      [dinner],
+      [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "a@x.com",
+          status: "invited",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+          calendarInviteSentAt: "2026-09-23T15:00:00.000Z",
+        }),
+      ],
+    );
+    expect(inferred?.templateKey).toBe("calendar_invite");
+    expect(inferred?.sentAt).toBe("2026-09-23T15:00:00.000Z");
+  });
+
+  it("picks the payment confirmation when it is the newest stamp", () => {
+    const inferred = inferLatestOutboundEmail(
+      [dinner],
+      [
+        part({
+          id: "p1",
+          eventId: "ev1",
+          email: "paid@x.com",
+          status: "confirmed",
+          placesAvailableSentAt: "2026-09-22T21:56:00.000Z",
+          confirmationEmailSentAt: "2026-09-23T18:00:00.000Z",
+        }),
+        part({
+          id: "org",
+          eventId: "ev1",
+          email: "org@x.com",
+          status: "confirmed",
+          isOrganizer: true,
+          satisfactionSurveySentAt: "2026-09-26T12:00:00.000Z",
+        }),
+      ],
+    );
+    expect(inferred?.templateKey).toBe("participation_confirmed");
+    expect(inferred?.recipientEmails).toEqual(["paid@x.com"]);
+  });
+});
+
+describe("mergeCampaignHistory", () => {
+  it("puts the newest blast first and drops the same wave", () => {
+    const places = campaign({
+      templateKey: `places_available:${SLUG}`,
+      sentAt: "2026-09-22T21:56:00.000Z",
+      source: "places_available",
+    });
+    const survey = campaign({
+      templateKey: "satisfaction_survey",
+      sentAt: "2026-09-25T16:00:00.000Z",
+      source: "inferred",
+    });
+    const dup = campaign({
+      templateKey: "satisfaction_survey",
+      sentAt: "2026-09-25T18:00:00.000Z",
+      source: "satisfaction_survey",
+    });
+    expect(mergeCampaignHistory([places], [survey, dup]).map((row) => row.templateKey)).toEqual([
+      "satisfaction_survey",
+      `places_available:${SLUG}`,
+    ]);
   });
 });
 

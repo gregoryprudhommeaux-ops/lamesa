@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendSatisfactionSurveyEmail } from "@/lib/email/send-satisfaction-survey";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -57,6 +59,9 @@ async function runDailyFollowups() {
       .where("eventId", "==", event.id)
       .get();
 
+    const sentEmails: string[] = [];
+    let sentAt = "";
+
     for (const doc of partsSnap.docs) {
       const p = {
         id: doc.id,
@@ -84,11 +89,26 @@ async function runDailyFollowups() {
       }
       if (result.ok) {
         surveysSent += 1;
+        sentEmails.push(p.email);
         const stamp = new Date().toISOString();
+        sentAt = stamp;
         await doc.ref.set({ satisfactionSurveySentAt: stamp, updatedAt: stamp }, { merge: true });
       } else {
         errors.push(`${p.email}:satisfaction_survey:${result.error}`);
       }
+    }
+
+    if (sentEmails.length > 0) {
+      void recordLastEmailCampaign({
+        templateKey: "satisfaction_survey",
+        templateLabel: templateLabel("satisfaction_survey"),
+        sentAt,
+        recipientEmails: sentEmails,
+        eventSlug: event.slug,
+        eventId: event.id,
+        eventTitle: event.title,
+        source: "satisfaction_survey",
+      });
     }
   }
 
