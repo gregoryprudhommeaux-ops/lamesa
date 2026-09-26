@@ -329,6 +329,7 @@ export async function GET(request: Request) {
       invited: 0,
       attending: 0,
       confirmed: 0,
+      comped: 0,
       not_attending: 0,
       waitlist: 0,
     };

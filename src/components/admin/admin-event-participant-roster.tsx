@@ -33,9 +33,10 @@ const DEFAULT_STATUS_LABELS: Record<
   Exclude<EventParticipationStatus, "present" | "declined">,
   string
 > = {
-  invited: "Invité",
+  invited: "À payer",
   attending: "Présent (RSVP)",
-  confirmed: "Payé / confirmé",
+  confirmed: "Payé",
+  comped: "Invité",
   not_attending: "Ne vient pas",
   waitlist: "Waitlist",
 };
@@ -141,7 +142,7 @@ export function AdminEventParticipantRoster({
                       type="button"
                       className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
                       onClick={() => onInviteFromWaitlist(p.id)}
-                      title="Passer en Invité et envoyer l’invitation calendrier"
+                      title="Passer en À payer et envoyer l’invitation calendrier"
                     >
                       INVITER
                     </button>
@@ -165,7 +166,14 @@ export function AdminEventParticipantRoster({
                     className="rounded border border-ns-alternate px-2 py-1 text-xs"
                   >
                     {(
-                      ["invited", "attending", "confirmed", "not_attending", "waitlist"] as const
+                      [
+                        "invited",
+                        "attending",
+                        "confirmed",
+                        "comped",
+                        "not_attending",
+                        "waitlist",
+                      ] as const
                     ).map((s) => (
                       <option key={s} value={s}>
                         {labels[s] ?? DEFAULT_STATUS_LABELS[s]}

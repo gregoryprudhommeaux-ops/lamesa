@@ -1,8 +1,9 @@
 /**
  * Recap of the latest dinner that has already started.
  * Counts are observed (email stamps, paid seat, ticket price, submitted survey).
+ * CA = paid seats only; complimentary (Invité) seats add COST, zero revenue.
  */
-import { countsAsConfirmed } from "@/lib/admin/member-engagement";
+import { countsAsConfirmed, countsAsComplimentary } from "@/lib/admin/member-engagement";
 import {
   computeEventSatisfaction,
   surveyOverallScore,
@@ -10,7 +11,7 @@ import {
 } from "@/lib/admin/satisfaction-stats";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { computeEventIva } from "@/lib/events/pricing";
+import { computeEventEconomics, computeSeatPriceBreakdown } from "@/lib/events/pricing";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
 const CHANNELS: Array<{
@@ -59,17 +60,23 @@ export type LastEventRecap = {
   title: string;
   startsAt: string;
   priceMxn: number | null;
+  costMxn: number | null;
   contacted: number;
   registered: number;
+  complimentary: number;
   revenueMxn: number;
   revenueBeforeTaxMxn: number;
   ivaMxn: number;
+  serviceMxn: number;
+  costTotalMxn: number;
+  marginMxn: number;
   satisfactionOverall: number | null;
   satisfactionResponses: number;
   satisfactionSent: number;
   satisfaction: SatisfactionAverages;
   contactedPeople: LastEventRecapPerson[];
   registeredPeople: LastEventRecapPerson[];
+  complimentaryPeople: LastEventRecapPerson[];
   surveyRows: LastEventSurveyRow[];
 };
 
@@ -90,6 +97,12 @@ function ticketPrice(event: AdminEvent): number | null {
   const price = event.priceMxn;
   if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) return null;
   return price;
+}
+
+function ticketCost(event: AdminEvent): number | null {
+  const cost = event.costMxn;
+  if (typeof cost !== "number" || !Number.isFinite(cost) || cost <= 0) return null;
+  return cost;
 }
 
 /** Latest non-draft event whose start is already in the past. */
@@ -123,19 +136,21 @@ export function buildLastEventRecap(
     (p) => p.eventId === event.id && !isOrganizerParticipation(p),
   );
   const price = ticketPrice(event);
-  const line = computeEventIva(price ?? 0);
+  const cost = ticketCost(event);
+  const saleLine = computeSeatPriceBreakdown(price ?? 0);
 
   const contactedPeople: LastEventRecapPerson[] = [];
   const registeredPeople: LastEventRecapPerson[] = [];
-  let revenue = 0;
-  let beforeTax = 0;
-  let iva = 0;
+  const complimentaryPeople: LastEventRecapPerson[] = [];
+  let paidCount = 0;
+  let compCount = 0;
 
   for (const p of guests) {
     const channels = channelsFor(p);
     const status = normalizeParticipationStatus(p.status);
     const paid = countsAsConfirmed(status);
-    const amountMxn = paid ? line.totalWithIva : 0;
+    const complimentary = countsAsComplimentary(status);
+    const amountMxn = paid ? saleLine.total : 0;
     const person: LastEventRecapPerson = {
       id: p.id,
       contactId: p.contactId?.trim() || null,
@@ -149,14 +164,24 @@ export function buildLastEventRecap(
     if (channels.length > 0) contactedPeople.push(person);
     if (paid) {
       registeredPeople.push(person);
-      revenue += line.totalWithIva;
-      beforeTax += line.priceBeforeTax;
-      iva += line.iva;
+      paidCount += 1;
+    }
+    if (complimentary) {
+      complimentaryPeople.push(person);
+      compCount += 1;
     }
   }
 
   contactedPeople.sort(byName);
   registeredPeople.sort(byName);
+  complimentaryPeople.sort(byName);
+
+  const econ = computeEventEconomics({
+    costMxn: cost,
+    priceMxn: price,
+    paidSeatCount: paidCount,
+    complimentarySeatCount: compCount,
+  });
 
   const satisfaction = computeEventSatisfaction(guests);
   const surveyRows: LastEventSurveyRow[] = guests
@@ -189,17 +214,23 @@ export function buildLastEventRecap(
     title: event.title,
     startsAt: event.startsAt,
     priceMxn: price,
+    costMxn: cost,
     contacted: contactedPeople.length,
     registered: registeredPeople.length,
-    revenueMxn: Math.round(revenue * 100) / 100,
-    revenueBeforeTaxMxn: Math.round(beforeTax * 100) / 100,
-    ivaMxn: Math.round(iva * 100) / 100,
+    complimentary: complimentaryPeople.length,
+    revenueMxn: econ.revenueMxn,
+    revenueBeforeTaxMxn: Math.round(saleLine.base * paidCount * 100) / 100,
+    ivaMxn: Math.round(saleLine.iva * paidCount * 100) / 100,
+    serviceMxn: Math.round(saleLine.service * paidCount * 100) / 100,
+    costTotalMxn: econ.costTotalMxn,
+    marginMxn: econ.marginMxn,
     satisfactionOverall: satisfaction.overall,
     satisfactionResponses: satisfaction.responseCount,
     satisfactionSent: satisfaction.sentCount,
     satisfaction,
     contactedPeople,
     registeredPeople,
+    complimentaryPeople,
     surveyRows,
   };
 }

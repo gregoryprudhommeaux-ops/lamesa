@@ -1435,7 +1435,7 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
       id: "revenue",
       label: "CA généré",
       value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
-      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : "TTC · ticket ACCESS",
+      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : "TTC · HT + IVA 16% + svc 15%",
     },
     {
       id: "satisfaction",
@@ -1592,8 +1592,18 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
                   <p className="mt-1 text-xs text-ns-secondary">
                     {recap.priceMxn === null
                       ? "Le prix ACCESS de ce dîner n’est pas renseigné."
-                      : `${recap.registered} place${recap.registered > 1 ? "s" : ""} · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)}`}
+                      : `${recap.registered} payée${recap.registered > 1 ? "s" : ""}${
+                          recap.complimentary > 0
+                            ? ` · ${recap.complimentary} invitée${recap.complimentary > 1 ? "s" : ""}`
+                            : ""
+                        } · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)} · svc ${formatRecapMxn(recap.serviceMxn)}`}
                   </p>
+                  {recap.costMxn != null ? (
+                    <p className="mt-1 text-xs text-ns-secondary">
+                      COST TTC {formatRecapMxn(recap.costTotalMxn)} · marge{" "}
+                      {formatRecapMxn(recap.marginMxn)}
+                    </p>
+                  ) : null}
                   {recap.registeredPeople.length > 0 ? (
                     <ul className="mt-3 divide-y divide-gray-50">
                       {recap.registeredPeople.map((person) => (

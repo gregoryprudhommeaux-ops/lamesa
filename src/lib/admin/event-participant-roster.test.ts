@@ -29,11 +29,12 @@ describe("event-participant-roster filters", () => {
     p({ id: "4", email: "d@x.com", status: "confirmed" }),
     p({ id: "5", email: "e@x.com", status: "not_attending" }),
     p({ id: "6", email: "org@x.com", status: "confirmed", isOrganizer: true }),
+    p({ id: "7", email: "comp@x.com", status: "comped" }),
   ];
 
   it("excludes organizers from all filters", () => {
-    expect(filterParticipationsForRoster(rows, "all")).toHaveLength(5);
-    expect(countRosterFilters(rows).all).toBe(5);
+    expect(filterParticipationsForRoster(rows, "all")).toHaveLength(6);
+    expect(countRosterFilters(rows).all).toBe(6);
   });
 
   it("filters unpaid after formal invite", () => {
@@ -41,8 +42,9 @@ describe("event-participant-roster filters", () => {
     expect(unpaid.map((x) => x.id)).toEqual(["3"]);
   });
 
-  it("filters paid and waitlist", () => {
+  it("filters paid, complimentary and waitlist", () => {
     expect(filterParticipationsForRoster(rows, "paid").map((x) => x.id)).toEqual(["4"]);
+    expect(filterParticipationsForRoster(rows, "comped").map((x) => x.id)).toEqual(["7"]);
     expect(filterParticipationsForRoster(rows, "waitlist").map((x) => x.id)).toEqual(["1"]);
   });
 });

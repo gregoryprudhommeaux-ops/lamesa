@@ -20,8 +20,9 @@ function row(
 }
 
 describe("checkin helpers", () => {
-  it("only paid non-organizer seats are eligible", () => {
+  it("paid and complimentary non-organizer seats are eligible", () => {
     expect(isCheckinEligible(row({ id: "a", status: "confirmed" }))).toBe(true);
+    expect(isCheckinEligible(row({ id: "comp", status: "comped" }))).toBe(true);
     expect(isCheckinEligible(row({ id: "b", status: "invited" }))).toBe(false);
     expect(
       isCheckinEligible(row({ id: "c", status: "confirmed", isOrganizer: true })),
@@ -32,10 +33,11 @@ describe("checkin helpers", () => {
     const rows = [
       row({ id: "a", status: "confirmed", checkedInAt: "2026-09-25T19:00:00.000Z" }),
       row({ id: "b", status: "confirmed" }),
+      row({ id: "comp", status: "comped" }),
       row({ id: "c", status: "invited" }),
     ];
-    expect(countCheckin(rows)).toEqual({ paid: 2, present: 1, pending: 1 });
-    expect(filterCheckinRows(rows, "pending").map((p) => p.id)).toEqual(["b"]);
+    expect(countCheckin(rows)).toEqual({ paid: 3, present: 1, pending: 2 });
+    expect(filterCheckinRows(rows, "pending").map((p) => p.id)).toEqual(["b", "comp"]);
     expect(isCheckedIn(rows[0]!)).toBe(true);
   });
 });

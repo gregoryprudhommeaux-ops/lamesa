@@ -28,11 +28,23 @@ function normalizeEmail(email: string | null | undefined): string {
 /** Invitation pathway: guest was invited (not merely put on event waitlist). */
 export function countsAsInvitation(status: string | null | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "invited" || s === "attending" || s === "confirmed" || s === "not_attending";
+  return (
+    s === "invited" ||
+    s === "attending" ||
+    s === "confirmed" ||
+    s === "comped" ||
+    s === "not_attending"
+  );
 }
 
+/** Paid seat — generates CA. */
 export function countsAsConfirmed(status: string | null | undefined): boolean {
   return normalizeParticipationStatus(status) === "confirmed";
+}
+
+/** Complimentary “Invité” — seated, COST yes, CA no. */
+export function countsAsComplimentary(status: string | null | undefined): boolean {
+  return normalizeParticipationStatus(status) === "comped";
 }
 
 export function countReferralsMade(

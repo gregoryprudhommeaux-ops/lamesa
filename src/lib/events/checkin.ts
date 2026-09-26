@@ -2,12 +2,13 @@ import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import type { AdminEventParticipation } from "@/lib/types/events";
 
-/** Paid seat eligible for door check-in (excludes organizer). */
+/** Held seat (paid or complimentary) eligible for door check-in (excludes organizer). */
 export function isCheckinEligible(
   p: Pick<AdminEventParticipation, "status" | "isOrganizer" | "email">,
 ): boolean {
   if (isOrganizerParticipation(p)) return false;
-  return normalizeParticipationStatus(p.status) === "confirmed";
+  const s = normalizeParticipationStatus(p.status);
+  return s === "confirmed" || s === "comped";
 }
 
 export function isCheckedIn(

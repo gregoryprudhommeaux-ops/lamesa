@@ -267,12 +267,13 @@
     "copyEmail": "Copiar correo",
     "copyWhatsapp": "Copiar WhatsApp",
     "statuses": {
-      "invited": "Invitado",
+      "invited": "Por pagar",
       "attending": "Asistirá",
-      "confirmed": "Confirmado",
+      "confirmed": "Pagado",
+      "comped": "Invitado",
       "not_attending": "No asistirá",
       "waitlist": "Lista de espera",
-      "present": "Confirmado",
+      "present": "Pagado",
       "declined": "No asistirá"
     },
     "templatesTitle": "Plantillas de correo",
@@ -297,8 +298,10 @@
       "mapsUrl": "Enlace de Google Maps (opcional)",
       "capacity": "Personas en la mesa",
       "capacityHint": "Por defecto 16, incluido Gregory (administrador). 15 lugares para invitados; el resto pasa a lista de espera.",
-      "priceMxn": "Ticket (MXN / pers., sin IVA)",
-      "priceMxnHint": "Monto libre a precisar. El IVA (16 %) y el total se calculan automáticamente.",
+      "priceMxn": "Precio de venta sin IVA (MXN / pers.)",
+      "priceMxnHint": "Base HT. TTC invitado = HT + IVA 16% + servicio 15%.",
+      "costMxn": "Cost de la cena HT (MXN / pers.)",
+      "costMxnHint": "Costo restaurante / cubierto — interno (margen, invitados). TTC = HT + IVA 16% + servicio 15%.",
       "pricingMode": "Modo de precio",
       "pricingModeHint": "Elige cómo paga el invitado: ticket + en el lugar, o ticket con bebidas incluidas.",
       "pricingModeTicket": "Ticket + consumos en el lugar",
@@ -306,7 +309,7 @@
       "pricingModeAllIn": "Ticket con bebidas incluidas",
       "pricingModeAllInHint": "Un solo ticket cubre acceso, comida y bebidas (también puedes dejarlas aparte).",
       "accessSection": "TICKET — confirmación de lugar",
-      "accessSectionHint": "Monto pagado por adelantado para confirmar el lugar (transferencia). Los consumos se pagan en el lugar.",
+      "accessSectionHint": "Monto pagado por adelantado por transferencia SPEI para confirmar el lugar — sin pago en línea. Los consumos se pagan en el lugar.",
       "accessIncludes": "Incluido en el ticket",
       "accessWelcomeDrink": "Welcome drink",
       "accessAmuseBouche": "Amuse-bouches",
@@ -324,8 +327,8 @@
       "menuIncludesDrinksNo": "No — bebidas aparte (participante)",
       "allInSection": "TICKET CON BEBIDAS INCLUIDAS",
       "allInSectionHint": "Un solo monto por adelantado: acceso + comida + bebidas (o bebidas aparte si lo precisas).",
-      "allInTicketMxn": "Ticket con bebidas incluidas (MXN / pers., sin IVA)",
-      "allInTicketHint": "Monto libre. El IVA (16 %) y el total se calculan automáticamente.",
+      "allInTicketMxn": "Precio de venta HT (MXN / pers.)",
+      "allInTicketHint": "Lo que paga el miembro por transferencia. TTC = HT + IVA 16% + servicio 15%.",
       "allInDrinks": "Bebidas",
       "allInDrinksYes": "Incluidas en el ticket",
       "allInDrinksNo": "Aparte — se pagan en el lugar",
@@ -553,8 +556,8 @@
     "nextActions": {
       "eyebrow": "Tu próximo paso",
       "accessPrice": "Ticket ACCESS: {amount} IVA incl.",
-      "bankTitle": "Transferencia",
-      "bankHint": "Pon tu nombre en la referencia. Factura: envía tu CSF a greg@nextstep-services.com.",
+      "bankTitle": "Transferencia bancaria",
+      "bankHint": "Pago solo por transferencia SPEI (sin pago en línea). Pon tu nombre en la referencia. Factura: envía tu CSF a greg@nextstep-services.com.",
       "kinds": {
         "fill_survey": {
           "title": "Dar mi opinión",
@@ -563,7 +566,7 @@
         },
         "pay_access": {
           "title": "Confirmar mi lugar",
-          "reason": "Recibiste la invitación a « {event} » — paga el ticket ACCESS para validar tu lugar.",
+          "reason": "Recibiste la invitación a « {event} » — paga el ticket ACCESS por transferencia (sin pago en línea) para validar tu lugar.",
           "cta": "Ver la cena"
         },
         "complete_profile": {
@@ -639,12 +642,13 @@
       "selectPlaceholder": "Elegir…"
     },
     "status": {
-      "invited": "Invitado",
+      "invited": "Por pagar",
       "attending": "Asistirá",
-      "confirmed": "Confirmado",
+      "confirmed": "Pagado",
+      "comped": "Invitado",
       "not_attending": "No asistirá",
       "waitlist": "Lista de espera",
-      "present": "Confirmado",
+      "present": "Pagado",
       "declined": "No asistirá"
     }
   }

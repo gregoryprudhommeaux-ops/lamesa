@@ -107,7 +107,8 @@ function PriceBlock({
               {t("priceAllIn")} · {formatMxn(pricing.priceBeforeTax, locale)}
             </p>
             <p className="mt-1 text-xs text-ns-secondary">
-              {t("iva")}: {formatMxn(pricing.iva, locale)} · {t("totalWithIva")}:{" "}
+              {t("iva")}: {formatMxn(pricing.iva, locale)} · Service (15%):{" "}
+              {formatMxn(pricing.service, locale)} · {t("totalWithIva")}:{" "}
               <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
             </p>
             <p className="mt-2 text-xs text-ns-secondary">{t("priceAllInHint")}</p>
@@ -142,7 +143,8 @@ function PriceBlock({
             {t("price")} · {formatMxn(pricing.priceBeforeTax, locale)}
           </p>
           <p className="mt-1 text-xs text-ns-secondary">
-            {t("iva")}: {formatMxn(pricing.iva, locale)} · {t("totalWithIva")}:{" "}
+            {t("iva")}: {formatMxn(pricing.iva, locale)} · Service (15%):{" "}
+            {formatMxn(pricing.service, locale)} · {t("totalWithIva")}:{" "}
             <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
           </p>
           {showAccessIncludes ? (

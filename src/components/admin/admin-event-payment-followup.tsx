@@ -8,8 +8,14 @@ import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { Mail, MessageCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
-/** Simplified member status for post-invite payment follow-up. */
-export type InviteMemberStatus = "relance" | "paid" | "out";
+/**
+ * Simplified member status for post-invite payment follow-up.
+ * - relance = À payer / à relancer
+ * - paid = PAYÉ (CA)
+ * - comped = INVITÉ (COST oui, CA non)
+ * - out = ne viendra pas
+ */
+export type InviteMemberStatus = "relance" | "paid" | "comped" | "out";
 
 type AdminEventPaymentFollowupPanelProps = {
   event: AdminEvent;
@@ -22,12 +28,14 @@ type AdminEventPaymentFollowupPanelProps = {
 function toMemberStatus(p: AdminEventParticipation): InviteMemberStatus {
   const status = normalizeParticipationStatus(p.status);
   if (status === "confirmed") return "paid";
+  if (status === "comped") return "comped";
   if (status === "not_attending") return "out";
   return "relance";
 }
 
 function memberStatusToParticipation(s: InviteMemberStatus): EventParticipationStatus {
   if (s === "paid") return "confirmed";
+  if (s === "comped") return "comped";
   if (s === "out") return "not_attending";
   return "invited";
 }
@@ -47,8 +55,8 @@ function formatDeadline(iso: string | null | undefined): string | null {
 }
 
 /**
- * Membres invités après invitation formelle — 3 statuts :
- * À relancer · A payé · Ne viendra pas (+ envoi email de relance paiement).
+ * Membres après invitation formelle — 4 statuts :
+ * À relancer · Payé · Invité (offert) · Ne viendra pas (+ email relance paiement).
  */
 export function AdminEventPaymentFollowupPanel({
   event,
@@ -74,12 +82,18 @@ export function AdminEventPaymentFollowupPanel({
           status === "invited" ||
           status === "attending" ||
           status === "confirmed" ||
+          status === "comped" ||
           status === "waitlist" ||
           status === "not_attending"
         );
       })
       .sort((a, b) => {
-        const order: Record<InviteMemberStatus, number> = { relance: 0, paid: 1, out: 2 };
+        const order: Record<InviteMemberStatus, number> = {
+          relance: 0,
+          paid: 1,
+          comped: 2,
+          out: 3,
+        };
         const d = order[toMemberStatus(a)] - order[toMemberStatus(b)];
         if (d !== 0) return d;
         return (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr");
@@ -89,14 +103,16 @@ export function AdminEventPaymentFollowupPanel({
   const counts = useMemo(() => {
     let relance = 0;
     let paid = 0;
+    let comped = 0;
     let out = 0;
     for (const p of rows) {
       const s = toMemberStatus(p);
       if (s === "relance") relance += 1;
       else if (s === "paid") paid += 1;
+      else if (s === "comped") comped += 1;
       else out += 1;
     }
-    return { all: rows.length, relance, paid, out };
+    return { all: rows.length, relance, paid, comped, out };
   }, [rows]);
 
   const visible = useMemo(() => {
@@ -175,7 +191,8 @@ export function AdminEventPaymentFollowupPanel({
   const filters: Array<{ id: InviteMemberStatus | "all"; label: string; count: number }> = [
     { id: "all", label: "Tous", count: counts.all },
     { id: "relance", label: "À relancer", count: counts.relance },
-    { id: "paid", label: "A payé", count: counts.paid },
+    { id: "paid", label: "Payé", count: counts.paid },
+    { id: "comped", label: "Invité", count: counts.comped },
     { id: "out", label: "Ne viendra pas", count: counts.out },
   ];
 
@@ -187,10 +204,12 @@ export function AdminEventPaymentFollowupPanel({
             Confirmation & paiement
           </h4>
           <p className="mt-1 text-xs text-ns-secondary">
-            Un seul suivi : <strong>À relancer</strong> (paiement en attente),{" "}
-            <strong>A payé</strong> (place confirmée + email auto),{" "}
-            <strong>Ne viendra pas</strong>. Envoie la relance ACCESS aux « À
-            relancer » — une personne déjà relancée n’est pas renvoyée.
+            <strong>À relancer</strong> (virement en attente), <strong>Payé</strong> (CA — après réception du transfer),{" "}
+            <strong>Invité</strong> (place offerte — COST oui, pas de CA),{" "}
+            <strong>Ne viendra pas</strong>. Pas de paiement en ligne : le membre
+            verse par SPEI ; tu marques <strong>Payé</strong> à réception. Relance
+            ACCESS uniquement aux « À relancer » — une personne déjà relancée n’est
+            pas renvoyée.
           </p>
           {deadlineLabel ? (
             <p className="mt-1 text-xs text-ns-secondary">
@@ -315,7 +334,8 @@ export function AdminEventPaymentFollowupPanel({
                     className="rounded border border-ns-alternate px-2 py-1 text-xs font-semibold"
                   >
                     <option value="relance">À relancer</option>
-                    <option value="paid">A payé</option>
+                    <option value="paid">Payé</option>
+                    <option value="comped">Invité</option>
                     <option value="out">Ne viendra pas</option>
                   </select>
                 </div>

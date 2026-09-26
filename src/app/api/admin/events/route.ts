@@ -88,6 +88,7 @@ export async function POST(request: Request) {
       endsAt: data.endsAt ?? null,
       capacity,
       priceMxn: data.priceMxn ?? null,
+      costMxn: data.costMxn ?? null,
       accessIncludesWelcomeDrink: data.accessIncludesWelcomeDrink ?? false,
       accessIncludesAmuseBouche: data.accessIncludesAmuseBouche ?? false,
       menuIncluded: data.menuIncluded ?? "",

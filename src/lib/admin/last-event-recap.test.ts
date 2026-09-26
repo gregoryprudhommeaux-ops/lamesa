@@ -135,7 +135,9 @@ describe("buildLastEventRecap", () => {
     expect(recap?.registeredPeople.map((p) => p.fullName)).toEqual(["Sophie Decobecq"]);
     expect(recap?.revenueBeforeTaxMxn).toBe(450);
     expect(recap?.ivaMxn).toBe(72);
-    expect(recap?.revenueMxn).toBe(522);
+    expect(recap?.serviceMxn).toBe(67.5);
+    expect(recap?.revenueMxn).toBe(589.5);
+    expect(recap?.complimentary).toBe(0);
     expect(recap?.satisfactionResponses).toBe(1);
     expect(recap?.satisfactionOverall).toBe(4.7);
     expect(recap?.surveyRows[0]?.comment).toBe("Table très juste.");
@@ -158,5 +160,36 @@ describe("buildLastEventRecap", () => {
     expect(recap?.registered).toBe(1);
     expect(recap?.priceMxn).toBeNull();
     expect(recap?.revenueMxn).toBe(0);
+  });
+
+  it("counts complimentary Invité seats with cost but zero CA", () => {
+    const recap = buildLastEventRecap(
+      [event({ ...dinner, priceMxn: 2000, costMxn: 1000 })],
+      [
+        part({
+          id: "paid",
+          eventId: "ev1",
+          email: "paid@x.com",
+          fullName: "Payé",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+        part({
+          id: "guest",
+          eventId: "ev1",
+          email: "guest@x.com",
+          fullName: "Invité offert",
+          status: "comped",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+      ],
+      NOW,
+    );
+    expect(recap?.registered).toBe(1);
+    expect(recap?.complimentary).toBe(1);
+    expect(recap?.revenueMxn).toBe(2620);
+    expect(recap?.costTotalMxn).toBe(2620);
+    expect(recap?.marginMxn).toBe(0);
+    expect(recap?.complimentaryPeople[0]?.amountMxn).toBe(0);
   });
 });

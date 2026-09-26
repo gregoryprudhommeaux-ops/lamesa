@@ -16,6 +16,7 @@ const patchSchema = z
         "invited",
         "attending",
         "confirmed",
+        "comped",
         "not_attending",
         "waitlist",
         "present",
@@ -95,7 +96,23 @@ export async function PATCH(request: Request, { params }: Params) {
           email: prev.email,
           type: "confirmed_seat",
           source: "admin",
-          summary: "Place confirmée",
+          summary: "Place confirmée (payée)",
+          refs: { eventId: prev.eventId, participationId: id },
+        }),
+      );
+    }
+    if (
+      parsed.data.status !== undefined &&
+      nextStatus === "comped" &&
+      prevStatus !== "comped" &&
+      prev.email
+    ) {
+      void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
+        recordContactActivity({
+          email: prev.email,
+          type: "confirmed_seat",
+          source: "admin",
+          summary: "Place invitée (offerte — COST, pas de CA)",
           refs: { eventId: prev.eventId, participationId: id },
         }),
       );

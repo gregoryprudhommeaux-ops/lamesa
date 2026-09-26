@@ -76,7 +76,9 @@ function buildKpis(
   parts: AdminEventParticipation[],
 ): EventOpsKpis {
   const guests = parts.filter((p) => !p.isOrganizer);
-  const paid = guests.filter((p) => p.status === "confirmed" || p.status === "present").length;
+  const paid = guests.filter(
+    (p) => p.status === "confirmed" || p.status === "present",
+  ).length;
   const unpaidAfterInvite = guests.filter(
     (p) =>
       Boolean(p.calendarInviteSentAt) &&
