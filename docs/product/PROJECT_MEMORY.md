@@ -91,7 +91,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | NBA **check-in** dans la fenêtre soir J (H-6 → H+18) | Étape active le jour J, pas saut direct feedback |
 | 2026-09-26 | Fil personne×dîner v1 : `guestJourneyStage` sur roster | Une étape métier lisible (STD → payé → présent…) |
 | 2026-09-26 | Signal membre **« J’ai effectué le virement »** (`paymentDeclaredAt`) | Déclaré ≠ Payé ; admin confirme ; exclus des relances email |
-| 2026-09-26 | Audience — chips fit observés dans ContactPicker (jamais invité, déjà venu, sat, ville, profil) | Aide au choix sans IA opaque |
+| 2026-09-26 | Page `/e` : CTA adaptatif selon parcours (intérêt · déjà répondu · ACCESS · confirmé) | NBA « Régler ACCESS » ne renvoie plus un formulaire OUI/NON vide |
 
 ## Reusable components / patterns
 
@@ -123,7 +123,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
-| Page publique `/e` bifurquée | Ouvert — vague 2 (garder OUI/NON ; CTA adaptatif plus tard) |
+| Page publique `/e` bifurquée | Partiel — CTA adaptatif (OUI/NON · déjà répondu · ACCESS · confirmé) |
 | Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
 | Pas d’évolution cumulée série LA MESA | Done — `mesaSeries` dashboard Approfondir |
 | NBA saute check-in | Done — fenêtre soir J H-6→H+18 |
@@ -185,6 +185,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | Pas d’évolution cumulée LA MESA | Fait — série dashboard |
 | 2026-09-26 | P1 | NBA saute check-in | Fait — fenêtre soir J |
 | 2026-09-26 | P0 | Fil personne×dîner fragmenté | Fait v1 — journey stage roster |
+| 2026-09-26 | P1 | `/e` montre OUI/NON après invitation formelle | Fait — surface ACCESS / confirmé / déjà répondu |
 
 ## Changelog
 
@@ -212,3 +213,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Paiement — signal déclaré membre (`paymentDeclaredAt`) + filtre admin « Virement déclaré » + exclus relance email |
 | 2026-09-26 | Récap — CA sur les payants ; un seul couvert organisateur dans le COST (mailbox LA MESA, nom avec apostrophe, lignes en double) |
 | 2026-09-26 | Audience — `audience-fit` chips dans ContactPicker (signaux observés) |
+| 2026-09-26 | Page `/e` — CTA adaptatif (`guest-status` + ACCESS panel) ; NBA membre « Régler l’ACCESS » |

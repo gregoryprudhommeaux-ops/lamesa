@@ -447,6 +447,16 @@
     "interestCalendarLocationTbc": "Guadalajara centro — venue TBC",
     "interestSuccessNo": "Thanks — your reply is recorded.",
     "interestSuccessOther": "Thanks — we noted your message.",
+    "accessTitle": "Pay your ACCESS ticket",
+    "accessIntro": "You’ve received the formal invite. Your seat is confirmed once we receive the bank transfer (no online payment).",
+    "accessPrice": "ACCESS ticket: {amount} incl. tax",
+    "accessDeadline": "Please pay by {date}.",
+    "accessBankTitle": "Bank transfer (SPEI)",
+    "accessBankHint": "Use your name as the reference. Invoice: send your CSF to greg@nextstep-services.com.",
+    "accessDeclareCta": "I’ve sent the transfer",
+    "accessDeclaring": "Saving…",
+    "accessDeclared": "Transfer declared — we’ll confirm once it lands on the account.",
+    "accessConfirmed": "Your seat is confirmed. See you at the table.",
     "profileCtaMember": "Complete / edit my profile",
     "profileSuggestionPrefix": "You can also",
     "profileSuggestionLink": "complete or edit your profile",
@@ -580,7 +590,7 @@
           "title": "Confirm your seat",
           "reason": "You’ve been invited to “{event}” — pay the ACCESS ticket by bank transfer (no online payment) to lock your seat.",
           "declaredReason": "You declared your transfer for “{event}”. We’ll confirm your seat once the SPEI clears.",
-          "cta": "View dinner"
+          "cta": "Pay ACCESS"
         },
         "complete_profile": {
           "title": "Complete your profile",
