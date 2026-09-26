@@ -28,6 +28,7 @@ import type {
 } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { Copy, MoreVertical, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function AdminEmailTemplatesPanel() {
@@ -45,6 +46,7 @@ export function AdminEmailTemplatesPanel() {
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
   const [showIncompleteBlast, setShowIncompleteBlast] = useState(false);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
@@ -478,36 +480,57 @@ export function AdminEmailTemplatesPanel() {
 
   return (
     <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
-      <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-          Créer un template
-        </h2>
-        <p className="mt-1 text-xs text-ns-secondary">
-          Même design que les mails LA MESA (fond sombre, carte blanche, marque lime). Les
-          templates custom sont globaux — utiles pour drafts / campagnes manuelles. Les
-          automations (invitation, rappel, etc.) restent dans la liste système.
-        </p>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <div className="min-w-0 flex-1 basis-[220px]">
-            <label className={LABEL_CLASS} htmlFor="new-tpl-label">
-              Nom du template
-            </label>
-            <input
-              id="new-tpl-label"
-              className={INPUT_CLASS}
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Ex. Nurture J+7"
-            />
-          </div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-ns-hero">Coms</h2>
+          <p className="mt-1 text-sm text-ns-secondary">
+            Envoyer et suivre — templates au service de l’envoi, pas l’inverse.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             className={BTN_PRIMARY}
-            disabled={creating || newLabel.trim().length < 2}
-            onClick={() => void createTemplate()}
+            onClick={() => {
+              const firstCustom = customTemplates[0]?.key;
+              if (firstCustom) {
+                setActiveKey(firstCustom);
+                setMessage(null);
+                window.requestAnimationFrame(() => {
+                  document
+                    .getElementById("coms-send-panel")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+              } else {
+                setShowCreateTemplate(true);
+                setMessage("Crée un template custom pour lancer un blast Prospects.");
+              }
+            }}
           >
-            {creating ? "Création…" : "Créer"}
+            Envoyer un blast
           </button>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => {
+              setActiveKey("profile_incomplete");
+              setShowIncompleteBlast(true);
+              setMessage(null);
+              window.requestAnimationFrame(() => {
+                document
+                  .getElementById("incomplete-profiles-blast")
+                  ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              });
+            }}
+          >
+            Profils incomplets
+          </button>
+          <Link
+            href="/admin/personnes?tab=prospects"
+            className={`${BTN_SECONDARY} inline-flex items-center text-sm`}
+          >
+            Listes Prospects →
+          </Link>
         </div>
       </div>
 
@@ -516,7 +539,7 @@ export function AdminEmailTemplatesPanel() {
           {customTemplates.length > 0 ? (
             <div className="space-y-1">
               <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-                Custom
+                Envoi · custom
               </p>
               {customTemplates.map((t) => (
                 <div
@@ -586,7 +609,7 @@ export function AdminEmailTemplatesPanel() {
                 Custom
               </p>
               <p className="mt-1 text-xs text-ns-secondary">
-                Aucun template custom — crée-en un ci-dessus.
+                Aucun template custom — crée-en un en bas de page.
               </p>
             </div>
           )}
@@ -832,6 +855,16 @@ export function AdminEmailTemplatesPanel() {
             />
           ) : null}
 
+          {isCustom ? (
+            <div id="coms-send-panel" className="min-w-0 max-w-full overflow-hidden">
+              <ColdOutreachPanel
+                templateKey={activeKey}
+                locale={editLocale}
+                enabled={enabled}
+              />
+            </div>
+          ) : null}
+
           {showPreview ? (
             <div className="max-w-full overflow-hidden rounded-xl border border-gray-200">
               <p className="border-b border-gray-100 bg-ns-brand-light px-3 py-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
@@ -854,15 +887,7 @@ export function AdminEmailTemplatesPanel() {
             </div>
           ) : null}
 
-          {isCustom ? (
-            <div className="min-w-0 max-w-full overflow-hidden">
-              <ColdOutreachPanel
-                templateKey={activeKey}
-                locale={editLocale}
-                enabled={enabled}
-              />
-            </div>
-          ) : null}
+          {/* cold outreach was here — moved above preview */}
 
           <div className="flex flex-wrap gap-2">
             <button
@@ -915,6 +940,50 @@ export function AdminEmailTemplatesPanel() {
             </button>
           </div>
         </section>
+      </div>
+
+      <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+              Bibliothèque · créer un template
+            </h3>
+            <p className="mt-1 text-xs text-ns-secondary">
+              Secondaire — pour une nouvelle campagne custom (même shell LA MESA).
+            </p>
+          </div>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => setShowCreateTemplate((v) => !v)}
+          >
+            {showCreateTemplate ? "Masquer" : "Nouveau template"}
+          </button>
+        </div>
+        {showCreateTemplate ? (
+          <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3">
+            <div className="min-w-0 flex-1 basis-[220px]">
+              <label className={LABEL_CLASS} htmlFor="new-tpl-label">
+                Nom du template
+              </label>
+              <input
+                id="new-tpl-label"
+                className={INPUT_CLASS}
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="Ex. Nurture J+7"
+              />
+            </div>
+            <button
+              type="button"
+              className={BTN_PRIMARY}
+              disabled={creating || newLabel.trim().length < 2}
+              onClick={() => void createTemplate()}
+            >
+              {creating ? "Création…" : "Créer"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
