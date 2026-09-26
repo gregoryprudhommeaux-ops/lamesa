@@ -30,6 +30,7 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
   const authFetch = useAuthFetch();
   const [ouiRecipients, setOuiRecipients] = useState<FormalInviteRecipient[]>([]);
   const [ouiLoading, setOuiLoading] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -85,6 +86,31 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
       else next.add(email);
       return next;
     });
+  }
+
+  async function syncInterestLists() {
+    setSyncing(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const res = await authFetch(`/api/admin/events/${event.id}/sync-interest-lists`, {
+        method: "POST",
+        body: "{}",
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        synced?: number;
+        error?: string;
+      };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "sync_failed");
+      setMessage(`Listes Prospects synchronisées (${json.synced ?? 0} réponses).`);
+      await loadOui();
+      onEventUpdated?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncing(false);
+    }
   }
 
   async function sendFormalInvites() {
@@ -147,17 +173,15 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
             Invitation formelle · OUI
           </p>
           <p className="mt-1 text-xs text-ns-secondary">
-            Un seul suivi : sélectionne les intéressés (playlist OUI) et envoie l’invitation
-            ACCESS. {stats.ouiCount} intéressé(s) · {stats.ouiPending} à envoyer · {stats.ouiSent}{" "}
-            déjà envoyés · {selectedEmails.size} sélectionné(s).
+            Sélectionne les OUI (formulaire + playlist CRM) et envoie l’invitation ACCESS.{" "}
+            {stats.ouiCount} intéressé(s) · {stats.ouiPending} à envoyer · {stats.ouiSent} déjà
+            envoyés · {selectedEmails.size} sélectionné(s).
           </p>
           <p className="mt-1 text-[11px] leading-snug text-ns-secondary">
             Table : <strong>{guestCapacity}</strong> places invités ({tableCovers} couverts). Pas de
-            plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS
-            se fait uniquement par virement (pas en ligne) ; tu marques Payé à
-            réception.
-            (first come) ; au-delà des places, liste d’attente. Le suivi paiement est dans l’étape
-            suivante.
+            plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS se fait
+            uniquement par virement (pas en ligne) ; tu marques Payé à réception. Sur-invite OK
+            (first come) ; au-delà des places → liste d’attente. Suivi paiement = étape suivante.
           </p>
           {overCapacity ? (
             <p className="mt-1 text-[11px] font-semibold text-amber-900">
@@ -170,7 +194,16 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
           <button
             type="button"
             className={BTN_SECONDARY}
-            disabled={ouiLoading}
+            disabled={ouiLoading || syncing}
+            onClick={() => void syncInterestLists()}
+            title="Alimente les playlists Prospects OUI/NON/sans réponse depuis le formulaire"
+          >
+            {syncing ? "Sync…" : "Sync → listes"}
+          </button>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            disabled={ouiLoading || syncing}
             onClick={() => void loadOui()}
           >
             Rafraîchir
@@ -203,7 +236,14 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
         <p className="text-sm text-ns-secondary">Chargement des OUI…</p>
       ) : ouiRecipients.length === 0 ? (
         <p className="text-sm text-ns-secondary">
-          Aucun OUI pour l’instant. Sync les listes Prospects depuis l’Inbox Save the Date.
+          Aucun OUI pour l’instant. Lance « Sync → listes » si des réponses existent déjà, ou{" "}
+          <a
+            href={`?id=${encodeURIComponent(event.id)}&phase=qualify`}
+            className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+          >
+            ouvre Qualification
+          </a>{" "}
+          pour voir l’inbox.
         </p>
       ) : (
         <ul className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-white bg-white p-2">
