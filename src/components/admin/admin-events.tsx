@@ -21,6 +21,9 @@ import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import {
+  type InterestDisplayStatus,
+} from "@/lib/admin/interest-display";
+import {
   normalizeOpsPhaseId,
   opsPhasesForMode,
   type OpsPhaseId,
@@ -265,6 +268,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [phaseOverride, setPhaseOverride] = useState(false);
   /** OUI without formal invite — feeds suggestOpsPhase interestSignals. */
   const [yesPendingFormal, setYesPendingFormal] = useState(0);
+  /** Interest OUI/NON/… by email — bridge Audience roster ↔ playlists. */
+  const [interestByEmail, setInterestByEmail] = useState<Record<
+    string,
+    InterestDisplayStatus
+  > | null>(null);
 
   const isInterestMode = responseMode === "interest";
 
@@ -289,6 +297,14 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     () => participations.filter((p) => p.eventId === activeId),
     [participations, activeId],
   );
+
+  /** Refresh interest map when roster / STD contact set changes. */
+  const interestRefreshKey = useMemo(() => {
+    if (!activeId) return "";
+    const parts = participations.filter((p) => p.eventId === activeId);
+    const stdSent = parts.filter((p) => p.saveTheDateSentAt).length;
+    return `${activeId}:${parts.length}:${stdSent}`;
+  }, [activeId, participations]);
 
   const opsSuggestion = useMemo(() => {
     const eventForSuggest = activeEvent ?? {
@@ -436,6 +452,35 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     };
   }, [activeId, isInterestMode, authFetch, activeParticipations]);
 
+  /** Bridge interest playlists → Audience/roster chips (email join only). */
+  useEffect(() => {
+    if (!activeId || !isInterestMode) {
+      setInterestByEmail(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/admin/events/${activeId}/interest-status`);
+        const json = (await res.json()) as {
+          ok?: boolean;
+          byEmail?: Record<string, InterestDisplayStatus>;
+        };
+        if (cancelled) return;
+        if (res.ok && json.ok) {
+          setInterestByEmail(json.byEmail ?? {});
+        } else {
+          setInterestByEmail(null);
+        }
+      } catch {
+        if (!cancelled) setInterestByEmail(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, isInterestMode, interestRefreshKey, authFetch]);
+
   /** Open event from ?id= (calendar / command-center deep-link) once list is loaded. */
   useEffect(() => {
     if (loading || events.length === 0) return;
@@ -512,6 +557,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setMesaNumber("");
     setSelectedInvitees(invitees);
     setYesPendingFormal(0);
+    setInterestByEmail(null);
   }
 
   useEffect(() => {
@@ -1953,6 +1999,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 participations={activeParticipations}
                 capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                 title={labels.selectedContacts}
+                interestByEmail={isInterestMode ? interestByEmail : null}
                 labels={{
                   invited: labels["statuses.invited"] ?? "À payer",
                   attending: labels["statuses.attending"] ?? "Attending",
@@ -2119,6 +2166,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     participations={activeParticipations}
                     capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                     title="Suivi participants"
+                    interestByEmail={isInterestMode ? interestByEmail : null}
                     labels={{
                       invited: labels["statuses.invited"] ?? "À payer",
                       attending: labels["statuses.attending"] ?? "Attending",

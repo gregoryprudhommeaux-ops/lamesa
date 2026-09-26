@@ -95,6 +95,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Audience — chips fit observés dans ContactPicker (jamais invité, déjà venu, sat, ville, profil) | Aide au choix sans IA opaque |
 | 2026-09-26 | Après STD, NBA = Qualification ; dès qu’il y a des OUI sans invite → Formal | Signaux playlist OUI |
 | 2026-09-26 | Formal : pool OUI = formulaire ∪ playlist ; Sync in-panel | NBA Formal ne tombe plus sur liste vide |
+| 2026-09-26 | Bridge Audience↔OUI : chips intérêt (OUI/NON/AUTRE/Sans réponse) sur roster **et** ContactPicker via email | Join-only ; pas de fusion Firestore |
 
 ## Reusable components / patterns
 
@@ -132,7 +133,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
 | Pas d’évolution cumulée série LA MESA | Done — `mesaSeries` dashboard Approfondir |
 | NBA saute check-in | Done — fenêtre soir J H-6→H+18 |
-| Double modèle Audience vs playlists OUI | Ouvert — v1 journey + fit chips ; fusion data = vague 3 |
+| Double modèle Audience vs playlists OUI | Partiel — chips intérêt roster+picker (join email) ; fusion data = vague 3 |
 | Formal OUI invisible sans Sync playlist | Fait — union formulaire∪playlist + Sync in-panel |
 
 ## Email funnel — audit 2026-09-26
@@ -224,3 +225,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Page `/e` — CTA adaptatif (`guest-status` + ACCESS panel) ; NBA membre « Régler l’ACCESS » |
 | 2026-09-26 | Ops — NBA Qualification après STD ; Formal dès OUI pending ; inbox intérêt en qualify seul |
 | 2026-09-26 | Formal — OUI formulaire∪playlist + bouton Sync dans le panneau |
+| 2026-09-26 | Bridge Audience↔intérêt — chips OUI/NON/AUTRE/Sans réponse sur roster + ContactPicker (`interest-display` + `/interest-status`) |
