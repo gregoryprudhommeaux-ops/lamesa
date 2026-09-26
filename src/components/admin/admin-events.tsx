@@ -263,6 +263,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [focusPhase, setFocusPhase] = useState<OpsPhaseId>("prep");
   /** When set, user overrode the suggested phase — show “revenir à la suggestion”. */
   const [phaseOverride, setPhaseOverride] = useState(false);
+  /** OUI without formal invite — feeds suggestOpsPhase interestSignals. */
+  const [yesPendingFormal, setYesPendingFormal] = useState(0);
 
   const isInterestMode = responseMode === "interest";
 
@@ -312,6 +314,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       },
       draft: { title, eventDate, venueName, address },
       participations: activeParticipations,
+      interestSignals: isInterestMode ? { yesPendingFormal } : undefined,
     });
   }, [
     activeEvent,
@@ -324,6 +327,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     status,
     responseMode,
     capacity,
+    isInterestMode,
+    yesPendingFormal,
   ]);
 
   function syncUrl(eventId: string | null, phase: OpsPhaseId) {
@@ -401,6 +406,36 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     void loadAll();
   }, [loadAll]);
 
+  /** OUI playlist pending formal — drives NBA Formal vs Qualify. */
+  useEffect(() => {
+    if (!activeId || !isInterestMode) {
+      setYesPendingFormal(0);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/admin/events/${activeId}/send-formal-invites`);
+        const json = (await res.json()) as {
+          ok?: boolean;
+          recipients?: { calendarInviteSentAt?: string | null }[];
+        };
+        if (cancelled) return;
+        if (!res.ok || !json.ok) {
+          setYesPendingFormal(0);
+          return;
+        }
+        const pending = (json.recipients ?? []).filter((r) => !r.calendarInviteSentAt).length;
+        setYesPendingFormal(pending);
+      } catch {
+        if (!cancelled) setYesPendingFormal(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, isInterestMode, authFetch, activeParticipations]);
+
   /** Open event from ?id= (calendar / command-center deep-link) once list is loaded. */
   useEffect(() => {
     if (loading || events.length === 0) return;
@@ -476,6 +511,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setAllInPriceMaxMxn("");
     setMesaNumber("");
     setSelectedInvitees(invitees);
+    setYesPendingFormal(0);
   }
 
   useEffect(() => {
