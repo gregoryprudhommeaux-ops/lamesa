@@ -326,7 +326,7 @@
       "menuIncludesDrinksYes": "Oui — boissons incluses",
       "menuIncludesDrinksNo": "Non — boissons à part (participant)",
       "allInSection": "TICKET AVEC BOISSONS INCLUSES",
-      "allInSectionHint": "Un seul montant payé à l’avance : accès + repas + boissons (ou boissons à part si tu le précises).",
+      "allInSectionHint": "Un seul montant payé à l’avance par virement : accès + repas + boissons. Renseigne aussi le cost du dîner pour la marge.",
       "allInTicketMxn": "Prix de vente HT (MXN / pers.)",
       "allInTicketHint": "Ce que le membre paie par virement. TTC = HT + IVA 16% + service 15%.",
       "allInDrinks": "Boissons",
