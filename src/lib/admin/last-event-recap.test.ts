@@ -137,6 +137,9 @@ describe("buildLastEventRecap", () => {
     expect(recap?.ivaMxn).toBe(72);
     expect(recap?.serviceMxn).toBe(67.5);
     expect(recap?.revenueMxn).toBe(589.5);
+    expect(recap?.saleFormula).toBe("TTC · HT + IVA 16% + svc 15%");
+    expect(recap?.priceIncludesIva).toBe(true);
+    expect(recap?.priceIncludesService).toBe(true);
     expect(recap?.complimentary).toBe(0);
     expect(recap?.satisfactionResponses).toBe(1);
     expect(recap?.satisfactionOverall).toBe(4.7);
@@ -191,5 +194,33 @@ describe("buildLastEventRecap", () => {
     expect(recap?.costTotalMxn).toBe(2620);
     expect(recap?.marginMxn).toBe(0);
     expect(recap?.complimentaryPeople[0]?.amountMxn).toBe(0);
+  });
+
+  it("CA follows negotiation flags (no invented service)", () => {
+    const recap = buildLastEventRecap(
+      [
+        event({
+          ...dinner,
+          priceMxn: 1300,
+          priceIncludesService: false,
+          priceIncludesIva: true,
+        }),
+      ],
+      [
+        part({
+          id: "paid",
+          eventId: "ev1",
+          email: "a@x.com",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+      ],
+      NOW,
+    );
+    // 1300 + IVA 208 = 1508 — no service
+    expect(recap?.revenueMxn).toBe(1508);
+    expect(recap?.serviceMxn).toBe(0);
+    expect(recap?.saleFormula).toBe("TTC · HT + IVA 16%");
+    expect(recap?.priceIncludesService).toBe(false);
   });
 });

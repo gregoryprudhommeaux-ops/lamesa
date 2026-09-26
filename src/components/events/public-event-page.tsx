@@ -92,6 +92,7 @@ function PriceBlock({
   const pricing =
     hasAccess && typeof priceMxn === "number"
       ? computeEventIva(priceMxn, {
+          includeIva: event.priceIncludesIva !== false,
           includeService: event.priceIncludesService !== false,
         })
       : null;
@@ -111,12 +112,17 @@ function PriceBlock({
               {t("priceAllIn")} · {formatMxn(pricing.priceBeforeTax, locale)}
             </p>
             <p className="mt-1 text-xs text-ns-secondary">
-              {t("iva")}: {formatMxn(pricing.iva, locale)}
-              {pricing.serviceIncluded
-                ? ` · Service (15%): ${formatMxn(pricing.service, locale)}`
-                : ""}{" "}
-              · {t("totalWithIva")}:{" "}
-              <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
+              {[
+                pricing.ivaIncluded
+                  ? `${t("iva")}: ${formatMxn(pricing.iva, locale)}`
+                  : null,
+                pricing.serviceIncluded
+                  ? `Service (15%): ${formatMxn(pricing.service, locale)}`
+                  : null,
+                `${t("totalWithIva")}: ${formatMxn(pricing.totalWithIva, locale)}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </p>
             <p className="mt-2 text-xs text-ns-secondary">{t("priceAllInHint")}</p>
             {event.menuIncludesDrinks === true ? (
@@ -150,12 +156,17 @@ function PriceBlock({
             {t("price")} · {formatMxn(pricing.priceBeforeTax, locale)}
           </p>
           <p className="mt-1 text-xs text-ns-secondary">
-            {t("iva")}: {formatMxn(pricing.iva, locale)}
-            {pricing.serviceIncluded
-              ? ` · Service (15%): ${formatMxn(pricing.service, locale)}`
-              : ""}{" "}
-            · {t("totalWithIva")}:{" "}
-            <strong>{formatMxn(pricing.totalWithIva, locale)}</strong>
+            {[
+              pricing.ivaIncluded
+                ? `${t("iva")}: ${formatMxn(pricing.iva, locale)}`
+                : null,
+              pricing.serviceIncluded
+                ? `Service (15%): ${formatMxn(pricing.service, locale)}`
+                : null,
+              `${t("totalWithIva")}: ${formatMxn(pricing.totalWithIva, locale)}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
           {showAccessIncludes ? (
             <p className="mt-2 text-xs text-ns-secondary">

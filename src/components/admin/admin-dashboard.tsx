@@ -1435,7 +1435,7 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
       id: "revenue",
       label: "CA généré",
       value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
-      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : "TTC · HT + IVA 16% + svc 15%",
+      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : recap.saleFormula,
     },
     {
       id: "satisfaction",
@@ -1596,7 +1596,15 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
                           recap.complimentary > 0
                             ? ` · ${recap.complimentary} invitée${recap.complimentary > 1 ? "s" : ""}`
                             : ""
-                        } · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)} · svc ${formatRecapMxn(recap.serviceMxn)}`}
+                        } · ${recap.saleFormula} · base HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)}${
+                          recap.priceIncludesIva
+                            ? ` · IVA ${formatRecapMxn(recap.ivaMxn)}`
+                            : ""
+                        }${
+                          recap.priceIncludesService
+                            ? ` · svc ${formatRecapMxn(recap.serviceMxn)}`
+                            : ""
+                        }`}
                   </p>
                   {recap.costMxn != null ? (
                     <p className="mt-1 text-xs text-ns-secondary">

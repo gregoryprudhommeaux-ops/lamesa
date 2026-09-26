@@ -8,14 +8,16 @@ export type SeatPriceBreakdown = {
   base: number;
   iva: number;
   service: number;
-  /** Whether service was applied. */
+  ivaIncluded: boolean;
   serviceIncluded: boolean;
-  /** base + IVA (+ service if included). */
+  /** base (+ IVA if included) (+ service if included). */
   total: number;
 };
 
 export type SeatPriceOptions = {
-  /** When false, TTC = HT + IVA only. Default true. */
+  /** When false, IVA is not added. Default true. */
+  includeIva?: boolean;
+  /** When false, service is not added. Default true. */
   includeService?: boolean;
 };
 
@@ -23,32 +25,49 @@ function roundMoney(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Missing/undefined → service included (legacy default). */
-export function resolveIncludesService(
-  value: boolean | null | undefined,
-): boolean {
+/** Missing/undefined → included (legacy default). */
+export function resolveIncludesFlag(value: boolean | null | undefined): boolean {
   return value !== false;
 }
 
+/** @deprecated Prefer resolveIncludesFlag */
+export function resolveIncludesService(
+  value: boolean | null | undefined,
+): boolean {
+  return resolveIncludesFlag(value);
+}
+
 /**
- * COST or prix de vente breakdown:
- * base HT + IVA 16% + optional service 15% (both computed on the HT base).
+ * COST or prix de vente breakdown from negotiation flags.
+ * Only adds IVA / service when the event marks them as included.
  */
 export function computeSeatPriceBreakdown(
   baseMxn: number,
   options?: SeatPriceOptions,
 ): SeatPriceBreakdown {
   const base = Number.isFinite(baseMxn) && baseMxn > 0 ? roundMoney(baseMxn) : 0;
-  const serviceIncluded = resolveIncludesService(options?.includeService);
-  const iva = roundMoney(base * EVENT_IVA_RATE);
+  const ivaIncluded = resolveIncludesFlag(options?.includeIva);
+  const serviceIncluded = resolveIncludesFlag(options?.includeService);
+  const iva = ivaIncluded ? roundMoney(base * EVENT_IVA_RATE) : 0;
   const service = serviceIncluded ? roundMoney(base * EVENT_SERVICE_RATE) : 0;
   const total = roundMoney(base + iva + service);
-  return { base, iva, service, serviceIncluded, total };
+  return { base, iva, service, ivaIncluded, serviceIncluded, total };
+}
+
+/** Short FR formula label for dashboard / recap (only negotiated components). */
+export function formatSeatPriceFormula(options?: SeatPriceOptions): string {
+  const iva = resolveIncludesFlag(options?.includeIva);
+  const service = resolveIncludesFlag(options?.includeService);
+  const parts = ["HT"];
+  if (iva) parts.push("IVA 16%");
+  if (service) parts.push("svc 15%");
+  if (parts.length === 1) return "HT (sans IVA ni service)";
+  return `TTC · ${parts.join(" + ")}`;
 }
 
 /**
  * @deprecated Prefer computeSeatPriceBreakdown — kept for call sites using IVA naming.
- * `totalWithIva` is TTC = HT + IVA (+ service when included).
+ * `totalWithIva` is the negotiated TTC (may omit IVA and/or service).
  */
 export function computeEventIva(
   priceBeforeTax: number,
@@ -57,6 +76,7 @@ export function computeEventIva(
   priceBeforeTax: number;
   iva: number;
   service: number;
+  ivaIncluded: boolean;
   serviceIncluded: boolean;
   totalWithIva: number;
 } {
@@ -65,8 +85,30 @@ export function computeEventIva(
     priceBeforeTax: b.base,
     iva: b.iva,
     service: b.service,
+    ivaIncluded: b.ivaIncluded,
     serviceIncluded: b.serviceIncluded,
     totalWithIva: b.total,
+  };
+}
+
+export type EventPricingFlags = {
+  priceIncludesIva?: boolean | null;
+  priceIncludesService?: boolean | null;
+  costIncludesIva?: boolean | null;
+  costIncludesService?: boolean | null;
+};
+
+export function salePriceOptions(flags: EventPricingFlags): SeatPriceOptions {
+  return {
+    includeIva: resolveIncludesFlag(flags.priceIncludesIva),
+    includeService: resolveIncludesFlag(flags.priceIncludesService),
+  };
+}
+
+export function costPriceOptions(flags: EventPricingFlags): SeatPriceOptions {
+  return {
+    includeIva: resolveIncludesFlag(flags.costIncludesIva),
+    includeService: resolveIncludesFlag(flags.costIncludesService),
   };
 }
 
@@ -74,16 +116,14 @@ export function computeEventIva(
 export function computeSeatMarginMxn(input: {
   costMxn: number | null | undefined;
   priceMxn: number | null | undefined;
-  priceIncludesService?: boolean | null;
-  costIncludesService?: boolean | null;
-}): number {
+} & EventPricingFlags): number {
   const cost = computeSeatPriceBreakdown(
     typeof input.costMxn === "number" ? input.costMxn : 0,
-    { includeService: resolveIncludesService(input.costIncludesService) },
+    costPriceOptions(input),
   ).total;
   const sale = computeSeatPriceBreakdown(
     typeof input.priceMxn === "number" ? input.priceMxn : 0,
-    { includeService: resolveIncludesService(input.priceIncludesService) },
+    salePriceOptions(input),
   ).total;
   if (cost <= 0 || sale <= 0) return 0;
   return roundMoney(sale - cost);
@@ -91,7 +131,7 @@ export function computeSeatMarginMxn(input: {
 
 /**
  * Event P&L snapshot from seats.
- * - CA = paid seats × sale TTC
+ * - CA = paid seats × sale TTC (only negotiated IVA/service)
  * - Cost = (paid + complimentary) × cost TTC
  * - Complimentary seats add cost, zero revenue
  */
@@ -100,9 +140,7 @@ export function computeEventEconomics(input: {
   priceMxn: number | null | undefined;
   paidSeatCount: number;
   complimentarySeatCount: number;
-  priceIncludesService?: boolean | null;
-  costIncludesService?: boolean | null;
-}): {
+} & EventPricingFlags): {
   costPerSeat: SeatPriceBreakdown;
   salePerSeat: SeatPriceBreakdown;
   revenueMxn: number;
@@ -110,14 +148,16 @@ export function computeEventEconomics(input: {
   marginMxn: number;
   paidSeatCount: number;
   complimentarySeatCount: number;
+  saleFormula: string;
 } {
   const costPerSeat = computeSeatPriceBreakdown(
     typeof input.costMxn === "number" ? input.costMxn : 0,
-    { includeService: resolveIncludesService(input.costIncludesService) },
+    costPriceOptions(input),
   );
+  const saleOpts = salePriceOptions(input);
   const salePerSeat = computeSeatPriceBreakdown(
     typeof input.priceMxn === "number" ? input.priceMxn : 0,
-    { includeService: resolveIncludesService(input.priceIncludesService) },
+    saleOpts,
   );
   const paid = Math.max(0, Math.floor(input.paidSeatCount));
   const comps = Math.max(0, Math.floor(input.complimentarySeatCount));
@@ -131,6 +171,7 @@ export function computeEventEconomics(input: {
     marginMxn: roundMoney(revenueMxn - costTotalMxn),
     paidSeatCount: paid,
     complimentarySeatCount: comps,
+    saleFormula: formatSeatPriceFormula(saleOpts),
   };
 }
 
