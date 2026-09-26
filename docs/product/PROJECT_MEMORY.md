@@ -170,10 +170,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
 | 2026-09-26 | Continuité — queue filters, NBA Dashboard, Tables eventId |
-<<<<<<< HEAD
 | 2026-09-26 | Dashboard moment T — un focus Maintenant (email / post-dîner CA+sat) |
-=======
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
->>>>>>> origin/main
