@@ -550,6 +550,34 @@
     "guest": "Guest",
     "viewEvent": "View dinner",
     "settingsLink": "Account settings",
+    "nextActions": {
+      "eyebrow": "Your next step",
+      "accessPrice": "ACCESS ticket: {amount} incl. tax",
+      "bankTitle": "Bank transfer",
+      "bankHint": "Put your name in the reference. Invoice: send your CSF to greg@nextstep-services.com.",
+      "kinds": {
+        "fill_survey": {
+          "title": "Share feedback",
+          "reason": "The satisfaction survey for “{event}” is waiting for you.",
+          "cta": "Open survey"
+        },
+        "pay_access": {
+          "title": "Confirm your seat",
+          "reason": "You’ve been invited to “{event}” — pay the ACCESS ticket to lock your seat.",
+          "cta": "View dinner"
+        },
+        "complete_profile": {
+          "title": "Complete your profile",
+          "reason": "Profile at {percent}% — fuller profiles get better table matches.",
+          "cta": "Open profile"
+        },
+        "open_event": {
+          "title": "Upcoming dinner",
+          "reason": "Your seat is confirmed for “{event}”.",
+          "cta": "View dinner"
+        }
+      }
+    },
     "dashboard": {
       "statsTitle": "At a glance",
       "stats": {

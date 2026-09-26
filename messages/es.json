@@ -550,6 +550,34 @@
     "guest": "Invitado",
     "viewEvent": "Ver la cena",
     "settingsLink": "Ajustes de la cuenta",
+    "nextActions": {
+      "eyebrow": "Tu próximo paso",
+      "accessPrice": "Ticket ACCESS: {amount} IVA incl.",
+      "bankTitle": "Transferencia",
+      "bankHint": "Pon tu nombre en la referencia. Factura: envía tu CSF a greg@nextstep-services.com.",
+      "kinds": {
+        "fill_survey": {
+          "title": "Dar mi opinión",
+          "reason": "La encuesta de satisfacción de « {event} » te espera.",
+          "cta": "Responder la encuesta"
+        },
+        "pay_access": {
+          "title": "Confirmar mi lugar",
+          "reason": "Recibiste la invitación a « {event} » — paga el ticket ACCESS para validar tu lugar.",
+          "cta": "Ver la cena"
+        },
+        "complete_profile": {
+          "title": "Completar mi perfil",
+          "reason": "Perfil al {percent} % — cuanto más completo, mejor el match de mesa.",
+          "cta": "Abrir mi perfil"
+        },
+        "open_event": {
+          "title": "Próxima cena",
+          "reason": "Tu lugar está confirmado para « {event} ».",
+          "cta": "Ver la cena"
+        }
+      }
+    },
     "dashboard": {
       "statsTitle": "De un vistazo",
       "stats": {

@@ -112,7 +112,8 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
-| Page publique `/e` bifurquée | Ouvert — vague 2 |
+| Page publique `/e` bifurquée | Ouvert — vague 2 (garder OUI/NON ; CTA adaptatif plus tard) |
+| Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
 
 ## Email funnel — audit 2026-09-26
 
@@ -185,3 +186,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Phase paiement — un seul panneau Confirmation & paiement (plus de double roster) |
 | 2026-09-26 | Phase formal (interest) — panneau OUI seul, plus de roster générique en dessous |
 | 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |
+| 2026-09-26 | Espace membre — bloc « Mon prochain pas » (survey / ACCESS / profil) |

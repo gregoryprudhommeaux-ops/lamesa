@@ -1,4 +1,5 @@
 import type { DashboardStats } from "@/lib/member/dashboard-stats";
+import type { MemberNextAction } from "@/lib/member/next-actions";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 export type MemberFellow = { fullName?: string; companyName?: string; status: string };
@@ -31,6 +32,7 @@ export type MePayload = {
   notOnWaitlist?: boolean;
   pastInvitations: MemberInvitationEntry[];
   upcomingInvitations: MemberInvitationEntry[];
+  nextActions?: MemberNextAction[];
   stats: DashboardStats;
   referral: MemberReferralInfo;
   isAdmin?: boolean;
