@@ -32,6 +32,21 @@ describe("isOrganizerParticipation", () => {
     ).toBe(true);
   });
 
+  it("matches the LA MESA mailbox and an apostrophe in the name", () => {
+    expect(
+      isOrganizerParticipation({
+        email: "greg@nextstep-services.com",
+        fullName: "Greg",
+      }),
+    ).toBe(true);
+    expect(
+      isOrganizerParticipation({
+        email: "other@example.com",
+        fullName: "Gregory Prud'hommeaux",
+      }),
+    ).toBe(true);
+  });
+
   it("does not treat other guests as organizer", () => {
     expect(
       isOrganizerParticipation({

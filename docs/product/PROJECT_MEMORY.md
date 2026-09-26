@@ -180,6 +180,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 | FormalInviteOui + roster générique en double (phase formal) | Done — panneau OUI seul |
 | 2026-09-26 | P1 | Check-in placeholder / statut Présent mort (`present`→`confirmed`) | Done — `checkedInAt` |
 | 2026-09-26 | P0 | Organisateur compté Payé dans CA dernier dîner | Fait (#52) |
+| 2026-09-26 | P0 | CA du 24 sept. encore sur 11 (boîte LA MESA / apostrophe / double ligne) | Fait — 10 payants, 1 couvert organisateur |
 | 2026-09-26 | P0 | Pas d’évolution cumulée LA MESA | Fait — série dashboard |
 | 2026-09-26 | P1 | NBA saute check-in | Fait — fenêtre soir J |
 | 2026-09-26 | P0 | Fil personne×dîner fragmenté | Fait v1 — journey stage roster |
@@ -208,3 +209,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Spec Jack P0/P1 : série LA MESA + NBA check-in + guest journey stage (`docs/superpowers/specs/2026-09-26-mesa-series-checkin-journey-design.md`) |
 | 2026-09-26 | Dashboard — Évolution LA MESA (CA / marge / sat / dîners) ; NBA check-in soir J ; roster affiche l’étape parcours |
 | 2026-09-26 | Paiement — signal déclaré membre (`paymentDeclaredAt`) + filtre admin « Virement déclaré » + exclus relance email |
+| 2026-09-26 | Récap — CA sur les payants ; un seul couvert organisateur dans le COST (mailbox LA MESA, nom avec apostrophe, lignes en double) |

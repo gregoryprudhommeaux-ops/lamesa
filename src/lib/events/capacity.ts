@@ -1,6 +1,6 @@
 import type { AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { isPlatformAdminEmail } from "@/lib/auth/platform-admin";
+import { isPlatformAdminEmail, normalizeEmail } from "@/lib/auth/platform-admin";
 
 /** Guest seats at a standard LA MESA dinner (organizer is separate). */
 export const DEFAULT_GUEST_CAPACITY = 15;
@@ -17,10 +17,15 @@ function normalizePersonName(name: string | null | undefined): string {
   return String(name ?? "")
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
-    .trim()
+    .replace(/['’`.-]/g, "")
     .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .trim()
     .replace(/\s+/g, " ");
 }
+
+/** Sending mailbox, often seated without the gmail admin address or `isOrganizer`. */
+const ORGANIZER_MAILBOXES = ["greg@nextstep-services.com"] as const;
 
 /** Known organizer display names (legacy rows without isOrganizer / admin email). */
 const ORGANIZER_FULL_NAMES = new Set([
@@ -28,16 +33,28 @@ const ORGANIZER_FULL_NAMES = new Set([
   "greg prudhommeaux",
 ]);
 
+function isOrganizerMailbox(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = normalizeEmail(email);
+  if (ORGANIZER_MAILBOXES.some((mailbox) => mailbox === normalized)) return true;
+  return normalized.includes("prudhommeaux");
+}
+
 /**
  * Organizer seat (Gregory): never a paying guest.
- * Matches `isOrganizer`, platform-admin email, or known organizer full name.
+ * Matches `isOrganizer`, platform-admin email, the LA MESA mailbox,
+ * or a name that contains Prudhommeaux (apostrophes ignored).
  */
 export function isOrganizerParticipation(
   p: Pick<AdminEventParticipation, "isOrganizer" | "email" | "fullName">,
 ): boolean {
-  if (Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email)) return true;
+  if (Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email) || isOrganizerMailbox(p.email)) {
+    return true;
+  }
   const name = normalizePersonName(p.fullName);
-  return Boolean(name) && ORGANIZER_FULL_NAMES.has(name);
+  if (!name) return false;
+  if (name.includes("prudhommeaux")) return true;
+  return ORGANIZER_FULL_NAMES.has(name);
 }
 
 export function countSeatedParticipations(

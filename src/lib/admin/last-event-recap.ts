@@ -184,20 +184,22 @@ export function buildLastEventRecap(
     }
   }
 
-  // Organizer cover: always Invité for economics (legacy `confirmed` still = COST, never CA).
-  for (const p of organizers) {
-    const person: LastEventRecapPerson = {
-      id: p.id,
-      contactId: p.contactId?.trim() || null,
-      fullName: p.fullName?.trim() || p.email || "Sans nom",
-      email: p.email ?? "",
-      company: p.companyName?.trim() || "",
-      status: "comped",
-      channels: channelsFor(p),
-      amountMxn: 0,
-    };
-    complimentaryPeople.push(person);
+  // One host cover for COST, even if gmail + LA MESA mailbox are both seated.
+  // Legacy `confirmed` on that seat is still COST, never CA.
+  if (organizers.length > 0) {
     compCount += 1;
+    for (const p of organizers) {
+      complimentaryPeople.push({
+        id: p.id,
+        contactId: p.contactId?.trim() || null,
+        fullName: p.fullName?.trim() || p.email || "Sans nom",
+        email: p.email ?? "",
+        company: p.companyName?.trim() || "",
+        status: "comped",
+        channels: channelsFor(p),
+        amountMxn: 0,
+      });
+    }
   }
 
   contactedPeople.sort(byName);
@@ -249,7 +251,7 @@ export function buildLastEventRecap(
     costMxn: cost,
     contacted: contactedPeople.length,
     registered: registeredPeople.length,
-    complimentary: complimentaryPeople.length,
+    complimentary: compCount,
     revenueMxn: econ.revenueMxn,
     revenueBeforeTaxMxn: Math.round(saleLine.base * paidCount * 100) / 100,
     ivaMxn: Math.round(saleLine.iva * paidCount * 100) / 100,
