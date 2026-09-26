@@ -5,12 +5,9 @@ import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/wait
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import {
-  CompletionCell,
-  WelcomeEmailCell,
   formatRegistrantDate,
-  registrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -239,16 +236,6 @@ const CATEGORIES: {
   { key: "wouldRecommend", label: "En parlerait" },
 ];
 
-function KpiCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{label}</p>
-      <p className="mt-2 text-3xl font-black text-ns-tertiary">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-ns-secondary">{hint}</p> : null}
-    </div>
-  );
-}
-
 function OpsQueueCard({
   title,
   href,
@@ -276,7 +263,7 @@ function OpsQueueCard({
           {rows.slice(0, 5).map((row) => (
             <li key={row.id}>
               <Link
-                href={`/admin/inscrits?id=${encodeURIComponent(row.id)}`}
+                href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.id)}`}
                 className="block rounded-lg px-2 py-1.5 hover:bg-ns-brand-light/60"
               >
                 <span className="block truncate text-sm font-semibold text-ns-tertiary">
@@ -451,7 +438,7 @@ function ResponseCounters({
         <p className="mt-1 text-2xl font-black text-amber-950">{pending}</p>
         {sansReponseListName ? (
           <Link
-            href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+            href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(sansReponseListName)}`}
             className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
           >
             Liste relance →
@@ -946,7 +933,7 @@ function DistributionDetailModal({
               {selection.members.map((m) => (
                 <li key={m.id}>
                   <Link
-                    href={`/admin/inscrits?id=${encodeURIComponent(m.id)}`}
+                    href={`/admin/personnes?tab=membres&id=${encodeURIComponent(m.id)}`}
                     className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
                     onClick={onClose}
                   >
@@ -1211,51 +1198,34 @@ export function AdminDashboardPanel() {
         <div>
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Cockpit ops : prochain dîner, performance des emails, vivier et satisfaction.
+            Porte d’entrée ops — situation, prochaines actions, accès aux hubs.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
             Rafraîchir
           </button>
-          <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
-            Templates email
-          </Link>
-          <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
+          <Link href="/admin/evenements?nouveau=1" className={`${BTN_PRIMARY} text-sm`}>
             Nouvel événement
           </Link>
         </div>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
-        <KpiCard
-          label="Événements"
-          value={kpis.eventsTotal}
-          hint={`${kpis.eventsPublished} publiés · ${kpis.eventsUpcoming} à venir`}
-        />
-        <KpiCard label="Participations" value={kpis.participationsTotal} />
-        <KpiCard
-          label="Satisfaction globale"
-          value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
-          hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
-        />
-      </section>
-
+      {/* Bande 1 — Maintenant */}
       <section>
         <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Files ops
+            Maintenant
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Dîner en cours (OUI / confirmés / sans réponse) puis vivier à traiter.
+            Le dîner en cours et l’action prioritaire.
           </p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           {nextEventRsvp ? (
             <NextEventRsvpCard rsvp={nextEventRsvp} />
           ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
               <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
                 Prochain événement
               </p>
@@ -1270,399 +1240,434 @@ export function AdminDashboardPanel() {
               </Link>
             </div>
           )}
-          <OpsQueueCard
-            title="Profils incomplets"
-            href="/admin/inscrits?profile=incomplete"
-            rows={queues.incomplete}
-          />
-          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
-          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
-          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Performance emails
-          </h3>
-          <p className="mt-1 text-xs text-ns-secondary">
-            Résultat du dernier blast (OUI / NON / inscrits / confirmés) et historique pour
-            apprendre ce qui marche.
-          </p>
-        </div>
-        {lastEmailResults ? (
-          <LastEmailResultsCard results={lastEmailResults} />
-        ) : (
-          <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-              Dernier email
-            </p>
-            <p className="mt-2 text-sm text-ns-secondary">
-              Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
-              Prospects pour voir la performance ici.
-            </p>
-            <Link
-              href="/admin/prospects"
-              className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-            >
-              Prospects →
-            </Link>
-          </div>
-        )}
-        <EmailCampaignHistoryTable rows={emailCampaignHistory} />
-      </section>
-
-      {needingAttention > 0 ? (
-        <Link
-          href="/admin/inscrits?profile=incomplete"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
-        >
-          <div>
-            <p className="text-sm font-bold text-amber-950">
-              {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
-            </p>
-            <p className="mt-0.5 text-xs text-amber-900/80">
-              Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
-        </Link>
-      ) : null}
-
-      <section>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Répartition membres
-          </h3>
-          <p className="mt-1 text-xs text-ns-secondary">
-            Sur la waitlist active : secteur, position et hub ville (ZMG → Guadalajara).
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DistributionCard
-            title="Secteurs"
-            items={distributions?.sectors ?? []}
-            total={kpis.waitlistUsers}
-            kind="sector"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "sector",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Positions"
-            items={distributions?.positions ?? []}
-            total={kpis.waitlistUsers}
-            kind="position"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "position",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Hubs"
-            items={distributions?.cities ?? []}
-            total={kpis.waitlistUsers}
-            kind="city"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "city",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-        </div>
-      </section>
-
-      {distributionSelection ? (
-        <DistributionDetailModal
-          selection={distributionSelection}
-          onClose={() => setDistributionSelection(null)}
-        />
-      ) : null}
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Intelligence du vivier
-            </h3>
-            <p className="mt-1 text-xs text-ns-secondary">
-              Dernières compositions enregistrées dans le Table Builder
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/admin/tables" className={`${BTN_SECONDARY} text-sm`}>
-              Ouvrir le Table Builder
-            </Link>
-            <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-sm`}>
-              Générer des idées
-            </Link>
-          </div>
-        </div>
-
-        {recentTableDrafts.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">
-            Aucun brouillon de table pour le moment.
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {recentTableDrafts.map((draft) => (
-              <div
-                key={draft.id}
-                className="rounded-xl border border-gray-100 bg-ns-brand-light/40 p-4"
-              >
-                <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
-                <p className="mt-1 text-xs text-ns-secondary">
-                  {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
-                  {" · "}
-                  {draft.city ? labelCityHubFr(draft.city) : "Ville non renseignée"}
-                </p>
-                <p className="mt-3 text-sm text-ns-tertiary">
-                  {draft.primaryCount} titulaire{draft.primaryCount === 1 ? "" : "s"} ·{" "}
-                  {draft.alternateCount} suppléant{draft.alternateCount === 1 ? "" : "s"}
-                </p>
-                <p className="mt-2 text-xs text-ns-secondary">
-                  Mis à jour {formatRegistrantDate(draft.updatedAt)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Derniers inscrits
-            </h3>
-            <p className="mt-1 text-xs text-ns-secondary">
-              Du plus récent au plus ancien
-              {avgCompletion !== null ? ` · complétion moyenne ${avgCompletion}%` : ""}
-            </p>
-          </div>
-          <Link href="/admin/inscrits" className="text-xs font-semibold text-ns-primary hover:underline">
-            Voir tous les membres →
-          </Link>
-        </div>
-
-        {recentRegistrants.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Inscrit</th>
-                  <th className="py-2 pr-3 font-semibold">Inscription</th>
-                  <th className="py-2 pr-3 font-semibold">Complétion</th>
-                  <th
-                    className="py-2 pr-3 font-semibold"
-                    title="Mail auto après inscription (express = compléter le profil)"
-                  >
-                    Mail auto
-                  </th>
-                  <th className="py-2 font-semibold">Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRegistrants.map((r) => {
-                  const subtitle = registrantSubtitle(r);
-                  return (
-                    <tr
-                      key={r.id}
-                      className="cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60"
-                      onClick={() => {
-                        router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="link"
-                    >
-                      <td className="py-3 pr-3">
-                        <p className="font-semibold text-ns-tertiary">{r.fullName || "—"}</p>
-                        {subtitle ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{subtitle}</p>
-                        ) : null}
-                        {r.isExpress ? (
-                          <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            Express
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
-                        {formatRegistrantDate(r.createdAt)}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <CompletionCell
-                          percent={r.completionPercent}
-                          missingFields={r.missingFields ?? []}
-                        />
-                      </td>
-                      <td className="py-3 pr-3">
-                        <WelcomeEmailCell
-                          status={r.welcomeEmailStatus}
-                          sentAt={r.welcomeEmailSentAt}
-                          isExpress={r.isExpress}
-                        />
-                      </td>
-                      <td className="py-3">
-                        <a
-                          href={`mailto:${r.email}`}
-                          className="block text-ns-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {r.email || "—"}
-                        </a>
-                        {r.phone ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{r.phone}</p>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Funnel participations
-          </h3>
-          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap sm:gap-2">
-            <FunnelStage label="Invités" value={kpis.invited} />
-            <FunnelArrow />
-            <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
-            <FunnelArrow />
-            <FunnelStage label="Présents" value={kpis.attending} />
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Déclinés</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.notAttending}</span>
-            </div>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Liste d’attente</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
-            </div>
-            <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
-              <span className="text-ns-secondary">En parlerait</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">
-                {satisfaction.wouldRecommend === null
-                  ? "—"
-                  : `${formatScore(satisfaction.wouldRecommend)}/5`}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Notes moyennes cumulées
-          </h3>
-          {satisfaction.responseCount === 0 ? (
-            <p className="mt-4 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+          {lastEmailResults ? (
+            <LastEmailResultsCard results={lastEmailResults} />
           ) : (
-            <div className="mt-4">
-              <p className="mb-4 text-4xl font-black text-ns-tertiary">
-                {formatScore(satisfaction.overall)}
-                <span className="text-lg text-ns-secondary"> / 5</span>
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Dernier email
               </p>
-              <CategoryBars sat={satisfaction} />
+              <p className="mt-2 text-sm text-ns-secondary">
+                Aucun envoi tracké — lance un STD ou une campagne depuis Coms / Personnes.
+              </p>
+              <Link
+                href="/admin/personnes?tab=prospects"
+                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Personnes · Prospects →
+              </Link>
             </div>
           )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* Bande 2 — À traiter */}
+      <section>
+        <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Satisfaction par dîner
+            À traiter
           </h3>
-          <p className="text-xs text-ns-secondary">
-            {withScores.length} dîner{withScores.length === 1 ? "" : "s"} avec réponses
+          <p className="mt-1 text-xs text-ns-secondary">
+            Files prioritaires — un clic vers Personnes.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <OpsQueueCard
+            title="Profils incomplets"
+            href="/admin/personnes?tab=membres&profile=incomplete"
+            rows={queues.incomplete}
+          />
+          <OpsQueueCard
+            title="À prioriser"
+            href="/admin/personnes?tab=membres"
+            rows={queues.priority}
+          />
+          <OpsQueueCard
+            title="À revoir"
+            href="/admin/personnes?tab=membres"
+            rows={queues.review}
+          />
+          <OpsQueueCard
+            title="No-show"
+            href="/admin/personnes?tab=membres"
+            rows={queues.noShow}
+          />
+        </div>
+        {needingAttention > 0 ? (
+          <Link
+            href="/admin/personnes?tab=membres&profile=incomplete"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
+          >
+            <div>
+              <p className="text-sm font-bold text-amber-950">
+                {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
+              </p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-amber-900">Ouvrir Personnes →</span>
+          </Link>
+        ) : null}
+      </section>
+
+      {/* Bande 3 — Accès */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Accès
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Les hubs du backend — tout part d’ici.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/admin/evenements"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Dîners</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {kpis.eventsUpcoming} à venir
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">
+              {kpis.eventsPublished} publiés · pilotage par phase
+            </p>
+          </Link>
+          <Link
+            href="/admin/personnes"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Personnes
+            </p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{kpis.waitlistUsers}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Membres · Prospects · Mémoire</p>
+          </Link>
+          <Link
+            href="/admin/templates"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Coms</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {emailCampaignHistory.length > 0
+                ? `${emailCampaignHistory.length} envoi${emailCampaignHistory.length > 1 ? "s" : ""}`
+                : "Templates"}
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">Bibliothèque · blasts · nurture</p>
+          </Link>
+          <Link
+            href="/admin/tables"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Tables</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{recentTableDrafts.length}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Brouillons récents · composition</p>
+          </Link>
+        </div>
+      </section>
+
+      {/* Approfondir — densifié sous la porte */}
+      <section className="space-y-4 border-t border-gray-100 pt-6">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Approfondir
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Signaux utiles — sans concurrencer l’action prioritaire ci-dessus.
           </p>
         </div>
 
-        {events.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun événement.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Dîner</th>
-                  <th className="py-2 pr-3 font-semibold">Date</th>
-                  <th className="py-2 pr-3 font-semibold">Réponses</th>
-                  <th className="py-2 pr-3 font-semibold">Moy.</th>
-                  <th className="py-2 pr-3 font-semibold">Lieu</th>
-                  <th className="py-2 pr-3 font-semibold">Menu</th>
-                  <th className="py-2 pr-3 font-semibold">Sélection</th>
-                  <th className="py-2 pr-3 font-semibold">Q/P</th>
-                  <th className="py-2 pr-3 font-semibold">Tables</th>
-                  <th className="py-2 font-semibold">Bouche</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((ev) => {
-                  const s = ev.satisfaction;
-                  const date = new Date(ev.startsAt);
-                  return (
-                    <tr key={ev.id} className="border-b border-gray-50">
-                      <td className="py-2.5 pr-3">
-                        <Link
-                          href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
-                          className="font-semibold text-ns-primary hover:underline"
-                        >
-                          {ev.title}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 pr-3 text-ns-secondary">
-                        {Number.isNaN(date.getTime())
-                          ? "—"
-                          : date.toLocaleDateString("fr-FR", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {s.responseCount}
-                        <span className="text-ns-secondary">/{s.sentCount}</span>
-                      </td>
-                      <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
-                        {formatScore(s.overall)}
-                      </td>
-                      <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
-                      <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Funnel participations
+            </h4>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-2 sm:flex-nowrap">
+              <FunnelStage label="Invités" value={kpis.invited} />
+              <FunnelArrow />
+              <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
+              <FunnelArrow />
+              <FunnelStage label="Présents" value={kpis.attending} />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-gray-100 pt-3 text-xs sm:grid-cols-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Déclinés</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.notAttending}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Waitlist</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.waitlistSeats}
+                </span>
+              </div>
+              <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
+                <span className="text-ns-secondary">En parlerait</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {satisfaction.wouldRecommend === null
+                    ? "—"
+                    : `${formatScore(satisfaction.wouldRecommend)}/5`}
+                </span>
+              </div>
+            </div>
           </div>
-        )}
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Satisfaction cumulée
+              </h4>
+              <span className="text-[11px] text-ns-secondary">
+                {kpis.surveysResponses} réponses · {kpis.eventsWithSurvey} dîners
+              </span>
+            </div>
+            {satisfaction.responseCount === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+            ) : (
+              <div className="mt-3">
+                <p className="mb-3 text-3xl font-black text-ns-tertiary">
+                  {formatScore(satisfaction.overall)}
+                  <span className="text-base text-ns-secondary"> / 5</span>
+                </p>
+                <CategoryBars sat={satisfaction} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Vivier · tables
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  Derniers brouillons Table Builder
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/admin/tables" className={`${BTN_SECONDARY} text-xs`}>
+                  Tables
+                </Link>
+                <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-xs`}>
+                  Générer
+                </Link>
+              </div>
+            </div>
+            {recentTableDrafts.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun brouillon.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {recentTableDrafts.slice(0, 3).map((draft) => (
+                  <li
+                    key={draft.id}
+                    className="rounded-xl border border-gray-100 bg-ns-brand-light/40 px-3 py-2"
+                  >
+                    <p className="truncate text-sm font-semibold text-ns-tertiary">
+                      {draft.title || "Table sans titre"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-ns-secondary">
+                      {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
+                      {" · "}
+                      {draft.primaryCount} tit. · {draft.alternateCount} supp.
+                      {" · "}
+                      {formatRegistrantDate(draft.updatedAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Derniers inscrits
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  {avgCompletion !== null ? `Complétion moy. ${avgCompletion}%` : "Plus récents"}
+                </p>
+              </div>
+              <Link
+                href="/admin/personnes?tab=membres"
+                className="text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Tous →
+              </Link>
+            </div>
+            {recentRegistrants.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun inscrit.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-gray-50">
+                {recentRegistrants.slice(0, 5).map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-start justify-between gap-2 px-1 py-2 text-left hover:bg-ns-brand-light/50"
+                      onClick={() =>
+                        router.push(
+                          `/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`,
+                        )
+                      }
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                          {r.fullName || "—"}
+                        </span>
+                        <span className="block truncate text-[11px] text-ns-secondary">
+                          {r.email}
+                          {r.isExpress ? " · Express" : ""}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-ns-secondary">
+                        {r.completionPercent}%
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Répartition waitlist
+          </h4>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <DistributionCard
+              title="Secteurs"
+              items={distributions?.sectors ?? []}
+              total={kpis.waitlistUsers}
+              kind="sector"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "sector",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Positions"
+              items={distributions?.positions ?? []}
+              total={kpis.waitlistUsers}
+              kind="position"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "position",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Hubs"
+              items={distributions?.cities ?? []}
+              total={kpis.waitlistUsers}
+              kind="city"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "city",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+          </div>
+        </div>
+
+        {distributionSelection ? (
+          <DistributionDetailModal
+            selection={distributionSelection}
+            onClose={() => setDistributionSelection(null)}
+          />
+        ) : null}
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Historique emails
+          </h4>
+          <EmailCampaignHistoryTable rows={emailCampaignHistory} />
+        </div>
+
+        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Satisfaction par dîner
+            </h4>
+            <p className="text-[11px] text-ns-secondary">
+              {withScores.length} avec réponses
+            </p>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="mt-3 text-sm text-ns-secondary">Aucun événement.</p>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+                    <th className="py-2 pr-3 font-semibold">Dîner</th>
+                    <th className="py-2 pr-3 font-semibold">Date</th>
+                    <th className="py-2 pr-3 font-semibold">Réponses</th>
+                    <th className="py-2 pr-3 font-semibold">Moy.</th>
+                    <th className="py-2 pr-3 font-semibold">Lieu</th>
+                    <th className="py-2 pr-3 font-semibold">Menu</th>
+                    <th className="py-2 pr-3 font-semibold">Sélection</th>
+                    <th className="py-2 pr-3 font-semibold">Q/P</th>
+                    <th className="py-2 pr-3 font-semibold">Tables</th>
+                    <th className="py-2 font-semibold">Bouche</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((ev) => {
+                    const s = ev.satisfaction;
+                    const date = new Date(ev.startsAt);
+                    return (
+                      <tr key={ev.id} className="border-b border-gray-50">
+                        <td className="py-2.5 pr-3">
+                          <Link
+                            href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
+                            className="font-semibold text-ns-primary hover:underline"
+                          >
+                            {ev.title}
+                          </Link>
+                        </td>
+                        <td className="py-2.5 pr-3 text-ns-secondary">
+                          {Number.isNaN(date.getTime())
+                            ? "—"
+                            : date.toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                        </td>
+                        <td className="py-2.5 pr-3">
+                          {s.responseCount}
+                          <span className="text-ns-secondary">/{s.sentCount}</span>
+                        </td>
+                        <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
+                          {formatScore(s.overall)}
+                        </td>
+                        <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
+                        <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </section>
     </div>
   );

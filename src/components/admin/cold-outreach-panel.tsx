@@ -270,7 +270,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           Choisis une <strong>liste Prospects</strong> ou le pool « à contacter ». Après envoi →{" "}
           <strong>contacté</strong> (sauf Gagné / Ne pas contacter). Batch max{" "}
           <strong>{BATCH_LIMIT}</strong>. Gérer les listes →{" "}
-          <Link href="/admin/prospects" className="font-semibold text-ns-primary underline">
+          <Link href="/admin/personnes?tab=prospects" className="font-semibold text-ns-primary underline">
             Prospects
           </Link>
           .
@@ -399,7 +399,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
             ? `Aucun contact dans « ${listFilter} ».`
             : "Aucun prospect « à contacter »."}{" "}
           Gère les listes sur{" "}
-          <Link href="/admin/prospects" className="font-semibold underline">
+          <Link href="/admin/personnes?tab=prospects" className="font-semibold underline">
             Prospects
           </Link>
           .

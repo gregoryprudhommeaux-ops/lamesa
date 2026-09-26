@@ -47,12 +47,26 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 
 ## UX/UI principles (project-specific)
 
+- **Dashboard = porte d’entrée** du backend (Maintenant · À traiter · Accès)
+- Nav admin courte : Dashboard · Dîners · Personnes · Tables · Coms
 - Centre de commande par phase (pas fiche événement infinie)
 - Next best action + blocages visibles
 - Roster participants unifié + filtres
 - Templates email en drawer (CTA Envoyer reste primaire)
 - FR / EN / ES
 - Mémoire contact : ne pas mélanger déclaré / observé / inféré
+
+## Admin IA (porte + hubs)
+
+| Item | Route | Notes |
+|------|-------|-------|
+| Dashboard | `/admin/dashboard` | Porte — 3 bandes |
+| Dîners | `/admin/evenements` | Pilotage + `?view=calendrier` |
+| Personnes | `/admin/personnes` | Onglets Membres / Prospects / Mémoire |
+| Tables | `/admin/tables` | Top-level (validé) |
+| Coms | `/admin/templates` | Templates + envois |
+
+Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/admin/calendrier`.
 
 ## Validated decisions
 
@@ -61,12 +75,14 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 | 2026-09-25 | Agent Jack v2 + `PROJECT_MEMORY.md` | Capitaliser parcours + mémoire relationnelle |
 | 2026-09-25 | Command center événement tranches 1–2 | Étape active + roster + drawers |
 | 2026-09-25 | 9 phases produit (`OpsPhaseId`) + suggestOpsPhase | Labels métier + Formal/Places/paiement séparés |
+| 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
 
 ## Reusable components / patterns
 
 - `ops-phases` + `suggestOpsPhase` + `EventCommandHeader` / `EventCommandPhaseNav`
 - `AdminEventParticipantRoster` + `EventTemplateDrawer`
 - `FormalInviteOuiPanel` (phase formal) · `AdminEventPlacesAvailablePanel` (phase dinner_prep)
+- `AdminPersonnesWorkspace` · `AdminDinersViewToggle`
 - Admin shell, RequireAuth, table builder, contact fiche
 
 ## Data, signals & governance
@@ -87,6 +103,9 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
 | FormalInviteOui encore panel dédié (pas fusion roster) | Ouvert — dans phase formal |
 | Check-in UI dédiée | Placeholder roster payés |
+| Nav plate 7 items + contacts orphelin | Done — porte + hubs (#35) |
+| Dashboard bas trop long vs porte | Done — zone Approfondir densifiée |
+| Lien Tables depuis dinner_prep | Done |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
 
 ## Jack findings log
@@ -97,7 +116,9 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 | 2026-09-25 | P0 | `?id=` effacé | Tranche 1 done (#32) |
 | 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done (#33) |
 | 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done (#33) |
-| 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 in PR |
+| 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 done (#34) |
+| 2026-09-26 | P0 | Nav admin plate / Dashboard pas porte | Done (#35) |
+| 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
 
 ## Changelog
 
@@ -106,4 +127,6 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 | 2026-09-25 | Bootstrap mémoire produit alignée DOC Jack |
 | 2026-09-25 | Tranche 1 command center événement (#32) |
 | 2026-09-25 | Tranche 2 roster unifié + template drawers (#33) |
-| 2026-09-25 | Tranche 3 — 9 ops phases + Formal/Places/paiement |
+| 2026-09-25 | Tranche 3 — 9 ops phases + Formal/Places/paiement (#34) |
+| 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
+| 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |

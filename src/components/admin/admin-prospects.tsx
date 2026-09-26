@@ -1687,7 +1687,7 @@ export function AdminProspectsPanel() {
             {editingId ? (
               <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
                 <Link
-                  href={`/admin/contacts?email=${encodeURIComponent(draft.email)}`}
+                  href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(draft.email)}`}
                   className="inline-flex text-sm font-semibold text-sky-800 hover:underline"
                 >
                   Voir la mémoire contact

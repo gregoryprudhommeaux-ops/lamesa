@@ -134,7 +134,7 @@ export function AdminContactFiche({ email }: { email: string }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          href="/admin/prospects"
+          href="/admin/personnes?tab=prospects"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-ns-secondary hover:text-ns-tertiary"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -142,7 +142,7 @@ export function AdminContactFiche({ email }: { email: string }) {
         </Link>
         <span className="text-ns-secondary/40">·</span>
         <Link
-          href="/admin/inscrits"
+          href="/admin/personnes?tab=membres"
           className="text-sm font-medium text-ns-secondary hover:text-ns-tertiary"
         >
           Membres

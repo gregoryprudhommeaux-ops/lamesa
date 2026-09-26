@@ -1,29 +1,25 @@
-import { AdminContactFiche } from "@/components/admin/admin-contact-fiche";
-import { AdminShell } from "@/components/admin/admin-shell";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Mémoire contact",
 };
 
-export default async function AdminContactPage({
+function firstString(v: string | string[] | undefined): string | undefined {
+  if (Array.isArray(v)) return v[0];
+  return v;
+}
+
+/** Legacy route → Personnes hub (onglet Mémoire). */
+export default async function AdminContactRedirectPage({
   searchParams,
 }: {
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const email = String(sp.email ?? "").trim();
-
-  return (
-    <AdminShell title="Mémoire contact" density="workspace">
-      {!email.includes("@") ? (
-        <p className="text-sm text-ns-secondary">
-          Ouvre une fiche depuis Prospects ou Membres (paramètre{" "}
-          <code className="text-xs">?email=</code>).
-        </p>
-      ) : (
-        <AdminContactFiche email={email} />
-      )}
-    </AdminShell>
-  );
+  const params = new URLSearchParams();
+  params.set("tab", "memoire");
+  const email = firstString(sp.email);
+  if (email) params.set("email", email);
+  redirect(`/admin/personnes?${params.toString()}`);
 }

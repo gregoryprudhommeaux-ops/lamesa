@@ -132,7 +132,7 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
               <p>
                 <span className="font-semibold text-emerald-800">OUI</span> →{" "}
                 <a
-                  href={`/admin/prospects?list=${encodeURIComponent(listNames.yes)}`}
+                  href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(listNames.yes)}`}
                   className="font-semibold text-ns-primary hover:underline"
                 >
                   {listNames.yes}
@@ -142,7 +142,7 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
               <p>
                 <span className="font-semibold text-rose-800">NON</span> →{" "}
                 <a
-                  href={`/admin/prospects?list=${encodeURIComponent(listNames.noOther)}`}
+                  href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(listNames.noOther)}`}
                   className="font-semibold text-ns-primary hover:underline"
                 >
                   {listNames.noOther}
@@ -153,7 +153,7 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
                 <p>
                   <span className="font-semibold text-amber-900">Sans réponse</span> →{" "}
                   <a
-                    href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+                    href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(sansReponseListName)}`}
                     className="font-semibold text-ns-primary hover:underline"
                   >
                     {sansReponseListName}
