@@ -95,6 +95,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Audience — chips fit observés dans ContactPicker (jamais invité, déjà venu, sat, ville, profil) | Aide au choix sans IA opaque |
 | 2026-09-26 | Après STD, NBA = Qualification ; dès qu’il y a des OUI sans invite → Formal | Signaux playlist OUI |
 | 2026-09-26 | Formal : pool OUI = formulaire ∪ playlist ; Sync in-panel | NBA Formal ne tombe plus sur liste vide |
+| 2026-09-26 | Page `/e` RSVP : même surfaces ACCESS / confirmé + scroll `#access` | Complète #58 pour le mode RSVP |
 | 2026-09-26 | Bridge Audience↔OUI : chips intérêt (OUI/NON/AUTRE/Sans réponse) sur roster **et** ContactPicker via email | Join-only ; pas de fusion Firestore |
 
 ## Reusable components / patterns
@@ -127,7 +128,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
-| Page publique `/e` bifurquée | Partiel — CTA adaptatif (OUI/NON · déjà répondu · ACCESS · confirmé) |
+| Page publique `/e` bifurquée | Done — CTA adaptatif interest + RSVP (OUI/NON · ACCESS · confirmé · `#access`) |
 | Qualification sauté par NBA après STD | Fait — qualify puis formal dès OUI prêts |
 | Inbox intérêt monté 2× (STD + qualify) | Fait — inbox uniquement en Qualification |
 | Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
@@ -192,9 +193,10 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | Pas d’évolution cumulée LA MESA | Fait — série dashboard |
 | 2026-09-26 | P1 | NBA saute check-in | Fait — fenêtre soir J |
 | 2026-09-26 | P0 | Fil personne×dîner fragmenté | Fait v1 — journey stage roster |
-| 2026-09-26 | P1 | `/e` montre OUI/NON après invitation formelle | Fait — surface ACCESS / confirmé / déjà répondu |
+| 2026-09-26 | P1 | `/e` montre OUI/NON après invitation formelle | Fait — surface ACCESS / confirmé / déjà répondu (+ RSVP) |
 | 2026-09-26 | P1 | NBA saute Qualification après STD | Fait — `qualify_responses` |
 | 2026-09-26 | P1 | Formal « Aucun OUI » alors que formulaire a des yes | Fait — union + Sync in-panel |
+| 2026-09-26 | P0 | `/e` RSVP ignore ACCESS après invitation | Fait — RsvpModeBody + `#access` |
 | 2026-09-26 | P1 | Audience ne voit pas OUI/NON des playlists | Fait v1 — chips intérêt roster+picker (join email) |
 
 ## Changelog
@@ -223,7 +225,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Paiement — signal déclaré membre (`paymentDeclaredAt`) + filtre admin « Virement déclaré » + exclus relance email |
 | 2026-09-26 | Récap — CA sur les payants ; un seul couvert organisateur dans le COST (mailbox LA MESA, nom avec apostrophe, lignes en double) |
 | 2026-09-26 | Audience — `audience-fit` chips dans ContactPicker (signaux observés) |
-| 2026-09-26 | Page `/e` — CTA adaptatif (`guest-status` + ACCESS panel) ; NBA membre « Régler l’ACCESS » |
+| 2026-09-26 | Page `/e` — CTA adaptatif interest + RSVP (`guest-status` + ACCESS + `#access`) |
 | 2026-09-26 | Ops — NBA Qualification après STD ; Formal dès OUI pending ; inbox intérêt en qualify seul |
 | 2026-09-26 | Formal — OUI formulaire∪playlist + bouton Sync dans le panneau |
 | 2026-09-26 | Bridge Audience↔intérêt — chips OUI/NON/AUTRE/Sans réponse sur roster + ContactPicker (`interest-display` + `/interest-status`) |
