@@ -235,6 +235,8 @@ export interface AdminEventParticipation {
   reminder36hSentAt?: string;
   reminder90mSentAt?: string;
   rsvpAt?: string;
+  /** Door check-in the night of (ISO). Independent of payment status. */
+  checkedInAt?: string | null;
   /** Thank-you + satisfaction survey email sent (~12h after start) */
   satisfactionSurveySentAt?: string;
   satisfactionSurvey?: SatisfactionSurveyAnswers;
