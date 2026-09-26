@@ -94,6 +94,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Page `/e` : CTA adaptatif selon parcours (intérêt · déjà répondu · ACCESS · confirmé) | NBA « Régler ACCESS » ne renvoie plus un formulaire OUI/NON vide |
 | 2026-09-26 | Audience — chips fit observés dans ContactPicker (jamais invité, déjà venu, sat, ville, profil) | Aide au choix sans IA opaque |
 | 2026-09-26 | Après STD, NBA = Qualification ; dès qu’il y a des OUI sans invite → Formal | Signaux playlist OUI |
+| 2026-09-26 | Formal : pool OUI = formulaire ∪ playlist ; Sync in-panel | NBA Formal ne tombe plus sur liste vide |
 
 ## Reusable components / patterns
 
@@ -132,6 +133,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Pas d’évolution cumulée série LA MESA | Done — `mesaSeries` dashboard Approfondir |
 | NBA saute check-in | Done — fenêtre soir J H-6→H+18 |
 | Double modèle Audience vs playlists OUI | Ouvert — v1 journey + fit chips ; fusion data = vague 3 |
+| Formal OUI invisible sans Sync playlist | Fait — union formulaire∪playlist + Sync in-panel |
 
 ## Email funnel — audit 2026-09-26
 
@@ -191,6 +193,8 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | Fil personne×dîner fragmenté | Fait v1 — journey stage roster |
 | 2026-09-26 | P1 | `/e` montre OUI/NON après invitation formelle | Fait — surface ACCESS / confirmé / déjà répondu |
 | 2026-09-26 | P1 | NBA saute Qualification après STD | Fait — `qualify_responses` |
+| 2026-09-26 | P1 | Formal « Aucun OUI » alors que formulaire a des yes | Fait — union + Sync in-panel |
+
 ## Changelog
 
 | Date | Change |
@@ -219,3 +223,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Audience — `audience-fit` chips dans ContactPicker (signaux observés) |
 | 2026-09-26 | Page `/e` — CTA adaptatif (`guest-status` + ACCESS panel) ; NBA membre « Régler l’ACCESS » |
 | 2026-09-26 | Ops — NBA Qualification après STD ; Formal dès OUI pending ; inbox intérêt en qualify seul |
+| 2026-09-26 | Formal — OUI formulaire∪playlist + bouton Sync dans le panneau |
