@@ -84,6 +84,7 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
         scanned?: number;
         reconciled?: { updated?: number };
         sansReponse?: { added?: number; removed?: number; total?: number; listName?: string };
+        audience?: { create?: number; promote?: number; noop?: number };
       };
       if (!res.ok || !json.ok) {
         setError(json.error ?? "sync_failed");
@@ -91,6 +92,7 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
       }
       const reconciled = json.reconciled;
       const sansReponse = json.sansReponse;
+      const audience = json.audience;
       setMessage(
         `Listes Prospects à jour — scannés ${json.scanned ?? 0} · sync ${json.synced ?? 0}` +
           (json.failed ? ` · échecs ${json.failed}` : "") +
@@ -100,6 +102,9 @@ export function AdminEventInterestInbox({ eventId, eventSlug }: Props) {
             : "") +
           (sansReponse?.total != null
             ? ` · sans réponse ${sansReponse.total} (« ${sansReponse.listName ?? interestSansReponseListName(eventSlug ?? "")} »)`
+            : "") +
+          (audience
+            ? ` · Audience OUI +${audience.create ?? 0} / ↑${audience.promote ?? 0}`
             : "") +
           (json.lists
             ? ` · « ${json.lists.yes} » / « ${json.lists.noOther} »`

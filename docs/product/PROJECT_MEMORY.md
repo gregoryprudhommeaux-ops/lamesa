@@ -98,6 +98,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Page `/e` RSVP : même surfaces ACCESS / confirmé + scroll `#access` | Complète #58 pour le mode RSVP |
 | 2026-09-26 | Bridge Audience↔OUI : chips intérêt (OUI/NON/AUTRE/Sans réponse) sur roster **et** ContactPicker via email | Join-only ; pas de fusion Firestore |
 | 2026-09-26 | Paiement — filtre « Virement déclaré » honnête + CTA Confirmer payé + NBA banque | Déclaré ≠ À relancer |
+| 2026-09-26 | Vague 3 Audience : OUI (form∪playlist) → participation `attending` + filtres intérêt roster | Sync + submit intérêt ; pas de dégrade Payé/Out |
 
 ## Reusable components / patterns
 
@@ -135,7 +136,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
 | Pas d’évolution cumulée série LA MESA | Done — `mesaSeries` dashboard Approfondir |
 | NBA saute check-in | Done — fenêtre soir J H-6→H+18 |
-| Double modèle Audience vs playlists OUI | Partiel — chips intérêt roster+picker (join email) ; fusion data = vague 3 |
+| Double modèle Audience vs playlists OUI | Fait v1 — upsert OUI → attending + filtres intérêt ; collections restent séparées |
 | Formal OUI invisible sans Sync playlist | Fait — union formulaire∪playlist + Sync in-panel |
 
 ## Email funnel — audit 2026-09-26
@@ -200,6 +201,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | `/e` RSVP ignore ACCESS après invitation | Fait — RsvpModeBody + `#access` |
 | 2026-09-26 | P1 | Audience ne voit pas OUI/NON des playlists | Fait v1 — chips intérêt roster+picker (join email) |
 | 2026-09-26 | P1 | Filtre paiement : déclaré affiché comme « À relancer » | Fait — select + CTA + NBA `payment_confirm_declared` |
+| 2026-09-26 | P2 | Audience ≠ playlists OUI (ajout manuel) | Fait v1 — Sync/form OUI → `attending` + filtres intérêt |
 
 ## Changelog
 
@@ -232,3 +234,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Formal — OUI formulaire∪playlist + bouton Sync dans le panneau |
 | 2026-09-26 | Bridge Audience↔intérêt — chips OUI/NON/AUTRE/Sans réponse sur roster + ContactPicker (`interest-display` + `/interest-status`) |
 | 2026-09-26 | Paiement — UX filtre Virement déclaré (select honnête, CTA Confirmer payé, NBA banque) |
+| 2026-09-26 | Audience vague 3 — OUI form∪playlist → roster (`attending`) + filtres intérêt |

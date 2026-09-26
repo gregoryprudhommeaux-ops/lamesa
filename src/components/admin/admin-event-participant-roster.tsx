@@ -62,11 +62,27 @@ export function AdminEventParticipantRoster({
   onWhatsAppAll,
 }: AdminEventParticipantRosterProps) {
   const [filter, setFilter] = useState<RosterFilterId>(initialFilter);
+  const [interestFilter, setInterestFilter] = useState<InterestDisplayStatus | "all">("all");
   const counts = useMemo(() => countRosterFilters(participations), [participations]);
-  const rows = useMemo(
+  const statusRows = useMemo(
     () => filterParticipationsForRoster(participations, filter),
     [participations, filter],
   );
+  const interestCounts = useMemo(() => {
+    const out = { oui: 0, non: 0, autre: 0, sans_reponse: 0 };
+    if (!interestByEmail) return out;
+    for (const p of statusRows) {
+      const s = resolveInterestDisplay(p.email, interestByEmail);
+      if (s) out[s] += 1;
+    }
+    return out;
+  }, [statusRows, interestByEmail]);
+  const rows = useMemo(() => {
+    if (!interestByEmail || interestFilter === "all") return statusRows;
+    return statusRows.filter(
+      (p) => resolveInterestDisplay(p.email, interestByEmail) === interestFilter,
+    );
+  }, [statusRows, interestByEmail, interestFilter]);
   const seated = countSeatedParticipations(participations);
   const waitlistCount = counts.waitlist;
 
@@ -118,6 +134,42 @@ export function AdminEventParticipantRoster({
           );
         })}
       </div>
+
+      {interestByEmail ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {(
+            [
+              { id: "all" as const, label: "Intérêt · tous", count: statusRows.length },
+              { id: "oui" as const, label: "OUI", count: interestCounts.oui },
+              { id: "non" as const, label: "NON", count: interestCounts.non },
+              { id: "autre" as const, label: "AUTRE", count: interestCounts.autre },
+              {
+                id: "sans_reponse" as const,
+                label: "Sans réponse",
+                count: interestCounts.sans_reponse,
+              },
+            ] as const
+          ).map((f) => {
+            if (f.id !== "all" && f.count === 0) return null;
+            const active = interestFilter === f.id;
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setInterestFilter(f.id)}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                  active
+                    ? "bg-ns-tertiary text-white"
+                    : "border border-dashed border-ns-alternate bg-ns-brand-light/40 text-ns-secondary hover:border-ns-primary"
+                }`}
+              >
+                {f.label}
+                <span className="ml-1 opacity-70">{f.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       {rows.length === 0 ? (
         <p className="mt-3 text-sm text-ns-secondary">Aucun participant dans ce filtre.</p>

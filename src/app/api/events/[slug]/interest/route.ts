@@ -8,6 +8,7 @@ import {
   isInterestDeadlinePassed,
   splitFullName,
 } from "@/lib/events/event-interest";
+import { ensureOuiParticipationForEmail } from "@/lib/events/apply-interest-oui-to-participations";
 import { syncInterestRespondentToProspectLists } from "@/lib/events/sync-interest-to-prospect-lists";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileForAuth } from "@/lib/member/ensure-waitlist-for-auth";
@@ -202,6 +203,18 @@ export async function POST(request: Request, { params }: Params) {
     waitlist,
     logPrefix: "[interest]",
   });
+
+  // Vague 3 — OUI lands on Audience roster as attending.
+  if (data.interestResponse === "yes") {
+    void ensureOuiParticipationForEmail({
+      db,
+      eventId: eventDoc.id,
+      email,
+      fullName: waitlist.fullName || `${firstName} ${lastName}`.trim(),
+      companyName: waitlist.company,
+      now,
+    }).catch((err) => console.warn("[interest] audience OUI upsert failed", err));
+  }
 
   // Keep SANS RÉPONSE playlist aligned after each answer.
   void import("@/lib/events/sync-std-sans-reponse-list")
