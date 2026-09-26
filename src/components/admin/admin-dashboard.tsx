@@ -4,6 +4,8 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
+import type { DashboardMoment } from "@/lib/admin/dashboard-moment";
+import { formatMxn } from "@/lib/events/pricing";
 import {
   formatRegistrantDate,
 } from "@/components/admin/registrant-table-cells";
@@ -164,6 +166,19 @@ type EmailCampaignHistoryRow = {
   eventId: string | null;
 };
 
+type PastEventFocus = {
+  eventId: string;
+  eventSlug: string;
+  title: string;
+  startsAt: string;
+  confirmedCount: number;
+  revenueMxn: number;
+  priceMxn: number | null;
+  surveySentCount: number;
+  surveyResponseCount: number;
+  satisfaction: SatisfactionAverages & { sentCount: number };
+};
+
 type DistributionMember = {
   id: string;
   fullName: string;
@@ -214,6 +229,8 @@ type DashboardPayload = {
   nextEventRsvp?: NextEventRsvp | null;
   lastEmailResults?: LastEmailResults | null;
   emailCampaignHistory?: EmailCampaignHistoryRow[];
+  pastEventFocus?: PastEventFocus | null;
+  dashboardMoment?: DashboardMoment | null;
 };
 
 const CATEGORIES: {
@@ -658,75 +675,64 @@ function ContactedRecipientsList({
   recipients: EmailCampaignRecipient[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  const limit = expanded ? recipients.length : 12;
-  const visible = recipients.slice(0, limit);
-  const hidden = recipients.length - visible.length;
 
   return (
     <div className="mt-4 border-t border-gray-100/80 pt-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-          Gens contactés · résultat
-        </p>
-        <p className="text-[11px] text-ns-secondary">
-          {recipients.length} dans ce blast
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Gens contactés · résultat
+          </p>
+          <p className="mt-0.5 text-[11px] text-ns-secondary">
+            {recipients.length} dans ce blast
+          </p>
+        </div>
+        {recipients.length > 0 ? (
+          <button
+            type="button"
+            className="text-xs font-semibold text-ns-primary hover:underline"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? "Masquer la liste" : `Voir les ${recipients.length} destinataires →`}
+          </button>
+        ) : null}
       </div>
       {recipients.length === 0 ? (
         <p className="mt-2 text-sm text-ns-secondary">
           Aucun destinataire enregistré pour ce blast.
         </p>
-      ) : (
-        <>
-          <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-            {visible.map((r) => (
-              <li
-                key={r.id}
-                className="rounded-lg border border-gray-100 bg-white/70 px-2.5 py-1.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="block truncate text-sm font-semibold text-ns-tertiary">
-                      {r.fullName || r.email || "Sans nom"}
-                    </span>
-                    <span className="block truncate text-[11px] text-ns-secondary">
-                      {r.company || r.email}
-                    </span>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${outcomeClass(r.outcome)}`}
-                  >
-                    {outcomeLabel(r.outcome)}
+      ) : null}
+      {expanded && recipients.length > 0 ? (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {recipients.map((r) => (
+            <li
+              key={r.id}
+              className="rounded-lg border border-gray-100 bg-white/70 px-2.5 py-1.5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                    {r.fullName || r.email || "Sans nom"}
+                  </span>
+                  <span className="block truncate text-[11px] text-ns-secondary">
+                    {r.company || r.email}
                   </span>
                 </div>
-                {r.signupKind ? (
-                  <span className="mt-1 inline-flex rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">
-                    {r.signupKind === "express" ? "Express" : "Profil complet"}
-                  </span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          {hidden > 0 ? (
-            <button
-              type="button"
-              className="mt-2 text-xs font-semibold text-ns-primary hover:underline"
-              onClick={() => setExpanded(true)}
-            >
-              Voir les {hidden} autres →
-            </button>
-          ) : null}
-          {expanded && recipients.length > 12 ? (
-            <button
-              type="button"
-              className="mt-2 block text-xs text-ns-secondary hover:underline"
-              onClick={() => setExpanded(false)}
-            >
-              Réduire
-            </button>
-          ) : null}
-        </>
-      )}
+                <span
+                  className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${outcomeClass(r.outcome)}`}
+                >
+                  {outcomeLabel(r.outcome)}
+                </span>
+              </div>
+              {r.signupKind ? (
+                <span className="mt-1 inline-flex rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">
+                  {r.signupKind === "express" ? "Express" : "Profil complet"}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }
@@ -845,6 +851,137 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
         sansReponseListName={rsvp.sansReponseListName}
       />
       <YesGuestsList yes={rsvp.yes} yesGuests={rsvp.yesGuests} />
+    </div>
+  );
+}
+
+function PastEventFocusCard({ focus }: { focus: PastEventFocus }) {
+  const eventHref = `/admin/evenements?id=${encodeURIComponent(focus.eventId)}&phase=feedback`;
+  const sat = focus.satisfaction;
+  const pendingSurveys = Math.max(0, focus.surveySentCount - focus.surveyResponseCount);
+  const responseRate =
+    focus.surveySentCount > 0
+      ? Math.round((focus.surveyResponseCount / focus.surveySentCount) * 100)
+      : null;
+
+  return (
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+            Après le dîner · bilan
+          </p>
+          <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">
+            {focus.title}
+          </h4>
+          <p className="mt-0.5 text-sm capitalize text-ns-secondary">
+            {formatNextEventWhen(focus.startsAt)}
+          </p>
+        </div>
+        <Link
+          href={eventHref}
+          className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Feedback événement →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            CA total
+          </p>
+          <p className="mt-1 text-xl font-black text-emerald-950 sm:text-2xl">
+            {focus.revenueMxn > 0 ? formatMxn(focus.revenueMxn, "fr") : "—"}
+          </p>
+          <p className="text-[10px] text-emerald-800/80">
+            {focus.confirmedCount} payé{focus.confirmedCount === 1 ? "" : "s"}
+            {focus.priceMxn ? ` · ${formatMxn(focus.priceMxn, "fr")} HT` : ""}
+          </p>
+        </div>
+        <div className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+            Survey envoyés
+          </p>
+          <p className="mt-1 text-2xl font-black text-sky-950">{focus.surveySentCount}</p>
+          <p className="text-[10px] text-sky-900/80">
+            {focus.surveySentCount === 0 ? "Pas encore envoyé" : "Mails satisfaction"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-violet-100 bg-violet-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-900">
+            Réponses
+          </p>
+          <p className="mt-1 text-2xl font-black text-violet-950">
+            {focus.surveyResponseCount}
+          </p>
+          <p className="text-[10px] text-violet-900/80">
+            {responseRate !== null
+              ? `${responseRate}% · ${pendingSurveys} en attente`
+              : "En attente d’envoi"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Note globale
+          </p>
+          <p className="mt-1 text-2xl font-black text-amber-950">
+            {sat.responseCount === 0 ? "—" : formatScore(sat.overall)}
+            {sat.responseCount > 0 ? (
+              <span className="text-sm font-semibold text-amber-900/70"> / 5</span>
+            ) : null}
+          </p>
+          <p className="text-[10px] text-amber-900/80">
+            {sat.wouldRecommend === null
+              ? "Pas encore de scores"
+              : `En parlerait ${formatScore(sat.wouldRecommend)}/5`}
+          </p>
+        </div>
+      </div>
+
+      {sat.responseCount > 0 ? (
+        <div className="mt-4 rounded-xl border border-gray-100 bg-white/60 p-3">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Détail satisfaction
+          </p>
+          <CategoryBars sat={sat} />
+        </div>
+      ) : focus.surveySentCount > 0 ? (
+        <p className="mt-4 text-sm text-ns-secondary">
+          Questionnaire parti — les réponses arriveront ici au fil de l’eau.
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-ns-secondary">
+          Envoie le questionnaire de satisfaction pour compléter le bilan.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function IdleMomentCard() {
+  return (
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+        Rien en cours
+      </p>
+      <p className="mt-2 text-sm text-ns-secondary">
+        Crée le prochain dîner ou lance un envoi depuis Coms / Personnes.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Link
+          href="/admin/evenements?nouveau=1"
+          className="text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Nouvel événement →
+        </Link>
+        <Link
+          href="/admin/templates"
+          className="text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Coms →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -1174,6 +1311,8 @@ export function AdminDashboardPanel() {
     nextEventRsvp = null,
     lastEmailResults = null,
     emailCampaignHistory = [],
+    pastEventFocus = null,
+    dashboardMoment = null,
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -1192,8 +1331,36 @@ export function AdminDashboardPanel() {
     noShow: [],
   };
 
+  const moment: DashboardMoment = dashboardMoment ?? {
+    kind: "idle",
+    label: "Rien en cours",
+    reason: "Créer le prochain dîner ou lancer un envoi.",
+  };
+
   const nba = (() => {
-    if (nextEventRsvp) {
+    if (moment.kind === "post_event" && pastEventFocus) {
+      const needsSend = pastEventFocus.surveySentCount === 0;
+      return {
+        id: needsSend ? "send_satisfaction" : "review_feedback",
+        label: needsSend ? "Envoyer la satisfaction" : "Voir le feedback",
+        href: `/admin/evenements?id=${encodeURIComponent(pastEventFocus.eventId)}&phase=feedback`,
+        reason: needsSend
+          ? `${pastEventFocus.title} — questionnaire pas encore parti.`
+          : `${pastEventFocus.title} — ${pastEventFocus.surveyResponseCount}/${pastEventFocus.surveySentCount} réponses · CA ${pastEventFocus.revenueMxn > 0 ? formatMxn(pastEventFocus.revenueMxn, "fr") : "—"}.`,
+      };
+    }
+    if (moment.kind === "email_pulse" && lastEmailResults) {
+      const eventHref = lastEmailResults.eventId
+        ? `/admin/evenements?id=${encodeURIComponent(lastEmailResults.eventId)}`
+        : "/admin/templates";
+      return {
+        id: "email_results",
+        label: lastEmailResults.eventId ? "Ouvrir l’événement" : "Voir Coms",
+        href: eventHref,
+        reason: `${lastEmailResults.templateLabel || lastEmailResults.templateKey} — ${lastEmailResults.yes} OUI · ${lastEmailResults.pending} sans réponse.`,
+      };
+    }
+    if (moment.kind === "next_dinner" && nextEventRsvp) {
       return {
         id: "continue_dinner",
         label: "Continuer le dîner",
@@ -1247,7 +1414,7 @@ export function AdminDashboardPanel() {
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Porte d’entrée ops — une action prioritaire, puis les hubs.
+            Porte d’entrée ops — le signal du moment T, puis les hubs.
           </p>
           <p className="mt-2 text-sm text-ns-tertiary">
             <span className="font-semibold">Action prioritaire :</span>{" "}
@@ -1269,54 +1436,27 @@ export function AdminDashboardPanel() {
         </div>
       </div>
 
-      {/* Bande 1 — Maintenant */}
+      {/* Bande 1 — Maintenant (un seul focus = moment T) */}
       <section>
         <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
             Maintenant
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Le dîner en cours et l’action prioritaire.
+            <span className="font-semibold text-ns-tertiary">{moment.label}</span>
+            {" — "}
+            {moment.reason}
           </p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-2">
-          {nextEventRsvp ? (
-            <NextEventRsvpCard rsvp={nextEventRsvp} />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Prochain événement
-              </p>
-              <p className="mt-2 text-sm text-ns-secondary">
-                Aucun événement à venir — crée-en un pour suivre les RSVP ici.
-              </p>
-              <Link
-                href="/admin/evenements?nouveau=1"
-                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-              >
-                Nouvel événement →
-              </Link>
-            </div>
-          )}
-          {lastEmailResults ? (
-            <LastEmailResultsCard results={lastEmailResults} />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Dernier email
-              </p>
-              <p className="mt-2 text-sm text-ns-secondary">
-                Aucun envoi tracké — lance un STD ou une campagne depuis Coms / Personnes.
-              </p>
-              <Link
-                href="/admin/personnes?tab=prospects"
-                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-              >
-                Personnes · Prospects →
-              </Link>
-            </div>
-          )}
-        </div>
+        {moment.kind === "post_event" && pastEventFocus ? (
+          <PastEventFocusCard focus={pastEventFocus} />
+        ) : moment.kind === "email_pulse" && lastEmailResults ? (
+          <LastEmailResultsCard results={lastEmailResults} />
+        ) : moment.kind === "next_dinner" && nextEventRsvp ? (
+          <NextEventRsvpCard rsvp={nextEventRsvp} />
+        ) : (
+          <IdleMomentCard />
+        )}
       </section>
 
       {/* Bande 2 — À traiter */}
