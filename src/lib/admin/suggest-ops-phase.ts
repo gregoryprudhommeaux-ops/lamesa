@@ -1,6 +1,7 @@
 import type { OpsPhaseId } from "@/lib/admin/ops-phases";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { countSeatedParticipations, isOrganizerParticipation } from "@/lib/events/capacity";
+import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 
 export type EventOpsKpis = {
   capacity: number;
@@ -11,6 +12,8 @@ export type EventOpsKpis = {
   invitedFormal: number;
   stdSent: boolean;
   publishStatus: "draft" | "published" | "closed";
+  /** Held seats (Payé/Invité) still missing door check-in. */
+  awaitingCheckin: number;
 };
 
 export type EventNextBestAction = {
@@ -41,6 +44,8 @@ export type SuggestOpsPhaseInput = {
     address?: string;
   };
   participations: AdminEventParticipation[];
+  /** Override clock (tests / replay). */
+  nowMs?: number;
 };
 
 export type SuggestOpsPhaseResult = {
@@ -51,6 +56,37 @@ export type SuggestOpsPhaseResult = {
   /** Phases considered done enough to mark on the stepper. */
   completedPhaseIds: OpsPhaseId[];
 };
+
+/** Door opens early evening → morning after. */
+export const CHECKIN_WINDOW_BEFORE_MS = 6 * 60 * 60 * 1000;
+export const CHECKIN_WINDOW_AFTER_MS = 18 * 60 * 60 * 1000;
+
+export function isInCheckinWindow(startsAt: string, nowMs = Date.now()): boolean {
+  const start = new Date(startsAt).getTime();
+  if (!Number.isFinite(start)) return false;
+  return (
+    nowMs >= start - CHECKIN_WINDOW_BEFORE_MS &&
+    nowMs <= start + CHECKIN_WINDOW_AFTER_MS
+  );
+}
+
+function heldSeatsAwaitingCheckin(parts: AdminEventParticipation[]): number {
+  return parts.filter((p) => {
+    if (isOrganizerParticipation(p)) return false;
+    const s = normalizeParticipationStatus(p.status);
+    if (s !== "confirmed" && s !== "comped") return false;
+    return !p.checkedInAt;
+  }).length;
+}
+
+function checkinNextAction(pending: number): EventNextBestAction {
+  return {
+    id: "door_checkin",
+    label: pending > 0 ? `Check-in porte (${pending})` : "Check-in porte",
+    phaseId: "checkin",
+    reason: "Soir J — pointer les places Payé / Invité présentes.",
+  };
+}
 
 function hasTitleAndDate(input: SuggestOpsPhaseInput): boolean {
   const title = (input.draft?.title ?? input.event.title ?? "").trim();
@@ -76,9 +112,10 @@ function buildKpis(
   parts: AdminEventParticipation[],
 ): EventOpsKpis {
   const guests = parts.filter((p) => !isOrganizerParticipation(p));
-  const paid = guests.filter(
-    (p) => p.status === "confirmed" || p.status === "present",
-  ).length;
+  const paid = guests.filter((p) => {
+    const s = normalizeParticipationStatus(p.status);
+    return s === "confirmed";
+  }).length;
   const unpaidAfterInvite = guests.filter(
     (p) =>
       Boolean(p.calendarInviteSentAt) &&
@@ -94,10 +131,15 @@ function buildKpis(
     invitedFormal,
     stdSent: eventStdSent(event, parts),
     publishStatus: event.status ?? "draft",
+    awaitingCheckin: heldSeatsAwaitingCheckin(parts),
   };
 }
 
-function interestPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): OpsPhaseId[] {
+function interestPhasesCompleted(
+  input: SuggestOpsPhaseInput,
+  kpis: EventOpsKpis,
+  nowMs: number,
+): OpsPhaseId[] {
   const done: OpsPhaseId[] = [];
   if (hasTitleAndDate(input)) done.push("prep");
   if (kpis.roster > 0) done.push("audience");
@@ -106,17 +148,31 @@ function interestPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis
   if (kpis.invitedFormal > 0) done.push("formal");
   if (kpis.invitedFormal > 0 && kpis.unpaidAfterInvite === 0) done.push("payment");
   if (kpis.paid > 0 && kpis.unpaidAfterInvite === 0) done.push("dinner_prep");
+  const started = new Date(input.event.startsAt).getTime() <= nowMs;
+  if (started && kpis.awaitingCheckin === 0 && kpis.paid > 0) done.push("checkin");
   return done;
 }
 
-function rsvpPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): OpsPhaseId[] {
+function rsvpPhasesCompleted(
+  input: SuggestOpsPhaseInput,
+  kpis: EventOpsKpis,
+  nowMs: number,
+): OpsPhaseId[] {
   const done: OpsPhaseId[] = [];
   if (hasTitleAndDate(input)) done.push("prep");
   if (kpis.roster > 0) done.push("audience");
   if (kpis.invitedFormal > 0) done.push("formal");
   if (kpis.invitedFormal > 0 && kpis.unpaidAfterInvite === 0) done.push("payment");
   if (kpis.paid > 0 && kpis.unpaidAfterInvite === 0) done.push("dinner_prep");
+  const started = new Date(input.event.startsAt).getTime() <= nowMs;
+  if (started && kpis.awaitingCheckin === 0 && kpis.paid > 0) done.push("checkin");
   return done;
+}
+
+function shouldFocusCheckin(input: SuggestOpsPhaseInput, kpis: EventOpsKpis, nowMs: number): boolean {
+  if (kpis.unpaidAfterInvite > 0) return false;
+  if (kpis.awaitingCheckin <= 0) return false;
+  return isInCheckinWindow(input.event.startsAt, nowMs);
 }
 
 /**
@@ -126,11 +182,12 @@ function rsvpPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): O
 export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseResult {
   const interest = input.event.responseMode === "interest";
   const parts = input.participations;
+  const nowMs = input.nowMs ?? Date.now();
   const kpis = buildKpis(input.event, parts);
   const blockers: string[] = [];
   const completedPhaseIds = interest
-    ? interestPhasesCompleted(input, kpis)
-    : rsvpPhasesCompleted(input, kpis);
+    ? interestPhasesCompleted(input, kpis, nowMs)
+    : rsvpPhasesCompleted(input, kpis, nowMs);
 
   if (!hasTitleAndDate(input)) {
     blockers.push("Titre ou date manquant");
@@ -230,6 +287,16 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
       };
     }
 
+    if (shouldFocusCheckin(input, kpis, nowMs)) {
+      return {
+        phaseId: "checkin",
+        kpis,
+        blockers,
+        completedPhaseIds,
+        nextBestAction: checkinNextAction(kpis.awaitingCheckin),
+      };
+    }
+
     if (kpis.capacity > 0 && kpis.seated < kpis.capacity) {
       return {
         phaseId: "dinner_prep",
@@ -320,6 +387,16 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
         phaseId: "prep",
         reason: "Compléter les éléments définitifs.",
       },
+    };
+  }
+
+  if (shouldFocusCheckin(input, kpis, nowMs)) {
+    return {
+      phaseId: "checkin",
+      kpis,
+      blockers,
+      completedPhaseIds,
+      nextBestAction: checkinNextAction(kpis.awaitingCheckin),
     };
   }
 

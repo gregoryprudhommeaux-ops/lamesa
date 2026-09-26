@@ -4,6 +4,7 @@ import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import type { LastEventRecap, LastEventRecapPerson, LastEventSurveyRow } from "@/lib/admin/last-event-recap";
+import type { MesaSeriesSummary } from "@/lib/admin/mesa-series";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import type { DashboardMoment } from "@/lib/admin/dashboard-moment";
 import { formatMxn } from "@/lib/events/pricing";
@@ -237,6 +238,7 @@ type DashboardPayload = {
   opsQueues?: OpsQueues;
   nextEventRsvp?: NextEventRsvp | null;
   lastEventRecap?: LastEventRecap | null;
+  mesaSeries?: MesaSeriesSummary | null;
   lastEmailResults?: LastEmailResults | null;
   emailCampaignHistory?: EmailCampaignHistoryRow[];
   pastEventFocus?: PastEventFocus | null;
@@ -1767,6 +1769,7 @@ export function AdminDashboardPanel() {
     opsQueues,
     nextEventRsvp = null,
     lastEventRecap = null,
+    mesaSeries = null,
     lastEmailResults = null,
     emailCampaignHistory = [],
     pastEventFocus = null,
@@ -2029,7 +2032,7 @@ export function AdminDashboardPanel() {
 
       {/* Approfondir — densifié sous la porte */}
       <section className="space-y-4 border-t border-gray-100 pt-6">
-        <div>
+        <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
             Approfondir
           </h3>
@@ -2037,6 +2040,62 @@ export function AdminDashboardPanel() {
             Signaux utiles — sans concurrencer l’action prioritaire ci-dessus.
           </p>
         </div>
+
+        {mesaSeries && mesaSeries.dinnerCount > 0 ? (
+          <div className="rounded-2xl border border-ns-primary/20 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/40 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+                  Évolution LA MESA
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  {mesaSeries.dinnerCount} dîner{mesaSeries.dinnerCount > 1 ? "s" : ""} passé
+                  {mesaSeries.dinnerCount > 1 ? "s" : ""} · CA payés seulement (Invité = COST)
+                </p>
+              </div>
+              <p className="text-right">
+                <span className="block text-2xl font-black text-ns-tertiary">
+                  {formatMxn(mesaSeries.revenueMxn, "fr")}
+                </span>
+                <span className="text-[11px] text-ns-secondary">
+                  marge {formatMxn(mesaSeries.marginMxn, "fr")}
+                  {mesaSeries.avgSatisfaction != null
+                    ? ` · sat ${formatScore(mesaSeries.avgSatisfaction)}/5`
+                    : ""}
+                </span>
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ns-secondary">
+              <span>{mesaSeries.totalPaidSeats} places payées</span>
+              <span>·</span>
+              <span>{mesaSeries.totalComplimentarySeats} invitées</span>
+              <span>·</span>
+              <span>COST {formatMxn(mesaSeries.costTotalMxn, "fr")}</span>
+            </div>
+            <ul className="mt-3 divide-y divide-gray-100">
+              {mesaSeries.dinners.slice(0, 6).map((d) => (
+                <li key={d.eventId} className="flex items-baseline justify-between gap-2 py-2">
+                  <Link
+                    href={`/admin/evenements?id=${encodeURIComponent(d.eventId)}&phase=feedback`}
+                    className="min-w-0 truncate text-sm font-semibold text-ns-tertiary hover:text-ns-primary hover:underline"
+                  >
+                    {d.title}
+                  </Link>
+                  <span className="shrink-0 tabular-nums text-sm font-bold text-ns-tertiary">
+                    {formatMxn(d.revenueMxn, "fr")}
+                    <span className="ml-2 text-[11px] font-normal text-ns-secondary">
+                      {d.paidSeats} payé{d.paidSeats > 1 ? "s" : ""}
+                      {d.satisfactionOverall != null
+                        ? ` · ${formatScore(d.satisfactionOverall)}`
+                        : ""}
+                      {d.fillRate != null ? ` · ${Math.round(d.fillRate * 100)}%` : ""}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">

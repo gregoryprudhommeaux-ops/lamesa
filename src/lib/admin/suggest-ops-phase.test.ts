@@ -89,6 +89,48 @@ describe("suggestOpsPhase", () => {
     expect(result.nextBestAction.id).toBe("formal_invite");
   });
 
+  it("soir J: unpaid clear + held seats → check-in (not feedback)", () => {
+    const startsAt = "2026-10-01T01:00:00.000Z";
+    const nowMs = new Date("2026-10-01T02:00:00.000Z").getTime();
+    const result = suggestOpsPhase({
+      event: {
+        ...baseEvent,
+        startsAt,
+        saveTheDateSentAt: "2026-09-01T00:00:00.000Z",
+        venueName: "Casa",
+        capacity: 14,
+        status: "published",
+      },
+      participations: [
+        part({
+          id: "1",
+          email: "a@x.com",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+        }),
+        part({
+          id: "2",
+          email: "b@x.com",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+        }),
+        // Fill capacity so dinner_prep wouldn't otherwise win
+        ...Array.from({ length: 12 }, (_, i) =>
+          part({
+            id: `f${i}`,
+            email: `f${i}@x.com`,
+            status: "confirmed",
+            calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+          }),
+        ),
+      ],
+      nowMs,
+    });
+    expect(result.phaseId).toBe("checkin");
+    expect(result.nextBestAction.id).toBe("door_checkin");
+    expect(result.kpis.awaitingCheckin).toBe(14);
+  });
+
   it("rsvp: empty roster → audience", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, responseMode: "rsvp", title: "X", startsAt: "2026-10-01T19:00:00.000Z" },
