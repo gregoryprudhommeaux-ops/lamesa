@@ -2,7 +2,6 @@
 
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/components/auth/auth-provider";
-import { AppFooter } from "@/components/layout/app-footer";
 import { Link as LocaleLink } from "@/i18n/navigation";
 import { LaMesaLogo } from "@/components/la-mesa-logo";
 import Link from "next/link";
@@ -12,7 +11,9 @@ import type { ReactNode } from "react";
 type AdminShellProps = {
   children: ReactNode;
   title?: string;
-  /** Full-bleed denser chrome for data-heavy admin (Personnes CRM). */
+  /**
+   * @deprecated Always workspace chrome — kept for call-site compatibility.
+   */
   density?: "default" | "workspace";
 };
 
@@ -38,88 +39,39 @@ const ADMIN_NAV: Array<{
   { href: "/admin/templates", label: "Coms", match: ["/admin/templates"] },
 ];
 
-const SITE_NAV = [
-  { href: "/" as const, label: "Accueil" },
-  { href: "/fonctionnement" as const, label: "Fonctionnement" },
-  { href: "/light" as const, label: "Inscription express" },
-  { href: "/compte?tab=profil" as const, label: "Espace membre" },
-];
-
 function navItemActive(pathname: string, match: string[]): boolean {
   return match.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
+/**
+ * Homogeneous admin chrome: logo + 5 hubs, no public SITE_NAV, no footer.
+ * Ops product feel — not a site-within-a-site.
+ */
 export function AdminShell({
   children,
   title = "LA MESA — Admin",
-  density = "default",
 }: AdminShellProps) {
   const { logout, user } = useAuth();
   const pathname = usePathname() ?? "";
-  const workspace = density === "workspace";
 
   return (
     <RequireAuth admin loginHref="/admin/login">
       <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden bg-ns-brand-light">
         <header className="sticky top-0 z-40 border-b border-white/10 bg-ns-hero shadow-md">
-          <div
-            className={
-              workspace
-                ? "mx-auto flex w-full max-w-[1600px] flex-col gap-2 px-3 py-2"
-                : "mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:py-4"
-            }
-          >
-            {!workspace ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-2 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
                 <LocaleLink
                   href="/"
-                  className="inline-flex items-center gap-2.5 transition-opacity hover:opacity-90"
+                  className="inline-flex shrink-0 items-center transition-opacity hover:opacity-90"
                   aria-label="LA MESA — retour à l'accueil"
                 >
                   <LaMesaLogo size="sm" variant="horizontal" />
                 </LocaleLink>
                 <nav
-                  className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-white/55"
-                  aria-label="Site public"
-                >
-                  {SITE_NAV.map((item) => (
-                    <LocaleLink
-                      key={item.href}
-                      href={item.href}
-                      className="transition hover:text-white"
-                    >
-                      {item.label}
-                    </LocaleLink>
-                  ))}
-                </nav>
-              </div>
-            ) : null}
-
-            <div
-              className={
-                workspace
-                  ? "flex flex-wrap items-center justify-between gap-2"
-                  : "flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-3"
-              }
-            >
-              <div className="flex min-w-0 flex-wrap items-center gap-3">
-                {workspace ? (
-                  <LocaleLink
-                    href="/"
-                    className="inline-flex shrink-0 items-center transition-opacity hover:opacity-90"
-                    aria-label="LA MESA — retour à l'accueil"
-                  >
-                    <LaMesaLogo size="sm" variant="horizontal" />
-                  </LocaleLink>
-                ) : null}
-                <nav
-                  className={
-                    workspace
-                      ? "flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold sm:text-sm"
-                      : "flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold"
-                  }
+                  className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-bold sm:text-sm"
                   aria-label="Administration"
                 >
                   {ADMIN_NAV.map((item) => {
@@ -159,18 +111,10 @@ export function AdminShell({
           </div>
         </header>
 
-        <div
-          className={
-            workspace
-              ? "mx-auto w-full min-w-0 max-w-[1600px] flex-1 px-3 py-3"
-              : "mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 py-8"
-          }
-        >
+        <div className="mx-auto w-full min-w-0 max-w-[1600px] flex-1 px-3 py-3">
           <h1 className="sr-only">{title}</h1>
           {children}
         </div>
-
-        {!workspace ? <AppFooter /> : null}
       </div>
     </RequireAuth>
   );

@@ -49,6 +49,8 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 
 - **Dashboard = porte d’entrée** du backend (Maintenant · À traiter · Accès)
 - Nav admin courte : Dashboard · Dîners · Personnes · Tables · Coms
+- Chrome admin homogène (pas de nav site public dans l’ops)
+- Coms = envoyer / suivre ; créer un template est secondaire
 - Centre de commande par phase (pas fiche événement infinie)
 - Next best action + blocages visibles
 - Roster participants unifié + filtres
@@ -77,6 +79,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | 9 phases produit (`OpsPhaseId`) + suggestOpsPhase | Labels métier + Formal/Places/paiement séparés |
 | 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
 | 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
+| 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
 
 ## Reusable components / patterns
 
@@ -104,9 +107,8 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
 | FormalInviteOui encore panel dédié (pas fusion roster) | Ouvert — dans phase formal |
 | Check-in UI dédiée | Placeholder roster payés |
-| Nav plate 7 items + contacts orphelin | Done — porte + hubs (#35) |
-| Dashboard bas trop long vs porte | Done — zone Approfondir densifiée |
-| Lien Tables depuis dinner_prep | Done |
+| Chrome Personnes vs reste (whiplash) | Done — workspace partout |
+| Coms ouvre sur « créer template » | Done — envoi d’abord |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
 
 ## Jack findings log

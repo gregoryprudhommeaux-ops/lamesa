@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function AdminPersonnesPage() {
   return (
-    <AdminShell title="Personnes" density="workspace">
+    <AdminShell title="Personnes">
       <Suspense fallback={<p className="text-sm text-ns-secondary">Chargement…</p>}>
         <AdminPersonnesWorkspace />
       </Suspense>
