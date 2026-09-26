@@ -204,10 +204,12 @@ export function AdminEventPaymentFollowupPanel({
             Confirmation & paiement
           </h4>
           <p className="mt-1 text-xs text-ns-secondary">
-            <strong>À relancer</strong> (paiement en attente), <strong>Payé</strong> (CA),{" "}
+            <strong>À relancer</strong> (virement en attente), <strong>Payé</strong> (CA — après réception du transfer),{" "}
             <strong>Invité</strong> (place offerte — COST oui, pas de CA),{" "}
-            <strong>Ne viendra pas</strong>. Relance ACCESS uniquement aux « À
-            relancer » — une personne déjà relancée n’est pas renvoyée.
+            <strong>Ne viendra pas</strong>. Pas de paiement en ligne : le membre
+            verse par SPEI ; tu marques <strong>Payé</strong> à réception. Relance
+            ACCESS uniquement aux « À relancer » — une personne déjà relancée n’est
+            pas renvoyée.
           </p>
           {deadlineLabel ? (
             <p className="mt-1 text-xs text-ns-secondary">

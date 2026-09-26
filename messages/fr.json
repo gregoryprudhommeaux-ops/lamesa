@@ -309,7 +309,7 @@
       "pricingModeAllIn": "Ticket avec boissons incluses",
       "pricingModeAllInHint": "Un seul ticket couvre l’accès, le repas et les boissons (tu peux aussi les laisser à part).",
       "accessSection": "TICKET — confirmation de place",
-      "accessSectionHint": "Montant payé à l’avance pour confirmer la place (virement). Les consommations se règlent sur place.",
+      "accessSectionHint": "Montant payé à l’avance par virement (SPEI) pour confirmer la place — pas de paiement en ligne. Les consommations se règlent sur place.",
       "accessIncludes": "Inclus dans le ticket",
       "accessWelcomeDrink": "Welcome drink",
       "accessAmuseBouche": "Amuse-bouches",
@@ -556,8 +556,8 @@
     "nextActions": {
       "eyebrow": "Mon prochain pas",
       "accessPrice": "Ticket ACCESS : {amount} TTC",
-      "bankTitle": "Virement",
-      "bankHint": "Indique ton nom en référence. Facture : envoie ton CSF à greg@nextstep-services.com.",
+      "bankTitle": "Virement bancaire",
+      "bankHint": "Paiement uniquement par virement (SPEI). Indique ton nom en référence. Facture : envoie ton CSF à greg@nextstep-services.com.",
       "kinds": {
         "fill_survey": {
           "title": "Donner mon avis",
@@ -566,7 +566,7 @@
         },
         "pay_access": {
           "title": "Confirmer ma place",
-          "reason": "Invitation reçue pour « {event} » — règle le ticket ACCESS pour valider ta place.",
+          "reason": "Invitation reçue pour « {event} » — règle le ticket ACCESS par virement (pas de paiement en ligne) pour valider ta place.",
           "cta": "Voir le dîner"
         },
         "complete_profile": {

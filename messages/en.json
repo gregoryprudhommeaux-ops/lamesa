@@ -309,7 +309,7 @@
       "pricingModeAllIn": "Ticket with drinks included",
       "pricingModeAllInHint": "One ticket covers access, meal, and drinks (you can still leave drinks separate).",
       "accessSection": "TICKET — seat confirmation",
-      "accessSectionHint": "Amount paid in advance to confirm the seat (transfer). Consumptions are paid on site.",
+      "accessSectionHint": "Amount paid in advance by bank transfer to confirm the seat — no online checkout. Consumptions are paid on site.",
       "accessIncludes": "Included in the ticket",
       "accessWelcomeDrink": "Welcome drink",
       "accessAmuseBouche": "Amuse-bouches",
@@ -557,7 +557,7 @@
       "eyebrow": "Your next step",
       "accessPrice": "ACCESS ticket: {amount} incl. tax",
       "bankTitle": "Bank transfer",
-      "bankHint": "Put your name in the reference. Invoice: send your CSF to greg@nextstep-services.com.",
+      "bankHint": "Payment by bank transfer only (no online checkout). Put your name in the reference. Invoice: send your CSF to greg@nextstep-services.com.",
       "kinds": {
         "fill_survey": {
           "title": "Share feedback",
@@ -566,7 +566,7 @@
         },
         "pay_access": {
           "title": "Confirm your seat",
-          "reason": "You’ve been invited to “{event}” — pay the ACCESS ticket to lock your seat.",
+          "reason": "You’ve been invited to “{event}” — pay the ACCESS ticket by bank transfer (no online payment) to lock your seat.",
           "cta": "View dinner"
         },
         "complete_profile": {

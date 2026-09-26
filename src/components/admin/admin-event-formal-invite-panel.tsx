@@ -153,7 +153,9 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
           </p>
           <p className="mt-1 text-[11px] leading-snug text-ns-secondary">
             Table : <strong>{guestCapacity}</strong> places invités ({tableCovers} couverts). Pas de
-            plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS valide la place
+            plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS
+            se fait uniquement par virement (pas en ligne) ; tu marques Payé à
+            réception.
             (first come) ; au-delà des places, liste d’attente. Le suivi paiement est dans l’étape
             suivante.
           </p>

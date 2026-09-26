@@ -1342,7 +1342,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     </h3>
                     <p className="mb-3 text-xs text-ns-secondary">
                       {labels["fields.accessSectionHint"] ??
-                        "Montant payé à l’avance pour confirmer la place (virement). Les consommations se règlent sur place."}
+                        "Montant payé à l’avance par virement (SPEI) pour confirmer la place — pas de paiement en ligne. Les consommations se règlent sur place."}
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>

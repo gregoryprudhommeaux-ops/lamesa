@@ -83,6 +83,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
 | 2026-09-26 | Dashboard moment T (post-event / email pulse / next dinner) | Une info prioritaire selon l’étape du process ; CA + satisfaction après dîner |
 | 2026-09-26 | Statuts siège : **Payé** (`confirmed`) + **Invité** (`comped`) ; event `costMxn` + `priceMxn` ; TTC = HT + IVA 16% + service 15% | Invité = COST oui / CA non ; marge interne |
+| 2026-09-26 | ACCESS = **virement bancaire uniquement** (pas de paiement en ligne sur le site) | Admin marque Payé à réception du transfer ; site affiche CLABE / infos, pas de checkout |
 
 ## Reusable components / patterns
 
