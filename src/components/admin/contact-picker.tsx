@@ -1,6 +1,7 @@
 "use client";
 
-import type { DatabasePersoContact, WaitlistRegistration } from "@/lib/types/events";
+import type { AdminEventParticipation, DatabasePersoContact, WaitlistRegistration } from "@/lib/types/events";
+import { buildAudienceFitIndex, type AudienceFitSummary } from "@/lib/admin/audience-fit";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
@@ -29,6 +30,12 @@ type ContactPickerProps = {
     externalEmail: string;
     externalName: string;
   };
+  /** All participations (any event) — used for observed fit chips. */
+  participations?: AdminEventParticipation[];
+  /** Current dinner city for “same city” signal. */
+  eventCity?: string | null;
+  /** Exclude seats already on this event from “past” history. */
+  excludeEventId?: string | null;
 };
 
 type PickerRow = {
@@ -39,9 +46,39 @@ type PickerRow = {
   contactId?: string;
   source: "database_perso" | "waitlist";
   badge?: string;
+  fit?: AudienceFitSummary | null;
 };
 
-export function ContactPicker({ selected, onChange, labels }: ContactPickerProps) {
+function FitChips({ fit }: { fit: AudienceFitSummary | null | undefined }) {
+  if (!fit || fit.signals.length === 0) return null;
+  return (
+    <span className="mt-1 flex flex-wrap gap-1">
+      {fit.signals.map((s) => (
+        <span
+          key={s.id}
+          className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+            s.tone === "positive"
+              ? "bg-emerald-50 text-emerald-800"
+              : s.tone === "caution"
+                ? "bg-amber-50 text-amber-900"
+                : "bg-ns-brand-light text-ns-secondary"
+          }`}
+        >
+          {s.label}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+export function ContactPicker({
+  selected,
+  onChange,
+  labels,
+  participations = [],
+  eventCity = null,
+  excludeEventId = null,
+}: ContactPickerProps) {
   const authFetch = useAuthFetch();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -52,6 +89,17 @@ export function ContactPicker({ selected, onChange, labels }: ContactPickerProps
   const [draftEmails, setDraftEmails] = useState<Set<string>>(new Set());
   const [externalEmail, setExternalEmail] = useState("");
   const [externalName, setExternalName] = useState("");
+
+  const fitIndex = useMemo(
+    () =>
+      buildAudienceFitIndex({
+        waitlist,
+        participations,
+        eventCity,
+        excludeEventId,
+      }),
+    [waitlist, participations, eventCity, excludeEventId],
+  );
 
   const loadWaitlist = useCallback(async () => {
     try {
@@ -120,6 +168,7 @@ export function ContactPicker({ selected, onChange, labels }: ContactPickerProps
         contactId: w.id,
         source: "waitlist",
         badge: "Waitlist LA MESA",
+        fit: fitIndex.get(email) ?? null,
       });
     }
 
@@ -133,13 +182,14 @@ export function ContactPicker({ selected, onChange, labels }: ContactPickerProps
         company: c.company ?? undefined,
         contactId: c.id,
         source: "database_perso",
+        fit: fitIndex.get(email) ?? null,
       });
     }
 
     return [...map.values()].sort((a, b) =>
       a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }),
     );
-  }, [waitlist, dbResults, query]);
+  }, [waitlist, dbResults, query, fitIndex]);
 
   function toggleDraft(email: string) {
     const key = email.toLowerCase();
@@ -353,6 +403,7 @@ export function ContactPicker({ selected, onChange, labels }: ContactPickerProps
                           {row.email}
                           {row.company ? ` · ${row.company}` : ""}
                         </span>
+                        <FitChips fit={row.fit} />
                         {row.badge && (
                           <span className="mt-0.5 inline-block text-[10px] font-semibold uppercase tracking-wide text-ns-secondary">
                             {row.badge}
