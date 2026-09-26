@@ -1,4 +1,5 @@
 import type { OpsPhaseId } from "@/lib/admin/ops-phases";
+import { countPaymentDeclaredUnpaid } from "@/lib/admin/payment-followup";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { countSeatedParticipations, isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
@@ -9,6 +10,8 @@ export type EventOpsKpis = {
   roster: number;
   paid: number;
   unpaidAfterInvite: number;
+  /** Formal invite + SPEI declared, not yet Payé. */
+  paymentDeclared: number;
   invitedFormal: number;
   stdSent: boolean;
   publishStatus: "draft" | "published" | "closed";
@@ -128,6 +131,7 @@ function buildKpis(
       Boolean(p.calendarInviteSentAt) &&
       (p.status === "invited" || p.status === "attending" || p.status === "waitlist"),
   ).length;
+  const paymentDeclared = countPaymentDeclaredUnpaid(guests);
   const invitedFormal = guests.filter((p) => Boolean(p.calendarInviteSentAt)).length;
   return {
     capacity: event.capacity ?? 0,
@@ -135,10 +139,31 @@ function buildKpis(
     roster: guests.length,
     paid,
     unpaidAfterInvite,
+    paymentDeclared,
     invitedFormal,
     stdSent: eventStdSent(event, parts),
     publishStatus: event.status ?? "draft",
     awaitingCheckin: heldSeatsAwaitingCheckin(parts),
+  };
+}
+
+function paymentNextBestAction(kpis: EventOpsKpis): EventNextBestAction {
+  if (kpis.paymentDeclared > 0) {
+    return {
+      id: "payment_confirm_declared",
+      label:
+        kpis.paymentDeclared === 1
+          ? "Confirmer le virement déclaré (1)"
+          : `Confirmer les virements déclarés (${kpis.paymentDeclared})`,
+      phaseId: "payment",
+      reason: "Signal membre — vérifier en banque puis passer en Payé.",
+    };
+  }
+  return {
+    id: "payment_relance",
+    label: `Relancer les paiements (${kpis.unpaidAfterInvite})`,
+    phaseId: "payment",
+    reason: "Confirmations bloquées tant que l’ACCESS n’est pas réglé.",
   };
 }
 
@@ -255,12 +280,7 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
         kpis,
         blockers,
         completedPhaseIds,
-        nextBestAction: {
-          id: "payment_relance",
-          label: `Relancer les paiements (${kpis.unpaidAfterInvite})`,
-          phaseId: "payment",
-          reason: "Confirmations bloquées tant que l’ACCESS n’est pas réglé.",
-        },
+        nextBestAction: paymentNextBestAction(kpis),
       };
     }
 
@@ -377,16 +397,18 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
 
   if (kpis.unpaidAfterInvite > 0) {
     blockers.push(`${kpis.unpaidAfterInvite} invitation(s) sans paiement`);
+    const nba = paymentNextBestAction(kpis);
     return {
       phaseId: "payment",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
-        id: "payment_relance",
-        label: `Relancer les paiements (${kpis.unpaidAfterInvite})`,
-        phaseId: "payment",
-        reason: "Places non confirmées financièrement.",
+        ...nba,
+        reason:
+          nba.id === "payment_confirm_declared"
+            ? "Signal membre — vérifier en banque puis passer en Payé."
+            : "Places non confirmées financièrement.",
       },
     };
   }

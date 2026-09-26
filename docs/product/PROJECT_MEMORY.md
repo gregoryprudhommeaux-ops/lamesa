@@ -97,6 +97,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Formal : pool OUI = formulaire ∪ playlist ; Sync in-panel | NBA Formal ne tombe plus sur liste vide |
 | 2026-09-26 | Page `/e` RSVP : même surfaces ACCESS / confirmé + scroll `#access` | Complète #58 pour le mode RSVP |
 | 2026-09-26 | Bridge Audience↔OUI : chips intérêt (OUI/NON/AUTRE/Sans réponse) sur roster **et** ContactPicker via email | Join-only ; pas de fusion Firestore |
+| 2026-09-26 | Paiement — filtre « Virement déclaré » honnête + CTA Confirmer payé + NBA banque | Déclaré ≠ À relancer |
 
 ## Reusable components / patterns
 
@@ -198,6 +199,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 | Formal « Aucun OUI » alors que formulaire a des yes | Fait — union + Sync in-panel |
 | 2026-09-26 | P0 | `/e` RSVP ignore ACCESS après invitation | Fait — RsvpModeBody + `#access` |
 | 2026-09-26 | P1 | Audience ne voit pas OUI/NON des playlists | Fait v1 — chips intérêt roster+picker (join email) |
+| 2026-09-26 | P1 | Filtre paiement : déclaré affiché comme « À relancer » | Fait — select + CTA + NBA `payment_confirm_declared` |
 
 ## Changelog
 
@@ -229,3 +231,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Ops — NBA Qualification après STD ; Formal dès OUI pending ; inbox intérêt en qualify seul |
 | 2026-09-26 | Formal — OUI formulaire∪playlist + bouton Sync dans le panneau |
 | 2026-09-26 | Bridge Audience↔intérêt — chips OUI/NON/AUTRE/Sans réponse sur roster + ContactPicker (`interest-display` + `/interest-status`) |
+| 2026-09-26 | Paiement — UX filtre Virement déclaré (select honnête, CTA Confirmer payé, NBA banque) |

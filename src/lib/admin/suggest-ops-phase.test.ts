@@ -118,6 +118,31 @@ describe("suggestOpsPhase", () => {
     expect(result.nextBestAction.id).toBe("payment_relance");
   });
 
+  it("interest: declared SPEI unpaid → confirm declared NBA (not email relance)", () => {
+    const result = suggestOpsPhase({
+      event: { ...baseEvent, saveTheDateSentAt: "2026-09-01T00:00:00.000Z", venueName: "X" },
+      participations: [
+        part({
+          id: "1",
+          email: "a@x.com",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+          status: "invited",
+          paymentDeclaredAt: "2026-09-20T12:00:00.000Z",
+        }),
+        part({
+          id: "2",
+          email: "b@x.com",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+          status: "attending",
+        }),
+      ],
+    });
+    expect(result.phaseId).toBe("payment");
+    expect(result.nextBestAction.id).toBe("payment_confirm_declared");
+    expect(result.kpis.paymentDeclared).toBe(1);
+    expect(result.nextBestAction.label).toContain("1");
+  });
+
   it("interest: after at least one formal invite and unpaid → payment", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, saveTheDateSentAt: "2026-09-01T00:00:00.000Z", venueName: "X" },

@@ -2,22 +2,20 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { resolveGuestJourneyStage } from "@/lib/admin/guest-journey";
+import {
+  defaultPaymentFilter,
+  inviteMemberStatusToParticipation,
+  toInviteMemberStatus,
+  type InviteMemberStatus,
+} from "@/lib/admin/payment-followup";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import type { AdminEvent, AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
-import { Mail, MessageCircle } from "lucide-react";
+import { Check, Mail, MessageCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 
-/**
- * Simplified member status for post-invite payment follow-up.
- * - declared = virement déclaré (déclaré, pas encore Payé)
- * - relance = À payer / à relancer (sans déclaration)
- * - paid = PAYÉ (CA)
- * - comped = INVITÉ (COST oui, CA non)
- * - out = ne viendra pas
- */
-export type InviteMemberStatus = "declared" | "relance" | "paid" | "comped" | "out";
+export type { InviteMemberStatus };
 
 type AdminEventPaymentFollowupPanelProps = {
   event: AdminEvent;
@@ -26,22 +24,6 @@ type AdminEventPaymentFollowupPanelProps = {
   onWhatsApp?: (p: AdminEventParticipation) => void;
   onUpdated?: () => void;
 };
-
-function toMemberStatus(p: AdminEventParticipation): InviteMemberStatus {
-  const status = normalizeParticipationStatus(p.status);
-  if (status === "confirmed") return "paid";
-  if (status === "comped") return "comped";
-  if (status === "not_attending") return "out";
-  if (p.paymentDeclaredAt) return "declared";
-  return "relance";
-}
-
-function memberStatusToParticipation(s: InviteMemberStatus): EventParticipationStatus {
-  if (s === "paid") return "confirmed";
-  if (s === "comped") return "comped";
-  if (s === "out") return "not_attending";
-  return "invited";
-}
 
 function formatDeadline(iso: string | null | undefined): string | null {
   if (!iso) return null;
@@ -69,7 +51,10 @@ export function AdminEventPaymentFollowupPanel({
   onUpdated,
 }: AdminEventPaymentFollowupPanelProps) {
   const authFetch = useAuthFetch();
-  const [filter, setFilter] = useState<InviteMemberStatus | "all">("relance");
+  /** null = follow smart default (declared if any, else relance). */
+  const [filterOverride, setFilterOverride] = useState<InviteMemberStatus | "all" | null>(
+    null,
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -98,7 +83,7 @@ export function AdminEventPaymentFollowupPanel({
           comped: 3,
           out: 4,
         };
-        const d = order[toMemberStatus(a)] - order[toMemberStatus(b)];
+        const d = order[toInviteMemberStatus(a)] - order[toInviteMemberStatus(b)];
         if (d !== 0) return d;
         return (a.fullName || a.email).localeCompare(b.fullName || b.email, "fr");
       });
@@ -111,7 +96,7 @@ export function AdminEventPaymentFollowupPanel({
     let comped = 0;
     let out = 0;
     for (const p of rows) {
-      const s = toMemberStatus(p);
+      const s = toInviteMemberStatus(p);
       if (s === "declared") declared += 1;
       else if (s === "relance") relance += 1;
       else if (s === "paid") paid += 1;
@@ -121,14 +106,21 @@ export function AdminEventPaymentFollowupPanel({
     return { all: rows.length, declared, relance, paid, comped, out };
   }, [rows]);
 
+  const filter = filterOverride ?? defaultPaymentFilter(counts);
+
   const visible = useMemo(() => {
     if (filter === "all") return rows;
-    return rows.filter((p) => toMemberStatus(p) === filter);
+    return rows.filter((p) => toInviteMemberStatus(p) === filter);
   }, [rows, filter]);
 
   /** Email targets = unpaid without declaration (non-intrusive). */
   const relanceTargets = useMemo(
-    () => rows.filter((p) => toMemberStatus(p) === "relance"),
+    () => rows.filter((p) => toInviteMemberStatus(p) === "relance"),
+    [rows],
+  );
+
+  const declaredTargets = useMemo(
+    () => rows.filter((p) => toInviteMemberStatus(p) === "declared"),
     [rows],
   );
 
@@ -145,6 +137,12 @@ export function AdminEventPaymentFollowupPanel({
       else next.add(id);
       return next;
     });
+  }
+
+  function confirmPaid(ids: string[]) {
+    for (const id of ids) {
+      onStatusChange(id, "confirmed");
+    }
   }
 
   async function sendPaymentRelance() {
@@ -226,22 +224,44 @@ export function AdminEventPaymentFollowupPanel({
             </p>
           ) : null}
         </div>
-        <button
-          type="button"
-          className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
-          disabled={sending || counts.relance === 0}
-          onClick={() => void sendPaymentRelance()}
-          title="Envoie le template « Relance paiement ACCESS »"
-        >
-          <Mail className="h-4 w-4" />
-          {sending
-            ? "Envoi…"
-            : `Email relance (${
-                selected.size > 0 && relanceTargets.some((p) => selected.has(p.id))
-                  ? selectedRelanceEmails.length
-                  : counts.relance
-              })`}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {counts.declared > 0 ? (
+            <button
+              type="button"
+              className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    `Marquer Payé les ${counts.declared} virement(s) déclaré(s) ?`,
+                  )
+                ) {
+                  return;
+                }
+                confirmPaid(declaredTargets.map((p) => p.id));
+              }}
+              title="Après vérif banque — passe en Payé (CA)"
+            >
+              <Check className="h-4 w-4" />
+              Confirmer déclarés ({counts.declared})
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`${BTN_SECONDARY} inline-flex items-center gap-2`}
+            disabled={sending || counts.relance === 0}
+            onClick={() => void sendPaymentRelance()}
+            title="Envoie le template « Relance paiement ACCESS »"
+          >
+            <Mail className="h-4 w-4" />
+            {sending
+              ? "Envoi…"
+              : `Email relance (${
+                  selected.size > 0 && relanceTargets.some((p) => selected.has(p.id))
+                    ? selectedRelanceEmails.length
+                    : counts.relance
+                })`}
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -251,7 +271,7 @@ export function AdminEventPaymentFollowupPanel({
             <button
               key={f.id}
               type="button"
-              onClick={() => setFilter(f.id)}
+              onClick={() => setFilterOverride(f.id)}
               className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                 filter === f.id
                   ? "bg-ns-primary text-ns-tertiary"
@@ -285,7 +305,7 @@ export function AdminEventPaymentFollowupPanel({
       ) : (
         <ul className="max-h-96 space-y-2 overflow-y-auto">
           {visible.map((p) => {
-            const memberStatus = toMemberStatus(p);
+            const memberStatus = toInviteMemberStatus(p);
             const journey = resolveGuestJourneyStage(p);
             const showCheck = memberStatus === "relance";
             return (
@@ -339,16 +359,30 @@ export function AdminEventPaymentFollowupPanel({
                       <MessageCircle className="h-3.5 w-3.5" />
                     </button>
                   ) : null}
+                  {memberStatus === "declared" ? (
+                    <button
+                      type="button"
+                      className={`${BTN_PRIMARY} inline-flex h-7 items-center gap-1 px-2 text-[11px]`}
+                      onClick={() => confirmPaid([p.id])}
+                      title="Après vérif banque"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      Confirmer payé
+                    </button>
+                  ) : null}
                   <select
-                    value={memberStatus === "declared" ? "relance" : memberStatus}
-                    onChange={(e) =>
-                      onStatusChange(
-                        p.id,
-                        memberStatusToParticipation(e.target.value as InviteMemberStatus),
-                      )
-                    }
+                    value={memberStatus}
+                    onChange={(e) => {
+                      const next = e.target.value as InviteMemberStatus;
+                      if (next === "declared") return;
+                      onStatusChange(p.id, inviteMemberStatusToParticipation(next));
+                    }}
                     className="rounded border border-ns-alternate px-2 py-1 text-xs font-semibold"
+                    aria-label={`Statut ${p.fullName ?? p.email}`}
                   >
+                    {memberStatus === "declared" ? (
+                      <option value="declared">Virement déclaré</option>
+                    ) : null}
                     <option value="relance">À relancer</option>
                     <option value="paid">Payé</option>
                     <option value="comped">Invité</option>
