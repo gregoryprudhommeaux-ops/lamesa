@@ -48,6 +48,7 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 ## UX/UI principles (project-specific)
 
 - **Dashboard = porte d’entrée** du backend (Maintenant · À traiter · Accès)
+- **Maintenant = moment T** : un seul focus (résultats dernier email / bilan post-dîner CA+satisfaction / prochain dîner) — pas deux colonnes concurrentes ni blocs blancs vides
 - Nav admin courte : Dashboard · Dîners · Personnes · Tables · Coms
 - Chrome admin homogène (pas de nav site public dans l’ops)
 - Coms = envoyer / suivre ; créer un template est secondaire
@@ -62,7 +63,7 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 
 | Item | Route | Notes |
 |------|-------|-------|
-| Dashboard | `/admin/dashboard` | Porte — 3 bandes |
+| Dashboard | `/admin/dashboard` | Porte — Maintenant = moment T (`resolveDashboardMoment`) |
 | Dîners | `/admin/evenements` | Pilotage + `?view=calendrier` |
 | Personnes | `/admin/personnes` | Onglets Membres / Prospects / Mémoire |
 | Tables | `/admin/tables` | Top-level (validé) |
@@ -80,6 +81,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
 | 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
 | 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
+| 2026-09-26 | Dashboard moment T (post-event / email pulse / next dinner) | Une info prioritaire selon l’étape du process ; CA + satisfaction après dîner |
 
 ## Reusable components / patterns
 
@@ -154,6 +156,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
 | 2026-09-26 | P0 | Files À traiter sans filtre | Done — `queue=` |
 | 2026-09-26 | P1 | Pas de NBA unique / contexte Tables perdu | Done — NBA + `eventId` |
+| 2026-09-26 | P0 | Dashboard trop dense / blocs blancs / pas de moment T | Done — `resolveDashboardMoment` + pastEventFocus |
 | 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
 | 2026-09-26 | P1 | Relance STD custom + reminders dans « Automatiques » | Fait — `std_relance` + bibliothèque scindée |
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
@@ -170,6 +173,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
 | 2026-09-26 | Continuité — queue filters, NBA Dashboard, Tables eventId |
+| 2026-09-26 | Dashboard moment T — un focus Maintenant (email / post-dîner CA+sat) |
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |

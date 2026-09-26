@@ -8,12 +8,20 @@ import {
   computeSatisfactionAverages,
   surveysFromParticipations,
 } from "@/lib/admin/satisfaction-stats";
-import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import {
+  DEFAULT_GUEST_CAPACITY,
+  isOrganizerParticipation,
+} from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { computeEventIva } from "@/lib/events/pricing";
 import {
   ADMIN_SCAN,
   loadAdminCoreCollections,
 } from "@/lib/admin/load-core-collections";
+import {
+  pickLastPastEvent,
+  resolveDashboardMoment,
+} from "@/lib/admin/dashboard-moment";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
@@ -545,6 +553,69 @@ export async function GET(request: Request) {
       console.error("[admin/dashboard] last-email results", error);
     }
 
+    const pastEvent = pickLastPastEvent(events);
+    let pastEventFocus = null as {
+      eventId: string;
+      eventSlug: string;
+      title: string;
+      startsAt: string;
+      confirmedCount: number;
+      revenueMxn: number;
+      priceMxn: number | null;
+      surveySentCount: number;
+      surveyResponseCount: number;
+      satisfaction: ReturnType<typeof computeEventSatisfaction>;
+    } | null;
+
+    if (pastEvent) {
+      const pastParts = participations.filter((p) => p.eventId === pastEvent.id);
+      const guests = pastParts.filter((p) => !isOrganizerParticipation(p));
+      const confirmedGuests = guests.filter(
+        (p) => normalizeParticipationStatus(p.status) === "confirmed",
+      );
+      const priceRaw =
+        typeof pastEvent.priceMxn === "number" && Number.isFinite(pastEvent.priceMxn)
+          ? pastEvent.priceMxn
+          : 0;
+      const unitTtc = computeEventIva(priceRaw).totalWithIva;
+      const revenueMxn =
+        Math.round(unitTtc * confirmedGuests.length * 100) / 100;
+      const sat = computeEventSatisfaction(pastParts);
+      pastEventFocus = {
+        eventId: pastEvent.id,
+        eventSlug: pastEvent.slug,
+        title: pastEvent.title,
+        startsAt: pastEvent.startsAt,
+        confirmedCount: confirmedGuests.length,
+        revenueMxn,
+        priceMxn: priceRaw > 0 ? priceRaw : null,
+        surveySentCount: sat.sentCount,
+        surveyResponseCount: sat.responseCount,
+        satisfaction: sat,
+      };
+    }
+
+    const dashboardMoment = resolveDashboardMoment({
+      lastEmail: lastEmailResults
+        ? {
+            templateKey: lastEmailResults.templateKey,
+            sentAt: lastEmailResults.sentAt,
+            eventId: lastEmailResults.eventId,
+          }
+        : null,
+      nextEvent: nextEventRsvp
+        ? { eventId: nextEventRsvp.eventId, startsAt: nextEventRsvp.startsAt }
+        : null,
+      pastEvent: pastEventFocus
+        ? {
+            eventId: pastEventFocus.eventId,
+            startsAt: pastEventFocus.startsAt,
+            surveySentCount: pastEventFocus.surveySentCount,
+            surveyResponseCount: pastEventFocus.surveyResponseCount,
+          }
+        : null,
+    });
+
     return NextResponse.json({
       ok: true,
       kpis: {
@@ -572,6 +643,8 @@ export async function GET(request: Request) {
       nextEventRsvp,
       lastEmailResults,
       emailCampaignHistory,
+      pastEventFocus,
+      dashboardMoment,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);
