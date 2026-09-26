@@ -550,6 +550,34 @@
     "guest": "Invité",
     "viewEvent": "Voir le dîner",
     "settingsLink": "Réglages du compte",
+    "nextActions": {
+      "eyebrow": "Mon prochain pas",
+      "accessPrice": "Ticket ACCESS : {amount} TTC",
+      "bankTitle": "Virement",
+      "bankHint": "Indique ton nom en référence. Facture : envoie ton CSF à greg@nextstep-services.com.",
+      "kinds": {
+        "fill_survey": {
+          "title": "Donner mon avis",
+          "reason": "Le questionnaire de satisfaction pour « {event} » t’attend.",
+          "cta": "Répondre au survey"
+        },
+        "pay_access": {
+          "title": "Confirmer ma place",
+          "reason": "Invitation reçue pour « {event} » — règle le ticket ACCESS pour valider ta place.",
+          "cta": "Voir le dîner"
+        },
+        "complete_profile": {
+          "title": "Compléter mon profil",
+          "reason": "Profil à {percent} % — plus c’est complet, mieux on te match à une table.",
+          "cta": "Ouvrir mon profil"
+        },
+        "open_event": {
+          "title": "Prochain dîner",
+          "reason": "Ta place est confirmée pour « {event} ».",
+          "cta": "Voir le dîner"
+        }
+      }
+    },
     "dashboard": {
       "statsTitle": "En un coup d'œil",
       "stats": {
