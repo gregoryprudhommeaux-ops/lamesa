@@ -37,7 +37,24 @@ import {
 } from "@/lib/ui/nextstep";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
+
+/** Scroll to ACCESS panel when landing from member NBA `#access`. */
+function useScrollToAccessHash(active: boolean) {
+  useEffect(() => {
+    if (!active || typeof window === "undefined") return;
+    if (window.location.hash !== "#access") return;
+    const t = window.setTimeout(() => {
+      document.getElementById("access")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [active]);
+}
+
+function AccessPaymentPanelWithScroll(props: ComponentProps<typeof AccessPaymentPanel>) {
+  useScrollToAccessHash(true);
+  return <AccessPaymentPanel {...props} />;
+}
 
 /** Lightweight bold markers in admin-authored intro copy: <bold>…</bold> or **…**. */
 function renderIntroRichText(text: string): ReactNode {
@@ -565,7 +582,7 @@ function InterestForm({
 
   if (guestSurface === "pay_access" && guestParticipationId) {
     return (
-      <AccessPaymentPanel
+      <AccessPaymentPanelWithScroll
         participationId={guestParticipationId}
         priceMxn={event.priceMxn}
         priceIncludesIva={event.priceIncludesIva !== false}
@@ -770,6 +787,159 @@ function InterestForm({
   );
 }
 
+/** RSVP-mode body: ACCESS / confirmed for signed-in invitees, else classic RSVP form. */
+function RsvpModeBody({
+  event,
+  locale,
+  success,
+  submitting,
+  formError,
+  onSubmit,
+}: {
+  event: AdminEvent;
+  locale: "fr" | "en" | "es";
+  success: boolean;
+  submitting: boolean;
+  formError: string | null;
+  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
+}) {
+  const t = useTranslations("publicEvent");
+  const { user, loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
+  const [guestSurface, setGuestSurface] = useState<PublicEventGuestSurface | null>(null);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestParticipationId, setGuestParticipationId] = useState<string | null>(null);
+  const [guestPaymentDeclaredAt, setGuestPaymentDeclaredAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      setGuestSurface(null);
+      setGuestParticipationId(null);
+      setGuestPaymentDeclaredAt(null);
+      setGuestLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setGuestLoading(true);
+    void (async () => {
+      try {
+        const res = await authFetch(
+          `/api/events/${encodeURIComponent(event.slug)}/guest-status`,
+        );
+        const json = (await res.json()) as {
+          ok?: boolean;
+          surface?: PublicEventGuestSurface;
+          participation?: {
+            id?: string;
+            paymentDeclaredAt?: string | null;
+          } | null;
+        };
+        if (cancelled) return;
+        if (res.ok && json.ok && json.surface) {
+          setGuestSurface(json.surface);
+          setGuestParticipationId(json.participation?.id ?? null);
+          setGuestPaymentDeclaredAt(json.participation?.paymentDeclaredAt ?? null);
+        } else {
+          setGuestSurface(null);
+        }
+      } catch {
+        if (!cancelled) setGuestSurface(null);
+      } finally {
+        if (!cancelled) setGuestLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user, authFetch, event.slug]);
+
+  if (user && (authLoading || guestLoading)) {
+    return <p className="mt-8 text-center text-sm text-ns-secondary">{t("loading")}</p>;
+  }
+
+  if (guestSurface === "pay_access" && guestParticipationId) {
+    return (
+      <AccessPaymentPanelWithScroll
+        participationId={guestParticipationId}
+        priceMxn={event.priceMxn}
+        priceIncludesIva={event.priceIncludesIva !== false}
+        priceIncludesService={event.priceIncludesService !== false}
+        paymentDeadlineAt={event.paymentDeadlineAt}
+        paymentDeclaredAt={guestPaymentDeclaredAt}
+        onDeclared={(iso) => setGuestPaymentDeclaredAt(iso)}
+      />
+    );
+  }
+
+  if (guestSurface === "confirmed") {
+    return (
+      <div className="mt-8 space-y-4">
+        <p className="text-sm font-medium text-ns-primary">{t("accessConfirmed")}</p>
+        <p className="border-t border-gray-100 pt-4 text-center text-xs text-ns-secondary">
+          {t("profileSuggestionPrefix")}{" "}
+          <Link
+            href="/compte?tab=profil"
+            className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+          >
+            {t("profileSuggestionLink")}
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  if (success) {
+    return <p className="mt-8 text-sm font-medium text-ns-primary">{t("rsvpSuccess")}</p>;
+  }
+
+  return (
+    <>
+      {(typeof event.priceMxn === "number" && event.priceMxn > 0) ||
+      hasNegotiatedMenuInfo(event) ? (
+        <PriceBlock event={event} locale={locale} />
+      ) : null}
+      <form onSubmit={onSubmit} className="mt-8 space-y-4">
+        <h2 className={FORM_SECTION_TITLE}>{t("rsvpTitle")}</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.firstName")}</label>
+            <input name="firstName" required className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.lastName")}</label>
+            <input name="lastName" required className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.email")}</label>
+            <input name="email" type="email" required className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.whatsapp")}</label>
+            <input name="whatsapp" required minLength={3} className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.jobTitle")}</label>
+            <input name="jobTitle" required className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div>
+            <label className={LABEL_CLASS}>{t("fields.company")}</label>
+            <input name="companyName" required className={INPUT_CLASS} disabled={submitting} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className={LABEL_CLASS}>{t("fields.comments")}</label>
+            <textarea name="comments" rows={2} className={INPUT_CLASS} disabled={submitting} />
+          </div>
+        </div>
+        {formError && <p className={ERROR_TEXT}>{formError}</p>}
+        <button type="submit" className={BTN_PRIMARY} disabled={submitting}>
+          {t("submitRsvp")}
+        </button>
+      </form>
+    </>
+  );
+}
+
 export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEventPageProps) {
   const t = useTranslations("publicEvent");
   const [loading, setLoading] = useState(!initialEvent);
@@ -821,7 +991,7 @@ export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEve
     void load();
   }, [slug, initialEvent]);
 
-  async function submitGuest(e: React.FormEvent<HTMLFormElement>) {
+  async function submitGuest(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!event?.id || submitting) return;
     setSubmitting(true);
@@ -947,53 +1117,17 @@ export function PublicEventPage({ slug, locale, initialEvent = null }: PublicEve
         </div>
       ) : null}
 
-      {interestMode ? null : (typeof event.priceMxn === "number" && event.priceMxn > 0) ||
-        hasNegotiatedMenuInfo(event) ? (
-        <PriceBlock event={event} locale={locale} />
-      ) : null}
-
       {interestMode ? (
         <InterestForm event={event} />
-      ) : success ? (
-        <p className="mt-8 text-sm font-medium text-ns-primary">{t("rsvpSuccess")}</p>
       ) : (
-        <form onSubmit={submitGuest} className="mt-8 space-y-4">
-          <h2 className={FORM_SECTION_TITLE}>{t("rsvpTitle")}</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.firstName")}</label>
-              <input name="firstName" required className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.lastName")}</label>
-              <input name="lastName" required className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.email")}</label>
-              <input name="email" type="email" required className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.whatsapp")}</label>
-              <input name="whatsapp" required minLength={3} className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.jobTitle")}</label>
-              <input name="jobTitle" required className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div>
-              <label className={LABEL_CLASS}>{t("fields.company")}</label>
-              <input name="companyName" required className={INPUT_CLASS} disabled={submitting} />
-            </div>
-            <div className="sm:col-span-2">
-              <label className={LABEL_CLASS}>{t("fields.comments")}</label>
-              <textarea name="comments" rows={2} className={INPUT_CLASS} disabled={submitting} />
-            </div>
-          </div>
-          {error && <p className={ERROR_TEXT}>{error}</p>}
-          <button type="submit" className={BTN_PRIMARY} disabled={submitting}>
-            {t("submitRsvp")}
-          </button>
-        </form>
+        <RsvpModeBody
+          event={event}
+          locale={locale}
+          success={success}
+          submitting={submitting}
+          formError={error}
+          onSubmit={(e) => void submitGuest(e)}
+        />
       )}
     </LaMesaShell>
   );

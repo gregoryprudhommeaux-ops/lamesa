@@ -64,4 +64,17 @@ describe("resolvePublicEventGuestSurface", () => {
       }).surface,
     ).toBe("interest_done");
   });
+
+  it("rsvp mode: formal invite unpaid → pay_access", () => {
+    expect(
+      resolvePublicEventGuestSurface({
+        responseMode: "rsvp",
+        participation: {
+          id: "p1",
+          status: "invited",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        },
+      }).surface,
+    ).toBe("pay_access");
+  });
 });
