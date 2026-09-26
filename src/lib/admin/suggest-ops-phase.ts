@@ -44,6 +44,13 @@ export type SuggestOpsPhaseInput = {
     address?: string;
   };
   participations: AdminEventParticipation[];
+  /**
+   * Interest-mode signals from OUI playlist (optional).
+   * `yesPendingFormal` = OUI without calendar invite yet.
+   */
+  interestSignals?: {
+    yesPendingFormal?: number;
+  };
   /** Override clock (tests / replay). */
   nowMs?: number;
 };
@@ -257,7 +264,10 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
       };
     }
 
-    if (kpis.invitedFormal === 0) {
+    const yesPendingFormal = Math.max(0, input.interestSignals?.yesPendingFormal ?? 0);
+
+    // OUI ready to invite → Formal (even if some invites already went out).
+    if (yesPendingFormal > 0) {
       return {
         phaseId: "formal",
         kpis,
@@ -265,9 +275,31 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
         completedPhaseIds,
         nextBestAction: {
           id: "formal_invite",
-          label: "Envoyer l’invitation formelle",
+          label:
+            yesPendingFormal === 1
+              ? "Envoyer l’invitation formelle (1 OUI)"
+              : `Envoyer l’invitation formelle (${yesPendingFormal} OUI)`,
           phaseId: "formal",
-          reason: "STD parti — passer aux OUI / places confirmées.",
+          reason:
+            kpis.invitedFormal === 0
+              ? "Des OUI sont prêts — passer à l’invitation ACCESS."
+              : "D’autres OUI attendent encore l’invitation formelle.",
+        },
+      };
+    }
+
+    // After STD, no OUI pending formal → stay on Qualification.
+    if (kpis.invitedFormal === 0) {
+      return {
+        phaseId: "qualify",
+        kpis,
+        blockers,
+        completedPhaseIds,
+        nextBestAction: {
+          id: "qualify_responses",
+          label: "Qualifier les réponses",
+          phaseId: "qualify",
+          reason: "STD parti — relancer les sans réponse, puis inviter les OUI.",
         },
       };
     }
