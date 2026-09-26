@@ -195,6 +195,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 | `/e` montre OUI/NON après invitation formelle | Fait — surface ACCESS / confirmé / déjà répondu |
 | 2026-09-26 | P1 | NBA saute Qualification après STD | Fait — `qualify_responses` |
 | 2026-09-26 | P1 | Formal « Aucun OUI » alors que formulaire a des yes | Fait — union + Sync in-panel |
+| 2026-09-26 | P1 | Audience ne voit pas OUI/NON des playlists | Fait v1 — chips intérêt roster+picker (join email) |
 
 ## Changelog
 

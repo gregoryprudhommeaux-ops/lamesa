@@ -1983,6 +1983,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 participations={participations}
                 eventCity={city || activeEvent?.city || null}
                 excludeEventId={activeId}
+                interestByEmail={isInterestMode ? interestByEmail : null}
                 labels={{
                   search: labels.searchContacts,
                   selected: activeId
