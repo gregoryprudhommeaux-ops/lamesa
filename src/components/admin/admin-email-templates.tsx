@@ -12,10 +12,10 @@ import {
 import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import {
   DEFAULT_SEND_LOCALE,
-  EMAIL_TEMPLATE_LABELS,
+  DINNER_FUNNEL_TEMPLATE_KEYS,
   isCustomEmailTemplateKey,
   isSystemEmailTemplateKey,
-  SYSTEM_EMAIL_TEMPLATE_KEYS,
+  OUTSIDE_DINNER_TEMPLATE_KEYS,
   TEMPLATE_LOCALE_LABELS,
   TEMPLATE_LOCALES,
   templateLabel,
@@ -484,8 +484,8 @@ export function AdminEmailTemplatesPanel() {
         </h2>
         <p className="mt-1 text-xs text-ns-secondary">
           Même design que les mails LA MESA (fond sombre, carte blanche, marque lime). Les
-          templates custom sont globaux — utiles pour drafts / campagnes manuelles. Les
-          automations (invitation, rappel, etc.) restent dans la liste système.
+          templates custom sont globaux — utiles pour un envoi ponctuel. Le dîner et les mails
+          hors dîner sont dans deux listes séparées.
         </p>
         <div className="mt-3 flex flex-wrap items-end gap-2">
           <div className="min-w-0 flex-1 basis-[220px]">
@@ -591,44 +591,48 @@ export function AdminEmailTemplatesPanel() {
             </div>
           )}
 
-          <div className="space-y-1 border-t border-gray-100 pt-3">
-            <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-              Automatiques
-            </p>
-            {(systemTemplates.length
-              ? systemTemplates
-              : SYSTEM_EMAIL_TEMPLATE_KEYS.map((key) => ({
-                  key,
-                  enabled: true,
-                  label: EMAIL_TEMPLATE_LABELS[key],
-                }))
-            ).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => {
-                  setActiveKey(t.key);
-                  setMessage(null);
-                }}
-                className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
-                  activeKey === t.key
-                    ? "bg-ns-primary/15 font-semibold text-ns-primary"
-                    : "hover:bg-ns-brand-light"
-                }`}
-              >
-                <span className="block truncate">
-                  {templateLabel(t.key, "label" in t ? t.label : undefined)}
-                </span>
-                <span
-                  className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
-                    t.enabled !== false ? "text-ns-primary" : "text-red-600"
-                  }`}
-                >
-                  {t.enabled !== false ? "Actif" : "Désactivé"}
-                </span>
-              </button>
-            ))}
-          </div>
+          {(
+            [
+              ["Funnel dîner", DINNER_FUNNEL_TEMPLATE_KEYS],
+              ["Hors dîner", OUTSIDE_DINNER_TEMPLATE_KEYS],
+            ] as const
+          ).map(([title, keys]) => (
+            <div key={title} className="space-y-1 border-t border-gray-100 pt-3">
+              <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                {title}
+              </p>
+              {keys.map((key) => {
+                const loaded = systemTemplates.find((t) => t.key === key);
+                const enabled = loaded ? loaded.enabled !== false : true;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setActiveKey(key);
+                      setMessage(null);
+                    }}
+                    className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
+                      activeKey === key
+                        ? "bg-ns-primary/15 font-semibold text-ns-primary"
+                        : "hover:bg-ns-brand-light"
+                    }`}
+                  >
+                    <span className="block truncate">
+                      {templateLabel(key, loaded?.label)}
+                    </span>
+                    <span
+                      className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
+                        enabled ? "text-ns-primary" : "text-red-600"
+                      }`}
+                    >
+                      {enabled ? "Actif" : "Désactivé"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </aside>
 
         <section className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface p-5">

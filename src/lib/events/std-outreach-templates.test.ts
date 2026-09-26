@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   eventSlugFromOutreachTemplateKey,
   isRsvpButtonCampaignKey,
+  hasStdRelanceStamp,
   isStdRelanceTemplateKey,
+  stdRelanceStampKey,
   templateKeyMatchesEventSlug,
 } from "./std-outreach-templates";
 
@@ -21,11 +23,19 @@ describe("std-outreach-templates", () => {
     expect(eventSlugFromOutreachTemplateKey("custom_relance_a_suivre_std_24_sept")).toBe(SLUG);
     expect(eventSlugFromOutreachTemplateKey("custom_newsletter")).toBeNull();
     expect(eventSlugFromOutreachTemplateKey(`places_available:${SLUG}`)).toBe(SLUG);
+    expect(eventSlugFromOutreachTemplateKey(stdRelanceStampKey(SLUG))).toBe(SLUG);
   });
 
   it("detects STD relance template keys", () => {
     expect(isStdRelanceTemplateKey("custom_relance_a_suivre_std_24_sept")).toBe(true);
+    expect(isStdRelanceTemplateKey("std_relance")).toBe(true);
+    expect(isStdRelanceTemplateKey(stdRelanceStampKey(SLUG))).toBe(true);
     expect(isStdRelanceTemplateKey("custom_dirigeants_fr_2026_09_24")).toBe(false);
+    expect(hasStdRelanceStamp([stdRelanceStampKey(SLUG)], SLUG)).toBe(true);
+    expect(hasStdRelanceStamp(["std_relance"], SLUG)).toBe(false);
+    expect(templateKeyMatchesEventSlug("std_relance", SLUG)).toBe(true);
+    expect(templateKeyMatchesEventSlug(stdRelanceStampKey(SLUG), SLUG)).toBe(true);
+    expect(templateKeyMatchesEventSlug(stdRelanceStampKey("other-event"), SLUG)).toBe(false);
   });
 
   it("detects RSVP-button campaigns (places available / formal invite)", () => {

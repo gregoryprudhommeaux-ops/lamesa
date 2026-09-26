@@ -127,7 +127,7 @@ type LastEmailResults = {
   yesGuests: NextEventRsvpYesGuest[];
   noGuests: NextEventRsvpYesGuest[];
   recipients: EmailCampaignRecipient[];
-  source: "cold_outreach" | "save_the_date" | "places_available" | "inferred";
+  source: "cold_outreach" | "save_the_date" | "std_relance" | "places_available" | "inferred";
 };
 
 type EmailCampaignRecipient = {
