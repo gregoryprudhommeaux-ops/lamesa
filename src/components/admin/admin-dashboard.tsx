@@ -127,7 +127,15 @@ type LastEmailResults = {
   yesGuests: NextEventRsvpYesGuest[];
   noGuests: NextEventRsvpYesGuest[];
   recipients: EmailCampaignRecipient[];
-  source: "cold_outreach" | "save_the_date" | "std_relance" | "places_available" | "inferred";
+  source:
+    | "cold_outreach"
+    | "save_the_date"
+    | "std_relance"
+    | "places_available"
+    | "calendar_invite"
+    | "payment_relance"
+    | "satisfaction_survey"
+    | "inferred";
 };
 
 type EmailCampaignRecipient = {
@@ -449,20 +457,61 @@ function ResponseCounters({
   );
 }
 
+function lastEmailTemplateRoot(templateKey: string): string {
+  return templateKey.split(":")[0] ?? templateKey;
+}
+
+function lastEmailModeHint(results: LastEmailResults): string {
+  switch (lastEmailTemplateRoot(results.templateKey)) {
+    case "places_available":
+    case "calendar_invite":
+      return "Boutons OUI / NON (RSVP)";
+    case "save_the_date":
+    case "std_relance":
+    case "interest_ack":
+      return "Save the Date / intérêt";
+    case "payment_relance":
+      return "Relance paiement";
+    case "participation_confirmed":
+      return "Confirmation de paiement";
+    case "satisfaction_survey":
+      return "Questionnaire";
+    default:
+      return results.responseMode === "rsvp"
+        ? "Boutons OUI / NON (RSVP)"
+        : results.responseMode === "interest"
+          ? "Save the Date / intérêt"
+          : "Envoi tracké";
+  }
+}
+
+function lastEmailChaseTitles(
+  templateKey: string,
+): { yes: string; no: string } | null {
+  switch (lastEmailTemplateRoot(templateKey)) {
+    case "satisfaction_survey":
+    case "participation_confirmed":
+      return null;
+    case "payment_relance":
+      return {
+        yes: "Relancés — toujours à encaisser",
+        no: "Ont dit non",
+      };
+    default:
+      return {
+        yes: "Ont dit oui — à relancer pour le paiement",
+        no: "Ont dit non",
+      };
+  }
+}
+
 function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
   const eventHref = results.eventId
     ? `/admin/evenements?id=${encodeURIComponent(results.eventId)}`
     : null;
   const noTotal = results.no + results.other;
-  const isPlaces =
-    results.templateKey.includes("places_available") ||
-    results.source === "places_available";
-  const modeHint =
-    isPlaces || results.responseMode === "rsvp"
-      ? "Boutons OUI / NON (RSVP)"
-      : results.responseMode === "interest"
-        ? "Save the Date / intérêt"
-        : "Envoi tracké";
+  const modeHint = lastEmailModeHint(results);
+  const chase = lastEmailChaseTitles(results.templateKey);
 
   return (
     <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
@@ -552,20 +601,22 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <NamedGuestList
-          title="Ont dit oui — à relancer pour le paiement"
-          empty="Aucun OUI pour l’instant."
-          guests={results.yesGuests}
-          tone="yes"
-        />
-        <NamedGuestList
-          title="Ont dit non"
-          empty="Aucun NON pour l’instant."
-          guests={results.noGuests}
-          tone="no"
-        />
-      </div>
+      {chase ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <NamedGuestList
+            title={chase.yes}
+            empty="Aucun OUI pour l’instant."
+            guests={results.yesGuests}
+            tone="yes"
+          />
+          <NamedGuestList
+            title={chase.no}
+            empty="Aucun NON pour l’instant."
+            guests={results.noGuests}
+            tone="no"
+          />
+        </div>
+      ) : null}
 
       <ContactedRecipientsList recipients={results.recipients} />
     </div>

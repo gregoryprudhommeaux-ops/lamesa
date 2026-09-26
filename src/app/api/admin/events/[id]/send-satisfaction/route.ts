@@ -4,7 +4,9 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendSatisfactionSurveyEmail } from "@/lib/email/send-satisfaction-survey";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
@@ -94,6 +96,8 @@ export async function POST(request: Request, { params }: Params) {
   let skipped = 0;
   let failed = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
+  let sentAt = "";
 
   for (const p of targets) {
     const result = await sendSatisfactionSurveyEmail({
@@ -107,7 +111,9 @@ export async function POST(request: Request, { params }: Params) {
     }
     if (result.ok) {
       sent += 1;
+      sentEmails.push(p.email);
       const stamp = new Date().toISOString();
+      sentAt = stamp;
       await db.collection(COLLECTIONS.participations).doc(p.id).set(
         { satisfactionSurveySentAt: stamp, updatedAt: stamp },
         { merge: true },
@@ -116,6 +122,19 @@ export async function POST(request: Request, { params }: Params) {
       failed += 1;
       errors.push(`${p.email}:${result.error}`);
     }
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "satisfaction_survey",
+      templateLabel: templateLabel("satisfaction_survey"),
+      sentAt: sentAt || undefined,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "satisfaction_survey",
+    });
   }
 
   return NextResponse.json({

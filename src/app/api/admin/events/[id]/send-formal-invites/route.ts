@@ -4,7 +4,9 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendCalendarInviteEmail } from "@/lib/email/send-calendar-invite";
+import { templateLabel } from "@/lib/email/template-defaults";
 import {
   countSeatedParticipations,
   DEFAULT_GUEST_CAPACITY,
@@ -146,6 +148,7 @@ export async function POST(request: Request, { params }: Params) {
   let skipped = 0;
   let waitlisted = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const target of targets) {
     if (isOrganizerParticipation({ email: target.email })) {
@@ -236,10 +239,24 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     sent += 1;
+    sentEmails.push(target.email);
     await db.collection(COLLECTIONS.participations).doc(participation.id).set(
       { calendarInviteSentAt: now, updatedAt: now },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "calendar_invite",
+      templateLabel: templateLabel("calendar_invite"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "calendar_invite",
+    });
   }
 
   if (sent > 0) {

@@ -3,7 +3,9 @@ import {
   isNextResponse,
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendCalendarInviteEmail } from "@/lib/email/send-calendar-invite";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
@@ -84,6 +86,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
   const now = new Date().toISOString();
 
   for (const p of recipients) {
@@ -94,6 +97,7 @@ export async function POST(request: Request, { params }: Params) {
     }
     if (result.ok) {
       sent += 1;
+      if (!isOrganizerParticipation(p)) sentEmails.push(p.email);
       await db.collection(COLLECTIONS.participations).doc(p.id).set(
         { calendarInviteSentAt: now, updatedAt: now },
         { merge: true },
@@ -109,6 +113,19 @@ export async function POST(request: Request, { params }: Params) {
       failed += 1;
       errors.push(`${p.email}:${result.error}`);
     }
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "calendar_invite",
+      templateLabel: templateLabel("calendar_invite"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "calendar_invite",
+    });
   }
 
   if (sent > 0 || skipped === recipients.length) {
