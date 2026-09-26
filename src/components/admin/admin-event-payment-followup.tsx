@@ -58,7 +58,7 @@ export function AdminEventPaymentFollowupPanel({
   onUpdated,
 }: AdminEventPaymentFollowupPanelProps) {
   const authFetch = useAuthFetch();
-  const [filter, setFilter] = useState<InviteMemberStatus | "all">("all");
+  const [filter, setFilter] = useState<InviteMemberStatus | "all">("relance");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -184,13 +184,13 @@ export function AdminEventPaymentFollowupPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-sm font-bold uppercase tracking-wide text-ns-hero">
-            Membres invités
+            Confirmation & paiement
           </h4>
           <p className="mt-1 text-xs text-ns-secondary">
-            Trois statuts : <strong>À relancer</strong> (paiement en attente),{" "}
+            Un seul suivi : <strong>À relancer</strong> (paiement en attente),{" "}
             <strong>A payé</strong> (place confirmée + email auto),{" "}
-            <strong>Ne viendra pas</strong>. Tu peux envoyer un email de relance à tous les « À
-            relancer » (ex. demain). Une personne déjà relancée n’est pas renvoyée.
+            <strong>Ne viendra pas</strong>. Envoie la relance ACCESS aux « À
+            relancer » — une personne déjà relancée n’est pas renvoyée.
           </p>
           {deadlineLabel ? (
             <p className="mt-1 text-xs text-ns-secondary">
