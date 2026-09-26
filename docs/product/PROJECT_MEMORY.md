@@ -27,15 +27,19 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 
 ### Event phases (command center)
 
-1. Préparation  
-2. Sélection audience  
-3. Save the Date  
-4. Qualification & sélection  
-5. Invitation formelle  
-6. Confirmation & paiement  
-7. Préparation du dîner  
-8. Check-in & expérience  
-9. Feedback, analyse & réactivation  
+Canonical ids (`OpsPhaseId`) — interest mode shows all 9; RSVP skips `save_the_date` + `qualify`.
+
+1. `prep` — Préparation  
+2. `audience` — Audience  
+3. `save_the_date` — Save the Date (interest)  
+4. `qualify` — Qualification (interest)  
+5. `formal` — Invitation formelle  
+6. `payment` — Confirmation & paiement  
+7. `dinner_prep` — Préparation du dîner (places)  
+8. `checkin` — Check-in  
+9. `feedback` — Feedback  
+
+URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_relance`, `auto`) normalize via `normalizeOpsPhaseId`.
 
 ## Business objects & lifecycle
 
@@ -56,11 +60,13 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 |------|----------|--------|
 | 2026-09-25 | Agent Jack v2 + `PROJECT_MEMORY.md` | Capitaliser parcours + mémoire relationnelle |
 | 2026-09-25 | Command center événement tranches 1–2 | Étape active + roster + drawers |
+| 2026-09-25 | 9 phases produit (`OpsPhaseId`) + suggestOpsPhase | Labels métier + Formal/Places/paiement séparés |
 
 ## Reusable components / patterns
 
-- `suggestOpsPhase` + `EventCommandHeader` / `EventCommandPhaseNav`
+- `ops-phases` + `suggestOpsPhase` + `EventCommandHeader` / `EventCommandPhaseNav`
 - `AdminEventParticipantRoster` + `EventTemplateDrawer`
+- `FormalInviteOuiPanel` (phase formal) · `AdminEventPlacesAvailablePanel` (phase dinner_prep)
 - Admin shell, RequireAuth, table builder, contact fiche
 
 ## Data, signals & governance
@@ -78,9 +84,9 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 
 | Item | Status |
 |------|--------|
-| Monolithe `admin-events.tsx` | En cours — shell + roster |
-| FormalInviteOui / Places encore séparés du roster | Ouvert |
-| Labels 9 phases produit | Ouvert |
+| Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
+| FormalInviteOui encore panel dédié (pas fusion roster) | Ouvert — dans phase formal |
+| Check-in UI dédiée | Placeholder roster payés |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
 
 ## Jack findings log
@@ -89,8 +95,9 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 |------|---|---------|--------|
 | 2026-09-25 | P0 | Pas d’étape active dérivée | Tranche 1 done (#32) |
 | 2026-09-25 | P0 | `?id=` effacé | Tranche 1 done (#32) |
-| 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done |
-| 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done |
+| 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done (#33) |
+| 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done (#33) |
+| 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 in PR |
 
 ## Changelog
 
@@ -98,4 +105,5 @@ Plateforme d’ops + expérience membre pour dîners thématiques exclusifs (Gua
 |------|--------|
 | 2026-09-25 | Bootstrap mémoire produit alignée DOC Jack |
 | 2026-09-25 | Tranche 1 command center événement (#32) |
-| 2026-09-25 | Tranche 2 roster unifié + template drawers |
+| 2026-09-25 | Tranche 2 roster unifié + template drawers (#33) |
+| 2026-09-25 | Tranche 3 — 9 ops phases + Formal/Places/paiement |

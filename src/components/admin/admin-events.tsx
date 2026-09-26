@@ -11,11 +11,7 @@ import {
   AutoRemindersPanel,
   StdRelancePanel,
 } from "@/components/admin/admin-event-journey-panels";
-import {
-  EventPhaseSection,
-  type EventPhaseId,
-  type EventPhaseMeta,
-} from "@/components/admin/admin-event-phase-section";
+import { EventPhaseSection } from "@/components/admin/admin-event-phase-section";
 import {
   EventCommandHeader,
   EventCommandPhaseNav,
@@ -23,6 +19,12 @@ import {
 import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest-inbox";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import {
+  normalizeOpsPhaseId,
+  opsPhasesForMode,
+  type OpsPhaseId,
+  type OpsPhaseMeta,
+} from "@/lib/admin/ops-phases";
 import { consumePendingEventSeed } from "@/lib/admin/pending-invitees";
 import { suggestOpsPhase } from "@/lib/admin/suggest-ops-phase";
 import { DRESS_CODES, PARKING_OPTIONS } from "@/lib/constants/form-options";
@@ -166,31 +168,23 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
   const [inviteSendOk, setInviteSendOk] = useState(false);
   /** Command-center focus: only one phase open in the work zone. */
-  const [focusPhase, setFocusPhase] = useState<EventPhaseId>("std");
+  const [focusPhase, setFocusPhase] = useState<OpsPhaseId>("prep");
   /** When set, user overrode the suggested phase — show “revenir à la suggestion”. */
   const [phaseOverride, setPhaseOverride] = useState(false);
 
   const isInterestMode = responseMode === "interest";
 
-  const journeyPhases: EventPhaseMeta[] = useMemo(() => {
-    if (isInterestMode) {
-      return [
-        { id: "std", number: 1, title: "Save the Date", summary: "Infos pour annoncer la date" },
-        { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, paiement" },
-        { id: "std_email", number: 3, title: "Email STD + liste", summary: "Template, invités, envoi" },
-        { id: "std_relance", number: 4, title: "Relance STD", summary: "Sans réponse → Prospects" },
-        { id: "formal", number: 5, title: "Invitation formelle", summary: "Envoi + suivi paiement" },
-        { id: "auto", number: 6, title: "Relances auto", summary: "ICS + satisfaction" },
-      ];
-    }
-    return [
-      { id: "std", number: 1, title: "Infos événement", summary: "Identité & calendrier" },
-      { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, statut" },
-      { id: "std_email", number: 3, title: "Invités", summary: "Groupe à inviter" },
-      { id: "formal", number: 4, title: "Invitation", summary: "ICS + YES/NO" },
-      { id: "auto", number: 5, title: "Relances auto", summary: "ICS + satisfaction" },
-    ];
-  }, [isInterestMode]);
+  const journeyPhases: OpsPhaseMeta[] = useMemo(
+    () => opsPhasesForMode(isInterestMode),
+    [isInterestMode],
+  );
+
+  function phaseMeta(id: OpsPhaseId): OpsPhaseMeta {
+    return (
+      journeyPhases.find((p) => p.id === id) ??
+      opsPhasesForMode(true).find((p) => p.id === id)!
+    );
+  }
 
   const activeEvent = useMemo(
     () => events.find((e) => e.id === activeId) ?? null,
@@ -240,7 +234,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     capacity,
   ]);
 
-  function syncUrl(eventId: string | null, phase: EventPhaseId) {
+  function syncUrl(eventId: string | null, phase: OpsPhaseId) {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     if (eventId) url.searchParams.set("id", eventId);
@@ -250,11 +244,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     window.history.replaceState({}, "", `${url.pathname}${url.search}`);
   }
 
-  function focusOnPhase(id: EventPhaseId, opts?: { fromSuggestion?: boolean }) {
-    setFocusPhase(id);
+  function focusOnPhase(id: OpsPhaseId, opts?: { fromSuggestion?: boolean }) {
+    const normalized = normalizeOpsPhaseId(id, { interestMode: isInterestMode });
+    setFocusPhase(normalized);
     if (opts?.fromSuggestion) setPhaseOverride(false);
     else setPhaseOverride(true);
-    syncUrl(activeId, id);
+    syncUrl(activeId, normalized);
     requestAnimationFrame(() => {
       document.getElementById("event-command-workzone")?.scrollIntoView({
         behavior: "smooth",
@@ -263,7 +258,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     });
   }
 
-  function jumpToPhase(id: EventPhaseId) {
+  function jumpToPhase(id: OpsPhaseId) {
     focusOnPhase(id);
   }
 
@@ -320,7 +315,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
-    const phaseParam = params.get("phase") as EventPhaseId | null;
+    const phaseParam = params.get("phase");
     if (!id) return;
     const event = events.find((e) => e.id === id);
     if (!event) return;
@@ -328,11 +323,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       openEdit(event, { preserveUrl: true, phaseFromUrl: phaseParam });
       return;
     }
-    if (
-      phaseParam &&
-      ["std", "definitive", "std_email", "std_relance", "formal", "auto"].includes(phaseParam)
-    ) {
-      setFocusPhase(phaseParam);
+    if (phaseParam) {
+      const normalized = normalizeOpsPhaseId(phaseParam, {
+        interestMode: event.responseMode === "interest",
+      });
+      setFocusPhase(normalized);
       setPhaseOverride(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
@@ -417,14 +412,14 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
   function openCreate() {
     resetForm([]);
-    setFocusPhase("std");
+    setFocusPhase("prep");
     setPhaseOverride(false);
-    syncUrl(null, "std");
+    syncUrl(null, "prep");
   }
 
   function openEdit(
     event: AdminEvent,
-    opts?: { preserveUrl?: boolean; phaseFromUrl?: EventPhaseId | null },
+    opts?: { preserveUrl?: boolean; phaseFromUrl?: string | null },
   ) {
     const start = splitLocal(event.startsAt);
     const end = splitLocal(event.endsAt);
@@ -504,20 +499,14 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       },
       participations: parts,
     });
-    const urlPhase = opts?.phaseFromUrl;
-    const validUrlPhase =
-      urlPhase &&
-      ["std", "definitive", "std_email", "std_relance", "formal", "auto"].includes(urlPhase)
-        ? urlPhase
-        : null;
-    const nextPhase = validUrlPhase ?? suggested.phaseId;
+    const interest = event.responseMode === "interest";
+    const urlPhase = opts?.phaseFromUrl
+      ? normalizeOpsPhaseId(opts.phaseFromUrl, { interestMode: interest })
+      : null;
+    const nextPhase = opts?.phaseFromUrl && urlPhase ? urlPhase : suggested.phaseId;
     setFocusPhase(nextPhase);
-    setPhaseOverride(Boolean(validUrlPhase));
-    if (!opts?.preserveUrl || !validUrlPhase) {
-      syncUrl(event.id, nextPhase);
-    } else {
-      syncUrl(event.id, nextPhase);
-    }
+    setPhaseOverride(Boolean(opts?.phaseFromUrl));
+    syncUrl(event.id, nextPhase);
   }
 
   function eventPayload() {
@@ -568,8 +557,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   async function saveEvent(phaseLabel?: string) {
     if (!title.trim() || !eventDate || !startTime) {
       setSaveOk(null);
-      setError("Titre, date et heure de début sont obligatoires (phase Save the Date).");
-      jumpToPhase("std");
+      setError("Titre, date et heure de début sont obligatoires (phase Préparation).");
+      jumpToPhase("prep");
       return;
     }
     setSaving(true);
@@ -989,13 +978,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           <div id="event-command-workzone" className="scroll-mt-28 space-y-3">
           <EventPhaseSection
             hideWhenCollapsed
-            
-            phase={journeyPhases.find((p) => p.id === "std")!}
-            open={focusPhase === "std"}
-            onToggle={() => jumpToPhase("std")}
+            phase={phaseMeta("prep")}
+            open={focusPhase === "prep"}
+            onToggle={() => jumpToPhase("prep")}
             footer={phaseSaveFooter(
-              "Save the Date",
-              "Titre, date, intro, capacité…",
+              "Préparation",
+              "Identité, calendrier, lieu, tarif, publish…",
             )}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1221,19 +1209,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </div>
               </div>
             ) : null}
-          </EventPhaseSection>
 
-          <EventPhaseSection
-            hideWhenCollapsed
-            
-            phase={journeyPhases.find((p) => p.id === "definitive")!}
-            open={focusPhase === "definitive"}
-            onToggle={() => jumpToPhase("definitive")}
-            footer={phaseSaveFooter(
-              "Éléments définitifs",
-              "Lieu, tarif, menu, date butoir paiement…",
-            )}
-          >
+            <div className="border-t border-gray-100 pt-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ns-secondary">
+                Lieu, tarif & publication
+              </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={LABEL_CLASS}>{labels["fields.venueName"]}</label>
@@ -1674,40 +1654,72 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
 
             </div>
+            </div>
+          </EventPhaseSection>
+
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("audience")}
+            open={focusPhase === "audience"}
+            onToggle={() => jumpToPhase("audience")}
+          >
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+                {labels.inviteGroup ?? "Constituer un groupe (invités)"}
+              </h4>
+              <p className="mt-1 mb-3 text-xs text-ns-secondary">
+                {labels.inviteGroupHint ??
+                  "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
+              </p>
+              <ContactPicker
+                selected={selectedInvitees}
+                onChange={setSelectedInvitees}
+                labels={{
+                  search: labels.searchContacts,
+                  selected: activeId
+                    ? `${labels.selectedContacts} (à ajouter)`
+                    : labels.selectedContacts,
+                  addExternal: labels.addExternal,
+                  externalEmail: "Email",
+                  externalName: "Nom",
+                }}
+              />
+            </div>
+            {activeEvent ? (
+              <AdminEventParticipantRoster
+                participations={activeParticipations}
+                capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                title={labels.selectedContacts}
+                labels={{
+                  invited: labels["statuses.invited"],
+                  attending: labels["statuses.attending"] ?? "Attending",
+                  confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                  not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                  waitlist: labels["statuses.waitlist"],
+                  seatedSummary: labels.seatingSummary,
+                }}
+                onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                onWhatsAppAll={() => void openWhatsAppForAll()}
+              />
+            ) : (
+              <p className="text-sm text-ns-secondary">
+                Enregistre l’événement pour voir le roster participants.
+              </p>
+            )}
           </EventPhaseSection>
 
           {isInterestMode ? (
             <EventPhaseSection
-            hideWhenCollapsed
-            
-              phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={focusPhase === "std_email"}
-              onToggle={() => jumpToPhase("std_email")}
+              hideWhenCollapsed
+              phase={phaseMeta("save_the_date")}
+              open={focusPhase === "save_the_date"}
+              onToggle={() => jumpToPhase("save_the_date")}
             >
-              <div>
-                <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-                  {labels.inviteGroup ?? "Constituer un groupe (invités)"}
-                </h4>
-                <p className="mt-1 mb-3 text-xs text-ns-secondary">
-                  {labels.inviteGroupHint ??
-                    "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
-                </p>
-                <ContactPicker
-                  selected={selectedInvitees}
-                  onChange={setSelectedInvitees}
-                  labels={{
-                    search: labels.searchContacts,
-                    selected: activeId
-                      ? `${labels.selectedContacts} (à ajouter)`
-                      : labels.selectedContacts,
-                    addExternal: labels.addExternal,
-                    externalEmail: "Email",
-                    externalName: "Nom",
-                  }}
-                />
-              </div>
               {activeEvent ? (
-                <>
+                <div className="space-y-4">
                   <div className="rounded-xl border border-gray-100 bg-ns-brand-light p-4">
                     <p className="text-sm font-bold text-ns-hero">Lien public</p>
                     <a
@@ -1758,89 +1770,38 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
                   </button>
                   <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
-                        <AdminEventParticipantRoster
-              participations={activeParticipations}
-              capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
-              title={labels.selectedContacts}
-              labels={{
-                invited: labels["statuses.invited"],
-                attending: labels["statuses.attending"] ?? "Attending",
-                confirmed: labels["statuses.confirmed"] ?? "Confirmé",
-                not_attending: labels["statuses.not_attending"] ?? "Not attending",
-                waitlist: labels["statuses.waitlist"],
-                seatedSummary: labels.seatingSummary,
-              }}
-              onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-              onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
-              onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-              onWhatsAppAll={() => void openWhatsAppForAll()}
-            />
-                </>
+                </div>
               ) : (
                 <p className="text-sm text-ns-secondary">
                   Enregistre l’événement pour éditer le template STD et envoyer.
                 </p>
               )}
             </EventPhaseSection>
-          ) : (
-            <EventPhaseSection
-            hideWhenCollapsed
-            
-              phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={focusPhase === "std_email"}
-              onToggle={() => jumpToPhase("std_email")}
-            >
-              <ContactPicker
-                selected={selectedInvitees}
-                onChange={setSelectedInvitees}
-                labels={{
-                  search: labels.searchContacts,
-                  selected: activeId
-                    ? `${labels.selectedContacts} (à ajouter)`
-                    : labels.selectedContacts,
-                  addExternal: labels.addExternal,
-                  externalEmail: "Email",
-                  externalName: "Nom",
-                }}
-              />
-              {activeEvent ? (
-                        <AdminEventParticipantRoster
-              participations={activeParticipations}
-              capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
-              title={labels.selectedContacts}
-              labels={{
-                invited: labels["statuses.invited"],
-                attending: labels["statuses.attending"] ?? "Attending",
-                confirmed: labels["statuses.confirmed"] ?? "Confirmé",
-                not_attending: labels["statuses.not_attending"] ?? "Not attending",
-                waitlist: labels["statuses.waitlist"],
-                seatedSummary: labels.seatingSummary,
-              }}
-              onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-              onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
-              onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-              onWhatsAppAll={() => void openWhatsAppForAll()}
-            />
-              ) : null}
-            </EventPhaseSection>
-          )}
+          ) : null}
 
-          {isInterestMode && activeEvent ? (
+          {isInterestMode ? (
             <EventPhaseSection
-            hideWhenCollapsed
-            
-              phase={journeyPhases.find((p) => p.id === "std_relance")!}
-              open={focusPhase === "std_relance"}
-              onToggle={() => jumpToPhase("std_relance")}
+              hideWhenCollapsed
+              phase={phaseMeta("qualify")}
+              open={focusPhase === "qualify"}
+              onToggle={() => jumpToPhase("qualify")}
             >
-              <StdRelancePanel event={activeEvent} />
+              {activeEvent ? (
+                <div className="space-y-4">
+                  <StdRelancePanel event={activeEvent} />
+                  <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
+                </div>
+              ) : (
+                <p className="text-sm text-ns-secondary">
+                  Enregistre l’événement pour qualifier les réponses.
+                </p>
+              )}
             </EventPhaseSection>
           ) : null}
 
           <EventPhaseSection
             hideWhenCollapsed
-            
-            phase={journeyPhases.find((p) => p.id === "formal")!}
+            phase={phaseMeta("formal")}
             open={focusPhase === "formal"}
             onToggle={() => jumpToPhase("formal")}
           >
@@ -1848,10 +1809,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               isInterestMode ? (
                 <div className="space-y-4">
                   <p className="text-xs text-ns-secondary">
-                    Vérifie le prix et la date butoir (phase 2) — ils alimentent{" "}
-                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail. Après envoi,
-                    marque les virements reçus dans <strong>Suivi paiement ACCESS</strong>{" "}
-                    (statut → Payé).
+                    Vérifie le prix et la date butoir (préparation) — ils alimentent{" "}
+                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail. Le suivi paiement
+                    est dans l’étape suivante.
                   </p>
                   <EventTemplateDrawer
                     event={activeEvent}
@@ -1864,18 +1824,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     event={activeEvent}
                     onEventUpdated={() => void loadAll()}
                   />
-                  <EventTemplateDrawer
-                    event={activeEvent}
-                    templateKey="payment_relance"
-                    label="Éditer le modèle relance paiement"
-                    onEventUpdated={() => void loadAll()}
-                    hint="Relance ACCESS — bold/liens supportés."
-                  />
                   <AdminEventParticipantRoster
                     participations={activeParticipations}
                     capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                     title="Suivi participants"
-                    initialFilter="unpaid_invite"
                     labels={{
                       invited: labels["statuses.invited"],
                       attending: labels["statuses.attending"] ?? "Attending",
@@ -1887,17 +1839,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onStatusChange={(id, status) => void setParticipationStatus(id, status)}
                     onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
                     onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                  />
-                  <AdminEventPaymentFollowupPanel
-                    event={activeEvent}
-                    participations={activeParticipations}
-                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                    onUpdated={() => void loadAll()}
-                  />
-                  <AdminEventPlacesAvailablePanel
-                    event={activeEvent}
-                    onEventUpdated={() => void loadAll()}
                   />
                 </div>
               ) : (
@@ -1917,18 +1858,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   >
                     <Mail className="h-4 w-4" /> Lancer les invitations
                   </button>
-                  <EventTemplateDrawer
-                    event={activeEvent}
-                    templateKey="payment_relance"
-                    label="Éditer le modèle relance paiement"
-                    onEventUpdated={() => void loadAll()}
-                    hint="Relance ACCESS — bold/liens supportés."
-                  />
                   <AdminEventParticipantRoster
                     participations={activeParticipations}
                     capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                     title="Suivi participants"
-                    initialFilter="unpaid_invite"
                     labels={{
                       invited: labels["statuses.invited"],
                       attending: labels["statuses.attending"] ?? "Attending",
@@ -1941,17 +1874,6 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
                     onWhatsApp={(p) => openWhatsAppForParticipation(p)}
                   />
-                  <AdminEventPaymentFollowupPanel
-                    event={activeEvent}
-                    participations={activeParticipations}
-                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                    onUpdated={() => void loadAll()}
-                  />
-                  <AdminEventPlacesAvailablePanel
-                    event={activeEvent}
-                    onEventUpdated={() => void loadAll()}
-                  />
                 </div>
               )
             ) : (
@@ -1961,10 +1883,106 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
           <EventPhaseSection
             hideWhenCollapsed
-            
-            phase={journeyPhases.find((p) => p.id === "auto")!}
-            open={focusPhase === "auto"}
-            onToggle={() => jumpToPhase("auto")}
+            phase={phaseMeta("payment")}
+            open={focusPhase === "payment"}
+            onToggle={() => jumpToPhase("payment")}
+          >
+            {activeEvent ? (
+              <div className="space-y-4">
+                <EventTemplateDrawer
+                  event={activeEvent}
+                  templateKey="payment_relance"
+                  label="Éditer le modèle relance paiement"
+                  onEventUpdated={() => void loadAll()}
+                  hint="Relance ACCESS — bold/liens supportés."
+                />
+                <AdminEventParticipantRoster
+                  participations={activeParticipations}
+                  capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                  title="À relancer (invitation sans paiement)"
+                  initialFilter="unpaid_invite"
+                  labels={{
+                    invited: labels["statuses.invited"],
+                    attending: labels["statuses.attending"] ?? "Attending",
+                    confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                    not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                    waitlist: labels["statuses.waitlist"],
+                    seatedSummary: labels.seatingSummary,
+                  }}
+                  onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                  onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                  onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                />
+                <AdminEventPaymentFollowupPanel
+                  event={activeEvent}
+                  participations={activeParticipations}
+                  onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                  onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                  onUpdated={() => void loadAll()}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("dinner_prep")}
+            open={focusPhase === "dinner_prep"}
+            onToggle={() => jumpToPhase("dinner_prep")}
+          >
+            {activeEvent ? (
+              <div className="space-y-4">
+                <p className="text-xs text-ns-secondary">
+                  Places restantes et last-call — composer les tables ensuite dans l’outil dédié.
+                </p>
+                <AdminEventPlacesAvailablePanel
+                  event={activeEvent}
+                  onEventUpdated={() => void loadAll()}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("checkin")}
+            open={focusPhase === "checkin"}
+            onToggle={() => jumpToPhase("checkin")}
+          >
+            <p className="text-sm text-ns-secondary">
+              Check-in le soir J — bientôt. En attendant, marque les présents dans le roster
+              (statut Présent) depuis Audience ou Confirmation.
+            </p>
+            {activeEvent ? (
+              <AdminEventParticipantRoster
+                participations={activeParticipations}
+                capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                title="Présence"
+                initialFilter="paid"
+                labels={{
+                  invited: labels["statuses.invited"],
+                  attending: labels["statuses.attending"] ?? "Attending",
+                  confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                  not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                  waitlist: labels["statuses.waitlist"],
+                  seatedSummary: labels.seatingSummary,
+                }}
+                onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+              />
+            ) : null}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("feedback")}
+            open={focusPhase === "feedback"}
+            onToggle={() => jumpToPhase("feedback")}
           >
             {activeEvent ? (
               <div className="space-y-4">

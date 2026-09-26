@@ -2,29 +2,22 @@
 
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useId } from "react";
+import type { OpsPhaseId, OpsPhaseMeta } from "@/lib/admin/ops-phases";
 
-export type EventPhaseId =
-  | "std"
-  | "definitive"
-  | "std_email"
-  | "std_relance"
-  | "formal"
-  | "auto";
-
-export type EventPhaseMeta = {
-  id: EventPhaseId;
-  number: number;
-  title: string;
-  summary?: string;
-};
+/** @deprecated Prefer OpsPhaseId — kept as alias for existing imports. */
+export type EventPhaseId = OpsPhaseId;
+/** @deprecated Prefer OpsPhaseMeta. */
+export type EventPhaseMeta = OpsPhaseMeta;
 
 type EventPhaseSectionProps = {
-  phase: EventPhaseMeta;
+  phase: OpsPhaseMeta;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
   /** Optional actions row (e.g. “Enregistrer cette étape”) at the bottom of the open panel. */
   footer?: ReactNode;
+  /** Command-center mode: hide the section entirely when not focused. */
+  hideWhenCollapsed?: boolean;
 };
 
 export function EventPhaseSection({
@@ -33,9 +26,8 @@ export function EventPhaseSection({
   onToggle,
   children,
   footer,
-  /** Command-center mode: hide the section entirely when not focused. */
   hideWhenCollapsed = false,
-}: EventPhaseSectionProps & { hideWhenCollapsed?: boolean }) {
+}: EventPhaseSectionProps) {
   const panelId = useId();
   if (hideWhenCollapsed && !open) return null;
   return (
@@ -77,9 +69,9 @@ export function EventPhaseSection({
 }
 
 type EventPhaseNavProps = {
-  phases: EventPhaseMeta[];
-  activeId?: EventPhaseId | null;
-  onJump: (id: EventPhaseId) => void;
+  phases: OpsPhaseMeta[];
+  activeId?: OpsPhaseId | null;
+  onJump: (id: OpsPhaseId) => void;
 };
 
 export function EventPhaseNav({ phases, activeId, onJump }: EventPhaseNavProps) {

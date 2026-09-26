@@ -1,6 +1,6 @@
 "use client";
 
-import type { EventPhaseId, EventPhaseMeta } from "@/components/admin/admin-event-phase-section";
+import type { OpsPhaseId, OpsPhaseMeta } from "@/lib/admin/ops-phases";
 import {
   publishStatusLabel,
   type EventNextBestAction,
@@ -129,11 +129,11 @@ function Kpi({
 }
 
 type EventPhaseNavProps = {
-  phases: EventPhaseMeta[];
-  activeId: EventPhaseId;
-  completedIds?: EventPhaseId[];
-  suggestedId?: EventPhaseId | null;
-  onJump: (id: EventPhaseId) => void;
+  phases: OpsPhaseMeta[];
+  activeId: OpsPhaseId;
+  completedIds?: OpsPhaseId[];
+  suggestedId?: OpsPhaseId | null;
+  onJump: (id: OpsPhaseId) => void;
 };
 
 /** Stepper for command center — one focus, completed + suggested hints. */

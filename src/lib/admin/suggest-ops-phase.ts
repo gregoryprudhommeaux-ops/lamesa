@@ -1,4 +1,4 @@
-import type { EventPhaseId } from "@/components/admin/admin-event-phase-section";
+import type { OpsPhaseId } from "@/lib/admin/ops-phases";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { countSeatedParticipations } from "@/lib/events/capacity";
 
@@ -16,7 +16,7 @@ export type EventOpsKpis = {
 export type EventNextBestAction = {
   id: string;
   label: string;
-  phaseId: EventPhaseId;
+  phaseId: OpsPhaseId;
   /** Short why — shown under the CTA. */
   reason: string;
 };
@@ -44,12 +44,12 @@ export type SuggestOpsPhaseInput = {
 };
 
 export type SuggestOpsPhaseResult = {
-  phaseId: EventPhaseId;
+  phaseId: OpsPhaseId;
   kpis: EventOpsKpis;
   blockers: string[];
   nextBestAction: EventNextBestAction;
   /** Phases considered done enough to mark on the stepper. */
-  completedPhaseIds: EventPhaseId[];
+  completedPhaseIds: OpsPhaseId[];
 };
 
 function hasTitleAndDate(input: SuggestOpsPhaseInput): boolean {
@@ -95,30 +95,31 @@ function buildKpis(
   };
 }
 
-function interestPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): EventPhaseId[] {
-  const done: EventPhaseId[] = [];
-  if (hasTitleAndDate(input)) done.push("std");
-  if (hasVenue(input)) done.push("definitive");
-  if (kpis.stdSent) done.push("std_email");
+function interestPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): OpsPhaseId[] {
+  const done: OpsPhaseId[] = [];
+  if (hasTitleAndDate(input)) done.push("prep");
+  if (kpis.roster > 0) done.push("audience");
+  if (kpis.stdSent) done.push("save_the_date");
+  if (kpis.stdSent && kpis.invitedFormal > 0) done.push("qualify");
   if (kpis.invitedFormal > 0) done.push("formal");
-  if (kpis.paid > 0 && kpis.unpaidAfterInvite === 0 && kpis.invitedFormal > 0) {
-    // payment follow-up quiet → auto/reminders is next ops focus after formal
-  }
+  if (kpis.invitedFormal > 0 && kpis.unpaidAfterInvite === 0) done.push("payment");
+  if (kpis.paid > 0 && kpis.unpaidAfterInvite === 0) done.push("dinner_prep");
   return done;
 }
 
-function rsvpPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): EventPhaseId[] {
-  const done: EventPhaseId[] = [];
-  if (hasTitleAndDate(input)) done.push("std");
-  if (hasVenue(input)) done.push("definitive");
-  if (kpis.roster > 0) done.push("std_email");
+function rsvpPhasesCompleted(input: SuggestOpsPhaseInput, kpis: EventOpsKpis): OpsPhaseId[] {
+  const done: OpsPhaseId[] = [];
+  if (hasTitleAndDate(input)) done.push("prep");
+  if (kpis.roster > 0) done.push("audience");
   if (kpis.invitedFormal > 0) done.push("formal");
+  if (kpis.invitedFormal > 0 && kpis.unpaidAfterInvite === 0) done.push("payment");
+  if (kpis.paid > 0 && kpis.unpaidAfterInvite === 0) done.push("dinner_prep");
   return done;
 }
 
 /**
  * Derive the ops focus phase + next best action from event + participations.
- * Does not require respondents (interest inbox) — qualification nudge is soft.
+ * Uses the 9 product ops phases (interest) / filtered set (RSVP).
  */
 export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseResult {
   const interest = input.event.responseMode === "interest";
@@ -132,51 +133,51 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
   if (!hasTitleAndDate(input)) {
     blockers.push("Titre ou date manquant");
     return {
-      phaseId: "std",
+      phaseId: "prep",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
         id: "fill_basics",
         label: "Compléter titre et date",
-        phaseId: "std",
+        phaseId: "prep",
         reason: "Sans identité calendrier, aucun envoi n’est possible.",
       },
     };
   }
 
-  if (!hasVenue(input) && (kpis.publishStatus === "published" || kpis.stdSent)) {
+  if (!hasVenue(input) && (kpis.publishStatus === "published" || kpis.stdSent || kpis.invitedFormal > 0)) {
     blockers.push("Lieu / adresse non renseigné");
   }
 
   if (interest) {
-    if (!kpis.stdSent) {
-      return {
-        phaseId: "std_email",
-        kpis,
-        blockers,
-        completedPhaseIds,
-        nextBestAction: {
-          id: "send_std",
-          label: "Envoyer le Save the Date",
-          phaseId: "std_email",
-          reason: "Annoncer la date aux invités sélectionnés.",
-        },
-      };
-    }
-
     if (kpis.roster === 0) {
       blockers.push("Aucun participant sur la liste");
       return {
-        phaseId: "std_email",
+        phaseId: "audience",
         kpis,
         blockers,
         completedPhaseIds,
         nextBestAction: {
           id: "add_audience",
           label: "Ajouter des invités à la liste",
-          phaseId: "std_email",
-          reason: "STD déjà marqué envoyé — renforcer ou qualifier l’audience.",
+          phaseId: "audience",
+          reason: "Sélectionner les contacts avant le Save the Date.",
+        },
+      };
+    }
+
+    if (!kpis.stdSent) {
+      return {
+        phaseId: "save_the_date",
+        kpis,
+        blockers,
+        completedPhaseIds,
+        nextBestAction: {
+          id: "send_std",
+          label: "Envoyer le Save the Date",
+          phaseId: "save_the_date",
+          reason: "Annoncer la date aux invités sélectionnés.",
         },
       };
     }
@@ -184,14 +185,14 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
     if (kpis.unpaidAfterInvite > 0) {
       blockers.push(`${kpis.unpaidAfterInvite} invitation(s) formelle(s) sans paiement`);
       return {
-        phaseId: "formal",
+        phaseId: "payment",
         kpis,
         blockers,
         completedPhaseIds,
         nextBestAction: {
           id: "payment_relance",
           label: `Relancer les paiements (${kpis.unpaidAfterInvite})`,
-          phaseId: "formal",
+          phaseId: "payment",
           reason: "Confirmations bloquées tant que l’ACCESS n’est pas réglé.",
         },
       };
@@ -214,29 +215,44 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
 
     if (!hasVenue(input)) {
       return {
-        phaseId: "definitive",
+        phaseId: "prep",
         kpis,
         blockers,
         completedPhaseIds,
         nextBestAction: {
           id: "fill_venue",
           label: "Renseigner le lieu et le tarif",
-          phaseId: "definitive",
+          phaseId: "prep",
           reason: "Invitations parties — verrouiller les éléments définitifs.",
         },
       };
     }
 
+    if (kpis.capacity > 0 && kpis.seated < kpis.capacity) {
+      return {
+        phaseId: "dinner_prep",
+        kpis,
+        blockers,
+        completedPhaseIds,
+        nextBestAction: {
+          id: "places_or_tables",
+          label: "Finaliser places & tables",
+          phaseId: "dinner_prep",
+          reason: "Paiements OK — remplir les dernières places ou composer les tables.",
+        },
+      };
+    }
+
     return {
-      phaseId: "auto",
+      phaseId: "feedback",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
         id: "all_clear",
         label: "Suivre relances auto & satisfaction",
-        phaseId: "auto",
-        reason: "Pas de paiement en attente détecté — piloter l’après-invitation.",
+        phaseId: "feedback",
+        reason: "Pas de paiement en attente — piloter l’après-invitation.",
       },
     };
   }
@@ -245,14 +261,14 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
   if (kpis.roster === 0) {
     blockers.push("Aucun invité sur la liste");
     return {
-      phaseId: "std_email",
+      phaseId: "audience",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
         id: "add_invitees",
         label: "Constituer la liste d’invités",
-        phaseId: "std_email",
+        phaseId: "audience",
         reason: "Sélectionner les contacts à inviter.",
       },
     };
@@ -261,14 +277,14 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
   if (kpis.unpaidAfterInvite > 0) {
     blockers.push(`${kpis.unpaidAfterInvite} invitation(s) sans paiement`);
     return {
-      phaseId: "formal",
+      phaseId: "payment",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
         id: "payment_relance",
         label: `Relancer les paiements (${kpis.unpaidAfterInvite})`,
-        phaseId: "formal",
+        phaseId: "payment",
         reason: "Places non confirmées financièrement.",
       },
     };
@@ -292,28 +308,43 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
   if (!hasVenue(input)) {
     blockers.push("Lieu / adresse non renseigné");
     return {
-      phaseId: "definitive",
+      phaseId: "prep",
       kpis,
       blockers,
       completedPhaseIds,
       nextBestAction: {
         id: "fill_venue",
         label: "Renseigner le lieu et le tarif",
-        phaseId: "definitive",
+        phaseId: "prep",
         reason: "Compléter les éléments définitifs.",
       },
     };
   }
 
+  if (kpis.capacity > 0 && kpis.seated < kpis.capacity) {
+    return {
+      phaseId: "dinner_prep",
+      kpis,
+      blockers,
+      completedPhaseIds,
+      nextBestAction: {
+        id: "places_or_tables",
+        label: "Finaliser places & tables",
+        phaseId: "dinner_prep",
+        reason: "Invitations parties — remplir places ou composer les tables.",
+      },
+    };
+  }
+
   return {
-    phaseId: "auto",
+    phaseId: "feedback",
     kpis,
     blockers,
     completedPhaseIds,
     nextBestAction: {
       id: "all_clear",
       label: "Suivre relances auto & satisfaction",
-      phaseId: "auto",
+      phaseId: "feedback",
       reason: "Invitations parties — piloter rappels et feedback.",
     },
   };
