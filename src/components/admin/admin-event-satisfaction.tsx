@@ -28,18 +28,22 @@ const CATEGORIES: {
 function ScoreBar({ score, label }: { score: number | null; label: string }) {
   const pct = score === null ? 0 : Math.max(0, Math.min(100, (score / 5) * 100));
   return (
-    <div>
-      <div className="mb-1 flex items-center justify-between text-xs">
-        <span className="font-medium text-ns-tertiary">{label}</span>
-        <span className="font-bold text-ns-primary">{formatScore(score)}</span>
-      </div>
-      <div className="h-2 overflow-hidden rounded-full bg-ns-brand-light">
+    <li className="grid grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-3">
+      <span className="truncate text-xs font-medium text-ns-tertiary">{label}</span>
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light"
+        role="img"
+        aria-label={`${label} : ${formatScore(score)} sur 5`}
+      >
         <div
           className="h-full rounded-full bg-[#b4e600] transition-all"
           style={{ width: `${pct}%` }}
         />
       </div>
-    </div>
+      <span className="text-right text-xs font-bold tabular-nums text-ns-primary">
+        {formatScore(score)}
+      </span>
+    </li>
   );
 }
 
@@ -94,11 +98,11 @@ export function AdminEventSatisfactionResults({
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <ul className="max-w-md space-y-2 sm:max-w-none sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-2 sm:space-y-0">
             {CATEGORIES.map((c) => (
               <ScoreBar key={c.key} label={c.label} score={stats[c.key]} />
             ))}
-          </div>
+          </ul>
 
           <div>
             <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ns-secondary">

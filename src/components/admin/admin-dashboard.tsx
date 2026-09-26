@@ -1078,23 +1078,30 @@ function IdleMomentCard() {
 
 function CategoryBars({ sat }: { sat: SatisfactionAverages }) {
   return (
-    <div className="space-y-3">
+    <ul className="max-w-md space-y-2">
       {CATEGORIES.map((c) => {
         const score = sat[c.key];
         const pct = score === null ? 0 : Math.max(0, Math.min(100, (score / 5) * 100));
         return (
-          <div key={c.key}>
-            <div className="mb-1 flex justify-between text-xs">
-              <span className="font-medium text-ns-tertiary">{c.label}</span>
-              <span className="font-bold text-ns-primary">{formatScore(score)} / 5</span>
+          <li key={c.key} className="grid grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-3">
+            <span className="truncate text-xs font-medium text-ns-tertiary">{c.label}</span>
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light"
+              role="img"
+              aria-label={`${c.label} : ${formatScore(score)} sur 5`}
+            >
+              <div
+                className="h-full rounded-full bg-[#b4e600]"
+                style={{ width: `${pct}%` }}
+              />
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-ns-brand-light">
-              <div className="h-full rounded-full bg-[#b4e600]" style={{ width: `${pct}%` }} />
-            </div>
-          </div>
+            <span className="text-right text-xs font-bold tabular-nums text-ns-primary">
+              {formatScore(score)}
+            </span>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 
