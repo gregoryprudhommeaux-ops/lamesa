@@ -1893,11 +1893,14 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               </h4>
               <p className="mt-1 mb-3 text-xs text-ns-secondary">
                 {labels.inviteGroupHint ??
-                  "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
+                  "Recherche par nom/société/email. Signaux observés (jamais invité, déjà venu, ville, sat) pour choisir. Au-delà des places → liste d’attente."}
               </p>
               <ContactPicker
                 selected={selectedInvitees}
                 onChange={setSelectedInvitees}
+                participations={participations}
+                eventCity={city || activeEvent?.city || null}
+                excludeEventId={activeId}
                 labels={{
                   search: labels.searchContacts,
                   selected: activeId
