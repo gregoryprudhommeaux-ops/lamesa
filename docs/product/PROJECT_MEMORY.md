@@ -155,6 +155,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
 | 2026-09-26 | P1 | Relance STD custom + reminders dans « Automatiques » | Fait — `std_relance` + bibliothèque scindée |
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
+| 2026-09-26 | P1 | Pas de récap du dernier dîner sur le dashboard | Fait — 4 chiffres cliquables |
 
 ## Changelog
 
@@ -170,3 +171,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
+| 2026-09-26 | Dashboard — récap du dernier dîner passé : contactées, places payées, CA TTC, note |

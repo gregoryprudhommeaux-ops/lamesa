@@ -3,6 +3,7 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
+import type { LastEventRecap, LastEventRecapPerson, LastEventSurveyRow } from "@/lib/admin/last-event-recap";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import {
   formatRegistrantDate,
@@ -212,6 +213,7 @@ type DashboardPayload = {
   recentTableDrafts?: RecentTableDraft[];
   opsQueues?: OpsQueues;
   nextEventRsvp?: NextEventRsvp | null;
+  lastEventRecap?: LastEventRecap | null;
   lastEmailResults?: LastEmailResults | null;
   emailCampaignHistory?: EmailCampaignHistoryRow[];
 };
@@ -1143,6 +1145,320 @@ function DashboardSkeleton() {
   );
 }
 
+type LastEventPanel = "contacted" | "registered" | "revenue" | "satisfaction";
+
+function formatRecapMxn(amount: number): string {
+  return new Intl.NumberFormat("fr-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function recapPersonHref(eventId: string, person: { contactId: string | null }): string {
+  if (person.contactId) {
+    return `/admin/personnes?tab=membres&id=${encodeURIComponent(person.contactId)}`;
+  }
+  return `/admin/evenements?id=${encodeURIComponent(eventId)}`;
+}
+
+function RecapPersonLine({
+  eventId,
+  person,
+  detail,
+  onClose,
+}: {
+  eventId: string;
+  person: LastEventRecapPerson;
+  detail?: string;
+  onClose: () => void;
+}) {
+  return (
+    <li>
+      <Link
+        href={recapPersonHref(eventId, person)}
+        className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
+        onClick={onClose}
+      >
+        <span className="block truncate text-sm font-semibold text-ns-tertiary">
+          {person.fullName}
+        </span>
+        <span className="block truncate text-[11px] text-ns-secondary">
+          {[person.company, person.email].filter(Boolean).join(" · ") || "—"}
+        </span>
+        {detail ? <span className="mt-1 block text-[11px] text-ns-secondary">{detail}</span> : null}
+      </Link>
+    </li>
+  );
+}
+
+function SurveyScoreLine({ row }: { row: LastEventSurveyRow }) {
+  const bits = [
+    `Endroit ${row.venueQuality}`,
+    `Menu ${row.menuQuality}`,
+    `Sélection ${row.guestsQuality}`,
+    row.valueForMoney === null ? null : `Prix ${row.valueForMoney}`,
+    `Retour ${row.wouldReturn}`,
+    row.wouldRecommend === null ? null : `En parlerait ${row.wouldRecommend}`,
+  ].filter(Boolean);
+  return <span className="mt-1 block text-[11px] text-ns-secondary">{bits.join(" · ")}</span>;
+}
+
+export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
+  const [panel, setPanel] = useState<LastEventPanel | null>(null);
+  const eventHref = `/admin/evenements?id=${encodeURIComponent(recap.eventId)}`;
+
+  useEffect(() => {
+    if (!panel) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setPanel(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panel]);
+
+  const tiles: Array<{
+    id: LastEventPanel;
+    label: string;
+    value: string;
+    hint: string;
+  }> = [
+    {
+      id: "contacted",
+      label: "Contactées",
+      value: String(recap.contacted),
+      hint: "Emails envoyés",
+    },
+    {
+      id: "registered",
+      label: "Inscrites",
+      value: String(recap.registered),
+      hint: "Places payées",
+    },
+    {
+      id: "revenue",
+      label: "CA généré",
+      value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
+      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : "TTC · ticket ACCESS",
+    },
+    {
+      id: "satisfaction",
+      label: "Note",
+      value:
+        recap.satisfactionOverall === null ? "—" : `${formatScore(recap.satisfactionOverall)}/5`,
+      hint:
+        recap.satisfactionResponses === 0
+          ? "Aucune réponse"
+          : `${recap.satisfactionResponses} réponse${recap.satisfactionResponses > 1 ? "s" : ""}`,
+    },
+  ];
+
+  const panelTitle =
+    panel === "contacted"
+      ? "Personnes contactées"
+      : panel === "registered"
+        ? "Qui a participé"
+        : panel === "revenue"
+          ? "Chiffre d’affaires"
+          : "Notes de satisfaction";
+
+  return (
+    <>
+      <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+              Dernier dîner
+            </p>
+            <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">{recap.title}</h4>
+            <p className="mt-0.5 text-sm text-ns-secondary">{formatNextEventWhen(recap.startsAt)}</p>
+          </div>
+          <Link
+            href={eventHref}
+            className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+          >
+            Ouvrir l’événement →
+          </Link>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {tiles.map((tile) => (
+            <button
+              key={tile.id}
+              type="button"
+              onClick={() => setPanel(tile.id)}
+              className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5 text-left transition hover:border-ns-primary/40 hover:bg-white"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                {tile.label}
+              </p>
+              <p className="mt-1 text-2xl font-black text-ns-tertiary">{tile.value}</p>
+              <p className="text-[10px] text-ns-secondary">{tile.hint}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {panel ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={panelTitle}
+          onClick={() => setPanel(null)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  {recap.title}
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-ns-hero">{panelTitle}</h3>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 text-ns-secondary hover:text-ns-tertiary"
+                onClick={() => setPanel(null)}
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-2 py-2">
+              {panel === "contacted" ? (
+                recap.contactedPeople.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-ns-secondary">
+                    Aucun email enregistré pour ce dîner.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {recap.contactedPeople.map((person) => (
+                      <RecapPersonLine
+                        key={person.id}
+                        eventId={recap.eventId}
+                        person={person}
+                        detail={person.channels.join(" · ")}
+                        onClose={() => setPanel(null)}
+                      />
+                    ))}
+                  </ul>
+                )
+              ) : null}
+              {panel === "registered" ? (
+                recap.registeredPeople.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-ns-secondary">Aucune place payée.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {recap.registeredPeople.map((person) => (
+                      <RecapPersonLine
+                        key={person.id}
+                        eventId={recap.eventId}
+                        person={person}
+                        detail={
+                          recap.priceMxn === null
+                            ? "Payé · montant non renseigné"
+                            : `Payé · ${formatRecapMxn(person.amountMxn)}`
+                        }
+                        onClose={() => setPanel(null)}
+                      />
+                    ))}
+                  </ul>
+                )
+              ) : null}
+              {panel === "revenue" ? (
+                <div className="px-3 py-3">
+                  <p className="text-2xl font-black text-ns-tertiary">
+                    {recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn)}
+                  </p>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {recap.priceMxn === null
+                      ? "Le prix ACCESS de ce dîner n’est pas renseigné."
+                      : `${recap.registered} place${recap.registered > 1 ? "s" : ""} · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)}`}
+                  </p>
+                  {recap.registeredPeople.length > 0 ? (
+                    <ul className="mt-3 divide-y divide-gray-50">
+                      {recap.registeredPeople.map((person) => (
+                        <RecapPersonLine
+                          key={person.id}
+                          eventId={recap.eventId}
+                          person={person}
+                          detail={
+                            recap.priceMxn === null ? "—" : formatRecapMxn(person.amountMxn)
+                          }
+                          onClose={() => setPanel(null)}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-sm text-ns-secondary">Aucune place payée.</p>
+                  )}
+                </div>
+              ) : null}
+              {panel === "satisfaction" ? (
+                <div className="px-3 py-3">
+                  <p className="text-2xl font-black text-ns-tertiary">
+                    {recap.satisfactionOverall === null
+                      ? "—"
+                      : formatScore(recap.satisfactionOverall)}
+                    <span className="text-base text-ns-secondary"> / 5</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {recap.satisfactionResponses} réponse
+                    {recap.satisfactionResponses > 1 ? "s" : ""}
+                    {recap.satisfactionSent > 0
+                      ? ` · ${recap.satisfactionSent} questionnaire${recap.satisfactionSent > 1 ? "s" : ""} envoyé${recap.satisfactionSent > 1 ? "s" : ""}`
+                      : ""}
+                  </p>
+                  {recap.satisfactionResponses > 0 ? (
+                    <div className="mt-4">
+                      <CategoryBars sat={recap.satisfaction} />
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-ns-secondary">Pas encore de note.</p>
+                  )}
+                  {recap.surveyRows.length > 0 ? (
+                    <ul className="mt-4 divide-y divide-gray-50">
+                      {recap.surveyRows.map((row) => (
+                        <li key={row.id}>
+                          <Link
+                            href={recapPersonHref(recap.eventId, row)}
+                            className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
+                            onClick={() => setPanel(null)}
+                          >
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-sm font-semibold text-ns-tertiary">
+                                {row.fullName}
+                              </span>
+                              <span className="shrink-0 text-sm font-black text-ns-tertiary">
+                                {formatScore(row.overall)}
+                              </span>
+                            </span>
+                            <span className="block truncate text-[11px] text-ns-secondary">
+                              {[row.company, row.email].filter(Boolean).join(" · ") || "—"}
+                            </span>
+                            <SurveyScoreLine row={row} />
+                            {row.comment ? (
+                              <span className="mt-1 block text-[11px] text-ns-tertiary">
+                                {row.comment}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function AdminDashboardPanel() {
   const authFetch = useAuthFetch();
   const router = useRouter();
@@ -1209,6 +1525,7 @@ export function AdminDashboardPanel() {
     recentTableDrafts = [],
     opsQueues,
     nextEventRsvp = null,
+    lastEventRecap = null,
     lastEmailResults = null,
     emailCampaignHistory = [],
   } = data;
@@ -1313,9 +1630,14 @@ export function AdminDashboardPanel() {
             Maintenant
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Le dîner en cours et l’action prioritaire.
+            Le dernier dîner, puis celui en cours.
           </p>
         </div>
+        {lastEventRecap ? (
+          <div className="mb-3">
+            <LastEventRecapCard recap={lastEventRecap} />
+          </div>
+        ) : null}
         <div className="grid gap-3 lg:grid-cols-2">
           {nextEventRsvp ? (
             <NextEventRsvpCard rsvp={nextEventRsvp} />

@@ -15,6 +15,7 @@ import {
   loadAdminCoreCollections,
 } from "@/lib/admin/load-core-collections";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
+import { buildLastEventRecap } from "@/lib/admin/last-event-recap";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
   buildNextEventRsvpSummary,
@@ -564,6 +565,7 @@ export async function GET(request: Request) {
       recentTableDrafts,
       opsQueues,
       nextEventRsvp,
+      lastEventRecap: buildLastEventRecap(events, participations),
       lastEmailResults,
       emailCampaignHistory,
     });
