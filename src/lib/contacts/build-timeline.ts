@@ -322,6 +322,7 @@ export function activityTypeLabel(type: ContactActivityType): string {
     rsvp_yes: "RSVP oui",
     rsvp_no: "Refus",
     confirmed_seat: "Confirmé",
+    payment_declared: "Virement déclaré",
     seen_marked: "Vu",
     interest_yes: "Intérêt oui",
     interest_no: "Intérêt non",
