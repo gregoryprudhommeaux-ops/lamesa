@@ -62,7 +62,7 @@ import {
   guestCapacityFromTotalCovers,
   totalCoversFromGuestCapacity,
 } from "@/lib/events/capacity";
-import { computeSeatPriceBreakdown, formatMxn } from "@/lib/events/pricing";
+import { computeSeatPriceBreakdown, formatMxn, resolveIncludesService } from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
 import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
 import Link from "next/link";
@@ -140,6 +140,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
   const [priceMxn, setPriceMxn] = useState<string>("450");
   const [costMxn, setCostMxn] = useState<string>("");
+  const [priceIncludesService, setPriceIncludesService] = useState(true);
+  const [costIncludesService, setCostIncludesService] = useState(true);
   const [pricingMode, setPricingMode] = useState<EventPricingMode>("ticket_onsite");
   const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
   const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
@@ -360,6 +362,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
     setPriceMxn("450");
     setCostMxn("");
+    setPriceIncludesService(true);
+    setCostIncludesService(true);
     setPricingMode("ticket_onsite");
     setAccessIncludesWelcomeDrink(true);
     setAccessIncludesAmuseBouche(false);
@@ -445,6 +449,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setCostMxn(
       event.costMxn != null && Number.isFinite(event.costMxn) ? String(event.costMxn) : "",
     );
+    setPriceIncludesService(resolveIncludesService(event.priceIncludesService));
+    setCostIncludesService(resolveIncludesService(event.costIncludesService));
     setPricingMode(resolveEventPricingMode(event));
     setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
     setAccessIncludesAmuseBouche(Boolean(event.accessIncludesAmuseBouche));
@@ -533,6 +539,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
       costMxn: costMxn.trim() === "" ? null : Number(costMxn),
+      priceIncludesService,
+      costIncludesService,
       pricingMode,
       accessIncludesWelcomeDrink,
       accessIncludesAmuseBouche,
@@ -1358,22 +1366,40 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           className={INPUT_CLASS}
                           placeholder="450"
                         />
+                        <label className="mt-2 flex items-center gap-2 text-sm text-ns-tertiary">
+                          <input
+                            type="checkbox"
+                            checked={priceIncludesService}
+                            onChange={(e) => setPriceIncludesService(e.target.checked)}
+                            className="h-4 w-4 rounded border-ns-alternate"
+                          />
+                          {labels["fields.priceIncludesService"] ?? "Service 15% inclus"}
+                        </label>
                         <p className="mt-1 text-xs text-ns-secondary">
-                          {labels["fields.priceMxnHint"] ??
-                            "Base HT. TTC invité = HT + IVA 16% + service 15%."}
+                          {priceIncludesService
+                            ? labels["fields.priceMxnHint"] ??
+                              "TTC = HT + IVA 16% + service 15%."
+                            : labels["fields.priceMxnHintNoService"] ??
+                              "TTC = HT + IVA 16% (sans service)."}
                         </p>
                         {(() => {
                           const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
                           if (!Number.isFinite(n) || n <= 0) return null;
-                          const b = computeSeatPriceBreakdown(n);
+                          const b = computeSeatPriceBreakdown(n, {
+                            includeService: priceIncludesService,
+                          });
                           return (
                             <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                               <p>
                                 IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                               </p>
-                              <p className="mt-0.5">
-                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
-                              </p>
+                              {b.serviceIncluded ? (
+                                <p className="mt-0.5">
+                                  Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                                </p>
+                              ) : (
+                                <p className="mt-0.5 text-ns-secondary">Service : non inclus</p>
+                              )}
                               <p className="mt-0.5">
                                 Total TTC: <strong>{formatMxn(b.total, "es")}</strong>
                               </p>
@@ -1394,22 +1420,37 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           className={INPUT_CLASS}
                           placeholder="ex. 350"
                         />
+                        <label className="mt-2 flex items-center gap-2 text-sm text-ns-tertiary">
+                          <input
+                            type="checkbox"
+                            checked={costIncludesService}
+                            onChange={(e) => setCostIncludesService(e.target.checked)}
+                            className="h-4 w-4 rounded border-ns-alternate"
+                          />
+                          {labels["fields.costIncludesService"] ?? "Service 15% inclus (cost)"}
+                        </label>
                         <p className="mt-1 text-xs text-ns-secondary">
                           {labels["fields.costMxnHint"] ??
-                            "Coût restaurant / couvert — interne (marge, places Invité). Même formule TTC."}
+                            "Coût restaurant / couvert — interne (marge, places Invité)."}
                         </p>
                         {(() => {
                           const n = costMxn.trim() === "" ? 0 : Number(costMxn);
                           if (!Number.isFinite(n) || n <= 0) return null;
-                          const b = computeSeatPriceBreakdown(n);
+                          const b = computeSeatPriceBreakdown(n, {
+                            includeService: costIncludesService,
+                          });
                           return (
                             <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                               <p>
                                 IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                               </p>
-                              <p className="mt-0.5">
-                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
-                              </p>
+                              {b.serviceIncluded ? (
+                                <p className="mt-0.5">
+                                  Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                                </p>
+                              ) : (
+                                <p className="mt-0.5 text-ns-secondary">Service : non inclus</p>
+                              )}
                               <p className="mt-0.5">
                                 COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
                               </p>
@@ -1546,22 +1587,40 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         className={INPUT_CLASS}
                         placeholder="1300"
                       />
+                      <label className="mt-2 flex items-center gap-2 text-sm text-ns-tertiary">
+                        <input
+                          type="checkbox"
+                          checked={priceIncludesService}
+                          onChange={(e) => setPriceIncludesService(e.target.checked)}
+                          className="h-4 w-4 rounded border-ns-alternate"
+                        />
+                        {labels["fields.priceIncludesService"] ?? "Service 15% inclus"}
+                      </label>
                       <p className="mt-1 text-xs text-ns-secondary">
-                        {labels["fields.allInTicketHint"] ??
-                          "Ce que le membre paie (virement). TTC = HT + IVA 16% + service 15%."}
+                        {priceIncludesService
+                          ? labels["fields.allInTicketHint"] ??
+                            "Ce que le membre paie (virement). TTC = HT + IVA 16% + service 15%."
+                          : labels["fields.priceMxnHintNoService"] ??
+                            "TTC = HT + IVA 16% (sans service)."}
                       </p>
                       {(() => {
                         const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
                         if (!Number.isFinite(n) || n <= 0) return null;
-                        const b = computeSeatPriceBreakdown(n);
+                        const b = computeSeatPriceBreakdown(n, {
+                          includeService: priceIncludesService,
+                        });
                         return (
                           <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                             <p>
                               IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                             </p>
-                            <p className="mt-0.5">
-                              Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
-                            </p>
+                            {b.serviceIncluded ? (
+                              <p className="mt-0.5">
+                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                              </p>
+                            ) : (
+                              <p className="mt-0.5 text-ns-secondary">Service : non inclus</p>
+                            )}
                             <p className="mt-0.5">
                               Total TTC: <strong>{formatMxn(b.total, "es")}</strong>
                             </p>
@@ -1582,22 +1641,37 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         className={INPUT_CLASS}
                         placeholder="ex. 900"
                       />
+                      <label className="mt-2 flex items-center gap-2 text-sm text-ns-tertiary">
+                        <input
+                          type="checkbox"
+                          checked={costIncludesService}
+                          onChange={(e) => setCostIncludesService(e.target.checked)}
+                          className="h-4 w-4 rounded border-ns-alternate"
+                        />
+                        {labels["fields.costIncludesService"] ?? "Service 15% inclus (cost)"}
+                      </label>
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.costMxnHint"] ??
-                          "Coût restaurant / couvert — interne (marge, places Invité). Même formule TTC."}
+                          "Coût restaurant / couvert — interne (marge, places Invité)."}
                       </p>
                       {(() => {
                         const n = costMxn.trim() === "" ? 0 : Number(costMxn);
                         if (!Number.isFinite(n) || n <= 0) return null;
-                        const b = computeSeatPriceBreakdown(n);
+                        const b = computeSeatPriceBreakdown(n, {
+                          includeService: costIncludesService,
+                        });
                         return (
                           <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                             <p>
                               IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                             </p>
-                            <p className="mt-0.5">
-                              Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
-                            </p>
+                            {b.serviceIncluded ? (
+                              <p className="mt-0.5">
+                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                              </p>
+                            ) : (
+                              <p className="mt-0.5 text-ns-secondary">Service : non inclus</p>
+                            )}
                             <p className="mt-0.5">
                               COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
                             </p>
@@ -1611,8 +1685,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       if (!Number.isFinite(sale) || sale <= 0 || !Number.isFinite(cost) || cost <= 0) {
                         return null;
                       }
-                      const saleTtc = computeSeatPriceBreakdown(sale).total;
-                      const costTtc = computeSeatPriceBreakdown(cost).total;
+                      const saleTtc = computeSeatPriceBreakdown(sale, {
+                        includeService: priceIncludesService,
+                      }).total;
+                      const costTtc = computeSeatPriceBreakdown(cost, {
+                        includeService: costIncludesService,
+                      }).total;
                       const margin = Math.round((saleTtc - costTtc) * 100) / 100;
                       return (
                         <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-ns-tertiary">

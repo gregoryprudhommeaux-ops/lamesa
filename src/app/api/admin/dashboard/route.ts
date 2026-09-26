@@ -579,7 +579,9 @@ export async function GET(request: Request) {
         typeof pastEvent.priceMxn === "number" && Number.isFinite(pastEvent.priceMxn)
           ? pastEvent.priceMxn
           : 0;
-      const unitTtc = computeEventIva(priceRaw).totalWithIva;
+      const unitTtc = computeEventIva(priceRaw, {
+        includeService: pastEvent.priceIncludesService !== false,
+      }).totalWithIva;
       const revenueMxn =
         Math.round(unitTtc * confirmedGuests.length * 100) / 100;
       const sat = computeEventSatisfaction(pastParts);

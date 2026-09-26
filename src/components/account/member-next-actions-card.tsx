@@ -81,7 +81,12 @@ export function MemberNextActionsCard({ actions }: MemberNextActionsCardProps) {
           {typeof primary.priceMxn === "number" && primary.priceMxn > 0 ? (
             <p className="font-semibold text-ns-tertiary">
               {t("accessPrice", {
-                amount: formatMxn(computeEventIva(primary.priceMxn).totalWithIva, locale),
+                amount: formatMxn(
+                  computeEventIva(primary.priceMxn, {
+                    includeService: primary.priceIncludesService !== false,
+                  }).totalWithIva,
+                  locale,
+                ),
               })}
             </p>
           ) : null}

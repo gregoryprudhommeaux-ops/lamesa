@@ -11,7 +11,7 @@ import {
 } from "@/lib/admin/satisfaction-stats";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { computeEventEconomics, computeSeatPriceBreakdown } from "@/lib/events/pricing";
+import { computeEventEconomics, computeSeatPriceBreakdown, resolveIncludesService } from "@/lib/events/pricing";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
 const CHANNELS: Array<{
@@ -137,7 +137,11 @@ export function buildLastEventRecap(
   );
   const price = ticketPrice(event);
   const cost = ticketCost(event);
-  const saleLine = computeSeatPriceBreakdown(price ?? 0);
+  const priceIncludesService = resolveIncludesService(event.priceIncludesService);
+  const costIncludesService = resolveIncludesService(event.costIncludesService);
+  const saleLine = computeSeatPriceBreakdown(price ?? 0, {
+    includeService: priceIncludesService,
+  });
 
   const contactedPeople: LastEventRecapPerson[] = [];
   const registeredPeople: LastEventRecapPerson[] = [];
@@ -181,6 +185,8 @@ export function buildLastEventRecap(
     priceMxn: price,
     paidSeatCount: paidCount,
     complimentarySeatCount: compCount,
+    priceIncludesService,
+    costIncludesService,
   });
 
   const satisfaction = computeEventSatisfaction(guests);

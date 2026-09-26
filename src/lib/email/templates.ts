@@ -162,7 +162,11 @@ export function buildEventTemplateVars(input: {
   const lang = input.locale ?? sendLocaleForEvent(input.event);
   const priceRaw = input.event.priceMxn;
   const hasPrice = typeof priceRaw === "number" && Number.isFinite(priceRaw) && priceRaw > 0;
-  const pricing = hasPrice ? computeEventIva(priceRaw) : null;
+  const pricing = hasPrice
+    ? computeEventIva(priceRaw, {
+        includeService: input.event.priceIncludesService !== false,
+      })
+    : null;
   const pending =
     lang === "fr" ? "À confirmer" : lang === "en" ? "To be confirmed" : "Por confirmar";
 
@@ -220,7 +224,13 @@ export function buildEventTemplateVars(input: {
             : "Según monto final (16%)"
         : pending,
     serviceAmount: pricing
-      ? formatMxn(pricing.service, lang)
+      ? pricing.serviceIncluded
+        ? formatMxn(pricing.service, lang)
+        : lang === "fr"
+          ? "Non inclus"
+          : lang === "en"
+            ? "Not included"
+            : "No incluido"
       : allInRange
         ? lang === "fr"
           ? "Selon montant final (15%)"

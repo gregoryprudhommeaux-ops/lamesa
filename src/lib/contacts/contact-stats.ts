@@ -82,7 +82,9 @@ export function buildContactStats(input: {
       | "satisfactionSurvey"
     >
   >;
-  events: Array<Pick<AdminEvent, "id" | "title" | "startsAt" | "priceMxn">>;
+  events: Array<
+    Pick<AdminEvent, "id" | "title" | "startsAt" | "priceMxn" | "priceIncludesService">
+  >;
   activities: ContactActivity[];
   /** Interest / STD form rows for this email (optional). */
   respondents?: Array<
@@ -132,7 +134,9 @@ export function buildContactStats(input: {
       const price = ev?.priceMxn ?? 0;
       const priceBeforeTax =
         typeof price === "number" && Number.isFinite(price) ? price : 0;
-      rowRevenue = computeEventIva(priceBeforeTax).totalWithIva;
+      rowRevenue = computeEventIva(priceBeforeTax, {
+        includeService: ev?.priceIncludesService !== false,
+      }).totalWithIva;
       revenueMxn += rowRevenue;
     }
 

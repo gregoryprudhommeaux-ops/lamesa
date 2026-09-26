@@ -133,15 +133,25 @@ export interface AdminEvent {
   parking?: "secure_nearby" | "valet" | "on_site" | "unknown";
   capacity?: number;
   /**
-   * ACCESS ticket HT (MXN / pers.) — prix de vente before IVA + service.
-   * TTC guest = HT + IVA 16% + service 15%.
+   * ACCESS ticket HT (MXN / pers.) — prix de vente before IVA (+ service if included).
+   * TTC guest = HT + IVA 16% (+ service 15% when `priceIncludesService`).
    */
   priceMxn?: number | null;
   /**
    * Internal COST HT (MXN / pers.) — restaurant / cover cost for margin.
-   * Cost TTC = HT + IVA 16% + service 15%. Not shown to guests.
+   * Cost TTC = HT + IVA 16% (+ service 15% when `costIncludesService`). Not shown to guests.
    */
   costMxn?: number | null;
+  /**
+   * Whether the selling price TTC includes service 15%.
+   * Default true when omitted (legacy).
+   */
+  priceIncludesService?: boolean | null;
+  /**
+   * Whether the internal COST TTC includes service 15%.
+   * Default true when omitted (legacy).
+   */
+  costIncludesService?: boolean | null;
   /** ACCESS includes a welcome drink */
   accessIncludesWelcomeDrink?: boolean;
   /** ACCESS includes amuse-bouches */
