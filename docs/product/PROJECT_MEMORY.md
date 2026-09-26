@@ -120,7 +120,7 @@ Faits code (pas de logs d’envoi prod consultés) :
 | Accusé réponse | `interest_ack` | Auto après formulaire intérêt | Garder, hors étape campagne |
 | Relance STD | custom (ex. `custom_relance_a_suivre_std_24_sept`) | Manuel via Prospects, playlist « SANS RÉPONSE » | Action juste, template système manquant |
 | Invitation | `calendar_invite` | Manuel ; corps déjà = prix + IBAN + ICS | Garder |
-| Relance paiement | `payment_relance` | Manuel (phase invitation) **et** auto au clic YES (`process-rsvp-click`) | Manuel oui ; auto au YES = mauvais moment. Le clic YES n’écrit pas `paymentRelanceSentAt` ; la route manuelle ne saute pas un déjà-envoyé |
+| Relance paiement | `payment_relance` | Manuel, phase paiement, une fois (`paymentRelanceSentAt`) | P0 fait : plus d’envoi au clic OUI ; second blast ignoré |
 | Confirmation | `participation_confirmed` | Auto quand statut → `confirmed` | Garder |
 | Rappels J-7 / H-36 / H-1h30 | ICS VALARM dans l’invitation | Calendrier natif | C’est le vrai mécanisme |
 | Mêmes rappels en email | `reminder_7d` `reminder_36h` `reminder_90m` | Aucun caller | Legacy, retirer de la bibliothèque active |
@@ -130,7 +130,9 @@ Faits code (pas de logs d’envoi prod consultés) :
 
 Les 9 phases placent déjà STD, qualification, invitation, paiement, places et feedback au bon endroit. `/admin/templates` range encore les 14 clés système sous « Automatiques ». L’explication ICS (J-7 / H-36 / H-1h30) est dans Feedback, pas entre le paiement et le dîner. La phase paiement montre le roster « impayés » et le panneau relance en double. Pas de cron de relance STD ni de relance paiement.
 
-**À valider avant code :** couper l’auto `payment_relance` au YES ; un template système `std_relance` envoyé depuis Qualification ; survey = confirmés payés seulement ; archiver `reminder_*` ; `places_available` reste l’exception Prépa dîner.
+**P0 fait (2026-09-26) :** le clic OUI n’envoie plus `payment_relance`. La route manuelle saute les participations déjà horodatées.
+
+**À valider avant code :** un template système `std_relance` envoyé depuis Qualification ; survey = confirmés payés seulement ; archiver `reminder_*` ; `places_available` reste l’exception Prépa dîner.
 
 ## Jack findings log
 
@@ -143,7 +145,7 @@ Les 9 phases placent déjà STD, qualification, invitation, paiement, places et 
 | 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 done (#34) |
 | 2026-09-26 | P0 | Nav admin plate / Dashboard pas porte | Done (#35) |
 | 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
-| 2026-09-26 | P0 | `payment_relance` part au clic YES (ton « rappel ») alors que l’invitation a déjà le paiement ; pas de garde anti-doublon | Audit — à valider |
+| 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
 | 2026-09-26 | P1 | 14 templates « Automatiques » dont 3 reminders sans envoi ; relance STD = custom hors événement | Audit — à valider |
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Audit — à valider |
 
@@ -158,3 +160,4 @@ Les 9 phases placent déjà STD, qualification, invitation, paiement, places et 
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
+| 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
