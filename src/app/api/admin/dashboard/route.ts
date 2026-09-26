@@ -26,6 +26,7 @@ import {
 } from "@/lib/admin/dashboard-moment";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildLastEventRecap } from "@/lib/admin/last-event-recap";
+import { buildMesaSeries } from "@/lib/admin/mesa-series";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
   buildNextEventRsvpSummary,
@@ -665,6 +666,7 @@ export async function GET(request: Request) {
       opsQueues,
       nextEventRsvp,
       lastEventRecap: buildLastEventRecap(events, participations),
+      mesaSeries: buildMesaSeries(events, participations),
       lastEmailResults,
       emailCampaignHistory,
       pastEventFocus,

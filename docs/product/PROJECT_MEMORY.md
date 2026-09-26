@@ -86,11 +86,16 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | ACCESS = **virement bancaire uniquement** (pas de paiement en ligne sur le site) | Admin marque Payé à réception du transfer ; site affiche CLABE / infos, pas de checkout |
 | 2026-09-26 | Service 15% **optionnel** par event (`priceIncludesService` / `costIncludesService`, défaut inclus) | Ajustable vente vs cost |
 | 2026-09-26 | IVA 16% aussi optionnel (`priceIncludesIva` / `costIncludesIva`) ; CA dashboard = négo event (pas d’ajout auto) | Les flags event font foi |
+| 2026-09-26 | Organisateur = toujours **Invité** (`comped`) : COST oui, CA non | Gregory hors places payées / CA |
+| 2026-09-26 | **Évolution LA MESA** (série dîners) sur Dashboard Approfondir | Cumul CA / marge / sat / remplissage — pas seulement dernier dîner |
+| 2026-09-26 | NBA **check-in** dans la fenêtre soir J (H-6 → H+18) | Étape active le jour J, pas saut direct feedback |
+| 2026-09-26 | Fil personne×dîner v1 : `guestJourneyStage` sur roster | Une étape métier lisible (STD → payé → présent…) |
 
 ## Reusable components / patterns
 
 - `ops-phases` + `suggestOpsPhase` + `EventCommandHeader` / `EventCommandPhaseNav`
-- `AdminEventParticipantRoster` + `EventTemplateDrawer`
+- `AdminEventParticipantRoster` + `EventTemplateDrawer` + `guestJourneyStage`
+- `mesaSeries` (évolution cumulée) · `lastEventRecap` (dernier dîner)
 - `FormalInviteOuiPanel` (phase formal) · `AdminEventPlacesAvailablePanel` (phase dinner_prep)
 - `AdminPersonnesWorkspace` · `AdminDinersViewToggle`
 - Admin shell, RequireAuth, table builder, contact fiche
@@ -118,6 +123,9 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
 | Page publique `/e` bifurquée | Ouvert — vague 2 (garder OUI/NON ; CTA adaptatif plus tard) |
 | Espace membre « mon prochain pas » | Done — survey / ACCESS / profil / prochain dîner |
+| Pas d’évolution cumulée série LA MESA | Done — `mesaSeries` dashboard Approfondir |
+| NBA saute check-in | Done — fenêtre soir J H-6→H+18 |
+| Double modèle Audience vs playlists OUI | Ouvert — v1 = étape parcours unifiée UI ; fusion data = vague 2 |
 
 ## Email funnel — audit 2026-09-26
 
@@ -170,7 +178,10 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 | Phase paiement : roster impayés + panneau relance en double | Done — un seul follow-up |
 | 2026-09-26 | P1 | FormalInviteOui + roster générique en double (phase formal) | Done — panneau OUI seul |
 | 2026-09-26 | P1 | Check-in placeholder / statut Présent mort (`present`→`confirmed`) | Done — `checkedInAt` |
-| 2026-09-26 | P0 | Carte « Dernier email » figée sur places dispo | Fait — tampon d’envoi le plus récent |
+| 2026-09-26 | P0 | Organisateur compté Payé dans CA dernier dîner | Fait (#52) |
+| 2026-09-26 | P0 | Pas d’évolution cumulée LA MESA | Fait — série dashboard |
+| 2026-09-26 | P1 | NBA saute check-in | Fait — fenêtre soir J |
+| 2026-09-26 | P0 | Fil personne×dîner fragmenté | Fait v1 — journey stage roster |
 
 ## Changelog
 
@@ -193,3 +204,5 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Check-in soir J — tap Présent sur places payées (`checkedInAt`) |
 | 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |
 | 2026-09-26 | Espace membre — bloc « Mon prochain pas » (survey / ACCESS / profil) |
+| 2026-09-26 | Spec Jack P0/P1 : série LA MESA + NBA check-in + guest journey stage (`docs/superpowers/specs/2026-09-26-mesa-series-checkin-journey-design.md`) |
+| 2026-09-26 | Dashboard — Évolution LA MESA (CA / marge / sat / dîners) ; NBA check-in soir J ; roster affiche l’étape parcours |

@@ -7,6 +7,7 @@ import {
   rosterCanonicalStatus,
   type RosterFilterId,
 } from "@/lib/admin/event-participant-roster";
+import { resolveGuestJourneyStage } from "@/lib/admin/guest-journey";
 import { countSeatedParticipations, totalCoversWithAdmin } from "@/lib/events/capacity";
 import type { AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
@@ -116,6 +117,7 @@ export function AdminEventParticipantRoster({
         <ul className="mt-3 space-y-2">
           {rows.map((p) => {
             const status = rosterCanonicalStatus(p.status);
+            const journey = resolveGuestJourneyStage(p);
             return (
               <li
                 key={p.id}
@@ -129,11 +131,20 @@ export function AdminEventParticipantRoster({
                   ) : (
                     <span className="mt-0.5 block text-xs text-ns-secondary">Pas de téléphone</span>
                   )}
-                  <span className="mt-0.5 block text-[10px] text-ns-secondary">
-                    {p.saveTheDateSentAt ? "STD envoyé · " : ""}
-                    {p.calendarInviteSentAt ? "Invite formelle · " : ""}
-                    {p.paymentRelanceSentAt ? "Relance € · " : ""}
-                    {status}
+                  <span className="mt-0.5 block text-[11px] font-medium text-ns-primary">
+                    {journey.label}
+                    {p.saveTheDateSentAt || p.calendarInviteSentAt || p.paymentRelanceSentAt
+                      ? " · "
+                      : ""}
+                    <span className="font-normal text-ns-secondary">
+                      {p.saveTheDateSentAt ? "STD" : ""}
+                      {p.saveTheDateSentAt && p.calendarInviteSentAt ? " · " : ""}
+                      {p.calendarInviteSentAt ? "Invite" : ""}
+                      {(p.saveTheDateSentAt || p.calendarInviteSentAt) && p.paymentRelanceSentAt
+                        ? " · "
+                        : ""}
+                      {p.paymentRelanceSentAt ? "Relance €" : ""}
+                    </span>
                   </span>
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
