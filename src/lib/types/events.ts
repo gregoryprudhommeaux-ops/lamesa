@@ -270,6 +270,11 @@ export interface AdminEventParticipation {
    * Epistemic: **declared** — not proof of receipt. Admin still marks Payé.
    */
   paymentDeclaredAt?: string | null;
+  /**
+   * Interest / STD answer mirrored onto participation (vague 3 Audience fusion).
+   * Epistemic: **observed** from formulaire or playlist OUI promote.
+   */
+  interestResponse?: EventInterestResponse | null;
   /** Thank-you + satisfaction survey email sent (~12h after start) */
   satisfactionSurveySentAt?: string;
   satisfactionSurvey?: SatisfactionSurveyAnswers;

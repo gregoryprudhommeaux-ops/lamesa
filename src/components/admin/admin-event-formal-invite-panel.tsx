@@ -101,9 +101,16 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
         ok?: boolean;
         synced?: number;
         error?: string;
+        audience?: { create?: number; promote?: number; noop?: number };
       };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "sync_failed");
-      setMessage(`Listes Prospects synchronisées (${json.synced ?? 0} réponses).`);
+      const audience = json.audience;
+      const audiencePart = audience
+        ? ` · Audience +${audience.create ?? 0} / ↑${audience.promote ?? 0}`
+        : "";
+      setMessage(
+        `Listes Prospects synchronisées (${json.synced ?? 0} réponses)${audiencePart}.`,
+      );
       await loadOui();
       onEventUpdated?.();
     } catch (e) {
@@ -196,9 +203,9 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
             className={BTN_SECONDARY}
             disabled={ouiLoading || syncing}
             onClick={() => void syncInterestLists()}
-            title="Alimente les playlists Prospects OUI/NON/sans réponse depuis le formulaire"
+            title="Alimente les playlists Prospects OUI/NON/sans réponse + roster Audience"
           >
-            {syncing ? "Sync…" : "Sync → listes"}
+            {syncing ? "Sync…" : "Sync → listes + Audience"}
           </button>
           <button
             type="button"
