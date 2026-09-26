@@ -11,7 +11,7 @@ import {
 } from "@/lib/admin/satisfaction-stats";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { computeEventEconomics, computeSeatPriceBreakdown, resolveIncludesService } from "@/lib/events/pricing";
+import { computeEventEconomics, computeSeatPriceBreakdown, resolveIncludesFlag } from "@/lib/events/pricing";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
 const CHANNELS: Array<{
@@ -68,6 +68,10 @@ export type LastEventRecap = {
   revenueBeforeTaxMxn: number;
   ivaMxn: number;
   serviceMxn: number;
+  /** Negotiated sale formula, e.g. "TTC · HT + IVA 16%". */
+  saleFormula: string;
+  priceIncludesIva: boolean;
+  priceIncludesService: boolean;
   costTotalMxn: number;
   marginMxn: number;
   satisfactionOverall: number | null;
@@ -137,9 +141,12 @@ export function buildLastEventRecap(
   );
   const price = ticketPrice(event);
   const cost = ticketCost(event);
-  const priceIncludesService = resolveIncludesService(event.priceIncludesService);
-  const costIncludesService = resolveIncludesService(event.costIncludesService);
+  const priceIncludesIva = resolveIncludesFlag(event.priceIncludesIva);
+  const priceIncludesService = resolveIncludesFlag(event.priceIncludesService);
+  const costIncludesIva = resolveIncludesFlag(event.costIncludesIva);
+  const costIncludesService = resolveIncludesFlag(event.costIncludesService);
   const saleLine = computeSeatPriceBreakdown(price ?? 0, {
+    includeIva: priceIncludesIva,
     includeService: priceIncludesService,
   });
 
@@ -185,7 +192,9 @@ export function buildLastEventRecap(
     priceMxn: price,
     paidSeatCount: paidCount,
     complimentarySeatCount: compCount,
+    priceIncludesIva,
     priceIncludesService,
+    costIncludesIva,
     costIncludesService,
   });
 
@@ -228,6 +237,9 @@ export function buildLastEventRecap(
     revenueBeforeTaxMxn: Math.round(saleLine.base * paidCount * 100) / 100,
     ivaMxn: Math.round(saleLine.iva * paidCount * 100) / 100,
     serviceMxn: Math.round(saleLine.service * paidCount * 100) / 100,
+    saleFormula: econ.saleFormula,
+    priceIncludesIva,
+    priceIncludesService,
     costTotalMxn: econ.costTotalMxn,
     marginMxn: econ.marginMxn,
     satisfactionOverall: satisfaction.overall,

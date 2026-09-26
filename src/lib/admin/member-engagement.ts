@@ -17,7 +17,7 @@ export type EngagementParticipation = Pick<
 
 export type EngagementEvent = Pick<
   AdminEvent,
-  "id" | "priceMxn" | "priceIncludesService"
+  "id" | "priceMxn" | "priceIncludesIva" | "priceIncludesService"
 >;
 
 export type EngagementMember = Pick<WaitlistRegistration, "id" | "email" | "referralCode">;
@@ -84,12 +84,13 @@ export function buildMemberEngagementIndex(input: {
 }): Map<string, MemberEngagement> {
   const priceByEvent = new Map<
     string,
-    { price: number; includeService: boolean }
+    { price: number; includeIva: boolean; includeService: boolean }
   >();
   for (const ev of input.events) {
     const price = typeof ev.priceMxn === "number" && Number.isFinite(ev.priceMxn) ? ev.priceMxn : 0;
     priceByEvent.set(ev.id, {
       price,
+      includeIva: ev.priceIncludesIva !== false,
       includeService: ev.priceIncludesService !== false,
     });
   }
@@ -129,6 +130,7 @@ export function buildMemberEngagementIndex(input: {
         eventsConfirmed += 1;
         const ticket = priceByEvent.get(part.eventId);
         revenueMxn += computeEventIva(ticket?.price ?? 0, {
+          includeIva: ticket?.includeIva !== false,
           includeService: ticket?.includeService !== false,
         }).totalWithIva;
       }

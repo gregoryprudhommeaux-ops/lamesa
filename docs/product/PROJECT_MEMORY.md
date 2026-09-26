@@ -85,6 +85,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Statuts siège : **Payé** (`confirmed`) + **Invité** (`comped`) ; event `costMxn` + `priceMxn` ; TTC = HT + IVA 16% + service 15% | Invité = COST oui / CA non ; marge interne |
 | 2026-09-26 | ACCESS = **virement bancaire uniquement** (pas de paiement en ligne sur le site) | Admin marque Payé à réception du transfer ; site affiche CLABE / infos, pas de checkout |
 | 2026-09-26 | Service 15% **optionnel** par event (`priceIncludesService` / `costIncludesService`, défaut inclus) | Ajustable vente vs cost |
+| 2026-09-26 | IVA 16% aussi optionnel (`priceIncludesIva` / `costIncludesIva`) ; CA dashboard = négo event (pas d’ajout auto) | Les flags event font foi |
 
 ## Reusable components / patterns
 

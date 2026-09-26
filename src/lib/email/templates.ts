@@ -164,6 +164,7 @@ export function buildEventTemplateVars(input: {
   const hasPrice = typeof priceRaw === "number" && Number.isFinite(priceRaw) && priceRaw > 0;
   const pricing = hasPrice
     ? computeEventIva(priceRaw, {
+        includeIva: input.event.priceIncludesIva !== false,
         includeService: input.event.priceIncludesService !== false,
       })
     : null;
@@ -215,7 +216,13 @@ export function buildEventTemplateVars(input: {
         ? `${allInRange} (${allInNote})`
         : pending,
     ivaAmount: pricing
-      ? formatMxn(pricing.iva, lang)
+      ? pricing.ivaIncluded
+        ? formatMxn(pricing.iva, lang)
+        : lang === "fr"
+          ? "Non inclus"
+          : lang === "en"
+            ? "Not included"
+            : "No incluido"
       : allInRange
         ? lang === "fr"
           ? "Selon montant final (16%)"

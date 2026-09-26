@@ -83,6 +83,7 @@ export function MemberNextActionsCard({ actions }: MemberNextActionsCardProps) {
               {t("accessPrice", {
                 amount: formatMxn(
                   computeEventIva(primary.priceMxn, {
+                    includeIva: primary.priceIncludesIva !== false,
                     includeService: primary.priceIncludesService !== false,
                   }).totalWithIva,
                   locale,

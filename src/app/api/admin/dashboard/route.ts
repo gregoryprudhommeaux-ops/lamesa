@@ -580,6 +580,7 @@ export async function GET(request: Request) {
           ? pastEvent.priceMxn
           : 0;
       const unitTtc = computeEventIva(priceRaw, {
+        includeIva: pastEvent.priceIncludesIva !== false,
         includeService: pastEvent.priceIncludesService !== false,
       }).totalWithIva;
       const revenueMxn =

@@ -24,6 +24,8 @@ export type MemberNextAction = {
   completionPercent?: number;
   /** ACCESS price (before tax) when kind = pay_access. */
   priceMxn?: number | null;
+  /** Whether sale TTC includes IVA 16% (default true). */
+  priceIncludesIva?: boolean;
   /** Whether sale TTC includes service 15% (default true). */
   priceIncludesService?: boolean;
 };
@@ -124,6 +126,7 @@ export function resolveMemberNextActions(input: {
       },
       priceMxn:
         typeof ev.priceMxn === "number" && Number.isFinite(ev.priceMxn) ? ev.priceMxn : null,
+      priceIncludesIva: ev.priceIncludesIva !== false,
       priceIncludesService: ev.priceIncludesService !== false,
     });
   }

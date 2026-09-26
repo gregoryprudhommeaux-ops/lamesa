@@ -62,7 +62,11 @@ import {
   guestCapacityFromTotalCovers,
   totalCoversFromGuestCapacity,
 } from "@/lib/events/capacity";
-import { computeSeatPriceBreakdown, formatMxn, resolveIncludesService } from "@/lib/events/pricing";
+import {
+  computeSeatPriceBreakdown,
+  formatMxn,
+  resolveIncludesFlag,
+} from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
 import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
 import Link from "next/link";
@@ -91,22 +95,24 @@ function openNativePicker(e: { currentTarget: HTMLInputElement }) {
   }
 }
 
-/** Visible Avec service / Sans service control for price & cost TTC. */
-function ServiceIncludeToggle({
+/** Visible Avec / Sans control for IVA or service. */
+function PricingFlagToggle({
+  label,
   included,
   onChange,
-  labels,
+  yesLabel,
+  noLabel,
 }: {
+  label: string;
   included: boolean;
   onChange: (next: boolean) => void;
-  labels: Record<string, string>;
+  yesLabel: string;
+  noLabel: string;
 }) {
   return (
     <div className="mt-2">
-      <p className={`${LABEL_CLASS} mb-1.5`}>
-        {labels["fields.serviceToggleLabel"] ?? "Service 15%"}
-      </p>
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Service 15%">
+      <p className={`${LABEL_CLASS} mb-1.5`}>{label}</p>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
         <button
           type="button"
           onClick={() => onChange(true)}
@@ -116,7 +122,7 @@ function ServiceIncludeToggle({
               : "border border-ns-alternate bg-white text-ns-secondary hover:border-ns-primary"
           }`}
         >
-          {labels["fields.serviceIncludedYes"] ?? "Avec service"}
+          {yesLabel}
         </button>
         <button
           type="button"
@@ -127,7 +133,7 @@ function ServiceIncludeToggle({
               : "border border-ns-alternate bg-white text-ns-secondary hover:border-ns-primary"
           }`}
         >
-          {labels["fields.serviceIncludedNo"] ?? "Sans service"}
+          {noLabel}
         </button>
       </div>
     </div>
@@ -136,26 +142,32 @@ function ServiceIncludeToggle({
 
 function PriceBreakdownBox({
   base,
+  includeIva,
   includeService,
   totalLabel,
 }: {
   base: number;
+  includeIva: boolean;
   includeService: boolean;
   totalLabel: string;
 }) {
   if (!Number.isFinite(base) || base <= 0) return null;
-  const b = computeSeatPriceBreakdown(base, { includeService });
+  const b = computeSeatPriceBreakdown(base, { includeIva, includeService });
   return (
     <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
-      <p>
-        IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
-      </p>
+      {b.ivaIncluded ? (
+        <p>
+          IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
+        </p>
+      ) : (
+        <p className="text-ns-secondary">IVA : non inclus (négo)</p>
+      )}
       {b.serviceIncluded ? (
         <p className="mt-0.5">
           Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
         </p>
       ) : (
-        <p className="mt-0.5 text-ns-secondary">Service : non inclus</p>
+        <p className="mt-0.5 text-ns-secondary">Service : non inclus (négo)</p>
       )}
       <p className="mt-0.5">
         {totalLabel}: <strong>{formatMxn(b.total, "es")}</strong>
@@ -215,6 +227,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [costMxn, setCostMxn] = useState<string>("");
   const [priceIncludesService, setPriceIncludesService] = useState(true);
   const [costIncludesService, setCostIncludesService] = useState(true);
+  const [priceIncludesIva, setPriceIncludesIva] = useState(true);
+  const [costIncludesIva, setCostIncludesIva] = useState(true);
   const [pricingMode, setPricingMode] = useState<EventPricingMode>("ticket_onsite");
   const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
   const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
@@ -437,6 +451,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setCostMxn("");
     setPriceIncludesService(true);
     setCostIncludesService(true);
+    setPriceIncludesIva(true);
+    setCostIncludesIva(true);
     setPricingMode("ticket_onsite");
     setAccessIncludesWelcomeDrink(true);
     setAccessIncludesAmuseBouche(false);
@@ -522,8 +538,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setCostMxn(
       event.costMxn != null && Number.isFinite(event.costMxn) ? String(event.costMxn) : "",
     );
-    setPriceIncludesService(resolveIncludesService(event.priceIncludesService));
-    setCostIncludesService(resolveIncludesService(event.costIncludesService));
+    setPriceIncludesService(resolveIncludesFlag(event.priceIncludesService));
+    setCostIncludesService(resolveIncludesFlag(event.costIncludesService));
+    setPriceIncludesIva(resolveIncludesFlag(event.priceIncludesIva));
+    setCostIncludesIva(resolveIncludesFlag(event.costIncludesIva));
     setPricingMode(resolveEventPricingMode(event));
     setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
     setAccessIncludesAmuseBouche(Boolean(event.accessIncludesAmuseBouche));
@@ -614,6 +632,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       costMxn: costMxn.trim() === "" ? null : Number(costMxn),
       priceIncludesService,
       costIncludesService,
+      priceIncludesIva,
+      costIncludesIva,
       pricingMode,
       accessIncludesWelcomeDrink,
       accessIncludesAmuseBouche,
@@ -1439,20 +1459,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           className={INPUT_CLASS}
                           placeholder="450"
                         />
-                        <ServiceIncludeToggle
+                        <PricingFlagToggle
+                          label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                          included={priceIncludesIva}
+                          onChange={setPriceIncludesIva}
+                          yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                          noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                        />
+                        <PricingFlagToggle
+                          label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
                           included={priceIncludesService}
                           onChange={setPriceIncludesService}
-                          labels={labels}
+                          yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                          noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
                         />
                         <p className="mt-1 text-xs text-ns-secondary">
-                          {priceIncludesService
-                            ? labels["fields.priceMxnHint"] ??
-                              "TTC = HT + IVA 16% + service 15%."
-                            : labels["fields.priceMxnHintNoService"] ??
-                              "TTC = HT + IVA 16% (sans service)."}
+                          {labels["fields.priceMxnHint"] ??
+                            "Selon la négo : seuls IVA / service cochés entrent dans le TTC (et le CA)."}
                         </p>
                         <PriceBreakdownBox
                           base={priceMxn.trim() === "" ? 0 : Number(priceMxn)}
+                          includeIva={priceIncludesIva}
                           includeService={priceIncludesService}
                           totalLabel="Total TTC"
                         />
@@ -1470,17 +1497,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           className={INPUT_CLASS}
                           placeholder="ex. 350"
                         />
-                        <ServiceIncludeToggle
+                        <PricingFlagToggle
+                          label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                          included={costIncludesIva}
+                          onChange={setCostIncludesIva}
+                          yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                          noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                        />
+                        <PricingFlagToggle
+                          label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
                           included={costIncludesService}
                           onChange={setCostIncludesService}
-                          labels={labels}
+                          yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                          noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
                         />
                         <p className="mt-1 text-xs text-ns-secondary">
                           {labels["fields.costMxnHint"] ??
-                            "Coût restaurant / couvert — interne (marge, places Invité)."}
+                            "Coût restaurant / couvert — interne (marge, places Invité). Même logique négo."}
                         </p>
                         <PriceBreakdownBox
                           base={costMxn.trim() === "" ? 0 : Number(costMxn)}
+                          includeIva={costIncludesIva}
                           includeService={costIncludesService}
                           totalLabel="COST TTC"
                         />
@@ -1614,20 +1651,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         className={INPUT_CLASS}
                         placeholder="1300"
                       />
-                      <ServiceIncludeToggle
+                      <PricingFlagToggle
+                        label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                        included={priceIncludesIva}
+                        onChange={setPriceIncludesIva}
+                        yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                        noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
                         included={priceIncludesService}
                         onChange={setPriceIncludesService}
-                        labels={labels}
+                        yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                        noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
-                        {priceIncludesService
-                          ? labels["fields.allInTicketHint"] ??
-                            "Ce que le membre paie (virement). TTC = HT + IVA 16% + service 15%."
-                          : labels["fields.priceMxnHintNoService"] ??
-                            "TTC = HT + IVA 16% (sans service)."}
+                        {labels["fields.allInTicketHint"] ??
+                          "Ce que le membre paie (virement). Seuls IVA / service cochés entrent dans le TTC et le CA."}
                       </p>
                       <PriceBreakdownBox
                         base={priceMxn.trim() === "" ? 0 : Number(priceMxn)}
+                        includeIva={priceIncludesIva}
                         includeService={priceIncludesService}
                         totalLabel="Total TTC"
                       />
@@ -1645,17 +1689,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         className={INPUT_CLASS}
                         placeholder="ex. 900"
                       />
-                      <ServiceIncludeToggle
+                      <PricingFlagToggle
+                        label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                        included={costIncludesIva}
+                        onChange={setCostIncludesIva}
+                        yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                        noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
                         included={costIncludesService}
                         onChange={setCostIncludesService}
-                        labels={labels}
+                        yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                        noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.costMxnHint"] ??
-                          "Coût restaurant / couvert — interne (marge, places Invité)."}
+                          "Coût restaurant / couvert — interne (marge, places Invité). Même logique négo."}
                       </p>
                       <PriceBreakdownBox
                         base={costMxn.trim() === "" ? 0 : Number(costMxn)}
+                        includeIva={costIncludesIva}
                         includeService={costIncludesService}
                         totalLabel="COST TTC"
                       />
@@ -1667,9 +1721,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         return null;
                       }
                       const saleTtc = computeSeatPriceBreakdown(sale, {
+                        includeIva: priceIncludesIva,
                         includeService: priceIncludesService,
                       }).total;
                       const costTtc = computeSeatPriceBreakdown(cost, {
+                        includeIva: costIncludesIva,
                         includeService: costIncludesService,
                       }).total;
                       const margin = Math.round((saleTtc - costTtc) * 100) / 100;

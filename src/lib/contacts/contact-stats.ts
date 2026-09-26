@@ -83,7 +83,10 @@ export function buildContactStats(input: {
     >
   >;
   events: Array<
-    Pick<AdminEvent, "id" | "title" | "startsAt" | "priceMxn" | "priceIncludesService">
+    Pick<
+      AdminEvent,
+      "id" | "title" | "startsAt" | "priceMxn" | "priceIncludesIva" | "priceIncludesService"
+    >
   >;
   activities: ContactActivity[];
   /** Interest / STD form rows for this email (optional). */
@@ -135,6 +138,7 @@ export function buildContactStats(input: {
       const priceBeforeTax =
         typeof price === "number" && Number.isFinite(price) ? price : 0;
       rowRevenue = computeEventIva(priceBeforeTax, {
+        includeIva: ev?.priceIncludesIva !== false,
         includeService: ev?.priceIncludesService !== false,
       }).totalWithIva;
       revenueMxn += rowRevenue;

@@ -4,6 +4,7 @@ import {
   computeEventIva,
   computeSeatMarginMxn,
   computeSeatPriceBreakdown,
+  formatSeatPriceFormula,
 } from "./pricing";
 
 describe("computeSeatPriceBreakdown", () => {
@@ -12,6 +13,7 @@ describe("computeSeatPriceBreakdown", () => {
     expect(b.base).toBe(1000);
     expect(b.iva).toBe(160);
     expect(b.service).toBe(150);
+    expect(b.ivaIncluded).toBe(true);
     expect(b.serviceIncluded).toBe(true);
     expect(b.total).toBe(1310);
   });
@@ -24,7 +26,22 @@ describe("computeSeatPriceBreakdown", () => {
     expect(b.total).toBe(1160);
   });
 
-  it("keeps computeEventIva total aligned with full TTC", () => {
+  it("skips IVA when includeIva is false", () => {
+    const b = computeSeatPriceBreakdown(1000, { includeIva: false, includeService: true });
+    expect(b.iva).toBe(0);
+    expect(b.service).toBe(150);
+    expect(b.total).toBe(1150);
+  });
+
+  it("can be HT only when both flags are off", () => {
+    const b = computeSeatPriceBreakdown(1000, { includeIva: false, includeService: false });
+    expect(b.total).toBe(1000);
+    expect(formatSeatPriceFormula({ includeIva: false, includeService: false })).toBe(
+      "HT (sans IVA ni service)",
+    );
+  });
+
+  it("keeps computeEventIva total aligned with negotiated TTC", () => {
     const legacy = computeEventIva(1000);
     expect(legacy.totalWithIva).toBe(1310);
     expect(legacy.service).toBe(150);
@@ -40,26 +57,31 @@ describe("computeEventEconomics", () => {
       paidSeatCount: 10,
       complimentarySeatCount: 2,
     });
-    // sale TTC = 2000 * 1.31 = 2620 → 10 * 2620
     expect(econ.salePerSeat.total).toBe(2620);
     expect(econ.revenueMxn).toBe(26200);
-    // cost TTC = 1310 × 12
     expect(econ.costTotalMxn).toBe(15720);
     expect(econ.marginMxn).toBe(10480);
+    expect(econ.saleFormula).toBe("TTC · HT + IVA 16% + svc 15%");
     expect(computeSeatMarginMxn({ costMxn: 1000, priceMxn: 2000 })).toBe(1310);
   });
 
-  it("honors independent service flags on sale vs cost", () => {
+  it("does not invent IVA/service when negotiation excluded them", () => {
     const econ = computeEventEconomics({
       costMxn: 1000,
-      priceMxn: 1000,
-      paidSeatCount: 1,
+      priceMxn: 1300,
+      paidSeatCount: 11,
       complimentarySeatCount: 0,
-      priceIncludesService: true,
+      priceIncludesIva: true,
+      priceIncludesService: false,
+      costIncludesIva: true,
       costIncludesService: false,
     });
-    expect(econ.salePerSeat.total).toBe(1310);
+    // sale = 1300 + 208 = 1508
+    expect(econ.salePerSeat.total).toBe(1508);
+    expect(econ.revenueMxn).toBe(16588);
+    expect(econ.saleFormula).toBe("TTC · HT + IVA 16%");
+    // cost = 1000 + 160 = 1160 × 11
     expect(econ.costPerSeat.total).toBe(1160);
-    expect(econ.marginMxn).toBe(150);
+    expect(econ.costTotalMxn).toBe(12760);
   });
 });
