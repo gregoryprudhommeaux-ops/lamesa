@@ -16,9 +16,13 @@ Dans Audience / ContactPicker, montrer **pourquoi** inviter quelqu’un : signau
 
 ## Hors scope
 
-- Fusion playlists OUI ↔ participations
+- Fusion playlists OUI ↔ participations (vague 3)
 - Ranking auto / “top 15 à inviter”
 - Scores table-matching (composition ≠ sélection)
+
+## Suite (bridge intérêt)
+
+Chips OUI/NON sur roster + ContactPicker via `interest-display` / `/interest-status` (join email) — PR Audience↔intérêt.
 
 ## Vérif
 

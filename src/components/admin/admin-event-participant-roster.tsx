@@ -8,6 +8,11 @@ import {
   type RosterFilterId,
 } from "@/lib/admin/event-participant-roster";
 import { resolveGuestJourneyStage } from "@/lib/admin/guest-journey";
+import {
+  INTEREST_DISPLAY_LABELS,
+  resolveInterestDisplay,
+  type InterestDisplayStatus,
+} from "@/lib/admin/interest-display";
 import { countSeatedParticipations, totalCoversWithAdmin } from "@/lib/events/capacity";
 import type { AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
@@ -24,6 +29,8 @@ type AdminEventParticipantRosterProps = {
   labels?: StatusLabels;
   title?: string;
   initialFilter?: RosterFilterId;
+  /** Interest-mode STD answer by email (oui/non/autre/sans_reponse). */
+  interestByEmail?: Record<string, InterestDisplayStatus> | null;
   onStatusChange: (id: string, status: EventParticipationStatus) => void;
   onInviteFromWaitlist?: (id: string) => void;
   onWhatsApp?: (p: AdminEventParticipation) => void;
@@ -48,6 +55,7 @@ export function AdminEventParticipantRoster({
   labels = {},
   title = "Participants",
   initialFilter = "all",
+  interestByEmail = null,
   onStatusChange,
   onInviteFromWaitlist,
   onWhatsApp,
@@ -118,6 +126,7 @@ export function AdminEventParticipantRoster({
           {rows.map((p) => {
             const status = rosterCanonicalStatus(p.status);
             const journey = resolveGuestJourneyStage(p);
+            const interest = resolveInterestDisplay(p.email, interestByEmail);
             return (
               <li
                 key={p.id}
@@ -131,20 +140,34 @@ export function AdminEventParticipantRoster({
                   ) : (
                     <span className="mt-0.5 block text-xs text-ns-secondary">Pas de téléphone</span>
                   )}
-                  <span className="mt-0.5 block text-[11px] font-medium text-ns-primary">
-                    {journey.label}
-                    {p.saveTheDateSentAt || p.calendarInviteSentAt || p.paymentRelanceSentAt
-                      ? " · "
-                      : ""}
-                    <span className="font-normal text-ns-secondary">
-                      {p.saveTheDateSentAt ? "STD" : ""}
-                      {p.saveTheDateSentAt && p.calendarInviteSentAt ? " · " : ""}
-                      {p.calendarInviteSentAt ? "Invite" : ""}
-                      {(p.saveTheDateSentAt || p.calendarInviteSentAt) && p.paymentRelanceSentAt
-                        ? " · "
-                        : ""}
-                      {p.paymentRelanceSentAt ? "Relance €" : ""}
-                    </span>
+                  <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                    {interest ? (
+                      <span
+                        className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          interest === "oui"
+                            ? "bg-emerald-50 text-emerald-800"
+                            : interest === "non"
+                              ? "bg-rose-50 text-rose-800"
+                              : interest === "autre"
+                                ? "bg-amber-50 text-amber-900"
+                                : "bg-ns-brand-light text-ns-secondary"
+                        }`}
+                      >
+                        {INTEREST_DISPLAY_LABELS[interest]}
+                      </span>
+                    ) : null}
+                    <span className="text-[11px] font-medium text-ns-primary">{journey.label}</span>
+                    {p.saveTheDateSentAt || p.calendarInviteSentAt || p.paymentRelanceSentAt ? (
+                      <span className="text-[11px] text-ns-secondary">
+                        {[
+                          p.saveTheDateSentAt ? "STD" : null,
+                          p.calendarInviteSentAt ? "Invite" : null,
+                          p.paymentRelanceSentAt ? "Relance €" : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    ) : null}
                   </span>
                 </span>
                 <div className="flex flex-wrap items-center gap-2">
