@@ -8,12 +8,20 @@ import {
   computeSatisfactionAverages,
   surveysFromParticipations,
 } from "@/lib/admin/satisfaction-stats";
-import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import {
+  DEFAULT_GUEST_CAPACITY,
+  isOrganizerParticipation,
+} from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { computeEventIva } from "@/lib/events/pricing";
 import {
   ADMIN_SCAN,
   loadAdminCoreCollections,
 } from "@/lib/admin/load-core-collections";
+import {
+  pickLastPastEvent,
+  resolveDashboardMoment,
+} from "@/lib/admin/dashboard-moment";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
 import { buildLastEventRecap } from "@/lib/admin/last-event-recap";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
@@ -27,8 +35,10 @@ import {
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
   inferLastPlacesAvailableCampaign,
+  inferLatestOutboundEmail,
   loadLastEmailCampaign,
   loadRecentEmailCampaigns,
+  mergeCampaignHistory,
   pickLatestCampaign,
   toEmailCampaignHistoryRow,
   type EmailCampaignHistoryRow,
@@ -425,12 +435,14 @@ export async function GET(request: Request) {
         events,
       );
       const inferredPlaces = inferLastPlacesAvailableCampaign(events, participations);
+      const inferredOutbound = inferLatestOutboundEmail(events, participations);
       const campaign = pickLatestCampaign(
         storedCampaign,
         recentCampaigns[0] ?? null,
         inferredFromEvents,
         inferredFromProspects,
         inferredPlaces,
+        inferredOutbound,
       );
 
       const prospectsCache = new Map<string, RsvpProspectRow[]>();
@@ -503,12 +515,14 @@ export async function GET(request: Request) {
         lastEmailResults = await summarizeCampaign(campaign);
       }
 
-      const historySource =
-        recentCampaigns.length > 0
-          ? recentCampaigns
-          : campaign
-            ? [campaign]
-            : [];
+      const historySource = mergeCampaignHistory(recentCampaigns, [
+        campaign,
+        inferredOutbound,
+        inferredFromEvents,
+        inferredFromProspects,
+        inferredPlaces,
+        storedCampaign,
+      ]);
       const historyRows: EmailCampaignHistoryRow[] = [];
       for (const c of historySource.slice(0, 6)) {
         // Skip duplicate of the live last-email row when ids match.
@@ -540,6 +554,69 @@ export async function GET(request: Request) {
       console.error("[admin/dashboard] last-email results", error);
     }
 
+    const pastEvent = pickLastPastEvent(events);
+    let pastEventFocus = null as {
+      eventId: string;
+      eventSlug: string;
+      title: string;
+      startsAt: string;
+      confirmedCount: number;
+      revenueMxn: number;
+      priceMxn: number | null;
+      surveySentCount: number;
+      surveyResponseCount: number;
+      satisfaction: ReturnType<typeof computeEventSatisfaction>;
+    } | null;
+
+    if (pastEvent) {
+      const pastParts = participations.filter((p) => p.eventId === pastEvent.id);
+      const guests = pastParts.filter((p) => !isOrganizerParticipation(p));
+      const confirmedGuests = guests.filter(
+        (p) => normalizeParticipationStatus(p.status) === "confirmed",
+      );
+      const priceRaw =
+        typeof pastEvent.priceMxn === "number" && Number.isFinite(pastEvent.priceMxn)
+          ? pastEvent.priceMxn
+          : 0;
+      const unitTtc = computeEventIva(priceRaw).totalWithIva;
+      const revenueMxn =
+        Math.round(unitTtc * confirmedGuests.length * 100) / 100;
+      const sat = computeEventSatisfaction(pastParts);
+      pastEventFocus = {
+        eventId: pastEvent.id,
+        eventSlug: pastEvent.slug,
+        title: pastEvent.title,
+        startsAt: pastEvent.startsAt,
+        confirmedCount: confirmedGuests.length,
+        revenueMxn,
+        priceMxn: priceRaw > 0 ? priceRaw : null,
+        surveySentCount: sat.sentCount,
+        surveyResponseCount: sat.responseCount,
+        satisfaction: sat,
+      };
+    }
+
+    const dashboardMoment = resolveDashboardMoment({
+      lastEmail: lastEmailResults
+        ? {
+            templateKey: lastEmailResults.templateKey,
+            sentAt: lastEmailResults.sentAt,
+            eventId: lastEmailResults.eventId,
+          }
+        : null,
+      nextEvent: nextEventRsvp
+        ? { eventId: nextEventRsvp.eventId, startsAt: nextEventRsvp.startsAt }
+        : null,
+      pastEvent: pastEventFocus
+        ? {
+            eventId: pastEventFocus.eventId,
+            startsAt: pastEventFocus.startsAt,
+            surveySentCount: pastEventFocus.surveySentCount,
+            surveyResponseCount: pastEventFocus.surveyResponseCount,
+          }
+        : null,
+    });
+
     return NextResponse.json({
       ok: true,
       kpis: {
@@ -568,6 +645,8 @@ export async function GET(request: Request) {
       lastEventRecap: buildLastEventRecap(events, participations),
       lastEmailResults,
       emailCampaignHistory,
+      pastEventFocus,
+      dashboardMoment,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

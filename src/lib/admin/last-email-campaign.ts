@@ -39,7 +39,21 @@ export type LastEmailCampaignSource =
   | "save_the_date"
   | "std_relance"
   | "places_available"
+  | "calendar_invite"
+  | "payment_relance"
+  | "satisfaction_survey"
   | "inferred";
+
+const LAST_EMAIL_CAMPAIGN_SOURCES = new Set<string>([
+  "cold_outreach",
+  "save_the_date",
+  "std_relance",
+  "places_available",
+  "calendar_invite",
+  "payment_relance",
+  "satisfaction_survey",
+  "inferred",
+]);
 
 /** Outcome of one person who received the blast. */
 export type EmailRecipientOutcome =
@@ -201,14 +215,9 @@ export function normalizeLastEmailCampaignRecord(
       ? Math.max(recipientCountRaw, recipientEmails.length)
       : recipientEmails.length;
   const sourceRaw = String(data.source ?? "inferred");
-  const source: LastEmailCampaignSource =
-    sourceRaw === "cold_outreach" ||
-    sourceRaw === "save_the_date" ||
-    sourceRaw === "std_relance" ||
-    sourceRaw === "places_available" ||
-    sourceRaw === "inferred"
-      ? sourceRaw
-      : "inferred";
+  const source: LastEmailCampaignSource = LAST_EMAIL_CAMPAIGN_SOURCES.has(sourceRaw)
+    ? (sourceRaw as LastEmailCampaignSource)
+    : "inferred";
 
   const eventSlug =
     String(data.eventSlug ?? "").trim() ||
@@ -489,6 +498,135 @@ export function inferLastPlacesAvailableCampaign(
   };
 }
 
+const PLACES_INVITE_SAME_SEND_MS = 2 * 60 * 1000;
+
+/**
+ * Places-available also stamps calendarInviteSentAt in the same send.
+ * A later formal invite is a different email.
+ */
+function calendarInviteIsItsOwnSend(p: AdminEventParticipation): boolean {
+  const invite = p.calendarInviteSentAt;
+  if (!invite) return false;
+  const places = p.placesAvailableSentAt;
+  if (!places) return true;
+  const inviteMs = new Date(invite).getTime();
+  const placesMs = new Date(places).getTime();
+  if (!Number.isFinite(inviteMs) || !Number.isFinite(placesMs)) return true;
+  return Math.abs(inviteMs - placesMs) > PLACES_INVITE_SAME_SEND_MS;
+}
+
+type OutboundHit = {
+  eventId: string;
+  email: string;
+  templateKey: string;
+  ms: number;
+};
+
+function pushOutboundHit(
+  hits: OutboundHit[],
+  eventId: string,
+  email: string,
+  templateKey: string,
+  iso: string | null | undefined,
+) {
+  if (!eventId || !iso) return;
+  const ms = new Date(iso).getTime();
+  if (!Number.isFinite(ms)) return;
+  hits.push({ eventId, email, templateKey, ms });
+}
+
+/**
+ * Newest real outbound email we can see on participations.
+ * Covers invites, payment reminders, confirmations and surveys — not only
+ * the last row written to the campaign archive.
+ */
+export function inferLatestOutboundEmail(
+  events: AdminEvent[],
+  participations: AdminEventParticipation[],
+): LastEmailCampaignRecord | null {
+  const hits: OutboundHit[] = [];
+  for (const p of participations) {
+    if (isOrganizerParticipation(p) || !p.eventId) continue;
+    const email = p.email ?? "";
+    pushOutboundHit(hits, p.eventId, email, "save_the_date", p.saveTheDateSentAt);
+    pushOutboundHit(hits, p.eventId, email, "places_available", p.placesAvailableSentAt);
+    if (calendarInviteIsItsOwnSend(p)) {
+      pushOutboundHit(hits, p.eventId, email, "calendar_invite", p.calendarInviteSentAt);
+    }
+    pushOutboundHit(hits, p.eventId, email, "payment_relance", p.paymentRelanceSentAt);
+    pushOutboundHit(hits, p.eventId, email, "participation_confirmed", p.confirmationEmailSentAt);
+    pushOutboundHit(hits, p.eventId, email, "satisfaction_survey", p.satisfactionSurveySentAt);
+  }
+  if (hits.length === 0) return null;
+
+  const ranked = [...hits].sort((a, b) => b.ms - a.ms);
+  let best: OutboundHit | null = null;
+  let event: AdminEvent | null = null;
+  for (const hit of ranked) {
+    const found = events.find((e) => e.id === hit.eventId);
+    if (!found) continue;
+    best = hit;
+    event = found;
+    break;
+  }
+  if (!best || !event) return null;
+
+  const wave = hits.filter(
+    (hit) =>
+      hit.eventId === best.eventId &&
+      hit.templateKey === best.templateKey &&
+      best.ms - hit.ms <= INFER_WAVE_MS,
+  );
+
+  const emails = uniqEmails(wave.map((hit) => hit.email));
+  const labelKey = best.templateKey as EmailTemplateKey;
+  const templateKey =
+    best.templateKey === "places_available" ? `places_available:${event.slug}` : best.templateKey;
+
+  return {
+    templateKey,
+    templateLabel: templateLabel(labelKey),
+    sentAt: new Date(best.ms).toISOString(),
+    recipientCount: emails.length,
+    recipientEmails: emails.slice(0, MAX_STORED_RECIPIENT_EMAILS),
+    eventSlug: event.slug,
+    eventId: event.id,
+    eventTitle: event.title,
+    source: "inferred",
+    updatedAt: new Date(best.ms).toISOString(),
+  };
+}
+
+function campaignSentMs(campaign: LastEmailCampaignRecord): number {
+  const ms = new Date(campaign.sentAt).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function isSameBlast(a: LastEmailCampaignRecord, b: LastEmailCampaignRecord): boolean {
+  if (a.id && b.id && a.id === b.id) return true;
+  const aKey = a.templateKey.split(":")[0];
+  const bKey = b.templateKey.split(":")[0];
+  if (aKey !== bKey) return false;
+  if (a.eventId && b.eventId && a.eventId !== b.eventId) return false;
+  return Math.abs(campaignSentMs(a) - campaignSentMs(b)) <= INFER_WAVE_MS;
+}
+
+/** Newest first. Drops duplicate waves of the same template on the same event. */
+export function mergeCampaignHistory(
+  recent: LastEmailCampaignRecord[],
+  extras: Array<LastEmailCampaignRecord | null | undefined>,
+  limit = 6,
+): LastEmailCampaignRecord[] {
+  const all = [...recent];
+  for (const extra of extras) {
+    if (!extra) continue;
+    if (all.some((row) => isSameBlast(row, extra))) continue;
+    all.push(extra);
+  }
+  all.sort((a, b) => campaignSentMs(b) - campaignSentMs(a));
+  return all.slice(0, Math.max(1, limit));
+}
+
 export function pickLatestCampaign(
   ...candidates: Array<LastEmailCampaignRecord | null | undefined>
 ): LastEmailCampaignRecord | null {
@@ -641,8 +779,19 @@ export function buildLastEmailResultsSummary(input: {
     };
   }
 
+  const templateRoot = campaign.templateKey.split(":")[0];
+  const postInviteStamp =
+    templateRoot === "payment_relance"
+      ? "paymentRelanceSentAt"
+      : templateRoot === "participation_confirmed"
+        ? "confirmationEmailSentAt"
+        : templateRoot === "satisfaction_survey"
+          ? "satisfactionSurveySentAt"
+          : null;
+
   // Places available / formal invite: OUI/NON are RSVP clicks on participations.
-  if (forceRsvp || event.responseMode !== "interest") {
+  // Later funnel mail (relance, confirmation, survey) is its own cohort.
+  if (postInviteStamp || forceRsvp || event.responseMode !== "interest") {
     return buildRsvpButtonCampaignSummary({
       base,
       event,
@@ -654,9 +803,12 @@ export function buildLastEmailResultsSummary(input: {
       waitlistEmails,
       yesLimit,
       recipientLimit,
-      stampField: forceRsvp && campaign.templateKey.includes("places_available")
-        ? "placesAvailableSentAt"
-        : "calendarInviteSentAt",
+      responseMode: postInviteStamp ? "none" : "rsvp",
+      stampField: postInviteStamp
+        ? postInviteStamp
+        : forceRsvp && campaign.templateKey.includes("places_available")
+          ? "placesAvailableSentAt"
+          : "calendarInviteSentAt",
     });
   }
 
@@ -840,7 +992,13 @@ function buildRsvpButtonCampaignSummary(input: {
   waitlistEmails: Set<string>;
   yesLimit: number;
   recipientLimit: number;
-  stampField: "placesAvailableSentAt" | "calendarInviteSentAt";
+  responseMode?: "rsvp" | "none";
+  stampField:
+    | "placesAvailableSentAt"
+    | "calendarInviteSentAt"
+    | "paymentRelanceSentAt"
+    | "confirmationEmailSentAt"
+    | "satisfactionSurveySentAt";
 }): LastEmailResultsSummary {
   const guests = input.participations.filter(
     (p) => p.eventId === input.event.id && !isOrganizerParticipation(p),
@@ -951,7 +1109,7 @@ function buildRsvpButtonCampaignSummary(input: {
   return {
     ...input.base,
     recipientCount: sent,
-    responseMode: "rsvp",
+    responseMode: input.responseMode ?? "rsvp",
     yes,
     no,
     other: 0,

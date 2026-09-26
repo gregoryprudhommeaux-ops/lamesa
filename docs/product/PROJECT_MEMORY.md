@@ -48,6 +48,7 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 ## UX/UI principles (project-specific)
 
 - **Dashboard = porte d’entrée** du backend (Maintenant · À traiter · Accès)
+- **Maintenant = moment T** : un seul focus (résultats dernier email / bilan post-dîner CA+satisfaction / prochain dîner) — pas deux colonnes concurrentes ni blocs blancs vides
 - Nav admin courte : Dashboard · Dîners · Personnes · Tables · Coms
 - Chrome admin homogène (pas de nav site public dans l’ops)
 - Coms = envoyer / suivre ; créer un template est secondaire
@@ -62,7 +63,7 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 
 | Item | Route | Notes |
 |------|-------|-------|
-| Dashboard | `/admin/dashboard` | Porte — 3 bandes |
+| Dashboard | `/admin/dashboard` | Porte — Maintenant = moment T (`resolveDashboardMoment`) |
 | Dîners | `/admin/evenements` | Pilotage + `?view=calendrier` |
 | Personnes | `/admin/personnes` | Onglets Membres / Prospects / Mémoire |
 | Tables | `/admin/tables` | Top-level (validé) |
@@ -80,6 +81,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
 | 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
 | 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
+| 2026-09-26 | Dashboard moment T (post-event / email pulse / next dinner) | Une info prioritaire selon l’étape du process ; CA + satisfaction après dîner |
 
 ## Reusable components / patterns
 
@@ -105,8 +107,9 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Item | Status |
 |------|--------|
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
-| FormalInviteOui encore panel dédié (pas fusion roster) | Ouvert — dans phase formal |
+| FormalInviteOui encore panel dédié (pas fusion roster) | Done — panneau OUI seul en phase formal (interest) ; roster retiré |
 | Check-in UI dédiée | Placeholder roster payés |
+| Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
@@ -131,13 +134,15 @@ Faits code (pas de logs d’envoi prod consultés) :
 | Dernier appel | `places_available` | Manuel | Exception, pas une étape du funnel |
 | Hors dîner | `light_signup`, `profile_incomplete` (cron 1er du mois), `fn_announcement`, `referral_invite` | Divers | Garder dans une bibliothèque séparée |
 
-Les 9 phases placent STD, qualification, invitation, paiement, places et feedback au bon endroit. Coms sépare **Funnel dîner** et **Hors dîner**. L’explication ICS (J-7 / H-36 / H-1h30) est dans Feedback. La phase paiement montre encore le roster « impayés » et le panneau relance en double. Pas de cron de relance STD ni de relance paiement.
+Les 9 phases placent STD, qualification, invitation, paiement, places et feedback au bon endroit. Coms sépare **Funnel dîner** et **Hors dîner**. L’explication ICS (J-7 / H-36 / H-1h30) est dans Feedback. La phase paiement a un seul panneau (Confirmation & paiement + envoi relance) — plus de roster « impayés » en double. Pas de cron de relance STD ni de relance paiement.
 
 **P0 fait (2026-09-26) :** le clic OUI n’envoie plus `payment_relance`. La route manuelle saute les participations déjà horodatées.
 
 **P1 fait (2026-09-26) :** `std_relance` s’envoie depuis Qualification (une fois, liste sans réponse) ; le survey auto et manuel ne part qu’aux places payées ; `reminder_*` sort de la bibliothèque active.
 
 `places_available` reste l’exception Prépa dîner.
+
+**Dernier email (2026-09-26) :** la carte dashboard suit le tampon le plus récent sur les participations (invitation, relance paiement, confirmation, questionnaire), pas seulement l’archive du dernier appel. Les envois suivants écrivent aussi cette archive.
 
 ## Jack findings log
 
@@ -152,10 +157,14 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
 | 2026-09-26 | P0 | Files À traiter sans filtre | Done — `queue=` |
 | 2026-09-26 | P1 | Pas de NBA unique / contexte Tables perdu | Done — NBA + `eventId` |
+| 2026-09-26 | P0 | Dashboard trop dense / blocs blancs / pas de moment T | Done — `resolveDashboardMoment` + pastEventFocus |
 | 2026-09-26 | P0 | `payment_relance` au clic YES + pas de garde anti-doublon | Fait — envoi manuel unique |
 | 2026-09-26 | P1 | Relance STD custom + reminders dans « Automatiques » | Fait — `std_relance` + bibliothèque scindée |
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
-| 2026-09-26 | P1 | Pas de récap du dernier dîner sur le dashboard | Fait — 4 chiffres cliquables |
+| 2026-09-26 | P1 | Pas de récap du dernier dîner sur le dashboard | Fait — 4 chiffres cliquables dans le moment « Après le dîner » |
+| 2026-09-26 | P1 | Phase paiement : roster impayés + panneau relance en double | Done — un seul follow-up |
+| 2026-09-26 | P1 | FormalInviteOui + roster générique en double (phase formal) | Done — panneau OUI seul |
+| 2026-09-26 | P0 | Carte « Dernier email » figée sur places dispo | Fait — tampon d’envoi le plus récent |
 
 ## Changelog
 
@@ -168,7 +177,11 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
 | 2026-09-26 | Continuité — queue filters, NBA Dashboard, Tables eventId |
+| 2026-09-26 | Dashboard moment T — un focus Maintenant (email / post-dîner CA+sat) |
 | 2026-09-26 | Audit funnel emails : séquence canonique + écarts auto/manuel (pas de changement d’envoi) |
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
-| 2026-09-26 | Dashboard — récap du dernier dîner passé : contactées, places payées, CA TTC, note |
+| 2026-09-26 | Dashboard — récap cliquable du dernier dîner dans le moment « Après le dîner » : contactées, places payées, CA TTC, note |
+| 2026-09-26 | Phase paiement — un seul panneau Confirmation & paiement (plus de double roster) |
+| 2026-09-26 | Phase formal (interest) — panneau OUI seul, plus de roster générique en dessous |
+| 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |
