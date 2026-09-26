@@ -447,6 +447,16 @@
     "interestCalendarLocationTbc": "Centre de Guadalajara — lieu à confirmer",
     "interestSuccessNo": "Merci — ta réponse est enregistrée.",
     "interestSuccessOther": "Merci — on a bien noté ton message.",
+    "accessTitle": "Régler ton ticket ACCESS",
+    "accessIntro": "Tu as reçu l’invitation formelle. Ta place sera confirmée dès réception du virement (pas de paiement en ligne).",
+    "accessPrice": "Ticket ACCESS : {amount} TTC",
+    "accessDeadline": "À régler au plus tard le {date}.",
+    "accessBankTitle": "Virement bancaire (SPEI)",
+    "accessBankHint": "Indique ton nom en référence. Facture : envoie ton CSF à greg@nextstep-services.com.",
+    "accessDeclareCta": "J’ai effectué le virement",
+    "accessDeclaring": "Enregistrement…",
+    "accessDeclared": "Virement déclaré — on confirme dès réception sur le compte.",
+    "accessConfirmed": "Ta place est confirmée. À très bientôt à table.",
     "profileCtaMember": "Compléter / modifier mon profil",
     "profileSuggestionPrefix": "Tu peux aussi",
     "profileSuggestionLink": "compléter ou modifier ton profil",
@@ -580,7 +590,7 @@
           "title": "Confirmer ma place",
           "reason": "Invitation reçue pour « {event} » — règle le ticket ACCESS par virement (pas de paiement en ligne) pour valider ta place.",
           "declaredReason": "Tu as déclaré ton virement pour « {event} ». On valide ta place dès réception du SPEI.",
-          "cta": "Voir le dîner"
+          "cta": "Régler l’ACCESS"
         },
         "complete_profile": {
           "title": "Compléter mon profil",

@@ -68,7 +68,9 @@ describe("resolveMemberNextActions", () => {
     });
     expect(actions[0]?.kind).toBe("fill_survey");
     expect(actions[0]?.href).toContain("/fr/satisfaction?token=");
-    expect(actions.some((a) => a.kind === "pay_access")).toBe(true);
+    const pay = actions.find((a) => a.kind === "pay_access");
+    expect(pay?.href).toContain("/e/");
+    expect(pay?.href).toContain("#access");
   });
 
   it("asks to complete an incomplete profile", () => {

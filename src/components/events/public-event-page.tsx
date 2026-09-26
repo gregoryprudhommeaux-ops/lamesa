@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { AccessPaymentPanel } from "@/components/events/access-payment-panel";
 import { LaMesaShell } from "@/components/la-mesa-shell";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -18,6 +19,7 @@ import {
 } from "@/lib/events/event-pricing-copy";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { resolveEventPricingMode } from "@/lib/events/pricing-mode";
+import type { PublicEventGuestSurface } from "@/lib/events/public-event-guest-surface";
 import { fmtDateTime } from "@/lib/events/utils";
 import { isFirebaseClientConfigured } from "@/lib/firebase/client";
 import type {
@@ -275,6 +277,12 @@ function InterestForm({
     email: string;
     company: string;
   } | null>(null);
+  const [guestSurface, setGuestSurface] = useState<PublicEventGuestSurface | null>(null);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestParticipationId, setGuestParticipationId] = useState<string | null>(null);
+  const [guestPaymentDeclaredAt, setGuestPaymentDeclaredAt] = useState<string | null>(null);
+  const [guestInterestResponse, setGuestInterestResponse] =
+    useState<EventInterestResponse | null>(null);
   const autoSubmitAttempted = useRef(false);
 
   const [interestResponse, setInterestResponse] = useState<EventInterestResponse | "">("");
@@ -317,15 +325,24 @@ function InterestForm({
     if (!user) {
       setMemberProfile(null);
       setProfileLoading(false);
+      setGuestSurface(null);
+      setGuestParticipationId(null);
+      setGuestPaymentDeclaredAt(null);
+      setGuestInterestResponse(null);
+      setGuestLoading(false);
       return;
     }
 
     let cancelled = false;
     setProfileLoading(true);
+    setGuestLoading(true);
     void (async () => {
       try {
-        const res = await authFetch("/api/me");
-        const json = (await res.json()) as {
+        const [meRes, guestRes] = await Promise.all([
+          authFetch("/api/me"),
+          authFetch(`/api/events/${encodeURIComponent(event.slug)}/guest-status`),
+        ]);
+        const meJson = (await meRes.json()) as {
           ok?: boolean;
           notOnWaitlist?: boolean;
           profile?: {
@@ -334,27 +351,50 @@ function InterestForm({
             company?: string;
           } | null;
         };
+        const guestJson = (await guestRes.json()) as {
+          ok?: boolean;
+          surface?: PublicEventGuestSurface;
+          interestResponse?: EventInterestResponse | null;
+          participation?: {
+            id?: string;
+            paymentDeclaredAt?: string | null;
+          } | null;
+        };
         if (cancelled) return;
-        if (!res.ok || !json.ok || json.notOnWaitlist || !json.profile) {
+        if (!meRes.ok || !meJson.ok || meJson.notOnWaitlist || !meJson.profile) {
           setMemberProfile(null);
-          return;
+        } else {
+          setMemberProfile({
+            fullName: String(meJson.profile.fullName ?? ""),
+            email: String(meJson.profile.email ?? user.email ?? ""),
+            company: String(meJson.profile.company ?? ""),
+          });
         }
-        setMemberProfile({
-          fullName: String(json.profile.fullName ?? ""),
-          email: String(json.profile.email ?? user.email ?? ""),
-          company: String(json.profile.company ?? ""),
-        });
+        if (guestRes.ok && guestJson.ok && guestJson.surface) {
+          setGuestSurface(guestJson.surface);
+          setGuestInterestResponse(guestJson.interestResponse ?? null);
+          setGuestParticipationId(guestJson.participation?.id ?? null);
+          setGuestPaymentDeclaredAt(guestJson.participation?.paymentDeclaredAt ?? null);
+        } else {
+          setGuestSurface("interest_form");
+        }
       } catch {
-        if (!cancelled) setMemberProfile(null);
+        if (!cancelled) {
+          setMemberProfile(null);
+          setGuestSurface("interest_form");
+        }
       } finally {
-        if (!cancelled) setProfileLoading(false);
+        if (!cancelled) {
+          setProfileLoading(false);
+          setGuestLoading(false);
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, authFetch]);
+  }, [authLoading, user, authFetch, event.slug]);
 
   function mapError(code: string | undefined): string {
     if (!code) return t("errors.generic");
@@ -469,21 +509,19 @@ function InterestForm({
     await submitInterest(draft);
   }
 
-  if (done) {
+  function renderInterestSuccess(response: EventInterestResponse) {
     const successKey =
-      done.interestResponse === "yes"
+      response === "yes"
         ? "interestSuccessYes"
-        : done.interestResponse === "no"
+        : response === "no"
           ? "interestSuccessNo"
           : "interestSuccessOther";
     const calendarUrl =
-      done.interestResponse === "yes"
+      response === "yes"
         ? buildGoogleCalendarUrl({
             title: interestCalendarTitle(event),
             description: interestCalendarDescription(event),
-            location:
-              event.venueName?.trim() ||
-              t("interestCalendarLocationTbc"),
+            location: event.venueName?.trim() || t("interestCalendarLocationTbc"),
             startsAt: event.startsAt,
             endsAt: event.endsAt,
           })
@@ -515,6 +553,49 @@ function InterestForm({
         </p>
       </div>
     );
+  }
+
+  if (done) {
+    return renderInterestSuccess(done.interestResponse);
+  }
+
+  if (user && (guestLoading || profileLoading || authLoading)) {
+    return <p className="mt-8 text-center text-sm text-ns-secondary">{t("loading")}</p>;
+  }
+
+  if (guestSurface === "pay_access" && guestParticipationId) {
+    return (
+      <AccessPaymentPanel
+        participationId={guestParticipationId}
+        priceMxn={event.priceMxn}
+        priceIncludesIva={event.priceIncludesIva !== false}
+        priceIncludesService={event.priceIncludesService !== false}
+        paymentDeadlineAt={event.paymentDeadlineAt}
+        paymentDeclaredAt={guestPaymentDeclaredAt}
+        onDeclared={(iso) => setGuestPaymentDeclaredAt(iso)}
+      />
+    );
+  }
+
+  if (guestSurface === "confirmed") {
+    return (
+      <div className="mt-8 space-y-4">
+        <p className="text-sm font-medium text-ns-primary">{t("accessConfirmed")}</p>
+        <p className="border-t border-gray-100 pt-4 text-center text-xs text-ns-secondary">
+          {t("profileSuggestionPrefix")}{" "}
+          <Link
+            href="/compte?tab=profil"
+            className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+          >
+            {t("profileSuggestionLink")}
+          </Link>
+        </p>
+      </div>
+    );
+  }
+
+  if (guestSurface === "interest_done" && guestInterestResponse) {
+    return renderInterestSuccess(guestInterestResponse);
   }
 
   return (

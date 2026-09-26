@@ -121,7 +121,7 @@ export function resolveMemberNextActions(input: {
     actions.push({
       id: `pay:${p.id}`,
       kind: "pay_access",
-      href: `/e/${encodeURIComponent(ev.slug)}`,
+      href: `/e/${encodeURIComponent(ev.slug)}#access`,
       participationId: p.id,
       paymentDeclaredAt: p.paymentDeclaredAt ?? null,
       event: {
