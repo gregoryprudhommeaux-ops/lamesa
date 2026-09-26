@@ -54,6 +54,7 @@ export function AdminPersonnesWorkspace() {
         params.delete("id");
         params.delete("profile");
         params.delete("source");
+        params.delete("queue");
       }
       if (next !== "prospects") {
         params.delete("list");

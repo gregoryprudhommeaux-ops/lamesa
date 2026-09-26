@@ -243,6 +243,13 @@ type ContextMenuState = { x: number; y: number } | null;
 type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
 type ProfileFilter = "all" | "incomplete" | "no_auth";
 type SourceFilter = "all" | "franconetwork";
+/** Dashboard “À traiter” deep-links — ops queues on waitlist. */
+type QueueFilter = "all" | "priority" | "review" | "no-show";
+
+function parseQueueFilter(raw: string | null): QueueFilter {
+  if (raw === "priority" || raw === "review" || raw === "no-show") return raw;
+  return "all";
+}
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
@@ -269,6 +276,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     if (p === "incomplete" || p === "no_auth") return p;
     return "all";
   });
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>(() =>
+    parseQueueFilter(searchParams.get("queue")),
+  );
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
     searchParams.get("source") === "franconetwork" ? "franconetwork" : "all",
   );
@@ -366,6 +376,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       }
       if (profileFilter === "no_auth" && r.uid?.trim()) return false;
       if (sourceFilter === "franconetwork" && !isFranconetworkMember(r)) return false;
+      if (queueFilter === "priority" && resolveOpsPriority(r.opsPriority) !== "priority") {
+        return false;
+      }
+      if (queueFilter === "review" && resolveOpsPriority(r.opsPriority) !== "review") {
+        return false;
+      }
+      if (queueFilter === "no-show") {
+        const tags = (r.opsTags ?? []).map((t) => t.toLowerCase());
+        if (!tags.includes("no-show")) return false;
+      }
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && (r.city ?? "").trim().toLowerCase() !== city.trim().toLowerCase()) return false;
@@ -389,7 +409,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter]);
+  }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter, queueFilter]);
 
   const filteredSorted = useMemo(
     () =>
@@ -413,7 +433,8 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       company ||
       referralFilter !== "all" ||
       profileFilter !== "all" ||
-      sourceFilter !== "all",
+      sourceFilter !== "all" ||
+      queueFilter !== "all",
   );
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
@@ -546,6 +567,13 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     setReferralFilter("all");
     setProfileFilter("all");
     setSourceFilter("all");
+    setQueueFilter("all");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("queue");
+    params.delete("profile");
+    params.delete("source");
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }
 
   async function sendFnAnnouncement(member: WaitlistRegistration, force = false) {
@@ -967,6 +995,30 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div>
+            <label className={LABEL_CLASS} htmlFor="filter-queue">
+              File ops
+            </label>
+            <select
+              id="filter-queue"
+              value={queueFilter}
+              onChange={(e) => {
+                const next = parseQueueFilter(e.target.value);
+                setQueueFilter(next);
+                const params = new URLSearchParams(searchParams.toString());
+                if (next === "all") params.delete("queue");
+                else params.set("queue", next);
+                const qs = params.toString();
+                router.replace(qs ? `?${qs}` : "?", { scroll: false });
+              }}
+              className={INPUT_CLASS}
+            >
+              <option value="all">Toutes</option>
+              <option value="priority">À prioriser</option>
+              <option value="review">À revoir</option>
+              <option value="no-show">No-show</option>
+            </select>
+          </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="filter-profile">
               Profil
