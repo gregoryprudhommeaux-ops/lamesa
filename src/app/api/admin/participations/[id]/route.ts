@@ -9,17 +9,26 @@ import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
-const statusSchema = z.object({
-  status: z.enum([
-    "invited",
-    "attending",
-    "confirmed",
-    "not_attending",
-    "waitlist",
-    "present",
-    "declined",
-  ]),
-});
+const patchSchema = z
+  .object({
+    status: z
+      .enum([
+        "invited",
+        "attending",
+        "confirmed",
+        "not_attending",
+        "waitlist",
+        "present",
+        "declined",
+      ])
+      .optional(),
+    /** ISO timestamp or null to clear door check-in. */
+    checkedInAt: z.union([z.string().min(1), z.null()]).optional(),
+  })
+  .refine(
+    (v) => v.status !== undefined || v.checkedInAt !== undefined,
+    { message: "status_or_checkedInAt_required" },
+  );
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -39,12 +48,10 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "invalid_json" }, { status: 400 });
   }
 
-  const parsed = statusSchema.safeParse(body);
+  const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
   }
-
-  const nextStatus = normalizeParticipationStatus(parsed.data.status);
 
   try {
     const db = getAdminFirestore();
@@ -60,17 +67,29 @@ export async function PATCH(request: Request, { params }: Params) {
     };
     const prevStatus = normalizeParticipationStatus(prev.status);
     const now = new Date().toISOString();
+    const patch: Record<string, unknown> = {
+      updatedAt: now,
+    };
 
-    await ref.set(
-      {
-        status: nextStatus,
-        statusSource: "admin",
-        updatedAt: now,
-      },
-      { merge: true },
-    );
+    let nextStatus = prevStatus;
+    if (parsed.data.status !== undefined) {
+      nextStatus = normalizeParticipationStatus(parsed.data.status);
+      patch.status = nextStatus;
+      patch.statusSource = "admin";
+    }
 
-    if (nextStatus === "confirmed" && prevStatus !== "confirmed" && prev.email) {
+    if (parsed.data.checkedInAt !== undefined) {
+      patch.checkedInAt = parsed.data.checkedInAt;
+    }
+
+    await ref.set(patch, { merge: true });
+
+    if (
+      parsed.data.status !== undefined &&
+      nextStatus === "confirmed" &&
+      prevStatus !== "confirmed" &&
+      prev.email
+    ) {
       void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
         recordContactActivity({
           email: prev.email,
@@ -81,7 +100,12 @@ export async function PATCH(request: Request, { params }: Params) {
         }),
       );
     }
-    if (nextStatus === "not_attending" && prevStatus !== "not_attending" && prev.email) {
+    if (
+      parsed.data.status !== undefined &&
+      nextStatus === "not_attending" &&
+      prevStatus !== "not_attending" &&
+      prev.email
+    ) {
       void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
         recordContactActivity({
           email: prev.email,
@@ -93,7 +117,11 @@ export async function PATCH(request: Request, { params }: Params) {
       );
     }
 
-    if (nextStatus === "confirmed" && prevStatus !== "confirmed") {
+    if (
+      parsed.data.status !== undefined &&
+      nextStatus === "confirmed" &&
+      prevStatus !== "confirmed"
+    ) {
       void (async () => {
         try {
           const eventSnap = await db.collection(COLLECTIONS.events).doc(prev.eventId).get();
@@ -126,7 +154,14 @@ export async function PATCH(request: Request, { params }: Params) {
       })();
     }
 
-    return NextResponse.json({ ok: true, status: nextStatus });
+    return NextResponse.json({
+      ok: true,
+      status: nextStatus,
+      checkedInAt:
+        parsed.data.checkedInAt !== undefined
+          ? parsed.data.checkedInAt
+          : (prev.checkedInAt ?? null),
+    });
   } catch (error) {
     console.error("[participation PATCH]", error);
     return NextResponse.json({ ok: false, error: "save_failed" }, { status: 502 });

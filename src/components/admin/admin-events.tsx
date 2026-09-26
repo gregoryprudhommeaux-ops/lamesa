@@ -3,6 +3,7 @@
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
 import { AdminEventPaymentFollowupPanel } from "@/components/admin/admin-event-payment-followup";
+import { AdminEventCheckinPanel } from "@/components/admin/admin-event-checkin-panel";
 import { AdminEventPlacesAvailablePanel } from "@/components/admin/admin-event-places-available-panel";
 import { AdminEventParticipantRoster } from "@/components/admin/admin-event-participant-roster";
 import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
@@ -1937,29 +1938,17 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
             open={focusPhase === "checkin"}
             onToggle={() => jumpToPhase("checkin")}
           >
-            <p className="text-sm text-ns-secondary">
-              Check-in le soir J — bientôt. En attendant, marque les présents dans le roster
-              (statut Présent) depuis Audience ou Confirmation.
-            </p>
             {activeEvent ? (
-              <AdminEventParticipantRoster
+              <AdminEventCheckinPanel
                 participations={activeParticipations}
-                capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
-                title="Présence"
-                initialFilter="paid"
-                labels={{
-                  invited: labels["statuses.invited"],
-                  attending: labels["statuses.attending"] ?? "Attending",
-                  confirmed: labels["statuses.confirmed"] ?? "Confirmé",
-                  not_attending: labels["statuses.not_attending"] ?? "Not attending",
-                  waitlist: labels["statuses.waitlist"],
-                  seatedSummary: labels.seatingSummary,
-                }}
-                onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-                onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
                 onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                onUpdated={() => void loadAll()}
               />
-            ) : null}
+            ) : (
+              <p className="text-sm text-ns-secondary">
+                Enregistre l’événement pour le check-in le soir J.
+              </p>
+            )}
           </EventPhaseSection>
 
           <EventPhaseSection

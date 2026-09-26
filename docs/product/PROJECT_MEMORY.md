@@ -108,7 +108,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 |------|--------|
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
 | FormalInviteOui encore panel dédié (pas fusion roster) | Done — panneau OUI seul en phase formal (interest) ; roster retiré |
-| Check-in UI dédiée | Placeholder roster payés |
+| Check-in UI dédiée | Done — `checkedInAt` + panneau soir J (places payées) |
 | Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |
@@ -163,6 +163,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 | Survey cron inclut `attending` (oui non payé) | Fait — places payées seulement |
 | 2026-09-26 | P1 | Phase paiement : roster impayés + panneau relance en double | Done — un seul follow-up |
 | 2026-09-26 | P1 | FormalInviteOui + roster générique en double (phase formal) | Done — panneau OUI seul |
+| 2026-09-26 | P1 | Check-in placeholder / statut Présent mort (`present`→`confirmed`) | Done — `checkedInAt` |
 | 2026-09-26 | P0 | Carte « Dernier email » figée sur places dispo | Fait — tampon d’envoi le plus récent |
 
 ## Changelog
@@ -182,4 +183,5 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
 | 2026-09-26 | Phase paiement — un seul panneau Confirmation & paiement (plus de double roster) |
 | 2026-09-26 | Phase formal (interest) — panneau OUI seul, plus de roster générique en dessous |
+| 2026-09-26 | Check-in soir J — tap Présent sur places payées (`checkedInAt`) |
 | 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |
