@@ -24,29 +24,39 @@ function part(
 }
 
 describe("suggestOpsPhase", () => {
-  it("points to std when title/date missing", () => {
+  it("points to prep when title/date missing", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, title: "" },
       draft: { title: "", eventDate: "" },
       participations: [],
     });
-    expect(result.phaseId).toBe("std");
+    expect(result.phaseId).toBe("prep");
     expect(result.nextBestAction.id).toBe("fill_basics");
     expect(result.blockers.length).toBeGreaterThan(0);
   });
 
-  it("interest: suggests send STD when basics ok and STD not sent", () => {
+  it("interest: empty roster → audience before STD", () => {
     const result = suggestOpsPhase({
       event: baseEvent,
       draft: { title: "Dîner test", eventDate: "2026-10-01" },
       participations: [],
     });
-    expect(result.phaseId).toBe("std_email");
+    expect(result.phaseId).toBe("audience");
+    expect(result.nextBestAction.id).toBe("add_audience");
+  });
+
+  it("interest: suggests send STD when roster ready and STD not sent", () => {
+    const result = suggestOpsPhase({
+      event: baseEvent,
+      draft: { title: "Dîner test", eventDate: "2026-10-01" },
+      participations: [part({ id: "1", email: "a@x.com" })],
+    });
+    expect(result.phaseId).toBe("save_the_date");
     expect(result.nextBestAction.id).toBe("send_std");
     expect(result.kpis.stdSent).toBe(false);
   });
 
-  it("interest: after STD, unpaid formal invites → payment relance", () => {
+  it("interest: after STD, unpaid formal invites → payment", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, saveTheDateSentAt: "2026-09-01T00:00:00.000Z", venueName: "X" },
       participations: [
@@ -64,7 +74,7 @@ describe("suggestOpsPhase", () => {
         }),
       ],
     });
-    expect(result.phaseId).toBe("formal");
+    expect(result.phaseId).toBe("payment");
     expect(result.nextBestAction.id).toBe("payment_relance");
     expect(result.kpis.unpaidAfterInvite).toBe(1);
     expect(result.kpis.paid).toBe(1);
@@ -79,13 +89,13 @@ describe("suggestOpsPhase", () => {
     expect(result.nextBestAction.id).toBe("formal_invite");
   });
 
-  it("rsvp: empty roster → add invitees", () => {
+  it("rsvp: empty roster → audience", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, responseMode: "rsvp", title: "X", startsAt: "2026-10-01T19:00:00.000Z" },
       draft: { title: "X", eventDate: "2026-10-01" },
       participations: [],
     });
-    expect(result.phaseId).toBe("std_email");
+    expect(result.phaseId).toBe("audience");
     expect(result.nextBestAction.id).toBe("add_invitees");
   });
 });
