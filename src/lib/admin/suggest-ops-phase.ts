@@ -257,17 +257,18 @@ export function suggestOpsPhase(input: SuggestOpsPhaseInput): SuggestOpsPhaseRes
       };
     }
 
+    // After STD: stop on Qualification before formal invites go out.
     if (kpis.invitedFormal === 0) {
       return {
-        phaseId: "formal",
+        phaseId: "qualify",
         kpis,
         blockers,
         completedPhaseIds,
         nextBestAction: {
-          id: "formal_invite",
-          label: "Envoyer l’invitation formelle",
-          phaseId: "formal",
-          reason: "STD parti — passer aux OUI / places confirmées.",
+          id: "qualify_responses",
+          label: "Qualifier les réponses",
+          phaseId: "qualify",
+          reason: "STD parti — relancer les sans réponse, puis inviter les OUI.",
         },
       };
     }

@@ -1996,7 +1996,17 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     <Mail className="h-4 w-4" />{" "}
                     {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
                   </button>
-                  <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
+                  <p className="text-xs text-ns-secondary">
+                    Les réponses OUI/NON et la relance se gèrent ensuite en{" "}
+                    <button
+                      type="button"
+                      className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+                      onClick={() => jumpToPhase("qualify")}
+                    >
+                      Qualification
+                    </button>
+                    .
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-ns-secondary">

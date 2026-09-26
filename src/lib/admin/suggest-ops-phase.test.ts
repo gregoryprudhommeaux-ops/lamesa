@@ -80,13 +80,29 @@ describe("suggestOpsPhase", () => {
     expect(result.kpis.paid).toBe(1);
   });
 
-  it("interest: STD sent, no formal invites → formal invite", () => {
+  it("interest: STD sent, no formal invites → qualify (not skip to formal)", () => {
     const result = suggestOpsPhase({
       event: { ...baseEvent, saveTheDateSentAt: "2026-09-01T00:00:00.000Z" },
       participations: [part({ id: "1", email: "a@x.com", saveTheDateSentAt: "2026-09-01T00:00:00.000Z" })],
     });
-    expect(result.phaseId).toBe("formal");
-    expect(result.nextBestAction.id).toBe("formal_invite");
+    expect(result.phaseId).toBe("qualify");
+    expect(result.nextBestAction.id).toBe("qualify_responses");
+    expect(result.nextBestAction.phaseId).toBe("qualify");
+  });
+
+  it("interest: after at least one formal invite and unpaid → payment", () => {
+    const result = suggestOpsPhase({
+      event: { ...baseEvent, saveTheDateSentAt: "2026-09-01T00:00:00.000Z", venueName: "X" },
+      participations: [
+        part({
+          id: "1",
+          email: "a@x.com",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+          status: "attending",
+        }),
+      ],
+    });
+    expect(result.phaseId).toBe("payment");
   });
 
   it("soir J: unpaid clear + held seats → check-in (not feedback)", () => {
