@@ -143,15 +143,19 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-bold text-ns-tertiary">Destinataires OUI</p>
-          <p className="text-xs text-ns-secondary">
-            {stats.ouiCount} intéressé(s) · {stats.ouiPending} à envoyer · {stats.ouiSent} déjà
-            envoyés · {selectedEmails.size} sélectionné(s)
+          <p className="text-sm font-bold uppercase tracking-wide text-ns-hero">
+            Invitation formelle · OUI
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Un seul suivi : sélectionne les intéressés (playlist OUI) et envoie l’invitation
+            ACCESS. {stats.ouiCount} intéressé(s) · {stats.ouiPending} à envoyer · {stats.ouiSent}{" "}
+            déjà envoyés · {selectedEmails.size} sélectionné(s).
           </p>
           <p className="mt-1 text-[11px] leading-snug text-ns-secondary">
             Table : <strong>{guestCapacity}</strong> places invités ({tableCovers} couverts). Pas de
             plafond d’envoi — tu peux sélectionner tous les OUI. Le règlement ACCESS valide la place
-            (first come) ; au-delà des places, liste d’attente.
+            (first come) ; au-delà des places, liste d’attente. Le suivi paiement est dans l’étape
+            suivante.
           </p>
           {overCapacity ? (
             <p className="mt-1 text-[11px] font-semibold text-amber-900">
