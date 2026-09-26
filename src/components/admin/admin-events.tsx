@@ -1941,13 +1941,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Link
-                      href="/admin/tables"
+                      href={`/admin/tables?eventId=${encodeURIComponent(activeEvent.id)}`}
                       className={`${BTN_PRIMARY} inline-flex items-center text-sm`}
                     >
                       Composer les tables →
                     </Link>
                     <Link
-                      href="/admin/tables?generate=1"
+                      href={`/admin/tables?eventId=${encodeURIComponent(activeEvent.id)}&generate=1`}
                       className={`${BTN_SECONDARY} inline-flex items-center text-sm`}
                     >
                       Générer des idées

@@ -76,6 +76,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | Command center événement tranches 1–2 | Étape active + roster + drawers |
 | 2026-09-25 | 9 phases produit (`OpsPhaseId`) + suggestOpsPhase | Labels métier + Formal/Places/paiement séparés |
 | 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
+| 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
 
 ## Reusable components / patterns
 
@@ -119,6 +120,8 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 done (#34) |
 | 2026-09-26 | P0 | Nav admin plate / Dashboard pas porte | Done (#35) |
 | 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
+| 2026-09-26 | P0 | Files À traiter sans filtre | Done — `queue=` |
+| 2026-09-26 | P1 | Pas de NBA unique / contexte Tables perdu | Done — NBA + `eventId` |
 
 ## Changelog
 
@@ -130,3 +133,4 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | Tranche 3 — 9 ops phases + Formal/Places/paiement (#34) |
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
 | 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |
+| 2026-09-26 | Continuité — queue filters, NBA Dashboard, Tables eventId |
