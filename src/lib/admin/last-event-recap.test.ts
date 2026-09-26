@@ -235,6 +235,51 @@ describe("buildLastEventRecap", () => {
     expect(recap?.marginMxn).toBe(0);
   });
 
+  it("excludes Gregory by name from paid CA even without isOrganizer flag", () => {
+    // 10 guests paid @ 1300 HT + IVA → 15080; Gregory as 11th must not inflate CA.
+    const recap = buildLastEventRecap(
+      [
+        event({
+          ...dinner,
+          priceMxn: 1300,
+          priceIncludesIva: true,
+          priceIncludesService: false,
+          costMxn: 1000,
+          costIncludesIva: true,
+          costIncludesService: false,
+        }),
+      ],
+      [
+        ...Array.from({ length: 10 }, (_, i) =>
+          part({
+            id: `paid-${i}`,
+            eventId: "ev1",
+            email: `guest${i}@x.com`,
+            fullName: `Guest ${i}`,
+            status: "confirmed",
+            calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+          }),
+        ),
+        part({
+          id: "gregory",
+          eventId: "ev1",
+          email: "other-mailbox@example.com",
+          fullName: "Grégory Prudhommeaux",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+      ],
+      NOW,
+    );
+    expect(recap?.registered).toBe(10);
+    expect(recap?.revenueMxn).toBe(15080);
+    expect(recap?.complimentary).toBe(1);
+    expect(recap?.saleFormula).toBe("TTC · HT + IVA 16%");
+    // COST = (10 paid + 1 org) × (1000 + 160) = 11 × 1160
+    expect(recap?.costTotalMxn).toBe(12760);
+    expect(recap?.marginMxn).toBe(2320);
+  });
+
   it("CA follows negotiation flags (no invented service)", () => {
     const recap = buildLastEventRecap(
       [

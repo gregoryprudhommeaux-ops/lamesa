@@ -13,14 +13,35 @@ export function isSeatedStatus(status: string | undefined): boolean {
   return s === "invited" || s === "attending" || s === "confirmed" || s === "comped";
 }
 
+function normalizePersonName(name: string | null | undefined): string {
+  return String(name ?? "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/** Known organizer display names (legacy rows without isOrganizer / admin email). */
+const ORGANIZER_FULL_NAMES = new Set([
+  "gregory prudhommeaux",
+  "greg prudhommeaux",
+]);
+
+/**
+ * Organizer seat (Gregory): never a paying guest.
+ * Matches `isOrganizer`, platform-admin email, or known organizer full name.
+ */
 export function isOrganizerParticipation(
-  p: Pick<AdminEventParticipation, "isOrganizer" | "email">,
+  p: Pick<AdminEventParticipation, "isOrganizer" | "email" | "fullName">,
 ): boolean {
-  return Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email);
+  if (Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email)) return true;
+  const name = normalizePersonName(p.fullName);
+  return Boolean(name) && ORGANIZER_FULL_NAMES.has(name);
 }
 
 export function countSeatedParticipations(
-  parts: Array<Pick<AdminEventParticipation, "status" | "isOrganizer" | "email">>,
+  parts: Array<Pick<AdminEventParticipation, "status" | "isOrganizer" | "email" | "fullName">>,
 ): number {
   return parts.filter((p) => isSeatedStatus(p.status) && !isOrganizerParticipation(p)).length;
 }

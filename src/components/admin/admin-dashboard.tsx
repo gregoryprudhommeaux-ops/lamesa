@@ -1429,13 +1429,19 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
       id: "registered",
       label: "Inscrites",
       value: String(recap.registered),
-      hint: "Places payées",
+      hint:
+        recap.complimentary > 0
+          ? `Places payées · ${recap.complimentary} invitée${recap.complimentary > 1 ? "s" : ""}`
+          : "Places payées",
     },
     {
       id: "revenue",
       label: "CA généré",
       value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
-      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : recap.saleFormula,
+      hint:
+        recap.priceMxn === null
+          ? "Prix ACCESS non renseigné"
+          : `${recap.registered} payée${recap.registered > 1 ? "s" : ""} · ${recap.saleFormula}`,
     },
     {
       id: "satisfaction",
