@@ -182,6 +182,7 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | P0 relance paiement : plus d’email au clic OUI ; un seul envoi manuel par invité |
 | 2026-09-26 | P1 : relance STD système, survey payés seulement, reminders archivés, Coms en deux listes |
 | 2026-09-26 | Dashboard — récap cliquable du dernier dîner dans le moment « Après le dîner » : contactées, places payées, CA TTC, note |
+| 2026-09-26 | Récap — CA sur les payants seulement ; coût et résultat incluent le couvert organisateur |
 | 2026-09-26 | Phase paiement — un seul panneau Confirmation & paiement (plus de double roster) |
 | 2026-09-26 | Phase formal (interest) — panneau OUI seul, plus de roster générique en dessous |
 | 2026-09-26 | Dernier email dashboard : invitation, relance paiement, confirmation et survey passent devant le dernier appel |

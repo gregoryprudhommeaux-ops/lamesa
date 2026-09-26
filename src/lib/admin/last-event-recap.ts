@@ -60,10 +60,17 @@ export type LastEventRecap = {
   startsAt: string;
   priceMxn: number | null;
   contacted: number;
+  /** Paying seats. The organizer is not in this count. */
   registered: number;
+  /** People at the table the restaurant charges for: payers + seated organizer. */
+  coverCount: number;
   revenueMxn: number;
   revenueBeforeTaxMxn: number;
   ivaMxn: number;
+  /** Cover count × ticket TTC. The organizer eats and does not pay. */
+  costMxn: number;
+  /** Collected from payers, minus the cost of every cover. */
+  profitMxn: number;
   satisfactionOverall: number | null;
   satisfactionResponses: number;
   satisfactionSent: number;
@@ -119,8 +126,10 @@ export function buildLastEventRecap(
   const event = pickLastPastEvent(events, nowMs);
   if (!event) return null;
 
-  const guests = participations.filter(
-    (p) => p.eventId === event.id && !isOrganizerParticipation(p),
+  const onEvent = participations.filter((p) => p.eventId === event.id);
+  const guests = onEvent.filter((p) => !isOrganizerParticipation(p));
+  const hostSeated = onEvent.some(
+    (p) => isOrganizerParticipation(p) && countsAsConfirmed(normalizeParticipationStatus(p.status)),
   );
   const price = ticketPrice(event);
   const line = computeEventIva(price ?? 0);
@@ -158,6 +167,10 @@ export function buildLastEventRecap(
   contactedPeople.sort(byName);
   registeredPeople.sort(byName);
 
+  const coverCount = registeredPeople.length + (hostSeated ? 1 : 0);
+  const cost = line.totalWithIva * coverCount;
+  const profit = revenue - cost;
+
   const satisfaction = computeEventSatisfaction(guests);
   const surveyRows: LastEventSurveyRow[] = guests
     .filter((p) => Boolean(p.satisfactionSurvey?.submittedAt))
@@ -191,9 +204,12 @@ export function buildLastEventRecap(
     priceMxn: price,
     contacted: contactedPeople.length,
     registered: registeredPeople.length,
+    coverCount,
     revenueMxn: Math.round(revenue * 100) / 100,
     revenueBeforeTaxMxn: Math.round(beforeTax * 100) / 100,
     ivaMxn: Math.round(iva * 100) / 100,
+    costMxn: Math.round(cost * 100) / 100,
+    profitMxn: Math.round(profit * 100) / 100,
     satisfactionOverall: satisfaction.overall,
     satisfactionResponses: satisfaction.responseCount,
     satisfactionSent: satisfaction.sentCount,

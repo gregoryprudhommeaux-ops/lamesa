@@ -133,9 +133,12 @@ describe("buildLastEventRecap", () => {
     ]);
     expect(recap?.registered).toBe(1);
     expect(recap?.registeredPeople.map((p) => p.fullName)).toEqual(["Sophie Decobecq"]);
+    expect(recap?.coverCount).toBe(2);
     expect(recap?.revenueBeforeTaxMxn).toBe(450);
     expect(recap?.ivaMxn).toBe(72);
     expect(recap?.revenueMxn).toBe(522);
+    expect(recap?.costMxn).toBe(1044);
+    expect(recap?.profitMxn).toBe(-522);
     expect(recap?.satisfactionResponses).toBe(1);
     expect(recap?.satisfactionOverall).toBe(4.7);
     expect(recap?.surveyRows[0]?.comment).toBe("Table très juste.");
@@ -158,5 +161,47 @@ describe("buildLastEventRecap", () => {
     expect(recap?.registered).toBe(1);
     expect(recap?.priceMxn).toBeNull();
     expect(recap?.revenueMxn).toBe(0);
+    expect(recap?.coverCount).toBe(1);
+    expect(recap?.profitMxn).toBe(0);
+  });
+
+  it("keeps CA on payers and cost on payers plus one organizer seat", () => {
+    const recap = buildLastEventRecap(
+      [event({ ...dinner, priceMxn: 1300 })],
+      [
+        ...Array.from({ length: 10 }, (_, index) =>
+          part({
+            id: `paid-${index}`,
+            eventId: "ev1",
+            email: `payer-${index}@x.com`,
+            fullName: `Payer ${index}`,
+            status: "confirmed",
+          }),
+        ),
+        part({
+          id: "host-gmail",
+          eventId: "ev1",
+          email: "gregory.prudhommeaux@gmail.com",
+          fullName: "Gregory Prudhommeaux",
+          status: "confirmed",
+          isOrganizer: true,
+        }),
+        part({
+          id: "host-mesa",
+          eventId: "ev1",
+          email: "greg@nextstep-services.com",
+          fullName: "Greg",
+          status: "confirmed",
+        }),
+      ],
+      NOW,
+    );
+
+    expect(recap?.registered).toBe(10);
+    expect(recap?.coverCount).toBe(11);
+    expect(recap?.revenueMxn).toBe(15080);
+    expect(recap?.costMxn).toBe(16588);
+    expect(recap?.profitMxn).toBe(-1508);
+    expect(recap?.registeredPeople.some((p) => p.email.includes("greg"))).toBe(false);
   });
 });

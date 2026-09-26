@@ -1428,7 +1428,12 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
       id: "revenue",
       label: "CA généré",
       value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
-      hint: recap.priceMxn === null ? "Prix ACCESS non renseigné" : "TTC · ticket ACCESS",
+      hint:
+        recap.priceMxn === null
+          ? "Prix ACCESS non renseigné"
+          : recap.coverCount > recap.registered
+            ? `${recap.registered} payants`
+            : "TTC · ticket ACCESS",
     },
     {
       id: "satisfaction",
@@ -1490,6 +1495,12 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
             </button>
           ))}
         </div>
+        {recap.priceMxn !== null && recap.coverCount > recap.registered ? (
+          <p className="mt-3 text-sm text-ns-secondary">
+            Résultat {formatRecapMxn(recap.profitMxn)} — encaissé {recap.registered} payants, coût{" "}
+            {recap.coverCount} couverts.
+          </p>
+        ) : null}
         {recap.satisfactionResponses > 0 ? (
           <div className="mt-4 rounded-xl border border-gray-100 bg-white/60 p-3">
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
@@ -1585,8 +1596,15 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
                   <p className="mt-1 text-xs text-ns-secondary">
                     {recap.priceMxn === null
                       ? "Le prix ACCESS de ce dîner n’est pas renseigné."
-                      : `${recap.registered} place${recap.registered > 1 ? "s" : ""} · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)}`}
+                      : `${recap.registered} payant${recap.registered > 1 ? "s" : ""} · HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)} · IVA ${formatRecapMxn(recap.ivaMxn)}`}
                   </p>
+                  {recap.priceMxn !== null && recap.coverCount > recap.registered ? (
+                    <p className="mt-3 text-sm text-ns-secondary">
+                      Coût {formatRecapMxn(recap.costMxn)} · {recap.coverCount} couverts (organisateur inclus).
+                      Résultat {formatRecapMxn(recap.profitMxn)} — encaissé {recap.registered}, coût{" "}
+                      {recap.coverCount}.
+                    </p>
+                  ) : null}
                   {recap.registeredPeople.length > 0 ? (
                     <ul className="mt-3 divide-y divide-gray-50">
                       {recap.registeredPeople.map((person) => (

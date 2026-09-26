@@ -1,6 +1,9 @@
 import type { AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { isPlatformAdminEmail } from "@/lib/auth/platform-admin";
+import { isPlatformAdminEmail, normalizeEmail } from "@/lib/auth/platform-admin";
+
+/** Sending / contact mailbox. Same person as the platform admin, often seated without `isOrganizer`. */
+const ORGANIZER_MAILBOXES = ["greg@nextstep-services.com"] as const;
 
 /** Guest seats at a standard LA MESA dinner (organizer is separate). */
 export const DEFAULT_GUEST_CAPACITY = 15;
@@ -13,10 +16,16 @@ export function isSeatedStatus(status: string | undefined): boolean {
   return s === "invited" || s === "attending" || s === "confirmed";
 }
 
+export function isOrganizerMailbox(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = normalizeEmail(email);
+  return ORGANIZER_MAILBOXES.some((mailbox) => mailbox === normalized);
+}
+
 export function isOrganizerParticipation(
   p: Pick<AdminEventParticipation, "isOrganizer" | "email">,
 ): boolean {
-  return Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email);
+  return Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email) || isOrganizerMailbox(p.email);
 }
 
 export function countSeatedParticipations(
