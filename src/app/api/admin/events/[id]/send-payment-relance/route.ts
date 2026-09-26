@@ -25,7 +25,7 @@ const schema = z.object({
 function isAwaitingPayment(p: AdminEventParticipation): boolean {
   if (isOrganizerParticipation(p)) return false;
   const status = normalizeParticipationStatus(p.status);
-  if (status === "confirmed" || status === "not_attending") return false;
+  if (status === "confirmed" || status === "comped" || status === "not_attending") return false;
   // Prefer people who already got the formal invite; still include seated unpaid.
   return Boolean(p.calendarInviteSentAt) || status === "invited" || status === "attending" || status === "waitlist";
 }

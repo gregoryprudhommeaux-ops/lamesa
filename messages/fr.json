@@ -267,12 +267,13 @@
     "copyEmail": "Copier email",
     "copyWhatsapp": "Copier WhatsApp",
     "statuses": {
-      "invited": "Invité",
+      "invited": "À payer",
       "attending": "Attending",
-      "confirmed": "Confirmé",
+      "confirmed": "Payé",
+      "comped": "Invité",
       "not_attending": "Not attending",
       "waitlist": "Waiting List",
-      "present": "Confirmé",
+      "present": "Payé",
       "declined": "Not attending"
     },
     "templatesTitle": "Templates emails",
@@ -297,8 +298,10 @@
       "mapsUrl": "Lien Google Maps (optionnel)",
       "capacity": "Personnes à table",
       "capacityHint": "Défaut 16 dont Gregory (admin). 15 places invités — au-delà → liste d’attente.",
-      "priceMxn": "Ticket (MXN / pers., hors IVA)",
-      "priceMxnHint": "Montant libre à préciser. L’IVA (16%) et le total TTC sont calculés automatiquement.",
+      "priceMxn": "Prix de vente HT (MXN / pers.)",
+      "priceMxnHint": "Base HT. TTC invité = HT + IVA 16% + service 15%.",
+      "costMxn": "COST interne HT (MXN / pers.)",
+      "costMxnHint": "Coût restaurant / couvert — interne seulement (marge). Même formule TTC.",
       "pricingMode": "Mode de tarification",
       "pricingModeHint": "Choisis comment l’invité paie : ticket + sur place, ou ticket avec boissons incluses.",
       "pricingModeTicket": "Ticket + consommations sur place",
@@ -639,12 +642,13 @@
       "selectPlaceholder": "Choisir…"
     },
     "status": {
-      "invited": "Invité",
+      "invited": "À payer",
       "attending": "Attending",
-      "confirmed": "Confirmé",
+      "confirmed": "Payé",
+      "comped": "Invité",
       "not_attending": "Not attending",
       "waitlist": "Liste d'attente",
-      "present": "Confirmé",
+      "present": "Payé",
       "declined": "Not attending"
     }
   }

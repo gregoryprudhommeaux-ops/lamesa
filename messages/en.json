@@ -267,12 +267,13 @@
     "copyEmail": "Copy email",
     "copyWhatsapp": "Copy WhatsApp",
     "statuses": {
-      "invited": "Invited",
+      "invited": "To pay",
       "attending": "Attending",
-      "confirmed": "Confirmed",
+      "confirmed": "Paid",
+      "comped": "Comped",
       "not_attending": "Not attending",
       "waitlist": "Waiting list",
-      "present": "Confirmed",
+      "present": "Paid",
       "declined": "Not attending"
     },
     "templatesTitle": "Email templates",
@@ -297,8 +298,10 @@
       "mapsUrl": "Google Maps link (optional)",
       "capacity": "People at the table",
       "capacityHint": "Default 16 including Gregory (admin). 15 guest seats — overflow goes to the waitlist.",
-      "priceMxn": "Ticket (MXN / person, before tax)",
-      "priceMxnHint": "Any amount you set. IVA (16%) and total are calculated automatically.",
+      "priceMxn": "Selling price before tax (MXN / person)",
+      "priceMxnHint": "HT base. Guest TTC = HT + IVA 16% + service 15%.",
+      "costMxn": "Internal COST before tax (MXN / person)",
+      "costMxnHint": "Restaurant / cover cost — internal only (margin). Same TTC formula.",
       "pricingMode": "Pricing mode",
       "pricingModeHint": "Choose how guests pay: ticket + on-site, or ticket with drinks included.",
       "pricingModeTicket": "Ticket + on-site consumptions",
@@ -639,12 +642,13 @@
       "selectPlaceholder": "Choose…"
     },
     "status": {
-      "invited": "Invited",
+      "invited": "To pay",
       "attending": "Attending",
-      "confirmed": "Confirmed",
+      "confirmed": "Paid",
+      "comped": "Comped",
       "not_attending": "Not attending",
       "waitlist": "Waitlist",
-      "present": "Confirmed",
+      "present": "Paid",
       "declined": "Not attending"
     }
   }

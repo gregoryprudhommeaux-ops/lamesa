@@ -82,6 +82,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
 | 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
 | 2026-09-26 | Dashboard moment T (post-event / email pulse / next dinner) | Une info prioritaire selon l’étape du process ; CA + satisfaction après dîner |
+| 2026-09-26 | Statuts siège : **Payé** (`confirmed`) + **Invité** (`comped`) ; event `costMxn` + `priceMxn` ; TTC = HT + IVA 16% + service 15% | Invité = COST oui / CA non ; marge interne |
 
 ## Reusable components / patterns
 
@@ -108,7 +109,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 |------|--------|
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
 | FormalInviteOui encore panel dédié (pas fusion roster) | Done — panneau OUI seul en phase formal (interest) ; roster retiré |
-| Check-in UI dédiée | Done — `checkedInAt` + panneau soir J (places payées) |
+| Check-in UI dédiée | Done — `checkedInAt` + panneau soir J (Payé + Invité) |
 | Phase paiement roster + relance en double | Done — un seul panneau follow-up |
 | Chrome Personnes vs reste (whiplash) | Done — workspace partout |
 | Coms ouvre sur « créer template » | Done — envoi d’abord |

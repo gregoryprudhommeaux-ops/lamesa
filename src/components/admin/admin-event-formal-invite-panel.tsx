@@ -232,16 +232,20 @@ export function FormalInviteOuiPanel({ event, onEventUpdated }: FormalInviteOuiP
                   className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
                     r.participationStatus === "confirmed"
                       ? "bg-emerald-100 text-emerald-900"
-                      : r.calendarInviteSentAt
-                        ? "bg-amber-100 text-amber-950"
-                        : "bg-gray-100 text-gray-700"
+                      : r.participationStatus === "comped"
+                        ? "bg-violet-100 text-violet-900"
+                        : r.calendarInviteSentAt
+                          ? "bg-amber-100 text-amber-950"
+                          : "bg-gray-100 text-gray-700"
                   }`}
                 >
                   {r.participationStatus === "confirmed"
                     ? "Payé"
-                    : r.calendarInviteSentAt
+                    : r.participationStatus === "comped"
                       ? "Invité"
-                      : "À envoyer"}
+                      : r.calendarInviteSentAt
+                        ? "Envoyée"
+                        : "À envoyer"}
                 </span>
               </li>
             );

@@ -10,7 +10,7 @@ export const DEFAULT_TOTAL_COVERS = DEFAULT_GUEST_CAPACITY + 1; // 16
 /** Places reserved at the table (excludes not_attending + waitlist). Admin seat is separate. */
 export function isSeatedStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "invited" || s === "attending" || s === "confirmed";
+  return s === "invited" || s === "attending" || s === "confirmed" || s === "comped";
 }
 
 export function isOrganizerParticipation(
@@ -58,14 +58,14 @@ export function totalCoversFromGuestCapacity(guestCapacity: number | null | unde
   return guests + 1;
 }
 
-/** Fellows shown to guests: people who RSVP'd yes or are confirmed. */
+/** Fellows shown to guests: people who RSVP'd yes, paid, or are complimentary. */
 export function isFellowVisibleStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "attending" || s === "confirmed";
+  return s === "attending" || s === "confirmed" || s === "comped";
 }
 
 /** Past dashboard "participations" count. */
 export function isPastParticipationStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "attending" || s === "confirmed" || s === "invited";
+  return s === "attending" || s === "confirmed" || s === "comped" || s === "invited";
 }

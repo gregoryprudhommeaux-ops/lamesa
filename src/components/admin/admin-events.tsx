@@ -62,7 +62,7 @@ import {
   guestCapacityFromTotalCovers,
   totalCoversFromGuestCapacity,
 } from "@/lib/events/capacity";
-import { computeEventIva, formatMxn } from "@/lib/events/pricing";
+import { computeSeatPriceBreakdown, formatMxn } from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
 import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
 import Link from "next/link";
@@ -139,6 +139,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [endTime, setEndTime] = useState("22:30");
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
   const [priceMxn, setPriceMxn] = useState<string>("450");
+  const [costMxn, setCostMxn] = useState<string>("");
   const [pricingMode, setPricingMode] = useState<EventPricingMode>("ticket_onsite");
   const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
   const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
@@ -358,6 +359,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setEndTime(times.endTime);
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
     setPriceMxn("450");
+    setCostMxn("");
     setPricingMode("ticket_onsite");
     setAccessIncludesWelcomeDrink(true);
     setAccessIncludesAmuseBouche(false);
@@ -439,6 +441,9 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setCapacity(totalCoversFromGuestCapacity(event.capacity));
     setPriceMxn(
       event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
+    );
+    setCostMxn(
+      event.costMxn != null && Number.isFinite(event.costMxn) ? String(event.costMxn) : "",
     );
     setPricingMode(resolveEventPricingMode(event));
     setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
@@ -527,6 +532,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       endsAt: endsAtIso,
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
+      costMxn: costMxn.trim() === "" ? null : Number(costMxn),
       pricingMode,
       accessIncludesWelcomeDrink,
       accessIncludesAmuseBouche,
@@ -1341,7 +1347,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className={LABEL_CLASS}>
-                          {labels["fields.priceMxn"] ?? "Ticket (MXN / pers., hors IVA)"}
+                          {labels["fields.priceMxn"] ?? "Prix de vente HT (MXN / pers.)"}
                         </label>
                         <input
                           type="number"
@@ -1354,27 +1360,62 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         />
                         <p className="mt-1 text-xs text-ns-secondary">
                           {labels["fields.priceMxnHint"] ??
-                            "Montant libre à préciser. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                            "Base HT. TTC invité = HT + IVA 16% + service 15%."}
                         </p>
                         {(() => {
                           const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
                           if (!Number.isFinite(n) || n <= 0) return null;
-                          const { iva, totalWithIva } = computeEventIva(n);
+                          const b = computeSeatPriceBreakdown(n);
                           return (
                             <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                               <p>
-                                {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                                <strong>{formatMxn(iva, "es")}</strong>
+                                IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                               </p>
                               <p className="mt-0.5">
-                                {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                                <strong>{formatMxn(totalWithIva, "es")}</strong>
+                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                              </p>
+                              <p className="mt-0.5">
+                                Total TTC: <strong>{formatMxn(b.total, "es")}</strong>
                               </p>
                             </div>
                           );
                         })()}
                       </div>
-                      <div className="space-y-3">
+                      <div>
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.costMxn"] ?? "COST interne HT (MXN / pers.)"}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={costMxn}
+                          onChange={(e) => setCostMxn(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="ex. 350"
+                        />
+                        <p className="mt-1 text-xs text-ns-secondary">
+                          {labels["fields.costMxnHint"] ??
+                            "Coût restaurant / couvert — interne seulement (marge). Même formule TTC."}
+                        </p>
+                        {(() => {
+                          const n = costMxn.trim() === "" ? 0 : Number(costMxn);
+                          if (!Number.isFinite(n) || n <= 0) return null;
+                          const b = computeSeatPriceBreakdown(n);
+                          return (
+                            <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                              <p>
+                                COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
+                                <span className="text-ns-secondary">
+                                  {" "}
+                                  (IVA {formatMxn(b.iva, "es")} · svc {formatMxn(b.service, "es")})
+                                </span>
+                              </p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <div className="space-y-3 sm:col-span-2">
                         <p className={`${LABEL_CLASS} mb-0`}>
                           {labels["fields.accessIncludes"] ?? "Inclus dans le ticket"}
                         </p>
@@ -1491,7 +1532,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className={LABEL_CLASS}>
-                        {labels["fields.allInTicketMxn"] ?? "Ticket avec boissons incluses (MXN / pers., hors IVA)"}
+                        {labels["fields.allInTicketMxn"] ??
+                          "Prix de vente HT (MXN / pers.)"}
                       </label>
                       <input
                         type="number"
@@ -1504,21 +1546,52 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.allInTicketHint"] ??
-                          "Montant libre. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                          "Base HT. TTC = HT + IVA 16% + service 15%."}
                       </p>
                       {(() => {
                         const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
                         if (!Number.isFinite(n) || n <= 0) return null;
-                        const { iva, totalWithIva } = computeEventIva(n);
+                        const b = computeSeatPriceBreakdown(n);
                         return (
                           <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                             <p>
-                              {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                              <strong>{formatMxn(iva, "es")}</strong>
+                              IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
                             </p>
                             <p className="mt-0.5">
-                              {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                              <strong>{formatMxn(totalWithIva, "es")}</strong>
+                              Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                            </p>
+                            <p className="mt-0.5">
+                              Total TTC: <strong>{formatMxn(b.total, "es")}</strong>
+                            </p>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.costMxn"] ?? "COST interne HT (MXN / pers.)"}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={costMxn}
+                        onChange={(e) => setCostMxn(e.target.value)}
+                        className={INPUT_CLASS}
+                        placeholder="ex. 700"
+                      />
+                      <p className="mt-1 text-xs text-ns-secondary">
+                        {labels["fields.costMxnHint"] ??
+                          "Coût restaurant / couvert — interne (marge). Même formule TTC."}
+                      </p>
+                      {(() => {
+                        const n = costMxn.trim() === "" ? 0 : Number(costMxn);
+                        if (!Number.isFinite(n) || n <= 0) return null;
+                        const b = computeSeatPriceBreakdown(n);
+                        return (
+                          <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+                            <p>
+                              COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
                             </p>
                           </div>
                         );
@@ -1694,9 +1767,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                 title={labels.selectedContacts}
                 labels={{
-                  invited: labels["statuses.invited"],
+                  invited: labels["statuses.invited"] ?? "À payer",
                   attending: labels["statuses.attending"] ?? "Attending",
-                  confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                  confirmed: labels["statuses.confirmed"] ?? "Payé",
+                  comped: labels["statuses.comped"] ?? "Invité",
                   not_attending: labels["statuses.not_attending"] ?? "Not attending",
                   waitlist: labels["statuses.waitlist"],
                   seatedSummary: labels.seatingSummary,
@@ -1840,7 +1914,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onClick={openInviteModal}
                     disabled={activeParticipations.filter((p) => p.status === "invited").length === 0}
                     className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
-                    title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
+                    title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts À payer"
                   >
                     <Mail className="h-4 w-4" /> Lancer les invitations
                   </button>
@@ -1849,9 +1923,10 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
                     title="Suivi participants"
                     labels={{
-                      invited: labels["statuses.invited"],
+                      invited: labels["statuses.invited"] ?? "À payer",
                       attending: labels["statuses.attending"] ?? "Attending",
-                      confirmed: labels["statuses.confirmed"] ?? "Confirmé",
+                      confirmed: labels["statuses.confirmed"] ?? "Payé",
+                      comped: labels["statuses.comped"] ?? "Invité",
                       not_attending: labels["statuses.not_attending"] ?? "Not attending",
                       waitlist: labels["statuses.waitlist"],
                       seatedSummary: labels.seatingSummary,

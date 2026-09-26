@@ -19,8 +19,8 @@ type AdminEventCheckinPanelProps = {
 };
 
 /**
- * Soir J — marque les places payées présentes à la porte.
- * Ne touche pas au statut de paiement (`confirmed`).
+ * Soir J — marque les places retenues (Payé + Invité) présentes à la porte.
+ * Ne touche pas au statut de paiement (`confirmed` / `comped`).
  */
 export function AdminEventCheckinPanel({
   participations,
@@ -42,7 +42,7 @@ export function AdminEventCheckinPanel({
   const filters: Array<{ id: CheckinFilterId; label: string; count: number }> = [
     { id: "pending", label: "À arriver", count: counts.pending },
     { id: "present", label: "Présents", count: counts.present },
-    { id: "all", label: "Tous (payés)", count: counts.paid },
+    { id: "all", label: "Tous (places)", count: counts.paid },
   ];
 
   async function setCheckedIn(p: AdminEventParticipation, next: boolean) {
@@ -111,8 +111,7 @@ export function AdminEventCheckinPanel({
 
       {counts.paid === 0 ? (
         <p className="text-sm text-ns-secondary">
-          Aucune place payée — le check-in s’active quand des invités ont confirmé le
-          règlement.
+          Aucune place retenue — le check-in s’active pour les statuts Payé et Invité.
         </p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-ns-secondary">
@@ -151,7 +150,9 @@ export function AdminEventCheckinPanel({
                           minute: "2-digit",
                           timeZone: "America/Mexico_City",
                         })}`
-                      : " · payé"}
+                      : p.status === "comped"
+                        ? " · Invité"
+                        : " · Payé"}
                   </span>
                 </span>
                 <div className="flex flex-wrap items-center gap-2">

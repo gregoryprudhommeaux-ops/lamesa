@@ -94,7 +94,9 @@ export function resolveMemberNextActions(input: {
   const unpaid = input.participations
     .filter((p) => {
       const status = normalizeParticipationStatus(p.status);
-      if (status === "confirmed" || status === "not_attending") return false;
+      if (status === "confirmed" || status === "comped" || status === "not_attending") {
+        return false;
+      }
       if (!p.calendarInviteSentAt) return false;
       const ev = input.eventsById.get(p.eventId);
       if (!ev) return false;

@@ -63,11 +63,13 @@ function fmtMoney(n: number): string {
 
 function statusLabel(status: string): string {
   const map: Record<string, string> = {
-    invited: "Invité",
+    invited: "À payer",
     attending: "RSVP oui",
-    confirmed: "Confirmé",
+    confirmed: "Payé",
+    comped: "Invité",
     not_attending: "Refus",
     waitlisted: "Liste d’attente",
+    waitlist: "Liste d’attente",
     interest_yes: "Intérêt oui",
     interest_no: "Intérêt non",
     interest_maybe: "Intérêt maybe",

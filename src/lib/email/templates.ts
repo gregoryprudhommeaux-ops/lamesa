@@ -81,6 +81,9 @@ export type TemplateVars = {
   /** Price before IVA, formatted (e.g. "$2,500.00 MXN") */
   priceBeforeTax?: string;
   ivaAmount?: string;
+  /** Service 15% on HT, formatted */
+  serviceAmount?: string;
+  /** TTC = HT + IVA 16% + service 15% */
   totalWithIva?: string;
   menuIncluded?: string;
   /** ACCESS inclusions (welcome drink / amuse-bouches) */
@@ -129,6 +132,7 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{surveyUrl}}", vars.surveyUrl ?? "")
     .replaceAll("{{priceBeforeTax}}", vars.priceBeforeTax ?? "")
     .replaceAll("{{ivaAmount}}", vars.ivaAmount ?? "")
+    .replaceAll("{{serviceAmount}}", vars.serviceAmount ?? "")
     .replaceAll("{{totalWithIva}}", vars.totalWithIva ?? "")
     .replaceAll("{{menuIncluded}}", vars.menuIncluded ?? "")
     .replaceAll("{{accessIncludes}}", vars.accessIncludes ?? "")
@@ -214,6 +218,15 @@ export function buildEventTemplateVars(input: {
           : lang === "en"
             ? "Depends on final amount (16%)"
             : "Según monto final (16%)"
+        : pending,
+    serviceAmount: pricing
+      ? formatMxn(pricing.service, lang)
+      : allInRange
+        ? lang === "fr"
+          ? "Selon montant final (15%)"
+          : lang === "en"
+            ? "Depends on final amount (15%)"
+            : "Según monto final (15%)"
         : pending,
     totalWithIva: pricing
       ? formatMxn(pricing.totalWithIva, lang)

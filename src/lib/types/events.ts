@@ -2,6 +2,8 @@ export type EventParticipationStatus =
   | "invited"
   | "attending"
   | "confirmed"
+  /** Complimentary seat — LA MESA covers COST, no CA. */
+  | "comped"
   | "not_attending"
   | "waitlist"
   /** @deprecated legacy — normalized to confirmed */
@@ -131,9 +133,15 @@ export interface AdminEvent {
   parking?: "secure_nearby" | "valet" | "on_site" | "unknown";
   capacity?: number;
   /**
-   * ACCESS ticket before IVA (MXN) — amount charged to confirm the seat.
+   * ACCESS ticket HT (MXN / pers.) — prix de vente before IVA + service.
+   * TTC guest = HT + IVA 16% + service 15%.
    */
   priceMxn?: number | null;
+  /**
+   * Internal COST HT (MXN / pers.) — restaurant / cover cost for margin.
+   * Cost TTC = HT + IVA 16% + service 15%. Not shown to guests.
+   */
+  costMxn?: number | null;
   /** ACCESS includes a welcome drink */
   accessIncludesWelcomeDrink?: boolean;
   /** ACCESS includes amuse-bouches */

@@ -8,15 +8,17 @@ export type RosterFilterId =
   | "invited"
   | "attending"
   | "paid"
+  | "comped"
   | "unpaid_invite"
   | "out";
 
 export const ROSTER_FILTERS: Array<{ id: RosterFilterId; label: string }> = [
   { id: "all", label: "Tous" },
   { id: "waitlist", label: "Waitlist" },
-  { id: "invited", label: "Invités" },
+  { id: "invited", label: "À payer" },
   { id: "attending", label: "Présents (RSVP)" },
   { id: "paid", label: "Payés" },
+  { id: "comped", label: "Invités" },
   { id: "unpaid_invite", label: "À relancer €" },
   { id: "out", label: "Ne vient pas" },
 ];
@@ -44,6 +46,8 @@ export function participationMatchesRosterFilter(
       return status === "attending";
     case "paid":
       return status === "confirmed";
+    case "comped":
+      return status === "comped";
     case "unpaid_invite":
       return (
         Boolean(p.calendarInviteSentAt) &&
