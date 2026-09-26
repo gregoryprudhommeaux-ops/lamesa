@@ -103,6 +103,13 @@ export function computeEventSatisfaction(
   };
 }
 
+/** Mean of the scores actually answered on one survey (same mix as the event average). */
+export function surveyOverallScore(survey: SatisfactionSurveyAnswers): number | null {
+  const parts = surveyParts(survey);
+  if (parts.length === 0) return null;
+  return Math.round((parts.reduce((sum, n) => sum + n, 0) / parts.length) * 10) / 10;
+}
+
 export function formatScore(n: number | null): string {
   if (n === null) return "—";
   return n.toFixed(1);
