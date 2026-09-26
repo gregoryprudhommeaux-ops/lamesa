@@ -1383,7 +1383,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       </div>
                       <div>
                         <label className={LABEL_CLASS}>
-                          {labels["fields.costMxn"] ?? "COST interne HT (MXN / pers.)"}
+                          {labels["fields.costMxn"] ?? "Cost du dîner HT (MXN / pers.)"}
                         </label>
                         <input
                           type="number"
@@ -1396,7 +1396,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         />
                         <p className="mt-1 text-xs text-ns-secondary">
                           {labels["fields.costMxnHint"] ??
-                            "Coût restaurant / couvert — interne seulement (marge). Même formule TTC."}
+                            "Coût restaurant / couvert — interne (marge, places Invité). Même formule TTC."}
                         </p>
                         {(() => {
                           const n = costMxn.trim() === "" ? 0 : Number(costMxn);
@@ -1405,11 +1405,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           return (
                             <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                               <p>
+                                IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
+                              </p>
+                              <p className="mt-0.5">
+                                Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                              </p>
+                              <p className="mt-0.5">
                                 COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
-                                <span className="text-ns-secondary">
-                                  {" "}
-                                  (IVA {formatMxn(b.iva, "es")} · svc {formatMxn(b.service, "es")})
-                                </span>
                               </p>
                             </div>
                           );
@@ -1527,7 +1529,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   </h3>
                   <p className="mb-3 text-xs text-ns-secondary">
                     {labels["fields.allInSectionHint"] ??
-                      "Un seul montant payé à l’avance : accès + repas + boissons (ou boissons à part si tu le précises)."}
+                      "Un seul montant payé à l’avance par virement : accès + repas + boissons. Renseigne aussi le COST interne pour la marge."}
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
@@ -1542,11 +1544,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         value={priceMxn}
                         onChange={(e) => setPriceMxn(e.target.value)}
                         className={INPUT_CLASS}
-                        placeholder="1000"
+                        placeholder="1300"
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.allInTicketHint"] ??
-                          "Base HT. TTC = HT + IVA 16% + service 15%."}
+                          "Ce que le membre paie (virement). TTC = HT + IVA 16% + service 15%."}
                       </p>
                       {(() => {
                         const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
@@ -1569,7 +1571,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     </div>
                     <div>
                       <label className={LABEL_CLASS}>
-                        {labels["fields.costMxn"] ?? "COST interne HT (MXN / pers.)"}
+                        {labels["fields.costMxn"] ?? "Cost du dîner HT (MXN / pers.)"}
                       </label>
                       <input
                         type="number"
@@ -1578,11 +1580,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         value={costMxn}
                         onChange={(e) => setCostMxn(e.target.value)}
                         className={INPUT_CLASS}
-                        placeholder="ex. 700"
+                        placeholder="ex. 900"
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.costMxnHint"] ??
-                          "Coût restaurant / couvert — interne (marge). Même formule TTC."}
+                          "Coût restaurant / couvert — interne (marge, places Invité). Même formule TTC."}
                       </p>
                       {(() => {
                         const n = costMxn.trim() === "" ? 0 : Number(costMxn);
@@ -1591,12 +1593,43 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         return (
                           <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
                             <p>
+                              IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
+                            </p>
+                            <p className="mt-0.5">
+                              Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+                            </p>
+                            <p className="mt-0.5">
                               COST TTC: <strong>{formatMxn(b.total, "es")}</strong>
                             </p>
                           </div>
                         );
                       })()}
                     </div>
+                    {(() => {
+                      const sale = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                      const cost = costMxn.trim() === "" ? 0 : Number(costMxn);
+                      if (!Number.isFinite(sale) || sale <= 0 || !Number.isFinite(cost) || cost <= 0) {
+                        return null;
+                      }
+                      const saleTtc = computeSeatPriceBreakdown(sale).total;
+                      const costTtc = computeSeatPriceBreakdown(cost).total;
+                      const margin = Math.round((saleTtc - costTtc) * 100) / 100;
+                      return (
+                        <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-ns-tertiary">
+                          <p>
+                            Marge / place payée (TTC) :{" "}
+                            <strong>{formatMxn(margin, "es")}</strong>
+                            <span className="text-ns-secondary">
+                              {" "}
+                              — vente {formatMxn(saleTtc, "es")} − cost {formatMxn(costTtc, "es")}
+                            </span>
+                          </p>
+                          <p className="mt-0.5 text-ns-secondary">
+                            Place Invité : CA 0, cost TTC compté quand même.
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <div>
                       <label className={LABEL_CLASS}>
                         {labels["fields.allInDrinks"] ?? "Boissons"}
