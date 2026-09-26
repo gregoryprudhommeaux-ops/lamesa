@@ -20,6 +20,7 @@ import {
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { ArrowLeftRight, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -130,8 +131,13 @@ export function AdminTableBuilder() {
   const [targetEventId, setTargetEventId] = useState("");
   const [adding, setAdding] = useState(false);
   const [addResultMsg, setAddResultMsg] = useState<string | null>(null);
+  const [contextEventTitle, setContextEventTitle] = useState<string | null>(null);
 
   const selectedIdea = ideas[selectedIdeaIndex];
+  const eventIdFromUrl = (searchParams.get("eventId") ?? "").trim();
+  const dinerReturnHref = eventIdFromUrl
+    ? `/admin/evenements?id=${encodeURIComponent(eventIdFromUrl)}&phase=dinner_prep`
+    : null;
 
   const loadDrafts = useCallback(async () => {
     setDraftsLoadState("loading");
@@ -159,6 +165,30 @@ export function AdminTableBuilder() {
     );
     focusable?.focus();
   }, [searchParams]);
+
+  // ?eventId= — keep dinner context when arriving from dinner_prep.
+  useEffect(() => {
+    if (!eventIdFromUrl) {
+      setContextEventTitle(null);
+      return;
+    }
+    setTargetEventId(eventIdFromUrl);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch("/api/admin/events");
+        const json = (await res.json()) as { ok?: boolean; events?: AdminEvent[]; error?: string };
+        if (!res.ok || !json.ok || cancelled) return;
+        const match = (json.events ?? []).find((e) => e.id === eventIdFromUrl);
+        if (match) setContextEventTitle(match.title);
+      } catch {
+        // Banner still works with id alone.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, eventIdFromUrl]);
 
   function selectIdea(index: number) {
     const idea = ideas[index];
@@ -380,7 +410,13 @@ export function AdminTableBuilder() {
       const json = (await res.json()) as { ok?: boolean; events?: AdminEvent[]; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "load_failed");
       setEvents(json.events ?? []);
-      setTargetEventId(json.events?.[0]?.id ?? "");
+      const preferred =
+        (eventIdFromUrl && json.events?.some((e) => e.id === eventIdFromUrl)
+          ? eventIdFromUrl
+          : null) ||
+        json.events?.[0]?.id ||
+        "";
+      setTargetEventId(preferred);
     } catch (e) {
       setAddResultMsg(describeActionError(e instanceof Error ? e.message : undefined, "Échec du chargement."));
     } finally {
@@ -423,12 +459,28 @@ export function AdminTableBuilder() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-ns-hero">Constructeur de tables</h2>
+        <h2 className="text-xl font-bold text-ns-hero">Tables</h2>
         <p className="mt-1 text-sm text-ns-secondary">
           Génère des idées de tables à partir de la waitlist, ajuste les invités puis crée un
           événement ou complète-en un existant.
         </p>
       </div>
+
+      {dinerReturnHref ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ns-primary/20 bg-ns-brand-light/50 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Contexte dîner
+            </p>
+            <p className="truncate text-sm font-semibold text-ns-tertiary">
+              {contextEventTitle || "Événement en cours"}
+            </p>
+          </div>
+          <Link href={dinerReturnHref} className={`${BTN_SECONDARY} text-sm`}>
+            ← Retour prépa dîner
+          </Link>
+        </div>
+      ) : null}
 
       <div ref={generateSectionRef} className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
         <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">Génération</h3>

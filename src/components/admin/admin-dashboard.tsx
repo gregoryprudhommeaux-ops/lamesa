@@ -801,7 +801,7 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
       : "RSVP classique";
 
   return (
-    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
@@ -1192,21 +1192,79 @@ export function AdminDashboardPanel() {
     noShow: [],
   };
 
+  const nba = (() => {
+    if (nextEventRsvp) {
+      return {
+        id: "continue_dinner",
+        label: "Continuer le dîner",
+        href: `/admin/evenements?id=${encodeURIComponent(nextEventRsvp.eventId)}`,
+        reason: `${nextEventRsvp.title} — reprendre le pilotage par phase.`,
+      };
+    }
+    if (queues.incomplete.length > 0) {
+      return {
+        id: "incomplete",
+        label: `Traiter ${queues.incomplete.length} profil${queues.incomplete.length > 1 ? "s" : ""} incomplet${queues.incomplete.length > 1 ? "s" : ""}`,
+        href: "/admin/personnes?tab=membres&profile=incomplete",
+        reason: "Nurture avant d’inviter — express ou complétion < 50 %.",
+      };
+    }
+    if (queues.priority.length > 0) {
+      return {
+        id: "priority",
+        label: `Voir ${queues.priority.length} à prioriser`,
+        href: "/admin/personnes?tab=membres&queue=priority",
+        reason: "Contacts marqués prioritaires sur la waitlist.",
+      };
+    }
+    if (queues.review.length > 0) {
+      return {
+        id: "review",
+        label: `Voir ${queues.review.length} à revoir`,
+        href: "/admin/personnes?tab=membres&queue=review",
+        reason: "Contacts à clarifier avant la prochaine vague.",
+      };
+    }
+    if (queues.noShow.length > 0) {
+      return {
+        id: "no_show",
+        label: `Voir ${queues.noShow.length} no-show`,
+        href: "/admin/personnes?tab=membres&queue=no-show",
+        reason: "Tag no-show — décider avant une prochaine invite.",
+      };
+    }
+    return {
+      id: "new_event",
+      label: "Nouvel événement",
+      href: "/admin/evenements?nouveau=1",
+      reason: "Aucun dîner à venir — créer le prochain.",
+    };
+  })();
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Porte d’entrée ops — situation, prochaines actions, accès aux hubs.
+            Porte d’entrée ops — une action prioritaire, puis les hubs.
+          </p>
+          <p className="mt-2 text-sm text-ns-tertiary">
+            <span className="font-semibold">Action prioritaire :</span>{" "}
+            <span className="text-ns-secondary">{nba.reason}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
             Rafraîchir
           </button>
-          <Link href="/admin/evenements?nouveau=1" className={`${BTN_PRIMARY} text-sm`}>
-            Nouvel événement
+          {nba.id !== "new_event" ? (
+            <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
+              Nouvel événement
+            </Link>
+          ) : null}
+          <Link href={nba.href} className={`${BTN_PRIMARY} text-sm`}>
+            {nba.label}
           </Link>
         </div>
       </div>
@@ -1279,17 +1337,17 @@ export function AdminDashboardPanel() {
           />
           <OpsQueueCard
             title="À prioriser"
-            href="/admin/personnes?tab=membres"
+            href="/admin/personnes?tab=membres&queue=priority"
             rows={queues.priority}
           />
           <OpsQueueCard
             title="À revoir"
-            href="/admin/personnes?tab=membres"
+            href="/admin/personnes?tab=membres&queue=review"
             rows={queues.review}
           />
           <OpsQueueCard
             title="No-show"
-            href="/admin/personnes?tab=membres"
+            href="/admin/personnes?tab=membres&queue=no-show"
             rows={queues.noShow}
           />
         </div>
