@@ -19,7 +19,7 @@ export default async function AdminMembresRedirectPage({
   const sp = await searchParams;
   const params = new URLSearchParams();
   params.set("tab", "membres");
-  for (const key of ["id", "profile", "source"] as const) {
+  for (const key of ["id", "profile", "source", "queue"] as const) {
     const val = firstString(sp[key]);
     if (val) params.set(key, val);
   }
