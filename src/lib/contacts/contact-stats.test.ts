@@ -77,13 +77,13 @@ describe("buildContactStats", () => {
     expect(stats.invitationsCount).toBe(2);
     expect(stats.confirmedCount).toBe(1);
     expect(stats.declinedCount).toBe(1);
-    // 1000 + 16% IVA
-    expect(stats.revenueMxn).toBe(1160);
+    // 1000 + IVA 16% + service 15%
+    expect(stats.revenueMxn).toBe(1310);
     expect(stats.addedAt).toBe("2026-01-01T00:00:00.000Z");
     expect(stats.events).toHaveLength(2);
     expect(stats.surveyCount).toBe(1);
     expect(stats.avgWouldRecommend).toBe(5);
-    expect(stats.events.find((e) => e.eventId === "e1")?.revenueMxn).toBe(1160);
+    expect(stats.events.find((e) => e.eventId === "e1")?.revenueMxn).toBe(1310);
     expect(stats.events.find((e) => e.eventId === "e2")?.interestResponse).toBe("no");
     expect(stats.events.find((e) => e.eventId === "e1")?.survey?.comment).toBe("Très bien");
   });

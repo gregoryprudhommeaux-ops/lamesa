@@ -120,6 +120,8 @@ export const eventSchema = z.object({
   priceMxn: z.number().min(0).max(1_000_000).optional().nullable(),
   /** Internal COST HT (MXN / pers.) — not shown to guests. */
   costMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  priceIncludesService: z.boolean().optional().nullable(),
+  costIncludesService: z.boolean().optional().nullable(),
   accessIncludesWelcomeDrink: z.boolean().optional(),
   accessIncludesAmuseBouche: z.boolean().optional(),
   menuIncluded: z.string().trim().max(4000).optional(),

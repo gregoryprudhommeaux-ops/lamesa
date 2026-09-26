@@ -15,7 +15,10 @@ export type EngagementParticipation = Pick<
   "id" | "email" | "contactId" | "status" | "isOrganizer" | "eventId"
 >;
 
-export type EngagementEvent = Pick<AdminEvent, "id" | "priceMxn">;
+export type EngagementEvent = Pick<
+  AdminEvent,
+  "id" | "priceMxn" | "priceIncludesService"
+>;
 
 export type EngagementMember = Pick<WaitlistRegistration, "id" | "email" | "referralCode">;
 
@@ -79,10 +82,16 @@ export function buildMemberEngagementIndex(input: {
     >
   >;
 }): Map<string, MemberEngagement> {
-  const priceByEvent = new Map<string, number>();
+  const priceByEvent = new Map<
+    string,
+    { price: number; includeService: boolean }
+  >();
   for (const ev of input.events) {
     const price = typeof ev.priceMxn === "number" && Number.isFinite(ev.priceMxn) ? ev.priceMxn : 0;
-    priceByEvent.set(ev.id, price);
+    priceByEvent.set(ev.id, {
+      price,
+      includeService: ev.priceIncludesService !== false,
+    });
   }
 
   const partsByEmail = new Map<string, EngagementParticipation[]>();
@@ -118,8 +127,10 @@ export function buildMemberEngagementIndex(input: {
       if (countsAsInvitation(part.status)) invitationsSent += 1;
       if (countsAsConfirmed(part.status)) {
         eventsConfirmed += 1;
-        const priceBeforeTax = priceByEvent.get(part.eventId) ?? 0;
-        revenueMxn += computeEventIva(priceBeforeTax).totalWithIva;
+        const ticket = priceByEvent.get(part.eventId);
+        revenueMxn += computeEventIva(ticket?.price ?? 0, {
+          includeService: ticket?.includeService !== false,
+        }).totalWithIva;
       }
     }
 
