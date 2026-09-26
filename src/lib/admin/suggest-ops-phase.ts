@@ -1,6 +1,6 @@
 import type { OpsPhaseId } from "@/lib/admin/ops-phases";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
-import { countSeatedParticipations } from "@/lib/events/capacity";
+import { countSeatedParticipations, isOrganizerParticipation } from "@/lib/events/capacity";
 
 export type EventOpsKpis = {
   capacity: number;
@@ -75,7 +75,7 @@ function buildKpis(
   event: SuggestOpsPhaseInput["event"],
   parts: AdminEventParticipation[],
 ): EventOpsKpis {
-  const guests = parts.filter((p) => !p.isOrganizer);
+  const guests = parts.filter((p) => !isOrganizerParticipation(p));
   const paid = guests.filter(
     (p) => p.status === "confirmed" || p.status === "present",
   ).length;

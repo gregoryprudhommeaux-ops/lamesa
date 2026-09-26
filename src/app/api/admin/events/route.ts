@@ -10,7 +10,11 @@ import {
 } from "@/lib/admin/load-core-collections";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
-import { nextInviteStatus, DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import {
+  nextInviteStatus,
+  DEFAULT_GUEST_CAPACITY,
+  isOrganizerParticipation,
+} from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { eventSchema } from "@/lib/validation";
 
@@ -37,10 +41,18 @@ export async function GET(request: Request) {
 
     const participations = core.participations.map((data) => {
       const email = normalizeEmail(String(data.email ?? ""));
-      return {
+      const row = {
         ...data,
         phone: phoneByEmail.get(email) ?? null,
       };
+      // Organizer is always Invité (COST yes, CA no) — coerce legacy Payé in API response.
+      if (
+        isOrganizerParticipation(row) &&
+        String(row.status ?? "") !== "comped"
+      ) {
+        return { ...row, status: "comped" as const };
+      }
+      return row;
     });
 
     return NextResponse.json({ ok: true, events, participations });

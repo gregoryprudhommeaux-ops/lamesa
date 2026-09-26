@@ -140,7 +140,11 @@ describe("buildLastEventRecap", () => {
     expect(recap?.saleFormula).toBe("TTC · HT + IVA 16% + svc 15%");
     expect(recap?.priceIncludesIva).toBe(true);
     expect(recap?.priceIncludesService).toBe(true);
-    expect(recap?.complimentary).toBe(0);
+    // Organizer seat counts as Invité (COST) even if legacy status was confirmed.
+    expect(recap?.complimentary).toBe(1);
+    expect(recap?.complimentaryPeople.map((p) => p.email)).toEqual(["org@x.com"]);
+    expect(recap?.complimentaryPeople[0]?.status).toBe("comped");
+    expect(recap?.complimentaryPeople[0]?.amountMxn).toBe(0);
     expect(recap?.satisfactionResponses).toBe(1);
     expect(recap?.satisfactionOverall).toBe(4.7);
     expect(recap?.surveyRows[0]?.comment).toBe("Table très juste.");
@@ -194,6 +198,41 @@ describe("buildLastEventRecap", () => {
     expect(recap?.costTotalMxn).toBe(2620);
     expect(recap?.marginMxn).toBe(0);
     expect(recap?.complimentaryPeople[0]?.amountMxn).toBe(0);
+  });
+
+  it("organizer seat is Invité COST (no CA) even when status was Payé", () => {
+    const recap = buildLastEventRecap(
+      [event({ ...dinner, priceMxn: 2000, costMxn: 1000 })],
+      [
+        part({
+          id: "paid",
+          eventId: "ev1",
+          email: "paid@x.com",
+          fullName: "Payé",
+          status: "confirmed",
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+        part({
+          id: "org",
+          eventId: "ev1",
+          email: "gregory@x.com",
+          fullName: "Gregory Prudhommeaux",
+          status: "confirmed",
+          isOrganizer: true,
+          calendarInviteSentAt: "2026-09-20T00:00:00.000Z",
+        }),
+      ],
+      NOW,
+    );
+    expect(recap?.registered).toBe(1);
+    expect(recap?.revenueMxn).toBe(2620);
+    expect(recap?.complimentary).toBe(1);
+    expect(recap?.complimentaryPeople[0]?.fullName).toBe("Gregory Prudhommeaux");
+    expect(recap?.complimentaryPeople[0]?.status).toBe("comped");
+    expect(recap?.complimentaryPeople[0]?.amountMxn).toBe(0);
+    // COST = (1 paid + 1 org Invité) × 1310
+    expect(recap?.costTotalMxn).toBe(2620);
+    expect(recap?.marginMxn).toBe(0);
   });
 
   it("CA follows negotiation flags (no invented service)", () => {
