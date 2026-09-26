@@ -64,6 +64,7 @@ import {
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
 import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminEventsProps = {
@@ -1934,9 +1935,25 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           >
             {activeEvent ? (
               <div className="space-y-4">
-                <p className="text-xs text-ns-secondary">
-                  Places restantes et last-call — composer les tables ensuite dans l’outil dédié.
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-xs text-ns-secondary">
+                    Places restantes et last-call — puis composer les tables dans Tables.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href="/admin/tables"
+                      className={`${BTN_PRIMARY} inline-flex items-center text-sm`}
+                    >
+                      Composer les tables →
+                    </Link>
+                    <Link
+                      href="/admin/tables?generate=1"
+                      className={`${BTN_SECONDARY} inline-flex items-center text-sm`}
+                    >
+                      Générer des idées
+                    </Link>
+                  </div>
+                </div>
                 <AdminEventPlacesAvailablePanel
                   event={activeEvent}
                   onEventUpdated={() => void loadAll()}

@@ -103,7 +103,9 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | Monolithe `admin-events.tsx` | En cours — 9 phases branchées |
 | FormalInviteOui encore panel dédié (pas fusion roster) | Ouvert — dans phase formal |
 | Check-in UI dédiée | Placeholder roster payés |
-| Nav plate 7 items + contacts orphelin | En cours — porte + hubs |
+| Nav plate 7 items + contacts orphelin | Done — porte + hubs (#35) |
+| Dashboard bas trop long vs porte | Done — zone Approfondir densifiée |
+| Lien Tables depuis dinner_prep | Done |
 | Page publique `/e` bifurquée | Ouvert — vague 2 |
 
 ## Jack findings log
@@ -115,7 +117,8 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | P0 | Listes participants dupliquées | Tranche 2 done (#33) |
 | 2026-09-25 | P1 | Templates diluent CTA | Tranche 2 done (#33) |
 | 2026-09-25 | P0 | Labels 9 phases produit | Tranche 3 done (#34) |
-| 2026-09-26 | P0 | Nav admin plate / Dashboard pas porte | En cours |
+| 2026-09-26 | P0 | Nav admin plate / Dashboard pas porte | Done (#35) |
+| 2026-09-26 | P2 | Dashboard Approfondir + lien Tables dinner_prep | Done |
 
 ## Changelog
 
@@ -126,3 +129,4 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | Tranche 2 roster unifié + template drawers (#33) |
 | 2026-09-25 | Tranche 3 — 9 ops phases + Formal/Places/paiement (#34) |
 | 2026-09-26 | Admin IA — Dashboard porte + Personnes onglets + nav 5 |
+| 2026-09-26 | P2 — Approfondir densifié + CTAs Tables en dinner_prep |

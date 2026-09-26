@@ -5,10 +5,7 @@ import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/wait
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
 import {
-  CompletionCell,
-  WelcomeEmailCell,
   formatRegistrantDate,
-  registrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { X } from "lucide-react";
@@ -238,16 +235,6 @@ const CATEGORIES: {
   { key: "wouldReturn", label: "Autres tables" },
   { key: "wouldRecommend", label: "En parlerait" },
 ];
-
-function KpiCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{label}</p>
-      <p className="mt-2 text-3xl font-black text-ns-tertiary">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-ns-secondary">{hint}</p> : null}
-    </div>
-  );
-}
 
 function OpsQueueCard({
   title,
@@ -1380,366 +1367,307 @@ export function AdminDashboardPanel() {
         </div>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
-        <KpiCard
-          label="Événements"
-          value={kpis.eventsTotal}
-          hint={`${kpis.eventsPublished} publiés · ${kpis.eventsUpcoming} à venir`}
-        />
-        <KpiCard label="Participations" value={kpis.participationsTotal} />
-        <KpiCard
-          label="Satisfaction globale"
-          value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
-          hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
-        />
-      </section>
-
-      <section className="space-y-4">
+      {/* Approfondir — densifié sous la porte */}
+      <section className="space-y-4 border-t border-gray-100 pt-6">
         <div>
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Approfondir · emails
+            Approfondir
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Historique des blasts pour apprendre ce qui marche.
+            Signaux utiles — sans concurrencer l’action prioritaire ci-dessus.
           </p>
         </div>
-        <EmailCampaignHistoryTable rows={emailCampaignHistory} />
-      </section>
 
-      <section>
-        <div className="mb-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Répartition membres
-          </h3>
-          <p className="mt-1 text-xs text-ns-secondary">
-            Sur la waitlist active : secteur, position et hub ville (ZMG → Guadalajara).
-          </p>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DistributionCard
-            title="Secteurs"
-            items={distributions?.sectors ?? []}
-            total={kpis.waitlistUsers}
-            kind="sector"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "sector",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Positions"
-            items={distributions?.positions ?? []}
-            total={kpis.waitlistUsers}
-            kind="position"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "position",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Hubs"
-            items={distributions?.cities ?? []}
-            total={kpis.waitlistUsers}
-            kind="city"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "city",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-        </div>
-      </section>
-
-      {distributionSelection ? (
-        <DistributionDetailModal
-          selection={distributionSelection}
-          onClose={() => setDistributionSelection(null)}
-        />
-      ) : null}
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Intelligence du vivier
-            </h3>
-            <p className="mt-1 text-xs text-ns-secondary">
-              Dernières compositions enregistrées dans le Table Builder
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/admin/tables" className={`${BTN_SECONDARY} text-sm`}>
-              Ouvrir le Table Builder
-            </Link>
-            <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-sm`}>
-              Générer des idées
-            </Link>
-          </div>
-        </div>
-
-        {recentTableDrafts.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">
-            Aucun brouillon de table pour le moment.
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {recentTableDrafts.map((draft) => (
-              <div
-                key={draft.id}
-                className="rounded-xl border border-gray-100 bg-ns-brand-light/40 p-4"
-              >
-                <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
-                <p className="mt-1 text-xs text-ns-secondary">
-                  {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
-                  {" · "}
-                  {draft.city ? labelCityHubFr(draft.city) : "Ville non renseignée"}
-                </p>
-                <p className="mt-3 text-sm text-ns-tertiary">
-                  {draft.primaryCount} titulaire{draft.primaryCount === 1 ? "" : "s"} ·{" "}
-                  {draft.alternateCount} suppléant{draft.alternateCount === 1 ? "" : "s"}
-                </p>
-                <p className="mt-2 text-xs text-ns-secondary">
-                  Mis à jour {formatRegistrantDate(draft.updatedAt)}
-                </p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Funnel participations
+            </h4>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-2 sm:flex-nowrap">
+              <FunnelStage label="Invités" value={kpis.invited} />
+              <FunnelArrow />
+              <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
+              <FunnelArrow />
+              <FunnelStage label="Présents" value={kpis.attending} />
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-gray-100 pt-3 text-xs sm:grid-cols-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Déclinés</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.notAttending}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Derniers inscrits
-            </h3>
-            <p className="mt-1 text-xs text-ns-secondary">
-              Du plus récent au plus ancien
-              {avgCompletion !== null ? ` · complétion moyenne ${avgCompletion}%` : ""}
-            </p>
-          </div>
-          <Link href="/admin/personnes?tab=membres" className="text-xs font-semibold text-ns-primary hover:underline">
-            Voir tous les membres →
-          </Link>
-        </div>
-
-        {recentRegistrants.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Inscrit</th>
-                  <th className="py-2 pr-3 font-semibold">Inscription</th>
-                  <th className="py-2 pr-3 font-semibold">Complétion</th>
-                  <th
-                    className="py-2 pr-3 font-semibold"
-                    title="Mail auto après inscription (express = compléter le profil)"
-                  >
-                    Mail auto
-                  </th>
-                  <th className="py-2 font-semibold">Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRegistrants.map((r) => {
-                  const subtitle = registrantSubtitle(r);
-                  return (
-                    <tr
-                      key={r.id}
-                      className="cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60"
-                      onClick={() => {
-                        router.push(`/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          router.push(`/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="link"
-                    >
-                      <td className="py-3 pr-3">
-                        <p className="font-semibold text-ns-tertiary">{r.fullName || "—"}</p>
-                        {subtitle ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{subtitle}</p>
-                        ) : null}
-                        {r.isExpress ? (
-                          <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            Express
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
-                        {formatRegistrantDate(r.createdAt)}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <CompletionCell
-                          percent={r.completionPercent}
-                          missingFields={r.missingFields ?? []}
-                        />
-                      </td>
-                      <td className="py-3 pr-3">
-                        <WelcomeEmailCell
-                          status={r.welcomeEmailStatus}
-                          sentAt={r.welcomeEmailSentAt}
-                          isExpress={r.isExpress}
-                        />
-                      </td>
-                      <td className="py-3">
-                        <a
-                          href={`mailto:${r.email}`}
-                          className="block text-ns-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {r.email || "—"}
-                        </a>
-                        {r.phone ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{r.phone}</p>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Funnel participations
-          </h3>
-          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap sm:gap-2">
-            <FunnelStage label="Invités" value={kpis.invited} />
-            <FunnelArrow />
-            <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
-            <FunnelArrow />
-            <FunnelStage label="Présents" value={kpis.attending} />
-          </div>
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Déclinés</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.notAttending}</span>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Waitlist</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.waitlistSeats}
+                </span>
+              </div>
+              <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
+                <span className="text-ns-secondary">En parlerait</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {satisfaction.wouldRecommend === null
+                    ? "—"
+                    : `${formatScore(satisfaction.wouldRecommend)}/5`}
+                </span>
+              </div>
             </div>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Liste d’attente</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
-            </div>
-            <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
-              <span className="text-ns-secondary">En parlerait</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">
-                {satisfaction.wouldRecommend === null
-                  ? "—"
-                  : `${formatScore(satisfaction.wouldRecommend)}/5`}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Satisfaction cumulée
+              </h4>
+              <span className="text-[11px] text-ns-secondary">
+                {kpis.surveysResponses} réponses · {kpis.eventsWithSurvey} dîners
               </span>
             </div>
+            {satisfaction.responseCount === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+            ) : (
+              <div className="mt-3">
+                <p className="mb-3 text-3xl font-black text-ns-tertiary">
+                  {formatScore(satisfaction.overall)}
+                  <span className="text-base text-ns-secondary"> / 5</span>
+                </p>
+                <CategoryBars sat={satisfaction} />
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Notes moyennes cumulées
-          </h3>
-          {satisfaction.responseCount === 0 ? (
-            <p className="mt-4 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Vivier · tables
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  Derniers brouillons Table Builder
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/admin/tables" className={`${BTN_SECONDARY} text-xs`}>
+                  Tables
+                </Link>
+                <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-xs`}>
+                  Générer
+                </Link>
+              </div>
+            </div>
+            {recentTableDrafts.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun brouillon.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {recentTableDrafts.slice(0, 3).map((draft) => (
+                  <li
+                    key={draft.id}
+                    className="rounded-xl border border-gray-100 bg-ns-brand-light/40 px-3 py-2"
+                  >
+                    <p className="truncate text-sm font-semibold text-ns-tertiary">
+                      {draft.title || "Table sans titre"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-ns-secondary">
+                      {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
+                      {" · "}
+                      {draft.primaryCount} tit. · {draft.alternateCount} supp.
+                      {" · "}
+                      {formatRegistrantDate(draft.updatedAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Derniers inscrits
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  {avgCompletion !== null ? `Complétion moy. ${avgCompletion}%` : "Plus récents"}
+                </p>
+              </div>
+              <Link
+                href="/admin/personnes?tab=membres"
+                className="text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Tous →
+              </Link>
+            </div>
+            {recentRegistrants.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun inscrit.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-gray-50">
+                {recentRegistrants.slice(0, 5).map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-start justify-between gap-2 px-1 py-2 text-left hover:bg-ns-brand-light/50"
+                      onClick={() =>
+                        router.push(
+                          `/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`,
+                        )
+                      }
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                          {r.fullName || "—"}
+                        </span>
+                        <span className="block truncate text-[11px] text-ns-secondary">
+                          {r.email}
+                          {r.isExpress ? " · Express" : ""}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-ns-secondary">
+                        {r.completionPercent}%
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Répartition waitlist
+          </h4>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <DistributionCard
+              title="Secteurs"
+              items={distributions?.sectors ?? []}
+              total={kpis.waitlistUsers}
+              kind="sector"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "sector",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Positions"
+              items={distributions?.positions ?? []}
+              total={kpis.waitlistUsers}
+              kind="position"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "position",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Hubs"
+              items={distributions?.cities ?? []}
+              total={kpis.waitlistUsers}
+              kind="city"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "city",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+          </div>
+        </div>
+
+        {distributionSelection ? (
+          <DistributionDetailModal
+            selection={distributionSelection}
+            onClose={() => setDistributionSelection(null)}
+          />
+        ) : null}
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Historique emails
+          </h4>
+          <EmailCampaignHistoryTable rows={emailCampaignHistory} />
+        </div>
+
+        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Satisfaction par dîner
+            </h4>
+            <p className="text-[11px] text-ns-secondary">
+              {withScores.length} avec réponses
+            </p>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="mt-3 text-sm text-ns-secondary">Aucun événement.</p>
           ) : (
-            <div className="mt-4">
-              <p className="mb-4 text-4xl font-black text-ns-tertiary">
-                {formatScore(satisfaction.overall)}
-                <span className="text-lg text-ns-secondary"> / 5</span>
-              </p>
-              <CategoryBars sat={satisfaction} />
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+                    <th className="py-2 pr-3 font-semibold">Dîner</th>
+                    <th className="py-2 pr-3 font-semibold">Date</th>
+                    <th className="py-2 pr-3 font-semibold">Réponses</th>
+                    <th className="py-2 pr-3 font-semibold">Moy.</th>
+                    <th className="py-2 pr-3 font-semibold">Lieu</th>
+                    <th className="py-2 pr-3 font-semibold">Menu</th>
+                    <th className="py-2 pr-3 font-semibold">Sélection</th>
+                    <th className="py-2 pr-3 font-semibold">Q/P</th>
+                    <th className="py-2 pr-3 font-semibold">Tables</th>
+                    <th className="py-2 font-semibold">Bouche</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((ev) => {
+                    const s = ev.satisfaction;
+                    const date = new Date(ev.startsAt);
+                    return (
+                      <tr key={ev.id} className="border-b border-gray-50">
+                        <td className="py-2.5 pr-3">
+                          <Link
+                            href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
+                            className="font-semibold text-ns-primary hover:underline"
+                          >
+                            {ev.title}
+                          </Link>
+                        </td>
+                        <td className="py-2.5 pr-3 text-ns-secondary">
+                          {Number.isNaN(date.getTime())
+                            ? "—"
+                            : date.toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                        </td>
+                        <td className="py-2.5 pr-3">
+                          {s.responseCount}
+                          <span className="text-ns-secondary">/{s.sentCount}</span>
+                        </td>
+                        <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
+                          {formatScore(s.overall)}
+                        </td>
+                        <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
+                        <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Satisfaction par dîner
-          </h3>
-          <p className="text-xs text-ns-secondary">
-            {withScores.length} dîner{withScores.length === 1 ? "" : "s"} avec réponses
-          </p>
-        </div>
-
-        {events.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun événement.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Dîner</th>
-                  <th className="py-2 pr-3 font-semibold">Date</th>
-                  <th className="py-2 pr-3 font-semibold">Réponses</th>
-                  <th className="py-2 pr-3 font-semibold">Moy.</th>
-                  <th className="py-2 pr-3 font-semibold">Lieu</th>
-                  <th className="py-2 pr-3 font-semibold">Menu</th>
-                  <th className="py-2 pr-3 font-semibold">Sélection</th>
-                  <th className="py-2 pr-3 font-semibold">Q/P</th>
-                  <th className="py-2 pr-3 font-semibold">Tables</th>
-                  <th className="py-2 font-semibold">Bouche</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((ev) => {
-                  const s = ev.satisfaction;
-                  const date = new Date(ev.startsAt);
-                  return (
-                    <tr key={ev.id} className="border-b border-gray-50">
-                      <td className="py-2.5 pr-3">
-                        <Link
-                          href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
-                          className="font-semibold text-ns-primary hover:underline"
-                        >
-                          {ev.title}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 pr-3 text-ns-secondary">
-                        {Number.isNaN(date.getTime())
-                          ? "—"
-                          : date.toLocaleDateString("fr-FR", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {s.responseCount}
-                        <span className="text-ns-secondary">/{s.sentCount}</span>
-                      </td>
-                      <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
-                        {formatScore(s.overall)}
-                      </td>
-                      <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
-                      <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
     </div>
   );
