@@ -14,6 +14,7 @@ export type GuestJourneyStageId =
   | "checked_in"
   | "paid"
   | "comped"
+  | "payment_declared"
   | "to_pay"
   | "invited_formal"
   | "interested"
@@ -34,6 +35,7 @@ const LABELS: Record<GuestJourneyStageId, string> = {
   checked_in: "Présent (soir J)",
   paid: "Payé",
   comped: "Invité (offert)",
+  payment_declared: "Virement déclaré",
   to_pay: "À payer",
   invited_formal: "Invité formel",
   interested: "OUI / intéressé",
@@ -43,7 +45,7 @@ const LABELS: Record<GuestJourneyStageId, string> = {
 
 /**
  * Resolve where a guest sits in the dinner journey.
- * Priority: terminal states → presence → payment → invite → interest → STD → selected.
+ * Priority: terminal states → presence → payment → declare → invite → interest → STD → selected.
  */
 export function resolveGuestJourneyStage(
   p: Pick<
@@ -55,6 +57,7 @@ export function resolveGuestJourneyStage(
     | "saveTheDateSentAt"
     | "calendarInviteSentAt"
     | "checkedInAt"
+    | "paymentDeclaredAt"
     | "satisfactionSurvey"
   >,
 ): GuestJourneyStage {
@@ -75,6 +78,10 @@ export function resolveGuestJourneyStage(
   }
   if (status === "confirmed") return { id: "paid", label: LABELS.paid };
   if (status === "comped") return { id: "comped", label: LABELS.comped };
+
+  if (p.paymentDeclaredAt && (status === "invited" || status === "attending")) {
+    return { id: "payment_declared", label: LABELS.payment_declared };
+  }
 
   if (p.calendarInviteSentAt) {
     if (status === "invited" || status === "attending") {

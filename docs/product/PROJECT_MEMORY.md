@@ -90,6 +90,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | **Évolution LA MESA** (série dîners) sur Dashboard Approfondir | Cumul CA / marge / sat / remplissage — pas seulement dernier dîner |
 | 2026-09-26 | NBA **check-in** dans la fenêtre soir J (H-6 → H+18) | Étape active le jour J, pas saut direct feedback |
 | 2026-09-26 | Fil personne×dîner v1 : `guestJourneyStage` sur roster | Une étape métier lisible (STD → payé → présent…) |
+| 2026-09-26 | Signal membre **« J’ai effectué le virement »** (`paymentDeclaredAt`) | Déclaré ≠ Payé ; admin confirme ; exclus des relances email |
 
 ## Reusable components / patterns
 
@@ -206,3 +207,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Espace membre — bloc « Mon prochain pas » (survey / ACCESS / profil) |
 | 2026-09-26 | Spec Jack P0/P1 : série LA MESA + NBA check-in + guest journey stage (`docs/superpowers/specs/2026-09-26-mesa-series-checkin-journey-design.md`) |
 | 2026-09-26 | Dashboard — Évolution LA MESA (CA / marge / sat / dîners) ; NBA check-in soir J ; roster affiche l’étape parcours |
+| 2026-09-26 | Paiement — signal déclaré membre (`paymentDeclaredAt`) + filtre admin « Virement déclaré » + exclus relance email |

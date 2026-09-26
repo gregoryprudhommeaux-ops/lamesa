@@ -265,6 +265,11 @@ export interface AdminEventParticipation {
   rsvpAt?: string;
   /** Door check-in the night of (ISO). Independent of payment status. */
   checkedInAt?: string | null;
+  /**
+   * Member declared they sent the SPEI transfer (ISO).
+   * Epistemic: **declared** — not proof of receipt. Admin still marks Payé.
+   */
+  paymentDeclaredAt?: string | null;
   /** Thank-you + satisfaction survey email sent (~12h after start) */
   satisfactionSurveySentAt?: string;
   satisfactionSurvey?: SatisfactionSurveyAnswers;

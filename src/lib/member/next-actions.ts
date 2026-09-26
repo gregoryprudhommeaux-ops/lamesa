@@ -20,6 +20,10 @@ export type MemberNextAction = {
     title: string;
     startsAt: string;
   };
+  /** Participation id when action is tied to a seat (pay / survey). */
+  participationId?: string;
+  /** Member declared SPEI — awaiting admin Payé. */
+  paymentDeclaredAt?: string | null;
   /** Profile completion % when kind = complete_profile. */
   completionPercent?: number;
   /** ACCESS price (before tax) when kind = pay_access. */
@@ -118,6 +122,8 @@ export function resolveMemberNextActions(input: {
       id: `pay:${p.id}`,
       kind: "pay_access",
       href: `/e/${encodeURIComponent(ev.slug)}`,
+      participationId: p.id,
+      paymentDeclaredAt: p.paymentDeclaredAt ?? null,
       event: {
         id: ev.id,
         slug: ev.slug,

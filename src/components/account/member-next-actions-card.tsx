@@ -1,14 +1,17 @@
 "use client";
 
 import { Link } from "@/i18n/navigation";
+import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { computeEventIva, formatMxn } from "@/lib/events/pricing";
 import { EVENT_PAYMENT_BANK } from "@/lib/events/payment-details";
 import type { MemberNextAction } from "@/lib/member/next-actions";
 import { BTN_PRIMARY, BTN_SECONDARY, FORM_SECTION_TITLE } from "@/lib/ui/nextstep";
 import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 
 type MemberNextActionsCardProps = {
   actions: MemberNextAction[];
+  onDeclared?: () => void;
 };
 
 function ActionCta({
@@ -36,14 +39,43 @@ function ActionCta({
   );
 }
 
-export function MemberNextActionsCard({ actions }: MemberNextActionsCardProps) {
+export function MemberNextActionsCard({ actions, onDeclared }: MemberNextActionsCardProps) {
   const t = useTranslations("account.nextActions");
   const locale = useLocale() as "fr" | "en" | "es";
+  const authFetch = useAuthFetch();
+  const [declaring, setDeclaring] = useState(false);
+  const [declareError, setDeclareError] = useState<string | null>(null);
+  const [declaredLocal, setDeclaredLocal] = useState<string | null>(null);
 
   if (actions.length === 0) return null;
 
   const primary = actions[0]!;
   const rest = actions.slice(1);
+  const paymentDeclared =
+    Boolean(primary.paymentDeclaredAt) ||
+    (primary.participationId != null && declaredLocal === primary.participationId);
+
+  async function declarePayment() {
+    if (!primary.participationId || declaring) return;
+    setDeclaring(true);
+    setDeclareError(null);
+    try {
+      const res = await authFetch(
+        `/api/me/participations/${encodeURIComponent(primary.participationId)}/declare-payment`,
+        { method: "POST", body: "{}" },
+      );
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? "declare_failed");
+      }
+      setDeclaredLocal(primary.participationId);
+      onDeclared?.();
+    } catch (e) {
+      setDeclareError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeclaring(false);
+    }
+  }
 
   return (
     <section className="space-y-4 rounded-2xl border border-ns-primary/30 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/40 p-5 shadow-sm">
@@ -58,9 +90,13 @@ export function MemberNextActionsCard({ actions }: MemberNextActionsCardProps) {
                 percent: primary.completionPercent ?? 0,
               })
             : primary.kind === "pay_access"
-              ? t("kinds.pay_access.reason", {
-                  event: primary.event?.title ?? "",
-                })
+              ? paymentDeclared
+                ? t("kinds.pay_access.declaredReason", {
+                    event: primary.event?.title ?? "",
+                  })
+                : t("kinds.pay_access.reason", {
+                    event: primary.event?.title ?? "",
+                  })
               : primary.kind === "fill_survey"
                 ? t("kinds.fill_survey.reason", {
                     event: primary.event?.title ?? "",
@@ -99,6 +135,21 @@ export function MemberNextActionsCard({ actions }: MemberNextActionsCardProps) {
             {EVENT_PAYMENT_BANK.cuenta} · {EVENT_PAYMENT_BANK.nombre}
           </p>
           <p className="mt-1 text-[11px]">{t("bankHint")}</p>
+          {paymentDeclared ? (
+            <p className="mt-2 font-semibold text-ns-primary">{t("declaredBadge")}</p>
+          ) : primary.participationId ? (
+            <button
+              type="button"
+              className={`${BTN_SECONDARY} mt-2 text-xs`}
+              disabled={declaring}
+              onClick={() => void declarePayment()}
+            >
+              {declaring ? t("declaring") : t("declareCta")}
+            </button>
+          ) : null}
+          {declareError ? (
+            <p className="mt-1 text-[11px] text-red-600">{declareError}</p>
+          ) : null}
         </div>
       ) : null}
 

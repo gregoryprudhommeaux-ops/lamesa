@@ -79,7 +79,7 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
 
-  const { toSend: targets, alreadySent } = splitPaymentRelanceBatch(awaiting);
+  const { toSend: targets, alreadySent, declared } = splitPaymentRelanceBatch(awaiting);
 
   if (parsed.data.dryRun) {
     return NextResponse.json({
@@ -87,6 +87,7 @@ export async function POST(request: Request, { params }: Params) {
       dryRun: true,
       count: targets.length,
       alreadySent: alreadySent.length,
+      declared: declared.length,
       emails: targets.map((t) => t.email),
     });
   }
@@ -140,6 +141,7 @@ export async function POST(request: Request, { params }: Params) {
     failed,
     skipped,
     alreadySent: alreadySent.length,
+    declared: declared.length,
     targeted: targets.length,
     errors: errors.slice(0, 20),
   });

@@ -43,6 +43,17 @@ describe("resolveGuestJourneyStage", () => {
     ).toBe("to_pay");
     expect(
       resolveGuestJourneyStage(
+        part({
+          id: "4b",
+          email: "a@x.com",
+          status: "attending",
+          calendarInviteSentAt: "2026-09-10T00:00:00.000Z",
+          paymentDeclaredAt: "2026-09-15T12:00:00.000Z",
+        }),
+      ).id,
+    ).toBe("payment_declared");
+    expect(
+      resolveGuestJourneyStage(
         part({ id: "5", email: "a@x.com", status: "confirmed" }),
       ).id,
     ).toBe("paid");
