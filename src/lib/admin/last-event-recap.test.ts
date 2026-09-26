@@ -280,6 +280,53 @@ describe("buildLastEventRecap", () => {
     expect(recap?.marginMxn).toBe(2320);
   });
 
+  it("keeps one organizer cover when mailbox and apostrophe name are both seated", () => {
+    const recap = buildLastEventRecap(
+      [
+        event({
+          ...dinner,
+          priceMxn: 1300,
+          priceIncludesIva: true,
+          priceIncludesService: false,
+          costMxn: 1300,
+          costIncludesIva: true,
+          costIncludesService: false,
+        }),
+      ],
+      [
+        ...Array.from({ length: 10 }, (_, i) =>
+          part({
+            id: `paid-${i}`,
+            eventId: "ev1",
+            email: `guest${i}@x.com`,
+            fullName: `Guest ${i}`,
+            status: "confirmed",
+          }),
+        ),
+        part({
+          id: "host-mail",
+          eventId: "ev1",
+          email: "greg@nextstep-services.com",
+          fullName: "Greg",
+          status: "confirmed",
+        }),
+        part({
+          id: "host-name",
+          eventId: "ev1",
+          email: "other@example.com",
+          fullName: "Gregory Prud'hommeaux",
+          status: "confirmed",
+        }),
+      ],
+      NOW,
+    );
+    expect(recap?.registered).toBe(10);
+    expect(recap?.revenueMxn).toBe(15080);
+    expect(recap?.complimentary).toBe(1);
+    expect(recap?.costTotalMxn).toBe(16588);
+    expect(recap?.marginMxn).toBe(-1508);
+  });
+
   it("CA follows negotiation flags (no invented service)", () => {
     const recap = buildLastEventRecap(
       [

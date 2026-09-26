@@ -1505,6 +1505,12 @@ export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
             </button>
           ))}
         </div>
+        {recap.costMxn != null && recap.priceMxn != null ? (
+          <p className="mt-3 text-sm text-ns-secondary">
+            Résultat {formatRecapMxn(recap.marginMxn)} — encaissé {recap.registered} payants, coût{" "}
+            {recap.registered + recap.complimentary} couverts.
+          </p>
+        ) : null}
         {recap.satisfactionResponses > 0 ? (
           <div className="mt-4 rounded-xl border border-gray-100 bg-white/60 p-3">
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">

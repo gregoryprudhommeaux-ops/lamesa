@@ -20,27 +20,31 @@ export async function ensureOrganizerParticipation(
     .where("eventId", "==", eventId)
     .get();
 
-  const hit =
-    existing.docs.find(
-      (d) => normalizeEmail(String(d.data().email ?? "")) === email,
-    ) ??
-    existing.docs.find((d) =>
+  const hits = existing.docs.filter((d) => {
+    const data = d.data();
+    return (
+      normalizeEmail(String(data.email ?? "")) === email ||
       isOrganizerParticipation({
-        email: String(d.data().email ?? ""),
-        isOrganizer: d.data().isOrganizer,
-        fullName: d.data().fullName != null ? String(d.data().fullName) : null,
+        email: String(data.email ?? ""),
+        isOrganizer: data.isOrganizer,
+        fullName: data.fullName != null ? String(data.fullName) : undefined,
+      })
+    );
+  });
+
+  if (hits.length > 0) {
+    await Promise.all(
+      hits.map(async (hit) => {
+        const data = hit.data();
+        const patch: Record<string, unknown> = { updatedAt: now };
+        if (!data.isOrganizer) patch.isOrganizer = true;
+        // Organizer is never a paying seat — normalize legacy `confirmed` → Invité.
+        if (String(data.status ?? "") !== "comped") patch.status = "comped";
+        if (Object.keys(patch).length > 1) {
+          await hit.ref.set(patch, { merge: true });
+        }
       }),
     );
-
-  if (hit) {
-    const data = hit.data();
-    const patch: Record<string, unknown> = { updatedAt: now };
-    if (!data.isOrganizer) patch.isOrganizer = true;
-    // Organizer is never a paying seat — normalize legacy `confirmed` → Invité.
-    if (String(data.status ?? "") !== "comped") patch.status = "comped";
-    if (Object.keys(patch).length > 1) {
-      await hit.ref.set(patch, { merge: true });
-    }
     return;
   }
 
