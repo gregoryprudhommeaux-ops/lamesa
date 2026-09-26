@@ -12,10 +12,12 @@ import {
   DEFAULT_GUEST_CAPACITY,
   isOrganizerParticipation,
 } from "@/lib/events/capacity";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { computeEventIva } from "@/lib/events/pricing";
 import {
   ADMIN_SCAN,
+  invalidateAdminCoreCollectionsCache,
   loadAdminCoreCollections,
 } from "@/lib/admin/load-core-collections";
 import {
@@ -570,6 +572,22 @@ export async function GET(request: Request) {
     } | null;
 
     if (pastEvent) {
+      // Persist organizer = Invité (COST oui, CA non) then coerce in-memory for this response.
+      try {
+        await ensureOrganizerParticipation(db, pastEvent.id);
+        invalidateAdminCoreCollectionsCache();
+      } catch (error) {
+        console.warn("[admin/dashboard] ensure organizer", error);
+      }
+      for (const p of participations) {
+        if (p.eventId !== pastEvent.id) continue;
+        if (!isOrganizerParticipation(p)) continue;
+        p.isOrganizer = true;
+        if (normalizeParticipationStatus(p.status) !== "comped") {
+          p.status = "comped";
+        }
+      }
+
       const pastParts = participations.filter((p) => p.eventId === pastEvent.id);
       const guests = pastParts.filter((p) => !isOrganizerParticipation(p));
       const confirmedGuests = guests.filter(
@@ -585,7 +603,7 @@ export async function GET(request: Request) {
       }).totalWithIva;
       const revenueMxn =
         Math.round(unitTtc * confirmedGuests.length * 100) / 100;
-      const sat = computeEventSatisfaction(pastParts);
+      const sat = computeEventSatisfaction(guests);
       pastEventFocus = {
         eventId: pastEvent.id,
         eventSlug: pastEvent.slug,

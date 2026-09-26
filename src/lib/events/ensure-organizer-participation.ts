@@ -1,6 +1,7 @@
 import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS } from "@/lib/firebase/admin";
+import { isOrganizerParticipation } from "@/lib/events/capacity";
 import type { Firestore } from "firebase-admin/firestore";
 
 /**
@@ -19,9 +20,17 @@ export async function ensureOrganizerParticipation(
     .where("eventId", "==", eventId)
     .get();
 
-  const hit = existing.docs.find(
-    (d) => normalizeEmail(String(d.data().email ?? "")) === email,
-  );
+  const hit =
+    existing.docs.find(
+      (d) => normalizeEmail(String(d.data().email ?? "")) === email,
+    ) ??
+    existing.docs.find((d) =>
+      isOrganizerParticipation({
+        email: String(d.data().email ?? ""),
+        isOrganizer: d.data().isOrganizer,
+        fullName: d.data().fullName != null ? String(d.data().fullName) : null,
+      }),
+    );
 
   if (hit) {
     const data = hit.data();
