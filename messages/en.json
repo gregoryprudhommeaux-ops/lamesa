@@ -567,6 +567,9 @@
       "accessPrice": "ACCESS ticket: {amount} incl. tax",
       "bankTitle": "Bank transfer",
       "bankHint": "Payment by bank transfer only (no online checkout). Put your name in the reference. Invoice: send your CSF to greg@nextstep-services.com.",
+      "declareCta": "I’ve sent the transfer",
+      "declaring": "Saving…",
+      "declaredBadge": "Transfer declared — we’ll confirm once it lands on the account.",
       "kinds": {
         "fill_survey": {
           "title": "Share feedback",
@@ -576,6 +579,7 @@
         "pay_access": {
           "title": "Confirm your seat",
           "reason": "You’ve been invited to “{event}” — pay the ACCESS ticket by bank transfer (no online payment) to lock your seat.",
+          "declaredReason": "You declared your transfer for “{event}”. We’ll confirm your seat once the SPEI clears.",
           "cta": "View dinner"
         },
         "complete_profile": {

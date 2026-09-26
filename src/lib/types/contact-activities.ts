@@ -8,6 +8,7 @@ export const CONTACT_ACTIVITY_TYPES = [
   "rsvp_yes",
   "rsvp_no",
   "confirmed_seat",
+  "payment_declared",
   "seen_marked",
   "interest_yes",
   "interest_no",

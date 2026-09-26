@@ -567,6 +567,9 @@
       "accessPrice": "Ticket ACCESS: {amount} IVA incl.",
       "bankTitle": "Transferencia bancaria",
       "bankHint": "Pago solo por transferencia SPEI (sin pago en línea). Pon tu nombre en la referencia. Factura: envía tu CSF a greg@nextstep-services.com.",
+      "declareCta": "Ya hice la transferencia",
+      "declaring": "Guardando…",
+      "declaredBadge": "Transferencia declarada — confirmamos al verla en la cuenta.",
       "kinds": {
         "fill_survey": {
           "title": "Dar mi opinión",
@@ -576,6 +579,7 @@
         "pay_access": {
           "title": "Confirmar mi lugar",
           "reason": "Recibiste la invitación a « {event} » — paga el ticket ACCESS por transferencia (sin pago en línea) para validar tu lugar.",
+          "declaredReason": "Declaraste tu transferencia para « {event} ». Confirmamos tu lugar al recibir el SPEI.",
           "cta": "Ver la cena"
         },
         "complete_profile": {
