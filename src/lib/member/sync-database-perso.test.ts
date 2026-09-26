@@ -1,5 +1,22 @@
-import { describe, expect, it } from "vitest";
-import { toDatabasePersoUpsertPayload } from "./sync-database-perso";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabasePersoError } from "@/lib/database-perso";
+import {
+  syncWaitlistMemberToDatabasePerso,
+  toDatabasePersoUpsertPayload,
+} from "./sync-database-perso";
+
+vi.mock("@/lib/database-perso", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/database-perso")>(
+    "@/lib/database-perso",
+  );
+  return {
+    ...actual,
+    isDatabasePersoConfigured: vi.fn(() => true),
+    upsertContact: vi.fn(),
+  };
+});
+
+import { isDatabasePersoConfigured, upsertContact } from "@/lib/database-perso";
 
 const baseMember = {
   fullName: "Ada Lovelace",
@@ -39,5 +56,53 @@ describe("toDatabasePersoUpsertPayload", () => {
 
     expect(payload.notes).toContain("Puede aportar: Experiencia SaaS");
     expect(payload.notes).toContain("Busca: Socios comerciales");
+  });
+});
+
+describe("syncWaitlistMemberToDatabasePerso", () => {
+  beforeEach(() => {
+    vi.mocked(isDatabasePersoConfigured).mockReturnValue(true);
+    vi.mocked(upsertContact).mockReset();
+  });
+
+  it("returns ok with id on successful upsert", async () => {
+    vi.mocked(upsertContact).mockResolvedValue({ ok: true, id: "c1", action: "created" });
+    const result = await syncWaitlistMemberToDatabasePerso(baseMember);
+    expect(result).toEqual({ ok: true, id: "c1" });
+  });
+
+  it("retries once on timeout then succeeds", async () => {
+    vi.mocked(upsertContact)
+      .mockRejectedValueOnce(new DatabasePersoError("Request timeout", "timeout"))
+      .mockResolvedValueOnce({ ok: true, id: "c2", action: "merged" });
+
+    const result = await syncWaitlistMemberToDatabasePerso(baseMember);
+    expect(result).toEqual({ ok: true, id: "c2" });
+    expect(upsertContact).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns failed with error after exhausted retry", async () => {
+    vi.mocked(upsertContact).mockRejectedValue(
+      new DatabasePersoError("Upstream error 503: down", "upstream", 503),
+    );
+
+    const result = await syncWaitlistMemberToDatabasePerso(baseMember);
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/upstream:503/);
+    expect(upsertContact).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips when email and phone are missing", async () => {
+    const result = await syncWaitlistMemberToDatabasePerso({
+      ...baseMember,
+      email: "  ",
+      phone: "",
+    });
+    expect(result).toEqual({
+      ok: false,
+      skipped: true,
+      error: "missing_email_and_phone",
+    });
+    expect(upsertContact).not.toHaveBeenCalled();
   });
 });

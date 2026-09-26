@@ -346,6 +346,8 @@ export interface WaitlistRegistration {
   databasePersoSyncedAt?: string;
   /** Outcome of Database Perso upsert at signup / profile sync */
   databasePersoSyncStatus?: "synced" | "failed" | "skipped";
+  /** Last Perso upsert error (cleared on success) */
+  databasePersoSyncError?: string;
   /** Welcome / express confirmation email to the member */
   welcomeEmailStatus?: "sent" | "failed" | "skipped";
   welcomeEmailSentAt?: string;

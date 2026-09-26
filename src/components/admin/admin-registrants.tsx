@@ -28,7 +28,7 @@ import {
   formatRegistrantDate,
   registrantSubtitle as buildRegistrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { CalendarPlus, Mail, Trash2, UserPlus, Users, X } from "lucide-react";
+import { CalendarPlus, Mail, RefreshCw, Trash2, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -262,6 +262,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [deleting, setDeleting] = useState(false);
   const [sendingFnMail, setSendingFnMail] = useState(false);
   const [sendingProfileMail, setSendingProfileMail] = useState(false);
+  const [syncingPerso, setSyncingPerso] = useState(false);
   const [loadingProfilePreview, setLoadingProfilePreview] = useState(false);
   const [profileReminderDraft, setProfileReminderDraft] =
     useState<ProfileReminderDraft | null>(null);
@@ -623,6 +624,73 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSendingFnMail(false);
+    }
+  }
+
+  async function syncPerso(member: WaitlistRegistration) {
+    setSyncingPerso(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/waitlist/${encodeURIComponent(member.id)}/sync-perso`,
+        { method: "POST" },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        status?: "synced" | "failed" | "skipped";
+        error?: string;
+        databasePersoContactId?: string;
+        databasePersoSyncedAt?: string;
+      };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "sync_failed");
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === member.id
+              ? {
+                  ...r,
+                  databasePersoSyncStatus: "failed",
+                  databasePersoSyncError: json.error ?? "sync_failed",
+                }
+              : r,
+          ),
+        );
+        return;
+      }
+      if (json.status === "skipped") {
+        setActionMsg(`Perso skip (${json.error ?? "skipped"}) pour ${member.email}.`);
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === member.id
+              ? {
+                  ...r,
+                  databasePersoSyncStatus: "skipped",
+                  databasePersoSyncError: undefined,
+                }
+              : r,
+          ),
+        );
+        return;
+      }
+      setActionMsg(`Perso sync OK · ${member.email}`);
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === member.id
+            ? {
+                ...r,
+                databasePersoSyncStatus: "synced",
+                databasePersoContactId: json.databasePersoContactId ?? r.databasePersoContactId,
+                databasePersoSyncedAt: json.databasePersoSyncedAt ?? new Date().toISOString(),
+                databasePersoSyncError: undefined,
+              }
+            : r,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncingPerso(false);
     }
   }
 
@@ -1344,6 +1412,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                                   ? "text-red-700"
                                   : "text-ns-secondary"
                             }`}
+                            title={
+                              status === "failed" && r.databasePersoSyncError
+                                ? r.databasePersoSyncError
+                                : undefined
+                            }
                           >
                             {status}
                           </span>
@@ -1492,15 +1565,37 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 </div>
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Database Perso</dt>
-                  <dd>
-                    {(active.databasePersoSyncStatus ??
-                      (active.databasePersoContactId ? "synced" : undefined)) === "synced"
-                      ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
-                      : active.databasePersoSyncStatus === "failed"
-                        ? "Échec sync"
-                        : active.databasePersoSyncStatus === "skipped"
-                          ? "Non configuré / skip"
-                          : "—"}
+                  <dd className="space-y-2">
+                    <p>
+                      {(active.databasePersoSyncStatus ??
+                        (active.databasePersoContactId ? "synced" : undefined)) === "synced"
+                        ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
+                        : active.databasePersoSyncStatus === "failed"
+                          ? "Échec sync"
+                          : active.databasePersoSyncStatus === "skipped"
+                            ? "Non configuré / skip"
+                            : "—"}
+                    </p>
+                    {active.databasePersoSyncStatus === "failed" &&
+                    active.databasePersoSyncError ? (
+                      <p
+                        className="break-words font-mono text-[11px] text-red-700/90"
+                        title={active.databasePersoSyncError}
+                      >
+                        {active.databasePersoSyncError}
+                      </p>
+                    ) : null}
+                    {!isSoftDeleted(active) ? (
+                      <button
+                        type="button"
+                        className={`${BTN_SECONDARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                        disabled={syncingPerso}
+                        onClick={() => void syncPerso(active)}
+                      >
+                        <RefreshCw className={`h-4 w-4 ${syncingPerso ? "animate-spin" : ""}`} />
+                        {syncingPerso ? "Sync Perso…" : "Resync Perso"}
+                      </button>
+                    ) : null}
                   </dd>
                 </div>
                 <div>
