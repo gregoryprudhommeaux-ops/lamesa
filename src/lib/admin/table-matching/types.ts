@@ -13,6 +13,8 @@ export type TableCandidate = {
   extraActivities: string[];
   canBring: string;
   isSeeking: string;
+  /** Declared dinner themes (industry / experience / problem space). */
+  dinnerThemesInterest: string;
   completionPercent: number;
   completionBand: CompletionBand;
   invitationCount: number;

@@ -75,6 +75,7 @@ export async function POST(request: Request) {
     city: "",
     phone: data.phone,
     invitationMotivation: "",
+    dinnerThemesInterest: "",
     locale: data.locale,
     source: "la-mesa-express",
     tags: ["la-mesa", "waitlist", "guadalajara", "express"],

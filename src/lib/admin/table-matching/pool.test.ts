@@ -22,6 +22,7 @@ const member = (
   invitationMotivation: "Meet other founders",
   canBring: "Introductions to investors",
   isSeeking: "A technical cofounder",
+  dinnerThemesInterest: "B2B SaaS scale and operator pairing",
   locale: "fr",
   source: "waitlist",
   tags: [],

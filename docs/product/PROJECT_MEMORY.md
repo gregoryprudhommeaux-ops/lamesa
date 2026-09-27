@@ -97,6 +97,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-26 | Formal : pool OUI = formulaire ∪ playlist ; Sync in-panel | NBA Formal ne tombe plus sur liste vide |
 | 2026-09-26 | Page `/e` RSVP : même surfaces ACCESS / confirmé + scroll `#access` | Complète #58 pour le mode RSVP |
 | 2026-09-26 | Bridge Audience↔OUI : chips intérêt (OUI/NON/AUTRE/Sans réponse) sur roster **et** ContactPicker via email | Join-only ; pas de fusion Firestore |
+| 2026-09-27 | Inscription — champ **thématiques de dîners** (`dinnerThemesInterest`) | Déclaré ; scan IA Tables + fiche admin |
 | 2026-09-26 | Paiement — filtre « Virement déclaré » honnête + CTA Confirmer payé + NBA banque | Déclaré ≠ À relancer |
 | 2026-09-26 | Vague 3 Audience : OUI (form∪playlist) → participation `attending` + filtres intérêt roster | Sync + submit intérêt ; pas de dégrade Payé/Out |
 
@@ -235,3 +236,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-26 | Bridge Audience↔intérêt — chips OUI/NON/AUTRE/Sans réponse sur roster + ContactPicker (`interest-display` + `/interest-status`) |
 | 2026-09-26 | Paiement — UX filtre Virement déclaré (select honnête, CTA Confirmer payé, NBA banque) |
 | 2026-09-26 | Audience vague 3 — OUI form∪playlist → roster (`attending`) + filtres intérêt |
+| 2026-09-27 | Inscription — `dinnerThemesInterest` (thématiques dîners) dans profil + scan Tables |

@@ -23,6 +23,7 @@ describe("computeProfileCompletionPercent", () => {
       "activités",
       "ce qu’il peut apporter",
       "ce qu’il recherche",
+      "thématiques de dîners",
     ]);
   });
 
@@ -33,7 +34,7 @@ describe("computeProfileCompletionPercent", () => {
         email: "a@b.com",
         phone: "+521234567890",
       }),
-    ).toBe(25);
+    ).toBe(23);
   });
 
   it("returns 100 when all fields filled", () => {
@@ -50,6 +51,7 @@ describe("computeProfileCompletionPercent", () => {
       extraActivities: ["networking"],
       canBring: "B2B product experience",
       isSeeking: "Distribution partners in Mexico",
+      dinnerThemesInterest: "SaaS B2B scale and climate ops",
     };
     expect(computeProfileCompletionPercent(full)).toBe(100);
     expect(listMissingProfileFieldsFr(full)).toEqual([]);
@@ -69,6 +71,7 @@ describe("computeProfileCompletionPercent", () => {
       extraActivities: ["networking"],
       canBring: "B2B",
       isSeeking: "Partners",
+      dinnerThemesInterest: "Energy markets",
     };
     expect(computeProfileCompletionPercent(profile)).toBeLessThan(100);
     expect(listMissingProfileFieldsFr(profile)).toContain("secteur (préciser si Autre)");
@@ -90,12 +93,13 @@ describe("computeProfileCompletionPercent", () => {
         extraActivities: ["networking"],
         canBring: "B2B",
         isSeeking: "Partners",
+        dinnerThemesInterest: "Renewables",
       }),
     ).toBe(100);
   });
 
-  it("counts canBring and isSeeking in profile completion", () => {
-    const complete = {
+  it("counts dinnerThemesInterest in profile completion", () => {
+    const withoutThemes = {
       fullName: "Ana García",
       email: "ana@example.com",
       phone: "+521234567890",
@@ -109,7 +113,13 @@ describe("computeProfileCompletionPercent", () => {
       canBring: "Experiencia en producto B2B",
       isSeeking: "Socios de distribución en México",
     };
-    expect(computeProfileCompletionPercent(complete)).toBe(100);
+    expect(computeProfileCompletionPercent(withoutThemes)).toBeLessThan(100);
+    expect(
+      computeProfileCompletionPercent({
+        ...withoutThemes,
+        dinnerThemesInterest: "Distribución B2B en México",
+      }),
+    ).toBe(100);
   });
 
   it("lists only missing fields for a near-complete profile", () => {
@@ -126,6 +136,7 @@ describe("computeProfileCompletionPercent", () => {
         invitationMotivation: "Curiosity",
         canBring: "B2B product experience",
         isSeeking: "Distribution partners",
+        dinnerThemesInterest: "B2B distribution",
       }),
     ).toEqual(["activités"]);
   });
@@ -161,6 +172,7 @@ describe("isProfileIncomplete", () => {
         extraActivities: ["networking"],
         canBring: "B2B",
         isSeeking: "Partners",
+        dinnerThemesInterest: "Founder dinners",
       }),
     ).toBe(false);
   });

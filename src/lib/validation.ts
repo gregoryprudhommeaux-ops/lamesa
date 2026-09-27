@@ -39,6 +39,7 @@ export const registrationSchema = z
     invitationMotivation: z.string().trim().min(10).max(2000),
     canBring: z.string().trim().min(2).max(280),
     isSeeking: z.string().trim().min(2).max(280),
+    dinnerThemesInterest: z.string().trim().min(10).max(2000),
     locale: z.enum(["fr", "en", "es"]),
     website: z.string().optional(),
     referralCode: z

@@ -181,6 +181,8 @@
       "phoneIncomplete": "Incomplete number — check country code and local number.",
       "invitationMotivation": "Why does LA MESA interest you?",
       "invitationMotivationPlaceholder": "A few sentences — what draws you here.",
+      "dinnerThemesInterest": "Which dinner themes would particularly interest you?",
+      "dinnerThemesInterestPlaceholder": "Tied to your experience, industry, or a broader problem — e.g. B2B SaaS scale, family succession, climate impact…",
       "canBring": "What do you bring to a dinner like this?",
       "isSeeking": "What are you looking for at LA MESA?"
     },
@@ -660,6 +662,7 @@
       "phone": "Phone",
       "extraActivities": "Extra-pro interests",
       "invitationMotivation": "Motivation",
+      "dinnerThemesInterest": "Dinner themes of interest",
       "canBring": "What can you bring?",
       "isSeeking": "What are you looking for?",
       "selectPlaceholder": "Choose…"

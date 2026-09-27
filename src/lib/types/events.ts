@@ -330,6 +330,11 @@ export interface WaitlistRegistration {
   invitationMotivation: string;
   canBring?: string;
   isSeeking?: string;
+  /**
+   * Declared dinner themes the member cares about (industry, experience, problem space).
+   * Used by table-matching / dinner creation profile scan — not inferred.
+   */
+  dinnerThemesInterest?: string;
   locale: string;
   source: string;
   tags: string[];

@@ -61,6 +61,7 @@ const profilePatchSchema = z
     invitationMotivation: z.string().trim().max(2000).optional(),
     canBring: z.string().trim().max(280).optional(),
     isSeeking: z.string().trim().max(280).optional(),
+    dinnerThemesInterest: z.string().trim().max(2000).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.sector !== undefined && isOtherSector(data.sector) && !data.sectorOther?.trim()) {

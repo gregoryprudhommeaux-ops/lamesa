@@ -52,10 +52,12 @@ describe("toDatabasePersoUpsertPayload", () => {
       ...baseMember,
       canBring: "Experiencia SaaS",
       isSeeking: "Socios comerciales",
+      dinnerThemesInterest: "Scale B2B y climate",
     });
 
     expect(payload.notes).toContain("Puede aportar: Experiencia SaaS");
     expect(payload.notes).toContain("Busca: Socios comerciales");
+    expect(payload.notes).toContain("Thématiques dîners: Scale B2B y climate");
   });
 });
 
