@@ -29,10 +29,13 @@ import type {
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { Copy, MoreVertical, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function AdminEmailTemplatesPanel() {
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
+  const prospectListFromUrl = (searchParams.get("prospectList") ?? "").trim();
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [templates, setTemplates] = useState<EmailTemplateDoc[]>([]);
   const [activeKey, setActiveKey] = useState<EmailTemplateKey>("calendar_invite");
@@ -534,6 +537,13 @@ export function AdminEmailTemplatesPanel() {
         </div>
       </div>
 
+      {prospectListFromUrl ? (
+        <div className="rounded-xl border border-ns-primary/20 bg-ns-brand-light/60 px-4 py-3 text-sm text-ns-tertiary">
+          Liste table pré-sélectionnée pour l’envoi cold :{" "}
+          <span className="font-semibold text-ns-hero">{prospectListFromUrl}</span>
+          . Ouvre un template custom pour envoyer à cette liste.
+        </div>
+      ) : null}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           {customTemplates.length > 0 ? (
@@ -865,6 +875,7 @@ export function AdminEmailTemplatesPanel() {
                 templateKey={activeKey}
                 locale={editLocale}
                 enabled={enabled}
+                initialListName={prospectListFromUrl || null}
               />
             </div>
           ) : null}

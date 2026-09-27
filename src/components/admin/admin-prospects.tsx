@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EmailTemplateDoc, TemplateLocale } from "@/lib/types/events";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
@@ -118,9 +119,13 @@ function formatShortDate(iso: string): string {
 
 export function AdminProspectsPanel() {
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
+  const listFromUrl = (searchParams.get("list") ?? "").trim();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [lists, setLists] = useState<ProspectListWithCount[]>([]);
-  const [activeListName, setActiveListName] = useState<string | null>(null);
+  const [activeListName, setActiveListName] = useState<string | null>(
+    () => listFromUrl || null,
+  );
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
