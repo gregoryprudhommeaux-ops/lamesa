@@ -88,6 +88,12 @@ export function ColdOutreachPanel({ templateKey, locale, enabled, initialListNam
   }, [load]);
 
   useEffect(() => {
+    const next = initialListName?.trim() || "";
+    if (!next) return;
+    setListFilter((current) => (current === next ? current : next));
+  }, [initialListName]);
+
+  useEffect(() => {
     if (listFilter !== LIST_TO_CONTACT) return;
     if (!isStdRelanceTemplateKey(templateKey)) return;
     const match = lists.find((l) => /sans r[eé]ponse/i.test(l.name));

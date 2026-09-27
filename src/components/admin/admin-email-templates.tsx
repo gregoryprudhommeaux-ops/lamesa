@@ -479,6 +479,26 @@ export function AdminEmailTemplatesPanel() {
   const systemTemplates = templates.filter((t) => isSystemEmailTemplateKey(t.key));
   const customTemplates = templates.filter((t) => isCustomEmailTemplateKey(t.key));
 
+  // From Tables Idées → open first custom template so cold send (list filter) is visible.
+  useEffect(() => {
+    if (!prospectListFromUrl || loading) return;
+    if (isCustomEmailTemplateKey(activeKey)) return;
+    const firstCustom = customTemplates[0]?.key;
+    if (!firstCustom) {
+      setShowCreateTemplate(true);
+      setMessage(
+        `Crée un template custom pour mailer la liste « ${prospectListFromUrl} ».`,
+      );
+      return;
+    }
+    setActiveKey(firstCustom);
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById("coms-send-panel")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [prospectListFromUrl, loading, customTemplates, activeKey]);
+
   if (loading) return <p className="text-sm text-ns-secondary">Chargement…</p>;
 
   return (
@@ -539,9 +559,10 @@ export function AdminEmailTemplatesPanel() {
 
       {prospectListFromUrl ? (
         <div className="rounded-xl border border-ns-primary/20 bg-ns-brand-light/60 px-4 py-3 text-sm text-ns-tertiary">
-          Liste table pré-sélectionnée pour l’envoi cold :{" "}
-          <span className="font-semibold text-ns-hero">{prospectListFromUrl}</span>
-          . Ouvre un template custom pour envoyer à cette liste.
+          Campagne table : liste{" "}
+          <span className="font-semibold text-ns-hero">« {prospectListFromUrl} »</span>{" "}
+          pré-sélectionnée dans l’envoi cold. Choisis / crée un template custom, vérifie les
+          destinataires, envoie.
         </div>
       ) : null}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">

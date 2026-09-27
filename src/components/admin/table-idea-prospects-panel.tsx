@@ -511,7 +511,7 @@ export function TableIdeaProspectsPanel({
 
       <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
         <Link href={comsHref} className={BTN_PRIMARY}>
-          Campagne mail avec cette liste
+          Créer / ouvrir campagne mail (cette liste)
         </Link>
         <Link href={personnesHref} className={BTN_SECONDARY}>
           Ouvrir dans Personnes
