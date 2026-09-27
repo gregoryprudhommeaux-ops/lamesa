@@ -401,6 +401,10 @@ export interface TableDraftMemberSnapshot {
   sector: string;
   position: string;
   city: string;
+  /** Past formal invites — optional for legacy drafts. */
+  invitationCount?: number;
+  /** Invited on the immediately previous event — optional for legacy drafts. */
+  invitedToPreviousEvent?: boolean;
 }
 
 export interface TableDraft {

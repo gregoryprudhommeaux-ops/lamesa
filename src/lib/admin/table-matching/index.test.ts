@@ -369,4 +369,87 @@ describe("composeTableIdeas", () => {
       ideas[0].warnings.some((w) => /IA n’a pas répondu|déterministe/i.test(w)),
     ).toBe(true);
   });
+
+  it("propagates prior-invite flags onto composed seats", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+
+    try {
+      const members = Array.from({ length: 20 }, (_, index) =>
+        member({
+          id: `m-${index + 1}`,
+          email: `m${index + 1}@example.com`,
+          company: `Company ${index + 1}`,
+          sector: index % 2 === 0 ? "tech" : "finance",
+        }),
+      );
+
+      const { ideas } = await composeTableIdeas({
+        mode: "spontaneous",
+        members,
+        participations: [
+          {
+            id: "p-prev",
+            eventId: "prev-event",
+            contactId: "m-1",
+            email: "m1@example.com",
+            fullName: "M 1",
+            status: "invited",
+            statusSource: "admin",
+            isOrganizer: false,
+            createdAt: "2026-06-01T00:00:00.000Z",
+          },
+          {
+            id: "p-older",
+            eventId: "older-event",
+            contactId: "m-2",
+            email: "m2@example.com",
+            fullName: "M 2",
+            status: "invited",
+            statusSource: "admin",
+            isOrganizer: false,
+            createdAt: "2026-05-01T00:00:00.000Z",
+          },
+        ],
+        events: [
+          {
+            id: "prev-event",
+            slug: "prev-event",
+            title: "Prev",
+            startsAt: "2026-07-01T18:00:00.000Z",
+          },
+          {
+            id: "older-event",
+            slug: "older-event",
+            title: "Older",
+            startsAt: "2026-05-01T18:00:00.000Z",
+          },
+        ],
+        city: "Mexico City",
+      });
+
+      const seats = [...ideas[0].primary, ...ideas[0].alternates];
+      const previousInvitee = seats.find((seat) => seat.id === "m-1");
+      const olderInvitee = seats.find((seat) => seat.id === "m-2");
+      const neverInvited = seats.find((seat) => seat.id === "m-3");
+
+      expect(previousInvitee).toMatchObject({
+        invitationCount: 1,
+        invitedToPreviousEvent: true,
+      });
+      expect(olderInvitee).toMatchObject({
+        invitationCount: 1,
+        invitedToPreviousEvent: false,
+      });
+      expect(neverInvited).toMatchObject({
+        invitationCount: 0,
+        invitedToPreviousEvent: false,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

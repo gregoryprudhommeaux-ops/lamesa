@@ -38,6 +38,8 @@ const memberSnapshotSchema: z.ZodType<TableDraftMemberSnapshot> = z
     sector: z.string().trim().max(200),
     position: z.string().trim().max(200),
     city: z.string().trim().max(100),
+    invitationCount: z.number().int().min(0).max(500).optional(),
+    invitedToPreviousEvent: z.boolean().optional(),
   })
   .strict();
 
@@ -205,6 +207,17 @@ function memberSnapshots(
     const id = stringValue(record.id).trim();
     if (!id || seen.has(id)) continue;
     seen.add(id);
+    const invitationCountRaw = record.invitationCount;
+    const invitationCount =
+      typeof invitationCountRaw === "number" &&
+      Number.isFinite(invitationCountRaw) &&
+      invitationCountRaw >= 0
+        ? Math.floor(invitationCountRaw)
+        : undefined;
+    const invitedToPreviousEvent =
+      typeof record.invitedToPreviousEvent === "boolean"
+        ? record.invitedToPreviousEvent
+        : undefined;
     result.push({
       id,
       fullName: stringValue(record.fullName),
@@ -213,6 +226,8 @@ function memberSnapshots(
       sector: stringValue(record.sector),
       position: stringValue(record.position),
       city: stringValue(record.city),
+      ...(invitationCount !== undefined ? { invitationCount } : {}),
+      ...(invitedToPreviousEvent !== undefined ? { invitedToPreviousEvent } : {}),
     });
     if (result.length === limit) break;
   }

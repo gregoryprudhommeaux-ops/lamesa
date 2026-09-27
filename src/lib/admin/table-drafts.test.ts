@@ -287,4 +287,25 @@ describe("normalizeTableDraft", () => {
       }),
     );
   });
+
+  it("preserves prior-invite markers on member snapshots", () => {
+    const draft = normalizeTableDraft("draft-invite", {
+      ...validDraftInput(),
+      primary: [
+        {
+          ...member("p-0"),
+          invitationCount: 2,
+          invitedToPreviousEvent: true,
+        },
+        ...Array.from({ length: 14 }, (_, index) => member(`p-${index + 1}`)),
+      ],
+    });
+
+    expect(draft.primary[0]).toEqual({
+      ...member("p-0"),
+      invitationCount: 2,
+      invitedToPreviousEvent: true,
+    });
+    expect(draft.primary[1]).toEqual(member("p-1"));
+  });
 });
