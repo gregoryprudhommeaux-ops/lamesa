@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { invalidateAdminCoreCollectionsCache } from "@/lib/admin/load-core-collections";
+import { appendOpsNotes, OPS_NOTES_MAX_LENGTH } from "@/lib/admin/ops-notes";
 import {
   isNextResponse,
   requirePlatformAdmin,
@@ -16,11 +18,16 @@ type Params = { params: Promise<{ id: string }> };
 
 const patchSchema = z
   .object({
-    opsNotes: z.string().trim().max(4000).optional(),
+    opsNotes: z.string().trim().max(OPS_NOTES_MAX_LENGTH).optional(),
+    /** Append a curation line without clobbering existing ops notes. */
+    appendOpsNote: z.string().trim().min(8).max(600).optional(),
     opsPriority: z.enum(OPS_PRIORITIES).optional(),
     opsTags: z.array(z.string()).max(12).optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => !(value.opsNotes !== undefined && value.appendOpsNote !== undefined), {
+    message: "opsNotes_and_appendOpsNote_exclusive",
+  });
 
 /** Soft-delete a waitlist contact (admin). */
 export async function DELETE(request: Request, { params }: Params) {
@@ -101,12 +108,15 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const now = new Date().toISOString();
+    const existing = snap.data() as { opsNotes?: string };
     const patch: Record<string, unknown> = {
       updatedAt: now,
       opsTouchedAt: now,
     };
     if (parsed.data.opsNotes !== undefined) {
       patch.opsNotes = parsed.data.opsNotes;
+    } else if (parsed.data.appendOpsNote !== undefined) {
+      patch.opsNotes = appendOpsNotes(existing.opsNotes, parsed.data.appendOpsNote);
     }
     if (parsed.data.opsPriority !== undefined) {
       patch.opsPriority = parsed.data.opsPriority ?? DEFAULT_OPS_PRIORITY;
@@ -116,6 +126,7 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     await ref.set(patch, { merge: true });
+    invalidateAdminCoreCollectionsCache();
 
     return NextResponse.json({
       ok: true,

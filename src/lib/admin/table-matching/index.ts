@@ -10,8 +10,8 @@ export type { TableIdeasErrorCode } from "./schemas";
 
 /** AI providers only ever see the top-ranked slice of the eligible pool. */
 export const AI_CANDIDATE_CAP = 80;
-const PRIMARY_SEATS = 15;
-const ALTERNATE_SEATS = 5;
+export const PRIMARY_SEATS = 15;
+export const ALTERNATE_SEATS = 5;
 
 export type TableIdeaSeat = {
   id: string;

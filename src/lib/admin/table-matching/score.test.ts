@@ -17,6 +17,7 @@ const candidate = (
   canBring: "Introductions",
   isSeeking: "Cofounder",
   dinnerThemesInterest: "Product-led growth",
+  opsNotes: "",
   completionPercent: 90,
   completionBand: "high",
   invitationCount: 0,
