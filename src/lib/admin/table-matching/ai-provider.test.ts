@@ -94,6 +94,56 @@ describe("generateTableIdeas", () => {
     expect(authHeader).toBe("Bearer pplx-test");
   });
 
+  it("prefers OpenAI over Perplexity when both keys are set", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "pplx-test");
+    vi.stubEnv("OPENAI_API_KEY", "openai-test");
+    vi.stubEnv("OPENAI_TABLE_MODEL", "gpt-test");
+    vi.stubEnv("OPENAI_BASE_URL", "https://api.openai.com/v1");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+
+    let requestedUrl = "";
+    let bodyJson: Record<string, unknown> = {};
+    const fetchImpl = vi.fn(async (url: string, init?: RequestInit) => {
+      requestedUrl = String(url);
+      bodyJson = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+      return chatCompletion(JSON.stringify({ ideas: [validIdea()] }));
+    });
+
+    await generateTableIdeas({
+      mode: "admin_theme",
+      theme: "Private Equity",
+      candidates: [card()],
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(requestedUrl).toBe("https://api.openai.com/v1/chat/completions");
+    expect(bodyJson.model).toBe("gpt-test");
+    expect(bodyJson.response_format).toEqual({ type: "json_object" });
+    expect(bodyJson.temperature).toBe(0.2);
+  });
+
+  it("retries once with a smaller candidate set after schema mismatch", async () => {
+    configureEnv();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(chatCompletion(JSON.stringify({ ideas: "nope" })))
+      .mockResolvedValueOnce(chatCompletion(JSON.stringify({ ideas: [validIdea()] })));
+
+    const result = await generateTableIdeas({
+      mode: "spontaneous",
+      candidates: Array.from({ length: 50 }, (_, index) => card({ id: `m-${index}` })),
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(result.ideas).toHaveLength(1);
+    const secondBody = JSON.parse(String(fetchImpl.mock.calls[1][1]?.body ?? "{}")) as {
+      messages: Array<{ content: string }>;
+    };
+    expect(secondBody.messages[1].content).toContain('"id":"m-39"');
+    expect(secondBody.messages[1].content).not.toContain('"id":"m-40"');
+  });
+
   it("uses a default model when only an API key is configured", async () => {
     vi.stubEnv("PERPLEXITY_API_KEY", "");
     vi.stubEnv("OPENAI_API_KEY", "test-key");

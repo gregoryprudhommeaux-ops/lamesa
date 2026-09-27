@@ -15,7 +15,11 @@ export type TableCandidate = {
   isSeeking: string;
   /** Declared dinner themes (industry / experience / problem space). */
   dinnerThemesInterest: string;
+<<<<<<< HEAD
   /** Admin ops / table-curation notes — weighed by AI scan. */
+=======
+  /** Admin ops / table-curation notes — weighed by theme fit + AI scan. */
+>>>>>>> 858ebe5 (feat(admin): theme-aware table scan + stronger AI fallback)
   opsNotes: string;
   completionPercent: number;
   completionBand: CompletionBand;

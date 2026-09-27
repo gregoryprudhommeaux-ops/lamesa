@@ -1,4 +1,5 @@
 import type { TableCandidate } from "./types";
+import { scoreThemeFit } from "./theme-fit";
 
 export const TABLE_SCORE = {
   notPreviousEvent: 30,
@@ -13,6 +14,12 @@ export const TABLE_SCORE = {
 export type RankedCandidate = TableCandidate & {
   baseScore: number;
   reasons: string[];
+  themeFitBand?: "strong" | "medium" | "weak" | "none";
+};
+
+export type RankCandidatesOptions = {
+  /** When set (admin_theme), boost / penalize by lexical theme fit. */
+  theme?: string;
 };
 
 const DEFAULT_PRIMARY_SIZE = 15;
@@ -48,7 +55,10 @@ function sanitizeSeatCount(value: number | undefined, fallback: number): number 
   return Math.max(0, Math.floor(value));
 }
 
-function scoreCandidate(candidate: TableCandidate): RankedCandidate {
+function scoreCandidate(
+  candidate: TableCandidate,
+  options?: RankCandidatesOptions,
+): RankedCandidate {
   let baseScore = 0;
   const reasons: string[] = [];
 
@@ -77,7 +87,16 @@ function scoreCandidate(candidate: TableCandidate): RankedCandidate {
     reasons.push("recent co-presence");
   }
 
-  return { ...candidate, baseScore, reasons };
+  let themeFitBand: RankedCandidate["themeFitBand"];
+  const theme = options?.theme?.trim();
+  if (theme) {
+    const fit = scoreThemeFit(candidate, theme);
+    baseScore += fit.score;
+    themeFitBand = fit.band;
+    reasons.push(...fit.reasons.map((reason) => `theme: ${reason}`));
+  }
+
+  return { ...candidate, baseScore, reasons, themeFitBand };
 }
 
 function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
@@ -149,8 +168,13 @@ function resolveSeedSeats(
   return seats;
 }
 
-export function rankCandidates(candidates: TableCandidate[]): RankedCandidate[] {
-  return dedupeByIdFirstWins(candidates).map(scoreCandidate).sort(compareRanked);
+export function rankCandidates(
+  candidates: TableCandidate[],
+  options?: RankCandidatesOptions,
+): RankedCandidate[] {
+  return dedupeByIdFirstWins(candidates)
+    .map((candidate) => scoreCandidate(candidate, options))
+    .sort(compareRanked);
 }
 
 export function selectBalancedTable(
