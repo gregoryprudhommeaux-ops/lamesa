@@ -434,6 +434,11 @@ export interface TableDraft {
   warnings: string[];
   primary: TableDraftMemberSnapshot[];
   alternates: TableDraftMemberSnapshot[];
+  /**
+   * Named Prospects playlist for theme sourcing (CSV Perso / Mesa / manual).
+   * Used for cold-mail campaigns from Coms.
+   */
+  prospectListName?: string;
   status: TableDraftStatus;
   linkedEventId?: string;
   /** ISO timestamp — admin confirmed human review before invites. */

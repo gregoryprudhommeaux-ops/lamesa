@@ -14,7 +14,9 @@ import type { ComposedTableIdea, TableIdeaSeat } from "@/lib/admin/table-matchin
 import { ALTERNATE_SEATS, PRIMARY_SEATS } from "@/lib/admin/table-matching";
 import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
+import { tableThemeProspectListName } from "@/lib/admin/table-theme-prospect-list";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { TableIdeaProspectsPanel } from "@/components/admin/table-idea-prospects-panel";
 import { CITY_HUBS, DEFAULT_CITY_HUB, resolveCityHub } from "@/lib/constants/city-hubs";
 import {
   DEFAULT_EVENT_FORMAT,
@@ -189,6 +191,7 @@ export function AdminTableBuilder() {
 
   const [primary, setPrimary] = useState<TableIdeaSeat[]>([]);
   const [alternates, setAlternates] = useState<TableIdeaSeat[]>([]);
+  const [prospectListName, setProspectListName] = useState<string | null>(null);
 
   const [drafts, setDrafts] = useState<TableDraft[]>([]);
   const [draftsLoadState, setDraftsLoadState] = useState<LoadState>("idle");
@@ -278,6 +281,13 @@ export function AdminTableBuilder() {
     setDraftMessage(null);
     setPrimary(idea.primary);
     setAlternates(idea.alternates);
+    setProspectListName(
+      tableThemeProspectListName({
+        theme: mode === "admin_theme" ? theme : undefined,
+        title: idea.title,
+        city,
+      }),
+    );
   }
 
   async function handleGenerate() {
@@ -306,6 +316,15 @@ export function AdminTableBuilder() {
       setDraftMessage(null);
       setPrimary(nextIdeas[0]?.primary ?? []);
       setAlternates(nextIdeas[0]?.alternates ?? []);
+      setProspectListName(
+        nextIdeas[0]
+          ? tableThemeProspectListName({
+              theme: mode === "admin_theme" ? theme : undefined,
+              title: nextIdeas[0].title,
+              city,
+            })
+          : null,
+      );
       setLoadState("success");
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "generate_failed");
@@ -498,6 +517,9 @@ export function AdminTableBuilder() {
       warnings: selectedIdea.warnings,
       primary,
       alternates,
+      ...(prospectListName?.trim()
+        ? { prospectListName: prospectListName.trim().slice(0, 60) }
+        : {}),
       humanValidatedAt: null as null,
     };
     try {
@@ -516,6 +538,7 @@ export function AdminTableBuilder() {
           body: JSON.stringify({
             title: payload.title,
             city: payload.city,
+            format: payload.format,
             themeAngle: payload.themeAngle,
             rationale: payload.rationale,
             commonalities: payload.commonalities,
@@ -523,6 +546,9 @@ export function AdminTableBuilder() {
             warnings: payload.warnings,
             primary: payload.primary,
             alternates: payload.alternates,
+            ...(payload.prospectListName
+              ? { prospectListName: payload.prospectListName }
+              : {}),
           }),
         });
         const json = (await res.json()) as { ok?: boolean; id?: string; error?: string };
@@ -554,6 +580,14 @@ export function AdminTableBuilder() {
     setSelectedIdeaIndex(0);
     setPrimary(draft.primary.map(seatFromSnapshot));
     setAlternates(draft.alternates.map(seatFromSnapshot));
+    setProspectListName(
+      draft.prospectListName?.trim() ||
+        tableThemeProspectListName({
+          title: draft.title,
+          theme: draft.themeAngle,
+          city: draft.city,
+        }),
+    );
     setDraftMessage(null);
   }
 
@@ -863,6 +897,48 @@ export function AdminTableBuilder() {
                   onSwap={swapRow}
                 />
               </div>
+
+              <TableIdeaProspectsPanel
+                theme={mode === "admin_theme" ? theme : undefined}
+                title={selectedIdea.title}
+                city={city}
+                listName={prospectListName}
+                onListNameChange={setProspectListName}
+                seatedEmails={
+                  new Set(
+                    [...primary, ...alternates]
+                      .map((seat) => seat.email.trim().toLowerCase())
+                      .filter(Boolean),
+                  )
+                }
+                onPromoteMember={(member) => {
+                  if (
+                    primary.some(
+                      (seat) => seat.id === member.id || seat.email === member.email,
+                    )
+                  ) {
+                    return;
+                  }
+                  if (primary.length >= PRIMARY_SEATS) {
+                    setDraftMessage(`Titulaires complets (${PRIMARY_SEATS}).`);
+                    return;
+                  }
+                  setAlternates((prev) =>
+                    prev.filter(
+                      (seat) => seat.id !== member.id && seat.email !== member.email,
+                    ),
+                  );
+                  setPrimary((prev) => [
+                    ...prev,
+                    {
+                      ...member,
+                      invitationCount: 0,
+                      invitedToPreviousEvent: false,
+                    },
+                  ]);
+                  setDraftMessage(`${member.fullName} ajouté en titulaire.`);
+                }}
+              />
 
               <div className="flex flex-wrap items-center gap-3">
                 <button

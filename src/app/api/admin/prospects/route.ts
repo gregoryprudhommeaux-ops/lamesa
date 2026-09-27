@@ -224,6 +224,11 @@ export async function POST(request: Request) {
       body && typeof body === "object" && "sheetUrl" in body
         ? String((body as { sheetUrl?: string }).sheetUrl ?? "").trim()
         : "";
+    const listRaw =
+      body && typeof body === "object" && "list" in body
+        ? String((body as { list?: string }).list ?? "").trim()
+        : "";
+    const listName = listRaw.slice(0, 60);
 
     let csvText = text;
     if (!csvText && sheetUrl) {
@@ -267,13 +272,25 @@ export async function POST(request: Request) {
       );
     }
 
+    if (listName) {
+      const { createProspectList } = await import("@/lib/prospects/lists-store");
+      await createProspectList(listName);
+    }
+
     let created = 0;
     let merged = 0;
     let failed = 0;
     const errors: Array<{ email: string; error: string }> = [];
 
     for (const row of rows) {
-      const result = await upsertProspect(row, { source: sheetUrl ? "google-sheet" : "csv-paste" });
+      const result = await upsertProspect(
+        {
+          ...row,
+          ...(listName ? { lists: [listName] } : {}),
+          status: "to_contact",
+        },
+        { source: sheetUrl ? "google-sheet" : listName ? "table-theme-csv" : "csv-paste" },
+      );
       if (!result.ok) {
         failed += 1;
         errors.push({ email: row.email, error: result.error });
@@ -290,6 +307,7 @@ export async function POST(request: Request) {
       created,
       merged,
       failed,
+      list: listName || undefined,
       errors: errors.slice(0, 20),
     });
   }
