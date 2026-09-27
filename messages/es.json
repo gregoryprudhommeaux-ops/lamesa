@@ -181,6 +181,8 @@
       "phoneIncomplete": "Número incompleto: revisa el código de país y el número local.",
       "invitationMotivation": "¿Por qué te interesa LA MESA?",
       "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de esto.",
+      "dinnerThemesInterest": "¿Qué temáticas de cenas te interesarían en particular?",
+      "dinnerThemesInterestPlaceholder": "Ligado a tu experiencia, industria o una problemática general — ej. scale SaaS B2B, sucesión familiar, impacto climate…",
       "canBring": "¿Qué puedes aportar a la mesa?",
       "isSeeking": "¿Qué buscas en LA MESA?"
     },
@@ -660,6 +662,7 @@
       "phone": "Teléfono",
       "extraActivities": "Intereses personales",
       "invitationMotivation": "Motivación",
+      "dinnerThemesInterest": "Temáticas de cenas",
       "canBring": "¿Qué puedes aportar?",
       "isSeeking": "¿Qué buscas?",
       "selectPlaceholder": "Elegir…"

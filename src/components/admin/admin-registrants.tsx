@@ -1606,6 +1606,22 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
                   <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
                 </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">
+                    Thématiques de dîners
+                  </dt>
+                  <dd className="whitespace-pre-wrap">{active.dinnerThemesInterest || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Apporte / cherche</dt>
+                  <dd className="whitespace-pre-wrap text-sm">
+                    <span className="font-medium text-ns-secondary">Apporte :</span>{" "}
+                    {active.canBring?.trim() || "—"}
+                    <br />
+                    <span className="font-medium text-ns-secondary">Cherche :</span>{" "}
+                    {active.isSeeking?.trim() || "—"}
+                  </dd>
+                </div>
                 {isFranconetworkMember(active) && !isSoftDeleted(active) ? (
                   <div className="space-y-2 border-t border-gray-100 pt-4">
                     <p className="text-xs font-bold uppercase text-ns-secondary">

@@ -20,6 +20,7 @@ export type WaitlistSyncInput = Pick<
   | "invitationMotivation"
   | "canBring"
   | "isSeeking"
+  | "dinnerThemesInterest"
   | "locale"
   | "source"
   | "tags"
@@ -44,6 +45,9 @@ function buildNotes(member: WaitlistSyncInput): string {
     member.city?.trim() ? `Ville: ${member.city.trim()}` : null,
     member.invitationMotivation?.trim()
       ? `Motivation: ${member.invitationMotivation.trim()}`
+      : null,
+    member.dinnerThemesInterest?.trim()
+      ? `Thématiques dîners: ${member.dinnerThemesInterest.trim()}`
       : null,
     member.canBring?.trim() ? `Puede aportar: ${member.canBring.trim()}` : null,
     member.isSeeking?.trim() ? `Busca: ${member.isSeeking.trim()}` : null,

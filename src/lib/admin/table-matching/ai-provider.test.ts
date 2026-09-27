@@ -12,6 +12,7 @@ const card = (overrides: Partial<AiCandidateCard> = {}): AiCandidateCard => ({
   extraActivities: [],
   canBring: "Introductions to investors",
   isSeeking: "A technical cofounder",
+  dinnerThemesInterest: "Early-stage fundraising",
   completionPercent: 90,
   completionBand: "high",
   invitationCount: 0,

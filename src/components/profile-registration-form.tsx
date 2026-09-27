@@ -79,6 +79,7 @@ export function ProfileRegistrationForm({
       invitationMotivation: String(data.get("invitationMotivation") ?? "").trim(),
       canBring: String(data.get("canBring") ?? "").trim(),
       isSeeking: String(data.get("isSeeking") ?? "").trim(),
+      dinnerThemesInterest: String(data.get("dinnerThemesInterest") ?? "").trim(),
       locale,
       website: String(data.get("website") ?? ""),
       referralCode: String(data.get("referralCode") ?? "").trim(),
@@ -284,6 +285,23 @@ export function ProfileRegistrationForm({
           minLength={2}
           maxLength={280}
           rows={2}
+          className={`${INPUT_CLASS} mt-1 resize-y`}
+          disabled={state === "sending"}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="dinnerThemesInterest" className={LABEL_CLASS}>
+          {t("fields.dinnerThemesInterest")}
+        </label>
+        <textarea
+          id="dinnerThemesInterest"
+          name="dinnerThemesInterest"
+          required
+          minLength={10}
+          maxLength={2000}
+          rows={3}
+          placeholder={t("fields.dinnerThemesInterestPlaceholder")}
           className={`${INPUT_CLASS} mt-1 resize-y`}
           disabled={state === "sending"}
         />

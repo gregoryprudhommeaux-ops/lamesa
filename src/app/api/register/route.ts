@@ -81,6 +81,7 @@ export async function POST(request: Request) {
     invitationMotivation: data.invitationMotivation,
     canBring: data.canBring,
     isSeeking: data.isSeeking,
+    dinnerThemesInterest: data.dinnerThemesInterest,
     locale: data.locale,
     source: "la-mesa-registration",
     tags: ["la-mesa", "waitlist", "guadalajara"],

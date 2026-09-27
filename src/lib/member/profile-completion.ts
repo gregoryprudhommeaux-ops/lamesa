@@ -14,6 +14,7 @@ export const PROFILE_COMPLETION_FIELDS = [
   "extraActivities",
   "canBring",
   "isSeeking",
+  "dinnerThemesInterest",
 ] as const;
 
 export type ProfileCompletionField = (typeof PROFILE_COMPLETION_FIELDS)[number];
@@ -32,6 +33,7 @@ export const PROFILE_COMPLETION_FIELD_LABELS_FR: Record<ProfileCompletionField, 
   extraActivities: "activités",
   canBring: "ce qu’il peut apporter",
   isSeeking: "ce qu’il recherche",
+  dinnerThemesInterest: "thématiques de dîners",
 };
 
 /** Spanish labels for member-facing emails. */
@@ -48,6 +50,7 @@ export const PROFILE_COMPLETION_FIELD_LABELS_ES: Record<ProfileCompletionField, 
   extraActivities: "actividades",
   canBring: "qué puedes aportar",
   isSeeking: "qué buscas",
+  dinnerThemesInterest: "temáticas de cenas",
 };
 
 /** English labels for member-facing UI. */
@@ -64,6 +67,7 @@ export const PROFILE_COMPLETION_FIELD_LABELS_EN: Record<ProfileCompletionField, 
   extraActivities: "interests",
   canBring: "what you can bring",
   isSeeking: "what you’re looking for",
+  dinnerThemesInterest: "dinner themes of interest",
 };
 
 export type ProfileCompletionInput = {
@@ -80,6 +84,7 @@ export type ProfileCompletionInput = {
   extraActivities?: string[] | null;
   canBring?: string | null;
   isSeeking?: string | null;
+  dinnerThemesInterest?: string | null;
   source?: string | null;
   profileComplete?: boolean | null;
 };

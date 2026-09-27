@@ -36,7 +36,8 @@ type FieldKey =
   | "company"
   | "sector"
   | "position"
-  | "invitationMotivation";
+  | "invitationMotivation"
+  | "dinnerThemesInterest";
 
 function initialSectorState(profile: Profile): { sector: string; sectorOther: string } {
   const raw = (profile.sector ?? "").trim();
@@ -103,6 +104,9 @@ export function MemberProfilePanel({
   const [invitationMotivation, setInvitationMotivation] = useState(
     profile.invitationMotivation ?? "",
   );
+  const [dinnerThemesInterest, setDinnerThemesInterest] = useState(
+    profile.dinnerThemesInterest ?? "",
+  );
   const [canBring, setCanBring] = useState(profile.canBring ?? "");
   const [isSeeking, setIsSeeking] = useState(profile.isSeeking ?? "");
 
@@ -116,6 +120,7 @@ export function MemberProfilePanel({
     setLinkedinUrl(profile.linkedinUrl ?? "");
     setExtraActivities((profile.extraActivities ?? []).join(", "));
     setInvitationMotivation(profile.invitationMotivation ?? "");
+    setDinnerThemesInterest(profile.dinnerThemesInterest ?? "");
     setCanBring(profile.canBring ?? "");
     setIsSeeking(profile.isSeeking ?? "");
   }, [profile]);
@@ -222,6 +227,7 @@ export function MemberProfilePanel({
           linkedinUrl: linkedinTrimmed,
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
+          dinnerThemesInterest,
           canBring,
           isSeeking,
         }),
@@ -240,6 +246,7 @@ export function MemberProfilePanel({
           "sector",
           "position",
           "invitationMotivation",
+          "dinnerThemesInterest",
         ];
         const field =
           apiField && knownFields.includes(apiField as FieldKey)
@@ -541,6 +548,18 @@ export function MemberProfilePanel({
             maxLength={280}
             value={isSeeking}
             onChange={(e) => setIsSeeking(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS}>{t("fields.dinnerThemesInterest")}</label>
+          <textarea
+            className={fieldInputClass(errorField === "dinnerThemesInterest")}
+            rows={3}
+            minLength={10}
+            maxLength={2000}
+            value={dinnerThemesInterest}
+            onChange={(e) => setDinnerThemesInterest(e.target.value)}
+            placeholder={tReg("fields.dinnerThemesInterestPlaceholder")}
           />
         </div>
         <div>

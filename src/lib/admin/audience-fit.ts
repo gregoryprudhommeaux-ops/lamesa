@@ -42,7 +42,7 @@ function normalizeCity(city: string | null | undefined): string {
 
 type FitMember = Pick<
   WaitlistRegistration,
-  "email" | "city" | "sector" | "position" | "company" | "fullName" | "phone" | "linkedinUrl" | "invitationMotivation" | "extraActivities" | "canBring" | "isSeeking" | "profileComplete" | "source"
+  "email" | "city" | "sector" | "position" | "company" | "fullName" | "phone" | "linkedinUrl" | "invitationMotivation" | "extraActivities" | "canBring" | "isSeeking" | "dinnerThemesInterest" | "profileComplete" | "source"
 >;
 
 type FitPart = Pick<

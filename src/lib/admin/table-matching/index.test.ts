@@ -18,6 +18,7 @@ const member = (
   invitationMotivation: "Meet founders",
   canBring: "Intros",
   isSeeking: "Partners",
+  dinnerThemesInterest: "Founder peer circles",
   locale: "fr",
   source: "waitlist",
   tags: [],
