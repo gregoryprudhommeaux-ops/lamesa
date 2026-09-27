@@ -406,6 +406,8 @@ export interface TableDraftMemberSnapshot {
   invitationCount?: number;
   /** Invited on the immediately previous event — optional for legacy drafts. */
   invitedToPreviousEvent?: boolean;
+  /** Lexical theme fit band when composed in admin_theme — optional for legacy drafts. */
+  themeFitBand?: "strong" | "medium" | "weak" | "none";
 }
 
 export interface TableDraft {

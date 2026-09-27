@@ -2,11 +2,19 @@ import type { AdminEvent, AdminEventParticipation, WaitlistRegistration } from "
 import { generateTableIdeas } from "./ai-provider";
 import { buildEligiblePool } from "./pool";
 import { TableIdeasError } from "./schemas";
-import { fillBalancedSeatsAroundSeed, rankCandidates, selectBalancedTable } from "./score";
+import {
+  fillBalancedSeatsAroundSeed,
+  isThemePrimaryQualified,
+  rankCandidates,
+  selectBalancedTable,
+  type RankedCandidate,
+  type ThemeFitBand,
+} from "./score";
 import type { AiCandidateCard, TableCandidate, TableIdeaMode } from "./types";
 
 export { TableIdeasError } from "./schemas";
 export type { TableIdeasErrorCode } from "./schemas";
+export type { ThemeFitBand } from "./score";
 
 /** AI providers only ever see the top-ranked slice of the eligible pool. */
 export const AI_CANDIDATE_CAP = 80;
@@ -25,6 +33,8 @@ export type TableIdeaSeat = {
   invitationCount: number;
   /** Invited on the immediately previous event — strongest deprioritization. */
   invitedToPreviousEvent: boolean;
+  /** Lexical theme fit when composing in admin_theme mode. */
+  themeFitBand?: ThemeFitBand;
 };
 
 export type ComposedTableIdea = {
@@ -49,7 +59,7 @@ type RawIdea = {
   alternateMemberIds: string[];
 };
 
-function toSeat(candidate: TableCandidate): TableIdeaSeat {
+function toSeat(candidate: TableCandidate, themeFitBand?: ThemeFitBand): TableIdeaSeat {
   return {
     id: candidate.id,
     fullName: candidate.fullName,
@@ -60,7 +70,19 @@ function toSeat(candidate: TableCandidate): TableIdeaSeat {
     city: candidate.city,
     invitationCount: candidate.invitationCount,
     invitedToPreviousEvent: candidate.invitedToPreviousEvent,
+    ...(themeFitBand ? { themeFitBand } : {}),
   };
+}
+
+function humanizeInternalWarning(warning: string): string {
+  const themeShort = /^theme_pool_short:(\d+):(\d+):(\d+)$/.exec(warning);
+  if (themeShort) {
+    const seated = Number(themeShort[1]);
+    const target = Number(themeShort[2]);
+    const qualified = Number(themeShort[3]);
+    return `${qualified} profil(s) qualifié(s) fort/moyen pour ${target} places (${seated} assis) — recrute des inscrits alignés ou change de thème. Pas de remplissage hors-sujet.`;
+  }
+  return warning;
 }
 
 function mergeWarnings(...groups: string[][]): string[] {
@@ -68,9 +90,10 @@ function mergeWarnings(...groups: string[][]): string[] {
   const merged: string[] = [];
   for (const group of groups) {
     for (const warning of group) {
-      if (seen.has(warning)) continue;
-      seen.add(warning);
-      merged.push(warning);
+      const human = humanizeInternalWarning(warning);
+      if (seen.has(human)) continue;
+      seen.add(human);
+      merged.push(human);
     }
   }
   return merged;
@@ -97,16 +120,18 @@ function buildDeterministicIdea(input: {
   mode: TableIdeaMode;
   theme?: string;
   city: string;
-  ranked: ReturnType<typeof rankCandidates>;
+  ranked: RankedCandidate[];
   aiFallbackReason?: "not_configured" | "provider_failed";
 }): RawIdea {
+  const adminTheme = input.mode === "admin_theme" ? input.theme?.trim() : undefined;
+  const themeStrict = Boolean(adminTheme);
   const selected = selectBalancedTable(input.ranked, {
     primarySize: PRIMARY_SEATS,
     alternateSize: ALTERNATE_SEATS,
+    themeStrict,
   });
   const sectors = topLabels(selected.primary, "sector");
   const positions = topLabels(selected.primary, "position");
-  const adminTheme = input.mode === "admin_theme" ? input.theme?.trim() : undefined;
   const themeTitle =
     adminTheme && adminTheme.length > 0
       ? adminTheme
@@ -120,7 +145,9 @@ function buildDeterministicIdea(input: {
     weak: selected.primary.filter((c) => c.themeFitBand === "weak").length,
     none: selected.primary.filter((c) => !c.themeFitBand || c.themeFitBand === "none").length,
   };
-  const themeAligned = themeFitCounts.strong + themeFitCounts.medium;
+  const qualifiedInPool = input.ranked.filter((c) =>
+    isThemePrimaryQualified(c.themeFitBand),
+  ).length;
 
   const aiWarning =
     input.aiFallbackReason === "provider_failed"
@@ -129,13 +156,9 @@ function buildDeterministicIdea(input: {
 
   const themeWarnings: string[] = [];
   if (adminTheme) {
-    if (themeAligned === 0) {
+    if (qualifiedInPool === 0) {
       themeWarnings.push(
-        "Peu de profils alignés sur le thème dans le pool — élargis le thème ou enrichis dinnerThemesInterest / secteurs.",
-      );
-    } else if (themeFitCounts.none >= 8) {
-      themeWarnings.push(
-        `${themeFitCounts.none} titulaires sans signal thème fort — revois ou commente les profils hors-sujet.`,
+        "Aucun profil fort/moyen sur ce thème — recrute des inscrits alignés ou change de thématique. Besoin marché non couvert par le pool actuel.",
       );
     }
   }
@@ -143,15 +166,15 @@ function buildDeterministicIdea(input: {
   return {
     title: themeTitle.slice(0, 120),
     themeAngle: adminTheme
-      ? `Composition autour du thème « ${adminTheme} » (fit lexical secteur / intérêts / notes ops).`
+      ? `Composition autour du thème « ${adminTheme} » — uniquement profils fort/moyen (pas de remplissage).`
       : `Composition déterministe pour ${input.city}.`,
     rationale: adminTheme
-      ? `Table assemblée en priorisant l’alignement au thème « ${adminTheme} » (dinnerThemesInterest, secteur, poste, notes ops), puis diversité et non-invités récents.`
+      ? `Table qualité : sièges réservés aux profils alignés fort/moyen sur « ${adminTheme} » (dinnerThemesInterest, secteur, poste, notes ops). Un effectif court = recruter ou revoir le thème.`
       : "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil).",
     commonalities: [
       ...(adminTheme
         ? [
-            `Alignement thème : ${themeFitCounts.strong} fort / ${themeFitCounts.medium} moyen / ${themeFitCounts.weak} faible`,
+            `Alignement thème : ${themeFitCounts.strong} fort / ${themeFitCounts.medium} moyen (qualifiés ${selected.primary.length}/${PRIMARY_SEATS})`,
           ]
         : []),
       ...(sectors.length ? [`Secteurs représentés : ${sectors.join(", ")}`] : []),
@@ -160,11 +183,11 @@ function buildDeterministicIdea(input: {
     ],
     complementarities: [
       adminTheme
-        ? "Priorité aux profils dont le secteur / les thématiques déclarées collent au thème"
+        ? "Qualité d’abord : pas de titulaires hors-thème pour remplir la table"
         : "Mix de profils pour éviter une table mono-secteur",
       "Priorité aux membres non invités à la table précédente",
     ],
-    warnings: [aiWarning, ...themeWarnings, ...selected.warnings],
+    warnings: mergeWarnings([aiWarning, ...themeWarnings], selected.warnings),
     primaryMemberIds: selected.primary.map((c) => c.id),
     alternateMemberIds: selected.alternates.map((c) => c.id),
   };
@@ -172,8 +195,9 @@ function buildDeterministicIdea(input: {
 
 function reconcileWithPool(
   idea: RawIdea,
-  ranked: ReturnType<typeof rankCandidates>,
+  ranked: RankedCandidate[],
   candidatesById: Map<string, TableCandidate>,
+  themeStrict: boolean,
 ): ComposedTableIdea {
   const balanced = fillBalancedSeatsAroundSeed(
     ranked,
@@ -181,18 +205,22 @@ function reconcileWithPool(
       primaryIds: idea.primaryMemberIds,
       alternateIds: idea.alternateMemberIds,
     },
-    { primarySize: PRIMARY_SEATS, alternateSize: ALTERNATE_SEATS },
+    { primarySize: PRIMARY_SEATS, alternateSize: ALTERNATE_SEATS, themeStrict },
   );
 
+  const bandById = new Map(ranked.map((c) => [c.id, c.themeFitBand]));
+
   const fillWarnings: string[] = [];
-  for (const id of balanced.primary.map((c) => c.id)) {
-    if (!idea.primaryMemberIds.includes(id)) {
-      fillWarnings.push(`filled missing primary seat deterministically: ${id}`);
+  if (!themeStrict) {
+    for (const id of balanced.primary.map((c) => c.id)) {
+      if (!idea.primaryMemberIds.includes(id)) {
+        fillWarnings.push(`filled missing primary seat deterministically: ${id}`);
+      }
     }
-  }
-  for (const id of balanced.alternates.map((c) => c.id)) {
-    if (!idea.alternateMemberIds.includes(id)) {
-      fillWarnings.push(`filled missing alternate seat deterministically: ${id}`);
+    for (const id of balanced.alternates.map((c) => c.id)) {
+      if (!idea.alternateMemberIds.includes(id)) {
+        fillWarnings.push(`filled missing alternate seat deterministically: ${id}`);
+      }
     }
   }
 
@@ -203,8 +231,12 @@ function reconcileWithPool(
     commonalities: idea.commonalities,
     complementarities: idea.complementarities,
     warnings: mergeWarnings(idea.warnings, balanced.warnings, fillWarnings),
-    primary: balanced.primary.map((c) => toSeat(candidatesById.get(c.id)!)),
-    alternates: balanced.alternates.map((c) => toSeat(candidatesById.get(c.id)!)),
+    primary: balanced.primary.map((c) =>
+      toSeat(candidatesById.get(c.id)!, bandById.get(c.id)),
+    ),
+    alternates: balanced.alternates.map((c) =>
+      toSeat(candidatesById.get(c.id)!, bandById.get(c.id)),
+    ),
   };
 }
 
@@ -278,7 +310,9 @@ export async function composeTableIdeas(input: {
     ];
   }
 
-  const ideas = rawIdeas.map((idea) => reconcileWithPool(idea, ranked, candidatesById));
+  const ideas = rawIdeas.map((idea) =>
+    reconcileWithPool(idea, ranked, candidatesById, Boolean(themeForRanking)),
+  );
 
   return { ideas, poolSize: pool.candidates.length };
 }

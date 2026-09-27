@@ -40,6 +40,7 @@ const memberSnapshotSchema: z.ZodType<TableDraftMemberSnapshot> = z
     city: z.string().trim().max(100),
     invitationCount: z.number().int().min(0).max(500).optional(),
     invitedToPreviousEvent: z.boolean().optional(),
+    themeFitBand: z.enum(["strong", "medium", "weak", "none"]).optional(),
   })
   .strict();
 
@@ -53,7 +54,8 @@ const editableFieldsSchema = z
     commonalities: z.array(z.string().trim().min(2).max(240)).max(8),
     complementarities: z.array(z.string().trim().min(2).max(240)).max(8),
     warnings: z.array(z.string().trim().min(2).max(240)).max(8),
-    primary: z.array(memberSnapshotSchema).length(15),
+    /** Theme-quality tables may be shorter than 15 — no padding with off-topic seats. */
+    primary: z.array(memberSnapshotSchema).min(1).max(15),
     alternates: z.array(memberSnapshotSchema).max(5),
   })
   .strict();
@@ -218,6 +220,14 @@ function memberSnapshots(
       typeof record.invitedToPreviousEvent === "boolean"
         ? record.invitedToPreviousEvent
         : undefined;
+    const themeFitBandRaw = record.themeFitBand;
+    const themeFitBand =
+      themeFitBandRaw === "strong" ||
+      themeFitBandRaw === "medium" ||
+      themeFitBandRaw === "weak" ||
+      themeFitBandRaw === "none"
+        ? themeFitBandRaw
+        : undefined;
     result.push({
       id,
       fullName: stringValue(record.fullName),
@@ -228,6 +238,7 @@ function memberSnapshots(
       city: stringValue(record.city),
       ...(invitationCount !== undefined ? { invitationCount } : {}),
       ...(invitedToPreviousEvent !== undefined ? { invitedToPreviousEvent } : {}),
+      ...(themeFitBand !== undefined ? { themeFitBand } : {}),
     });
     if (result.length === limit) break;
   }
