@@ -21,6 +21,10 @@ export type TableIdeaSeat = {
   sector: string;
   position: string;
   city: string;
+  /** Past formal invites across dinners (deprioritized in scoring). */
+  invitationCount: number;
+  /** Invited on the immediately previous event — strongest deprioritization. */
+  invitedToPreviousEvent: boolean;
 };
 
 export type ComposedTableIdea = {
@@ -54,6 +58,8 @@ function toSeat(candidate: TableCandidate): TableIdeaSeat {
     sector: candidate.sector,
     position: candidate.position,
     city: candidate.city,
+    invitationCount: candidate.invitationCount,
+    invitedToPreviousEvent: candidate.invitedToPreviousEvent,
   };
 }
 

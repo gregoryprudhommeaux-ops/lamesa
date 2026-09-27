@@ -19,7 +19,7 @@ import {
 } from "@/lib/constants/event-formats";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { ArrowLeftRight, X } from "lucide-react";
+import { ArrowLeftRight, History, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -71,6 +71,20 @@ function memberSubtitle(member: TableIdeaSeat): string {
     .join(" · ");
 }
 
+function seatFromSnapshot(member: TableDraft["primary"][number]): TableIdeaSeat {
+  return {
+    id: member.id,
+    fullName: member.fullName,
+    email: member.email,
+    company: member.company,
+    sector: member.sector,
+    position: member.position,
+    city: member.city,
+    invitationCount: member.invitationCount ?? 0,
+    invitedToPreviousEvent: member.invitedToPreviousEvent ?? false,
+  };
+}
+
 function ideaFromDraft(draft: TableDraft): TableIdea {
   return {
     title: draft.title,
@@ -79,9 +93,25 @@ function ideaFromDraft(draft: TableDraft): TableIdea {
     commonalities: draft.commonalities,
     complementarities: draft.complementarities,
     warnings: draft.warnings,
-    primary: draft.primary,
-    alternates: draft.alternates,
+    primary: draft.primary.map(seatFromSnapshot),
+    alternates: draft.alternates.map(seatFromSnapshot),
   };
+}
+
+function priorInviteLabel(member: TableIdeaSeat): { short: string; title: string } | null {
+  if (member.invitedToPreviousEvent) {
+    return {
+      short: "Table préc.",
+      title: "Invité à la table précédente — priorité réduite au scoring",
+    };
+  }
+  if (member.invitationCount > 0) {
+    return {
+      short: member.invitationCount === 1 ? "Déjà invité" : `Invité ×${member.invitationCount}`,
+      title: `Déjà invité ${member.invitationCount} fois — priorité réduite au scoring`,
+    };
+  }
+  return null;
 }
 
 function formatDraftDate(iso: string | undefined): string {
@@ -363,8 +393,8 @@ export function AdminTableBuilder() {
     setFormat(draft.format ?? DEFAULT_EVENT_FORMAT);
     setIdeas([ideaFromDraft(draft)]);
     setSelectedIdeaIndex(0);
-    setPrimary(draft.primary);
-    setAlternates(draft.alternates);
+    setPrimary(draft.primary.map(seatFromSnapshot));
+    setAlternates(draft.alternates.map(seatFromSnapshot));
     setDraftMessage(null);
   }
 
@@ -893,13 +923,25 @@ function MemberSeatList({
         <ul className="mt-3 space-y-2">
           {members.map((member, index) => {
             const canSwap = Boolean(swapPartner[index]);
+            const priorInvite = priorInviteLabel(member);
             return (
               <li
                 key={member.id}
                 className="flex items-start justify-between gap-2 rounded-lg border border-gray-50 bg-white p-2.5"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
+                    {priorInvite ? (
+                      <span
+                        title={priorInvite.title}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                      >
+                        <History className="h-3 w-3" aria-hidden />
+                        {priorInvite.short}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-0.5 truncate text-xs text-ns-secondary">{memberSubtitle(member)}</p>
                 </div>
                 <div className="flex shrink-0 gap-1">
