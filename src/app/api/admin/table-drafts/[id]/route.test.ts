@@ -261,7 +261,7 @@ describe("/api/admin/table-drafts/[id]", () => {
   it("rejects title edits when stored seats are malformed or incomplete", async () => {
     const { set } = mockDoc({
       data: storedDraft({
-        primary: [member("only-one")],
+        primary: [],
         alternates: [],
       }),
     });
@@ -278,6 +278,34 @@ describe("/api/admin/table-drafts/[id]", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({ ok: false, error: "validation" });
     expect(set).not.toHaveBeenCalled();
+  });
+
+  it("allows title edits when theme-quality draft has fewer than 15 qualified seats", async () => {
+    const shortPrimary = Array.from({ length: 3 }, (_, index) => member(`q-${index}`));
+    const { update, reference } = mockDoc({
+      data: storedDraft({
+        primary: shortPrimary,
+        alternates: [],
+      }),
+    });
+
+    const response = await PATCH(
+      new Request("http://localhost/api/admin/table-drafts/draft-1", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Table PE courte" }),
+      }),
+      context,
+    );
+
+    expect(response.status).toBe(200);
+    expect(update).toHaveBeenCalledWith(
+      reference,
+      expect.objectContaining({
+        title: "Table PE courte",
+        primary: shortPrimary,
+      }),
+    );
   });
 
   it("rejects title edits when raw stored primary seats exceed 15", async () => {
@@ -336,7 +364,7 @@ describe("/api/admin/table-drafts/[id]", () => {
     const { set } = mockDoc({
       data: storedDraft({
         status: "archived",
-        primary: [member("only-one")],
+        primary: [],
         alternates: [],
       }),
     });

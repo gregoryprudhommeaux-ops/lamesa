@@ -94,6 +94,7 @@ function seatFromSnapshot(member: TableDraft["primary"][number]): TableIdeaSeat 
     city: member.city,
     invitationCount: member.invitationCount ?? 0,
     invitedToPreviousEvent: member.invitedToPreviousEvent ?? false,
+    ...(member.themeFitBand ? { themeFitBand: member.themeFitBand } : {}),
   };
 }
 
@@ -124,6 +125,36 @@ function priorInviteLabel(member: TableIdeaSeat): { short: string; title: string
     };
   }
   return null;
+}
+
+function themeFitLabel(member: TableIdeaSeat): { short: string; title: string; className: string } | null {
+  if (!member.themeFitBand) return null;
+  if (member.themeFitBand === "strong") {
+    return {
+      short: "Fit fort",
+      title: "Alignement fort avec le thème de la table",
+      className: "bg-emerald-50 text-emerald-900",
+    };
+  }
+  if (member.themeFitBand === "medium") {
+    return {
+      short: "Fit moyen",
+      title: "Alignement moyen avec le thème de la table",
+      className: "bg-sky-50 text-sky-900",
+    };
+  }
+  if (member.themeFitBand === "weak") {
+    return {
+      short: "Fit faible",
+      title: "Alignement faible — à vérifier manuellement",
+      className: "bg-amber-50 text-amber-900",
+    };
+  }
+  return {
+    short: "Hors thème",
+    title: "Pas de signal thème — ne devrait pas être titulaire en mode qualité",
+    className: "bg-rose-50 text-rose-900",
+  };
 }
 
 function formatDraftDate(iso: string | undefined): string {
@@ -1165,6 +1196,7 @@ function MemberSeatList({
           {members.map((member, index) => {
             const canSwap = Boolean(swapPartner[index]);
             const priorInvite = priorInviteLabel(member);
+            const themeFit = themeFitLabel(member);
             return (
               <li
                 key={member.id}
@@ -1179,6 +1211,14 @@ function MemberSeatList({
                 >
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
+                    {themeFit ? (
+                      <span
+                        title={themeFit.title}
+                        className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${themeFit.className}`}
+                      >
+                        {themeFit.short}
+                      </span>
+                    ) : null}
                     {priorInvite ? (
                       <span
                         title={priorInvite.title}

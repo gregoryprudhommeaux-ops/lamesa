@@ -237,7 +237,8 @@ export function scoreThemeFit(candidate: TableCandidate, theme: string): ThemeFi
   }
 
   let band: ThemeFitResult["band"] = "none";
-  let score = THEME_SCORE.nonePenalty;
+  // Widen past `as const` literals so band branches can reassign score.
+  let score: number = THEME_SCORE.nonePenalty;
   if (raw >= 40) {
     band = "strong";
     score = THEME_SCORE.strong;
