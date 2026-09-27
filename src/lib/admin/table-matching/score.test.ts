@@ -87,6 +87,44 @@ describe("rankCandidates", () => {
     expect(ranked[1].themeFitBand).toBe("none");
   });
 
+  it("themeStrict seats only strong/medium and never pads with off-topic", () => {
+    const finance = Array.from({ length: 3 }, (_, index) =>
+      candidate({
+        id: `fin-${index + 1}`,
+        sector: "finance",
+        position: "investor",
+        dinnerThemesInterest: "Private equity, family offices",
+        company: `Fund ${index + 1}`,
+      }),
+    );
+    const tech = Array.from({ length: 20 }, (_, index) =>
+      candidate({
+        id: `tech-${index + 1}`,
+        sector: "tech",
+        position: "founder",
+        dinnerThemesInterest: "SaaS PLG",
+        company: `SaaS ${index + 1}`,
+      }),
+    );
+
+    const ranked = rankCandidates([...tech, ...finance], {
+      theme: "Family Offices, VC, Private Equity, Investissement, Levée de fonds",
+    });
+    const { primary, alternates, warnings } = selectBalancedTable(ranked, {
+      primarySize: 15,
+      alternateSize: 5,
+      themeStrict: true,
+    });
+
+    expect(primary).toHaveLength(3);
+    expect(primary.every((seat) => seat.sector === "finance")).toBe(true);
+    expect(primary.every((seat) => seat.themeFitBand === "strong" || seat.themeFitBand === "medium")).toBe(
+      true,
+    );
+    expect(alternates.every((seat) => seat.themeFitBand !== "none")).toBe(true);
+    expect(warnings.some((w) => w.startsWith("theme_pool_short:"))).toBe(true);
+  });
+
   it("does not use locale in scoring", () => {
     const base = candidate({
       id: "member-a",
