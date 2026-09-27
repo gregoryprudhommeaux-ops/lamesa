@@ -1,6 +1,6 @@
 import type { DatabasePersoContact } from "@/lib/types/events";
 
-const REQUEST_TIMEOUT_MS = 10_000;
+const REQUEST_TIMEOUT_MS = 20_000;
 
 export class DatabasePersoError extends Error {
   constructor(
@@ -78,6 +78,15 @@ async function fetchDatabasePerso<T>(
   }
 }
 
+function stringOrNull(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function stringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
+
 function normalizeContact(raw: unknown): DatabasePersoContact | null {
   if (!raw || typeof raw !== "object") return null;
   const c = raw as Record<string, unknown>;
@@ -88,16 +97,18 @@ function normalizeContact(raw: unknown): DatabasePersoContact | null {
   return {
     id,
     fullName,
-    company: typeof c.company === "string" ? c.company : null,
-    emails: Array.isArray(c.emails)
-      ? c.emails.filter((e): e is string => typeof e === "string")
-      : [],
-    phones: Array.isArray(c.phones)
-      ? c.phones.filter((p): p is string => typeof p === "string")
-      : [],
-    tags: Array.isArray(c.tags)
-      ? c.tags.filter((t): t is string => typeof t === "string")
-      : [],
+    company: stringOrNull(c.company),
+    emails: stringArray(c.emails),
+    phones: stringArray(c.phones),
+    tags: stringArray(c.tags),
+    linkedinUrl: stringOrNull(c.linkedinUrl),
+    sector: stringOrNull(c.sector),
+    position: stringOrNull(c.position),
+    city: stringOrNull(c.city),
+    notes: stringOrNull(c.notes),
+    keywords: stringArray(c.keywords),
+    extraActivities: stringArray(c.extraActivities),
+    updatedAt: stringOrNull(c.updatedAt) ?? stringOrNull(c.updated_at),
   };
 }
 
@@ -114,6 +125,18 @@ export async function searchContacts(query: string): Promise<DatabasePersoContac
   return data.results
     .map(normalizeContact)
     .filter((c): c is DatabasePersoContact => c !== null);
+}
+
+/** Best-effort lookup by email (Perso search). Exact email match preferred. */
+export async function findContactByEmail(email: string): Promise<DatabasePersoContact | null> {
+  const normalized = email.trim().toLowerCase();
+  if (!normalized.includes("@")) return null;
+
+  const results = await searchContacts(normalized);
+  const exact = results.find((contact) =>
+    contact.emails.some((item) => item.trim().toLowerCase() === normalized),
+  );
+  return exact ?? results[0] ?? null;
 }
 
 export type UpsertContactPayload = {
@@ -133,6 +156,15 @@ export type UpsertContactPayload = {
   notes?: string;
   /** After upsert: move to LA MESA - INSCRITS, leave LA MESA - CONTACTER */
   laMesaRegistered?: boolean;
+  /**
+   * Perso merge policy. `prefer_incoming` = LA MESA non-empty fields overwrite
+   * existing Perso values (newest LA MESA write wins). Notes still append-friendly
+   * when Perso supports `notesMode`.
+   */
+  mergePolicy?: "fill_empty" | "prefer_incoming";
+  notesMode?: "replace" | "append" | "fill_empty";
+  /** ISO stamp of the LA MESA profile write that triggered this upsert. */
+  sourceUpdatedAt?: string;
 };
 
 export type LaMesaOutreachContact = {

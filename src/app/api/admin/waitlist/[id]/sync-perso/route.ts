@@ -6,12 +6,12 @@ import {
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import { syncWaitlistMemberBidirectional } from "@/lib/member/sync-database-perso";
 import type { WaitlistRegistration } from "@/lib/types/events";
 
 type Params = { params: Promise<{ id: string }> };
 
-/** Force-resync one waitlist member to Database Perso. */
+/** Bidirectional resync: Perso → LA MESA enrich, then LA MESA → Perso push. */
 export async function POST(request: Request, { params }: Params) {
   const admin = await requirePlatformAdmin(request);
   if (isNextResponse(admin)) return admin;
@@ -27,7 +27,8 @@ export async function POST(request: Request, { params }: Params) {
 
   try {
     const db = getAdminFirestore();
-    const snap = await db.collection(COLLECTIONS.waitlist).doc(id).get();
+    const ref = db.collection(COLLECTIONS.waitlist).doc(id);
+    const snap = await ref.get();
     if (!snap.exists) {
       return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
     }
@@ -37,23 +38,42 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ ok: false, error: "deleted" }, { status: 409 });
     }
 
-    const sync = await syncWaitlistMemberToDatabasePerso(member, "[admin/waitlist/sync-perso]");
-    await persistDatabasePersoSyncStatus(member.id, sync);
+    const { enrich, push, merged } = await syncWaitlistMemberBidirectional(
+      member,
+      "[admin/waitlist/sync-perso]",
+    );
 
-    if (sync.skipped) {
+    const now = new Date().toISOString();
+    const enrichPatch = { ...enrich.patch };
+    if (Object.keys(enrichPatch).length > 0) {
+      await ref.set(
+        {
+          ...enrichPatch,
+          updatedAt: now,
+          databasePersoPulledAt: now,
+        },
+        { merge: true },
+      );
+    }
+
+    await persistDatabasePersoSyncStatus(member.id, push);
+
+    if (push.skipped) {
       return NextResponse.json({
         ok: true,
         status: "skipped",
-        error: sync.error ?? "skipped",
+        error: push.error ?? "skipped",
+        enrichedFields: Object.keys(enrich.patch),
       });
     }
 
-    if (!sync.ok || !sync.id) {
+    if (!push.ok || !push.id) {
       return NextResponse.json(
         {
           ok: false,
           status: "failed",
-          error: sync.error ?? "sync_failed",
+          error: push.error ?? "sync_failed",
+          enrichedFields: Object.keys(enrich.patch),
         },
         { status: 502 },
       );
@@ -62,8 +82,13 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({
       ok: true,
       status: "synced",
-      databasePersoContactId: sync.id,
-      databasePersoSyncedAt: new Date().toISOString(),
+      databasePersoContactId: push.id,
+      databasePersoSyncedAt: now,
+      enrichedFields: Object.keys(enrich.patch),
+      pulled: enrich.ok && !enrich.skipped,
+      fullName: merged.fullName,
+      company: merged.company,
+      linkedinUrl: merged.linkedinUrl,
     });
   } catch (error) {
     console.error("[admin/waitlist sync-perso]", error);

@@ -263,6 +263,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [sendingFnMail, setSendingFnMail] = useState(false);
   const [sendingProfileMail, setSendingProfileMail] = useState(false);
   const [syncingPerso, setSyncingPerso] = useState(false);
+  const [bulkSyncingPerso, setBulkSyncingPerso] = useState(false);
   const [loadingProfilePreview, setLoadingProfilePreview] = useState(false);
   const [profileReminderDraft, setProfileReminderDraft] =
     useState<ProfileReminderDraft | null>(null);
@@ -642,7 +643,12 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         error?: string;
         databasePersoContactId?: string;
         databasePersoSyncedAt?: string;
+        enrichedFields?: string[];
+        fullName?: string;
+        company?: string;
+        linkedinUrl?: string;
       };
+      const enriched = Array.isArray(json.enrichedFields) ? json.enrichedFields : [];
       if (!res.ok || !json.ok) {
         setError(json.error ?? "sync_failed");
         setRows((prev) =>
@@ -650,6 +656,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
             r.id === member.id
               ? {
                   ...r,
+                  ...(json.fullName ? { fullName: json.fullName } : {}),
+                  ...(json.company ? { company: json.company } : {}),
+                  ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
                   databasePersoSyncStatus: "failed",
                   databasePersoSyncError: json.error ?? "sync_failed",
                 }
@@ -659,12 +668,19 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         return;
       }
       if (json.status === "skipped") {
-        setActionMsg(`Perso skip (${json.error ?? "skipped"}) pour ${member.email}.`);
+        setActionMsg(
+          `Perso skip (${json.error ?? "skipped"}) pour ${member.email}${
+            enriched.length ? ` · enrichi: ${enriched.join(", ")}` : ""
+          }.`,
+        );
         setRows((prev) =>
           prev.map((r) =>
             r.id === member.id
               ? {
                   ...r,
+                  ...(json.fullName ? { fullName: json.fullName } : {}),
+                  ...(json.company ? { company: json.company } : {}),
+                  ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
                   databasePersoSyncStatus: "skipped",
                   databasePersoSyncError: undefined,
                 }
@@ -673,12 +689,19 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         );
         return;
       }
-      setActionMsg(`Perso sync OK · ${member.email}`);
+      setActionMsg(
+        `Perso sync OK · ${member.email}${
+          enriched.length ? ` · enrichi depuis Perso: ${enriched.join(", ")}` : ""
+        }`,
+      );
       setRows((prev) =>
         prev.map((r) =>
           r.id === member.id
             ? {
                 ...r,
+                ...(json.fullName ? { fullName: json.fullName } : {}),
+                ...(json.company ? { company: json.company } : {}),
+                ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
                 databasePersoSyncStatus: "synced",
                 databasePersoContactId: json.databasePersoContactId ?? r.databasePersoContactId,
                 databasePersoSyncedAt: json.databasePersoSyncedAt ?? new Date().toISOString(),
@@ -691,6 +714,51 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSyncingPerso(false);
+    }
+  }
+
+  async function bulkResyncPersoFailed() {
+    const failedCount = rows.filter((r) => r.databasePersoSyncStatus === "failed").length;
+    if (failedCount === 0) {
+      setActionMsg("Aucun profil en échec Perso.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Relancer la sync bidirectionnelle Perso pour jusqu’à 25 profils en échec (sur ${failedCount} visibles en base) ?`,
+      )
+    ) {
+      return;
+    }
+    setBulkSyncingPerso(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/waitlist/resync-perso-failed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 25 }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        scanned?: number;
+        synced?: number;
+        failed?: number;
+        skipped?: number;
+      };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "sync_failed");
+        return;
+      }
+      setActionMsg(
+        `Perso bulk · scannés ${json.scanned ?? 0} · OK ${json.synced ?? 0} · échec ${json.failed ?? 0} · skip ${json.skipped ?? 0}`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkSyncingPerso(false);
     }
   }
 
@@ -942,6 +1010,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           >
             <Users className="h-4 w-4" />
             {syncingProspects ? "Sync…" : "→ Prospects"}
+          </button>
+          <button
+            type="button"
+            disabled={bulkSyncingPerso}
+            onClick={() => void bulkResyncPersoFailed()}
+            className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-sm`}
+            title="Relancer Perso ↔ LA MESA pour les profils en échec (pull enrichissement + push)"
+          >
+            <RefreshCw className={`h-4 w-4 ${bulkSyncingPerso ? "animate-spin" : ""}`} />
+            {bulkSyncingPerso ? "Perso bulk…" : "Resync Perso failed"}
           </button>
           <button
             type="button"
@@ -1593,7 +1671,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                         onClick={() => void syncPerso(active)}
                       >
                         <RefreshCw className={`h-4 w-4 ${syncingPerso ? "animate-spin" : ""}`} />
-                        {syncingPerso ? "Sync Perso…" : "Resync Perso"}
+                        {syncingPerso ? "Sync Perso…" : "Resync Perso ↔"}
                       </button>
                     ) : null}
                   </dd>

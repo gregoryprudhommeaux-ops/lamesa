@@ -349,6 +349,8 @@ export interface WaitlistRegistration {
   /** Linked Database Perso contact id after upsert sync */
   databasePersoContactId?: string;
   databasePersoSyncedAt?: string;
+  /** Last time we pulled complementary fields from Database Perso into LA MESA. */
+  databasePersoPulledAt?: string;
   /** Outcome of Database Perso upsert at signup / profile sync */
   databasePersoSyncStatus?: "synced" | "failed" | "skipped";
   /** Last Perso upsert error (cleared on success) */
@@ -390,6 +392,15 @@ export interface DatabasePersoContact {
   emails: string[];
   phones: string[];
   tags: string[];
+  linkedinUrl?: string | null;
+  sector?: string | null;
+  position?: string | null;
+  city?: string | null;
+  notes?: string | null;
+  keywords?: string[];
+  extraActivities?: string[];
+  /** ISO timestamp when Perso last updated the contact (if provided). */
+  updatedAt?: string | null;
 }
 
 export type TableDraftStatus = "draft" | "used" | "archived";
