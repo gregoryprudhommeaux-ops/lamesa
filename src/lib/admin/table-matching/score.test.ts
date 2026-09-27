@@ -53,6 +53,40 @@ describe("rankCandidates", () => {
     expect(ranked[1].reasons).toContain("invited to previous event");
   });
 
+  it("boosts theme-aligned members when an admin theme is provided", () => {
+    const ranked = rankCandidates(
+      [
+        candidate({
+          id: "tech-founder",
+          sector: "tech",
+          position: "founder",
+          dinnerThemesInterest: "SaaS PLG",
+          invitedToPreviousEvent: false,
+          invitationCount: 0,
+        }),
+        candidate({
+          id: "pe-investor",
+          sector: "finance",
+          position: "investor",
+          dinnerThemesInterest: "Private equity and family offices",
+          invitedToPreviousEvent: true,
+          invitationCount: 2,
+          completionBand: "mid",
+          completionPercent: 60,
+        }),
+      ],
+      {
+        theme:
+          "Family Offices, VC, Private Equity, Investment banking, Investissement, Levée de fonds",
+      },
+    );
+
+    expect(ranked[0].id).toBe("pe-investor");
+    expect(ranked[0].themeFitBand).toBe("strong");
+    expect(ranked[1].id).toBe("tech-founder");
+    expect(ranked[1].themeFitBand).toBe("none");
+  });
+
   it("does not use locale in scoring", () => {
     const base = candidate({
       id: "member-a",

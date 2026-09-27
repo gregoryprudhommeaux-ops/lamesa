@@ -106,36 +106,65 @@ function buildDeterministicIdea(input: {
   });
   const sectors = topLabels(selected.primary, "sector");
   const positions = topLabels(selected.primary, "position");
-  const theme =
-    input.mode === "admin_theme" && input.theme?.trim()
-      ? input.theme.trim()
+  const adminTheme = input.mode === "admin_theme" ? input.theme?.trim() : undefined;
+  const themeTitle =
+    adminTheme && adminTheme.length > 0
+      ? adminTheme
       : sectors.length > 0
         ? `Table ${sectors.slice(0, 2).join(" × ")} — ${input.city}`
         : `Table ${input.city}`;
 
+  const themeFitCounts = {
+    strong: selected.primary.filter((c) => c.themeFitBand === "strong").length,
+    medium: selected.primary.filter((c) => c.themeFitBand === "medium").length,
+    weak: selected.primary.filter((c) => c.themeFitBand === "weak").length,
+    none: selected.primary.filter((c) => !c.themeFitBand || c.themeFitBand === "none").length,
+  };
+  const themeAligned = themeFitCounts.strong + themeFitCounts.medium;
+
   const aiWarning =
     input.aiFallbackReason === "provider_failed"
-      ? "Composition déterministe — l’IA n’a pas répondu (scoring interne utilisé)."
-      : "Composition déterministe — IA non configurée.";
+      ? "Composition déterministe — l’IA n’a pas répondu (scoring thème + historique utilisé)."
+      : "Composition déterministe — IA non configurée (scoring thème + historique).";
+
+  const themeWarnings: string[] = [];
+  if (adminTheme) {
+    if (themeAligned === 0) {
+      themeWarnings.push(
+        "Peu de profils alignés sur le thème dans le pool — élargis le thème ou enrichis dinnerThemesInterest / secteurs.",
+      );
+    } else if (themeFitCounts.none >= 8) {
+      themeWarnings.push(
+        `${themeFitCounts.none} titulaires sans signal thème fort — revois ou commente les profils hors-sujet.`,
+      );
+    }
+  }
 
   return {
-    title: theme.slice(0, 120),
-    themeAngle:
-      input.mode === "admin_theme" && input.theme?.trim()
-        ? `Composition autour du thème « ${input.theme.trim()} ».`
-        : `Composition déterministe pour ${input.city}.`,
-    rationale:
-      "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil). Une IA configurée enrichit thèmes et explications.",
+    title: themeTitle.slice(0, 120),
+    themeAngle: adminTheme
+      ? `Composition autour du thème « ${adminTheme} » (fit lexical secteur / intérêts / notes ops).`
+      : `Composition déterministe pour ${input.city}.`,
+    rationale: adminTheme
+      ? `Table assemblée en priorisant l’alignement au thème « ${adminTheme} » (dinnerThemesInterest, secteur, poste, notes ops), puis diversité et non-invités récents.`
+      : "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil).",
     commonalities: [
+      ...(adminTheme
+        ? [
+            `Alignement thème : ${themeFitCounts.strong} fort / ${themeFitCounts.medium} moyen / ${themeFitCounts.weak} faible`,
+          ]
+        : []),
       ...(sectors.length ? [`Secteurs représentés : ${sectors.join(", ")}`] : []),
       ...(positions.length ? [`Postes : ${positions.join(", ")}`] : []),
       `Ville : ${input.city}`,
     ],
     complementarities: [
-      "Mix de profils pour éviter une table mono-secteur",
+      adminTheme
+        ? "Priorité aux profils dont le secteur / les thématiques déclarées collent au thème"
+        : "Mix de profils pour éviter une table mono-secteur",
       "Priorité aux membres non invités à la table précédente",
     ],
-    warnings: [aiWarning, ...selected.warnings],
+    warnings: [aiWarning, ...themeWarnings, ...selected.warnings],
     primaryMemberIds: selected.primary.map((c) => c.id),
     alternateMemberIds: selected.alternates.map((c) => c.id),
   };
@@ -201,7 +230,9 @@ export async function composeTableIdeas(input: {
     throw new TableIdeasError("pool_too_small");
   }
 
-  const ranked = rankCandidates(pool.candidates);
+  const themeForRanking =
+    input.mode === "admin_theme" && input.theme?.trim() ? input.theme.trim() : undefined;
+  const ranked = rankCandidates(pool.candidates, { theme: themeForRanking });
   const candidatesById = new Map<string, TableCandidate>(ranked.map((c) => [c.id, c]));
   const aiCardsById = new Map(pool.aiCards.map((aiCard) => [aiCard.id, aiCard]));
 

@@ -370,6 +370,49 @@ describe("composeTableIdeas", () => {
     ).toBe(true);
   });
 
+  it("uses theme-aware deterministic seats when AI fails in admin_theme mode", async () => {
+    vi.stubEnv("PERPLEXITY_API_KEY", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+
+    const financeMembers = Array.from({ length: 10 }, (_, index) =>
+      member({
+        id: `fin-${index + 1}`,
+        email: `fin${index + 1}@example.com`,
+        company: `Fund ${index + 1}`,
+        sector: "finance",
+        position: "investor",
+        dinnerThemesInterest: "Private equity, family offices, fundraising",
+      }),
+    );
+    const techMembers = Array.from({ length: 10 }, (_, index) =>
+      member({
+        id: `tech-${index + 1}`,
+        email: `tech${index + 1}@example.com`,
+        company: `SaaS ${index + 1}`,
+        sector: "tech",
+        position: "founder",
+        dinnerThemesInterest: "Product-led growth",
+      }),
+    );
+
+    const { ideas } = await composeTableIdeas({
+      mode: "admin_theme",
+      theme:
+        "Family Offices, VC, Private Equity, Investment banking, Investissement, Levée de fonds",
+      members: [...techMembers, ...financeMembers],
+      participations: [],
+      events: [],
+      city: "Mexico City",
+    });
+
+    const primarySectors = ideas[0].primary.map((seat) => seat.sector);
+    const financeCount = primarySectors.filter((sector) => sector === "finance").length;
+    expect(financeCount).toBeGreaterThanOrEqual(10);
+    expect(ideas[0].commonalities.some((item) => /Alignement thème/i.test(item))).toBe(true);
+    expect(ideas[0].title).toMatch(/Family Offices|Private Equity|Investissement/i);
+  });
+
   it("propagates prior-invite flags onto composed seats", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-17T12:00:00.000Z"));
