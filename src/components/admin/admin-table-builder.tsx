@@ -2,11 +2,16 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import {
+  formatTableCurationNote,
+  type TableCurationAction,
+} from "@/lib/admin/ops-notes";
+import {
   setPendingInvitees,
   tableMembersToInviteEmails,
   tableMembersToPendingInvitees,
 } from "@/lib/admin/pending-invitees";
 import type { ComposedTableIdea, TableIdeaSeat } from "@/lib/admin/table-matching";
+import { ALTERNATE_SEATS, PRIMARY_SEATS } from "@/lib/admin/table-matching";
 import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
@@ -26,6 +31,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 type TableIdea = ComposedTableIdea;
+type SeatListKind = "primary" | "alternates";
+type SeatActionMode = "move" | "remove";
+
+type SeatActionTarget = {
+  member: TableIdeaSeat;
+  list: SeatListKind;
+};
 
 const GENERATE_ERROR_LABELS_FR: Record<TableIdeasErrorCode | "generate_failed", string> = {
   validation: "Paramètres invalides. Vérifie la ville et le thème.",
@@ -163,6 +175,12 @@ export function AdminTableBuilder() {
   const [addResultMsg, setAddResultMsg] = useState<string | null>(null);
   const [contextEventTitle, setContextEventTitle] = useState<string | null>(null);
 
+  const [seatAction, setSeatAction] = useState<SeatActionTarget | null>(null);
+  const [seatActionMode, setSeatActionMode] = useState<SeatActionMode>("move");
+  const [seatActionComment, setSeatActionComment] = useState("");
+  const [seatActionBusy, setSeatActionBusy] = useState(false);
+  const [seatActionError, setSeatActionError] = useState<string | null>(null);
+
   const selectedIdea = ideas[selectedIdeaIndex];
   const eventIdFromUrl = (searchParams.get("eventId") ?? "").trim();
   const dinerReturnHref = eventIdFromUrl
@@ -268,14 +286,124 @@ export function AdminTableBuilder() {
     setHumanValidatedAt(null);
   }
 
-  function removeFromPrimary(id: string) {
-    setPrimary((prev) => prev.filter((m) => m.id !== id));
-    clearHumanValidation();
+  function openSeatAction(member: TableIdeaSeat, list: SeatListKind) {
+    setSeatAction({ member, list });
+    setSeatActionMode(list === "primary" ? "move" : "remove");
+    setSeatActionComment("");
+    setSeatActionError(null);
   }
 
-  function removeFromAlternates(id: string) {
-    setAlternates((prev) => prev.filter((m) => m.id !== id));
+  function closeSeatAction() {
+    if (seatActionBusy) return;
+    setSeatAction(null);
+    setSeatActionComment("");
+    setSeatActionError(null);
+  }
+
+  function moveSeatToOtherList(member: TableIdeaSeat, from: SeatListKind): string | null {
+    if (from === "primary") {
+      if (alternates.some((seat) => seat.id === member.id)) {
+        return "Ce profil est déjà en remplaçants.";
+      }
+      if (alternates.length >= ALTERNATE_SEATS) {
+        return `Remplaçants complets (${ALTERNATE_SEATS}). Retire un remplacant d’abord.`;
+      }
+      setPrimary((prev) => prev.filter((seat) => seat.id !== member.id));
+      setAlternates((prev) => [...prev, member]);
+      clearHumanValidation();
+      return null;
+    }
+
+    if (primary.some((seat) => seat.id === member.id)) {
+      return "Ce profil est déjà en titulaires.";
+    }
+    if (primary.length >= PRIMARY_SEATS) {
+      return `Titulaires complets (${PRIMARY_SEATS}). Retire un titulaire d’abord.`;
+    }
+    setAlternates((prev) => prev.filter((seat) => seat.id !== member.id));
+    setPrimary((prev) => [...prev, member]);
     clearHumanValidation();
+    return null;
+  }
+
+  async function persistCurationComment(
+    member: TableIdeaSeat,
+    list: SeatListKind,
+    comment: string,
+  ): Promise<string | null> {
+    const action: TableCurationAction =
+      list === "primary" ? "removed_from_primary" : "removed_from_alternate";
+    const appendOpsNote = formatTableCurationNote({
+      comment,
+      action,
+      themeTitle: selectedIdea?.title || theme || undefined,
+    });
+    const res = await authFetch(`/api/admin/waitlist/${encodeURIComponent(member.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appendOpsNote }),
+    });
+    const json = (await res.json()) as { ok?: boolean; error?: string };
+    if (!res.ok || !json.ok) {
+      return json.error ?? "save_failed";
+    }
+    return null;
+  }
+
+  async function confirmSeatAction() {
+    if (!seatAction) return;
+    setSeatActionError(null);
+
+    if (seatActionMode === "move") {
+      const moveError = moveSeatToOtherList(seatAction.member, seatAction.list);
+      if (moveError) {
+        setSeatActionError(moveError);
+        return;
+      }
+      setSeatAction(null);
+      setDraftMessage(
+        seatAction.list === "primary"
+          ? `${seatAction.member.fullName} déplacé en remplaçants.`
+          : `${seatAction.member.fullName} déplacé en titulaires.`,
+      );
+      return;
+    }
+
+    const comment = seatActionComment.trim();
+    if (comment.length < 8) {
+      setSeatActionError("Ajoute un commentaire (min. 8 caractères) pour affiner le profil.");
+      return;
+    }
+
+    setSeatActionBusy(true);
+    try {
+      const persistError = await persistCurationComment(
+        seatAction.member,
+        seatAction.list,
+        comment,
+      );
+      if (persistError) {
+        setSeatActionError(
+          describeActionError(persistError, "Impossible d’enregistrer le commentaire profil."),
+        );
+        return;
+      }
+      if (seatAction.list === "primary") {
+        setPrimary((prev) => prev.filter((seat) => seat.id !== seatAction.member.id));
+      } else {
+        setAlternates((prev) => prev.filter((seat) => seat.id !== seatAction.member.id));
+      }
+      clearHumanValidation();
+      setDraftMessage(
+        `Retiré · commentaire ajouté au profil de ${seatAction.member.fullName}.`,
+      );
+      setSeatAction(null);
+      setSeatActionComment("");
+    } catch (e) {
+      setSeatActionError(e instanceof Error ? e.message : "save_failed");
+    } finally {
+      setSeatActionBusy(false);
+    }
   }
 
   function swapRow(index: number) {
@@ -690,14 +818,16 @@ export function AdminTableBuilder() {
                 <MemberSeatList
                   title={`Titulaires (${primary.length})`}
                   members={primary}
-                  onRemove={removeFromPrimary}
+                  list="primary"
+                  onOpenSeat={(member) => openSeatAction(member, "primary")}
                   swapPartner={alternates}
                   onSwap={swapRow}
                 />
                 <MemberSeatList
                   title={`Remplaçants (${alternates.length})`}
                   members={alternates}
-                  onRemove={removeFromAlternates}
+                  list="alternates"
+                  onOpenSeat={(member) => openSeatAction(member, "alternates")}
                   swapPartner={primary}
                   onSwap={swapRow}
                 />
@@ -864,6 +994,115 @@ export function AdminTableBuilder() {
           </div>
         </div>
       ) : null}
+
+      {seatAction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="table-seat-action-title"
+            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <h3 id="table-seat-action-title" className="text-lg font-bold text-ns-hero">
+              {seatAction.member.fullName}
+            </h3>
+            <p className="mt-1 text-sm text-ns-secondary">{memberSubtitle(seatAction.member)}</p>
+            <p className="mt-3 text-sm text-ns-tertiary">
+              {seatAction.list === "primary"
+                ? "Déplace en remplaçants, ou retire avec un commentaire pour affiner le prochain scan."
+                : "Remonte en titulaires, ou retire avec un commentaire pour affiner le prochain scan."}
+            </p>
+
+            <fieldset className="mt-4 space-y-2">
+              <legend className="sr-only">Action</legend>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-100 p-3 has-[:checked]:border-ns-primary has-[:checked]:bg-ns-brand-light">
+                <input
+                  type="radio"
+                  name="seat-action-mode"
+                  className="mt-1"
+                  checked={seatActionMode === "move"}
+                  onChange={() => {
+                    setSeatActionMode("move");
+                    setSeatActionError(null);
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ns-tertiary">
+                    {seatAction.list === "primary" ? "Placer en remplaçants" : "Placer en titulaires"}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ns-secondary">
+                    Garde le profil dans la composition sans toucher aux notes.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-100 p-3 has-[:checked]:border-ns-primary has-[:checked]:bg-ns-brand-light">
+                <input
+                  type="radio"
+                  name="seat-action-mode"
+                  className="mt-1"
+                  checked={seatActionMode === "remove"}
+                  onChange={() => {
+                    setSeatActionMode("remove");
+                    setSeatActionError(null);
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ns-tertiary">
+                    Retirer de la sélection
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ns-secondary">
+                    Le commentaire enrichit le profil et oriente les prochains scans IA.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            {seatActionMode === "remove" ? (
+              <div className="mt-4">
+                <label className={LABEL_CLASS} htmlFor="table-seat-curation-comment">
+                  Pourquoi retirer ce profil ?
+                </label>
+                <textarea
+                  id="table-seat-curation-comment"
+                  className={`${INPUT_CLASS} min-h-[96px]`}
+                  value={seatActionComment}
+                  onChange={(e) => setSeatActionComment(e.target.value)}
+                  placeholder="Ex. trop junior pour PE/FO, doublon secteur, mauvais fit thème…"
+                  maxLength={600}
+                />
+                <p className="mt-1 text-xs text-ns-secondary">
+                  Enregistré dans les notes ops du membre (min. 8 caractères).
+                </p>
+              </div>
+            ) : null}
+
+            {seatActionError ? <p className={`mt-3 text-sm ${ERROR_TEXT}`}>{seatActionError}</p> : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                disabled={seatActionBusy}
+                onClick={closeSeatAction}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={seatActionBusy}
+                onClick={() => void confirmSeatAction()}
+              >
+                {seatActionBusy
+                  ? "Enregistrement…"
+                  : seatActionMode === "move"
+                    ? "Déplacer"
+                    : "Retirer + commenter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -904,13 +1143,15 @@ function IdeaTagList({
 function MemberSeatList({
   title,
   members,
-  onRemove,
+  list,
+  onOpenSeat,
   swapPartner,
   onSwap,
 }: {
   title: string;
   members: TableIdeaSeat[];
-  onRemove: (id: string) => void;
+  list: SeatListKind;
+  onOpenSeat: (member: TableIdeaSeat) => void;
   swapPartner: TableIdeaSeat[];
   onSwap: (index: number) => void;
 }) {
@@ -929,7 +1170,13 @@ function MemberSeatList({
                 key={member.id}
                 className="flex items-start justify-between gap-2 rounded-lg border border-gray-50 bg-white p-2.5"
               >
-                <div className="min-w-0">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded-md text-left transition hover:bg-ns-brand-light/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ns-primary"
+                  onClick={() => onOpenSeat(member)}
+                  title="Gérer ce siège"
+                  aria-label={`Gérer ${member.fullName}`}
+                >
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
                     {priorInvite ? (
@@ -943,7 +1190,10 @@ function MemberSeatList({
                     ) : null}
                   </div>
                   <p className="mt-0.5 truncate text-xs text-ns-secondary">{memberSubtitle(member)}</p>
-                </div>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-ns-secondary">
+                    {list === "primary" ? "Cliquer · remplacant ou retirer" : "Cliquer · titulaire ou retirer"}
+                  </p>
+                </button>
                 <div className="flex shrink-0 gap-1">
                   {canSwap ? (
                     <button
@@ -958,10 +1208,10 @@ function MemberSeatList({
                   ) : null}
                   <button
                     type="button"
-                    title="Retirer"
-                    aria-label="Retirer"
+                    title="Gérer / retirer"
+                    aria-label={`Gérer ${member.fullName}`}
                     className="rounded-full p-1.5 text-ns-secondary transition hover:bg-red-50 hover:text-red-700"
-                    onClick={() => onRemove(member.id)}
+                    onClick={() => onOpenSeat(member)}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

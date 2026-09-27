@@ -371,7 +371,8 @@ export interface WaitlistRegistration {
   referredById?: string;
   referralAcceptedAt?: string;
   /**
-   * Admin ops notes (post-dinner CRM, curation). Not synced to Database Perso.
+   * Admin ops notes (post-dinner CRM, table curation feedback).
+   * Fed into AI table-matching scans. Not synced to Database Perso.
    */
   opsNotes?: string;
   /** Admin prioritization band for cockpit queues. */

@@ -444,4 +444,20 @@ describe("buildEligiblePool", () => {
       vi.useRealTimers();
     }
   });
+
+  it("propagates admin opsNotes into candidates and AI cards", () => {
+    const result = buildEligiblePool({
+      members: [
+        member({
+          opsNotes: "[Table 2026-09-01 — retiré des titulaires] Trop junior pour PE",
+        }),
+      ],
+      participations: [],
+      events: [],
+      city: "Mexico City",
+    });
+
+    expect(result.candidates[0].opsNotes).toContain("Trop junior pour PE");
+    expect(result.aiCards[0].opsNotes).toContain("Trop junior pour PE");
+  });
 });

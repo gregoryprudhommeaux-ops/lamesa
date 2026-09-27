@@ -15,6 +15,8 @@ export type TableCandidate = {
   isSeeking: string;
   /** Declared dinner themes (industry / experience / problem space). */
   dinnerThemesInterest: string;
+  /** Admin ops / table-curation notes — weighed by AI scan. */
+  opsNotes: string;
   completionPercent: number;
   completionBand: CompletionBand;
   invitationCount: number;
