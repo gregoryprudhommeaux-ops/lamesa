@@ -15,6 +15,7 @@ import {
   INPUT_CLASS,
   LABEL_CLASS,
 } from "@/lib/ui/nextstep";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -170,8 +171,29 @@ export function AdminDinnerSubjectsPanel() {
         <div>
           <h2 className="text-base font-bold text-ns-hero">Sujets de dîners — demande</h2>
           <p className="text-xs text-ns-secondary">
-            Période = mois. Inscription → déclaration ; validation cohérence sur la fiche ; validés
-            → scan Tables.
+            Publier = visible sur la page publique (toutes villes). Membres avec profil 100 %
+            choisissent → tu valides la cohérence → validés nourrissent le scan Tables.
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Lien partageable :{" "}
+            <a
+              href={`${PRODUCTION_SITE_URL}/es/themes`}
+              className="font-semibold text-ns-primary underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {PRODUCTION_SITE_URL}/es/themes
+            </a>
+            {" · "}
+            <button
+              type="button"
+              className="font-semibold text-ns-primary underline"
+              onClick={() => {
+                void navigator.clipboard.writeText(`${PRODUCTION_SITE_URL}/es/themes`);
+              }}
+            >
+              Copier
+            </button>
           </p>
         </div>
         <button type="button" className={BTN_SECONDARY} onClick={() => void load()} disabled={loading}>

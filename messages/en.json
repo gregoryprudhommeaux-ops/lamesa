@@ -182,10 +182,10 @@
       "invitationMotivation": "Why does LA MESA interest you?",
       "invitationMotivationPlaceholder": "A few sentences — what draws you here.",
       "dinnerSubjects": "Dinner subjects that interest you",
-      "dinnerSubjectsHint": "Select past or upcoming subjects (period = month). The team checks fit with your profile.",
+      "dinnerSubjectsHint": "All published subjects, every city. Period = month.",
       "dinnerSubjectsPast": "Past subjects",
       "dinnerSubjectsUpcoming": "Upcoming subjects",
-      "dinnerSubjectsEmpty": "Catalog temporarily unavailable — describe your themes below.",
+      "dinnerSubjectsEmpty": "Catalog temporarily unavailable.",
       "dinnerThemesInterest": "Other theme (free text)",
       "dinnerThemesInterestPlaceholder": "Optional complement — e.g. B2B SaaS scale, family succession, climate impact…",
       "optional": "optional",
@@ -245,8 +245,9 @@
     "submit": "Join the list",
     "submitting": "Sending…",
     "success": "Thank you. You’re on the list. You’ll get an invitation when an evening matches your profile.",
-    "successLoginHint": "To update your profile anytime, sign in with the same Google email.",
-    "successLoginCta": "Sign in and edit my profile",
+    "successLoginHint": "Sign in with the same email, complete your profile to 100%, then pick your themes.",
+    "successLoginCta": "Sign in to choose my themes",
+    "successSubjectsLink": "Browse themes",
     "error": "Could not submit. Please try again.",
     "errors": {
       "already_registered": "You’re trying to create an account with an email that’s already in the system. Sign in, or use a different email address.",
@@ -579,6 +580,9 @@
     "fellows": "Other guests",
     "guest": "Guest",
     "viewEvent": "View dinner",
+    "subjectsPageHint": "Themes are chosen on the public page once your profile is 100% complete.",
+    "subjectsPageCta": "Choose my themes",
+    "subjectsNeedCompleteProfile": "Profile at {percent}% — complete it to 100% to choose themes.",
     "settingsLink": "Account settings",
     "nextActions": {
       "eyebrow": "Your next step",
@@ -682,6 +686,32 @@
       "waitlist": "Waitlist",
       "present": "Paid",
       "declined": "Not attending"
+    }
+  },
+  "subjectsPage": {
+    "metaTitle": "Dinner themes | LA MESA",
+    "metaDescription": "Explore LA MESA dinner subjects (all cities). Sign in or join, complete your profile, then pick the themes you care about.",
+    "title": "Dinner themes",
+    "intro": "Subjects we open or have opened. Pick those that interest you — the team checks fit with your profile.",
+    "allCitiesNote": "Every theme is visible, whatever the city.",
+    "pickerHint": "Select one or more subjects. Saving is for members with a complete profile.",
+    "loading": "Loading…",
+    "gateAnonymous": "Member? Sign in to save your picks. Not yet on the list? Create your profile first.",
+    "gateNotMember": "No LA MESA profile for this email. Join, complete your profile to 100%, then come back to choose.",
+    "gateIncomplete": "Profile at {percent}% — it must be 100% before you can choose themes.",
+    "missingFields": "Still missing: {fields}",
+    "ctaLogin": "Sign in",
+    "ctaRegister": "Create my profile",
+    "ctaCompleteProfile": "Complete my profile",
+    "ctaSave": "Save my picks",
+    "saving": "Saving…",
+    "saved": "Saved — the team will validate them.",
+    "selectAtLeastOne": "Select at least one subject to save.",
+    "validationNote": "Your picks stay pending until the team validates profile fit.",
+    "errors": {
+      "loadFailed": "Could not load your profile. Try again.",
+      "saveFailed": "Could not save. Try again.",
+      "profileIncomplete": "Profile incomplete — finish it to 100% then return."
     }
   }
 }

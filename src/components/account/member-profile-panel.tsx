@@ -1,12 +1,16 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
-import { DinnerSubjectPicker } from "@/components/dinner-subject-picker";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import { Link } from "@/i18n/navigation";
 import { POSITIONS, SECTORS, isSectorCode } from "@/lib/constants/form-options";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
-import { listMissingProfileFieldsForLocale } from "@/lib/member/profile-completion";
+import {
+  computeProfileCompletionPercent,
+  isProfileIncomplete,
+  listMissingProfileFieldsForLocale,
+} from "@/lib/member/profile-completion";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
@@ -37,8 +41,7 @@ type FieldKey =
   | "company"
   | "sector"
   | "position"
-  | "invitationMotivation"
-  | "dinnerThemesInterest";
+  | "invitationMotivation";
 
 function initialSectorState(profile: Profile): { sector: string; sectorOther: string } {
   const raw = (profile.sector ?? "").trim();
@@ -105,12 +108,6 @@ export function MemberProfilePanel({
   const [invitationMotivation, setInvitationMotivation] = useState(
     profile.invitationMotivation ?? "",
   );
-  const [dinnerThemesInterest, setDinnerThemesInterest] = useState(
-    profile.dinnerThemesInterest ?? "",
-  );
-  const [dinnerSubjectIds, setDinnerSubjectIds] = useState<string[]>(
-    (profile.dinnerSubjectInterests ?? []).map((row) => row.subjectId),
-  );
   const [canBring, setCanBring] = useState(profile.canBring ?? "");
   const [isSeeking, setIsSeeking] = useState(profile.isSeeking ?? "");
 
@@ -124,8 +121,6 @@ export function MemberProfilePanel({
     setLinkedinUrl(profile.linkedinUrl ?? "");
     setExtraActivities((profile.extraActivities ?? []).join(", "));
     setInvitationMotivation(profile.invitationMotivation ?? "");
-    setDinnerThemesInterest(profile.dinnerThemesInterest ?? "");
-    setDinnerSubjectIds((profile.dinnerSubjectInterests ?? []).map((row) => row.subjectId));
     setCanBring(profile.canBring ?? "");
     setIsSeeking(profile.isSeeking ?? "");
   }, [profile]);
@@ -232,8 +227,6 @@ export function MemberProfilePanel({
           linkedinUrl: linkedinTrimmed,
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
-          dinnerThemesInterest,
-          dinnerSubjectIds,
           canBring,
           isSeeking,
         }),
@@ -252,7 +245,6 @@ export function MemberProfilePanel({
           "sector",
           "position",
           "invitationMotivation",
-          "dinnerThemesInterest",
         ];
         const field =
           apiField && knownFields.includes(apiField as FieldKey)
@@ -556,35 +548,20 @@ export function MemberProfilePanel({
             onChange={(e) => setIsSeeking(e.target.value)}
           />
         </div>
-        <DinnerSubjectPicker
-          locale={locale}
-          selectedIds={dinnerSubjectIds}
-          onChange={setDinnerSubjectIds}
-          disabled={saving}
-          label={tReg("fields.dinnerSubjects")}
-          hint={tReg("fields.dinnerSubjectsHint")}
-          pastLabel={tReg("fields.dinnerSubjectsPast")}
-          upcomingLabel={tReg("fields.dinnerSubjectsUpcoming")}
-          emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
-        />
-        <div>
-          <label className={LABEL_CLASS}>
-            {t("fields.dinnerThemesInterest")}
-            {dinnerSubjectIds.length > 0 ? (
-              <span className="ml-1 font-normal text-ns-secondary">
-                ({tReg("fields.optional")})
-              </span>
-            ) : null}
-          </label>
-          <textarea
-            className={fieldInputClass(errorField === "dinnerThemesInterest")}
-            rows={3}
-            minLength={dinnerSubjectIds.length === 0 ? 10 : undefined}
-            maxLength={2000}
-            value={dinnerThemesInterest}
-            onChange={(e) => setDinnerThemesInterest(e.target.value)}
-            placeholder={tReg("fields.dinnerThemesInterestPlaceholder")}
-          />
+        <div className="rounded-md border border-ns-primary/20 bg-ns-primary/5 px-3 py-3">
+          <p className={LABEL_CLASS}>{tReg("fields.dinnerSubjects")}</p>
+          <p className="mt-1 text-xs text-ns-secondary">{t("subjectsPageHint")}</p>
+          {isProfileIncomplete(profile) ? (
+            <p className="mt-2 text-xs font-semibold text-amber-800">
+              {t("subjectsNeedCompleteProfile", {
+                percent: computeProfileCompletionPercent(profile),
+              })}
+            </p>
+          ) : (
+            <Link href="/themes" className={`${BTN_SECONDARY} mt-3 inline-flex`}>
+              {t("subjectsPageCta")}
+            </Link>
+          )}
         </div>
         <div>
           <label className={LABEL_CLASS}>{t("fields.invitationMotivation")}</label>
