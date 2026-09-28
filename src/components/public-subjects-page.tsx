@@ -38,10 +38,10 @@ export function PublicSubjectsPage() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const nextSujets = "/sujets";
-  const loginHref = withNextQuery("/connexion", nextSujets);
-  const signupHref = withNextQuery("/inscription", nextSujets);
-  const compteHref = withNextQuery("/compte?tab=profil", nextSujets);
+  const nextThemes = "/themes";
+  const loginHref = withNextQuery("/connexion", nextThemes);
+  const signupHref = withNextQuery("/inscription", nextThemes);
+  const compteHref = withNextQuery("/compte?tab=profil", nextThemes);
 
   const loadProfile = useCallback(async () => {
     if (!user) {

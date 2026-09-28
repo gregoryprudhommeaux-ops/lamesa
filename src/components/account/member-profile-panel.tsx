@@ -558,7 +558,7 @@ export function MemberProfilePanel({
               })}
             </p>
           ) : (
-            <Link href="/sujets" className={`${BTN_SECONDARY} mt-3 inline-flex`}>
+            <Link href="/themes" className={`${BTN_SECONDARY} mt-3 inline-flex`}>
               {t("subjectsPageCta")}
             </Link>
           )}

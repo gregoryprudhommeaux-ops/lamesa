@@ -118,10 +118,10 @@ export function ProfileRegistrationForm({
           <p className="text-sm font-medium leading-relaxed text-ns-secondary">
             {t("successLoginHint")}
           </p>
-          <Link href="/connexion?next=/sujets" className={BTN_PRIMARY}>
+          <Link href="/connexion?next=/themes" className={BTN_PRIMARY}>
             {t("successLoginCta")}
           </Link>
-          <Link href="/sujets" className="text-sm font-semibold text-ns-primary underline">
+          <Link href="/themes" className="text-sm font-semibold text-ns-primary underline">
             {t("successSubjectsLink")}
           </Link>
         </div>

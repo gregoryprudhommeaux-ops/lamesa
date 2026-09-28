@@ -40,7 +40,7 @@ export const registrationSchema = z
     canBring: z.string().trim().min(2).max(280),
     isSeeking: z.string().trim().min(2).max(280),
     /**
-     * Legacy optional free-text — catalog picks happen on public /sujets after
+     * Legacy optional free-text — catalog picks happen on public /themes after
      * the profile is 100% complete, not at signup.
      */
     dinnerThemesInterest: z

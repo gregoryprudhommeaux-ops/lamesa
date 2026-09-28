@@ -177,19 +177,19 @@ export function AdminDinnerSubjectsPanel() {
           <p className="mt-1 text-xs text-ns-secondary">
             Lien partageable :{" "}
             <a
-              href={`${PRODUCTION_SITE_URL}/es/sujets`}
+              href={`${PRODUCTION_SITE_URL}/es/themes`}
               className="font-semibold text-ns-primary underline"
               target="_blank"
               rel="noreferrer"
             >
-              {PRODUCTION_SITE_URL}/es/sujets
+              {PRODUCTION_SITE_URL}/es/themes
             </a>
             {" · "}
             <button
               type="button"
               className="font-semibold text-ns-primary underline"
               onClick={() => {
-                void navigator.clipboard.writeText(`${PRODUCTION_SITE_URL}/es/sujets`);
+                void navigator.clipboard.writeText(`${PRODUCTION_SITE_URL}/es/themes`);
               }}
             >
               Copier
