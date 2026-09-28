@@ -3,6 +3,7 @@ import {
   currentPeriodMonth,
   formatPeriodMonthLabel,
   isValidPeriodMonth,
+  periodMonthToSuggestedDate,
   subjectTimingBucket,
 } from "@/lib/dinner-subjects/period";
 
@@ -27,5 +28,10 @@ describe("dinner-subjects/period", () => {
 
   it("returns current period as YYYY-MM", () => {
     expect(currentPeriodMonth(new Date("2026-03-01T18:00:00Z"))).toMatch(/^\d{4}-\d{2}$/);
+  });
+
+  it("suggests mid-month date for dinner compose", () => {
+    expect(periodMonthToSuggestedDate("2026-10")).toBe("2026-10-15");
+    expect(periodMonthToSuggestedDate("bad")).toBeUndefined();
   });
 });
