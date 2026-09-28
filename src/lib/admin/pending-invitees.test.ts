@@ -1,9 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  consumePendingEventSeed,
+  setPendingEventSeed,
   tableMembersToInviteEmails,
   tableMembersToPendingInvitees,
   type TableIdeaMember,
 } from "./pending-invitees";
+
+afterEach(() => {
+  try {
+    sessionStorage.clear();
+  } catch {
+    // no sessionStorage in node until stubbed
+  }
+  vi.unstubAllGlobals();
+});
 
 function member(overrides: Partial<TableIdeaMember> = {}): TableIdeaMember {
   return {
@@ -60,5 +71,40 @@ describe("tableMembersToPendingInvitees", () => {
         contactId: "valid",
       },
     ]);
+  });
+});
+
+describe("setPendingEventSeed / consumePendingEventSeed", () => {
+  it("stores title, city, subtitle, date and format for Nouveau dîner", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        store.set(k, v);
+      },
+      removeItem: (k: string) => {
+        store.delete(k);
+      },
+      clear: () => store.clear(),
+    });
+
+    setPendingEventSeed({
+      title: "CEO et Entrepreneurs Français à Guadalajara",
+      city: "Guadalajara",
+      format: "dinner",
+      subtitle: "Pairs dirigeants",
+      date: "2026-11-15",
+    });
+
+    expect(consumePendingEventSeed()).toEqual({
+      invitees: [],
+      title: "CEO et Entrepreneurs Français à Guadalajara",
+      city: "Guadalajara",
+      format: "dinner",
+      subtitle: "Pairs dirigeants",
+      date: "2026-11-15",
+    });
+    // consumed once
+    expect(consumePendingEventSeed()).toEqual({ invitees: [] });
   });
 });

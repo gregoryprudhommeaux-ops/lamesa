@@ -244,5 +244,6 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-27 | Inscription — `dinnerThemesInterest` (thématiques dîners) dans profil + scan Tables |
 | 2026-09-28 | Catalogue sujets (`la_mesa_dinner_subjects`) + multi-select inscription/profil + validation admin cohérence ; free-text complément ; validés → theme-fit |
 | 2026-09-28 | Demande sujets : agrégat validé/pending + file cohérence + CTA Composer table (`?theme=`) |
+| 2026-09-28 | Composer (idée) → Nouveau dîner prérempli (titre, ville, résumé, date mi-période) |
 | 2026-09-28 | Page publique `/themes` + gate auth/profil 100 % ; admin publie depuis Tables ; lien partageable |
 | 2026-09-28 | `/themes` i18n — `titleI18n`/`summaryI18n` auto (create/update + backfill GET `?locale=`) ; picker refetch locale |

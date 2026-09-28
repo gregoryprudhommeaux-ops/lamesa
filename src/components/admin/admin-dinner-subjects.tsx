@@ -6,7 +6,12 @@ import type {
   PendingSubjectValidation,
   SubjectDemandRow,
 } from "@/lib/dinner-subjects/demand";
-import { currentPeriodMonth, formatPeriodMonthLabel } from "@/lib/dinner-subjects/period";
+import { setPendingEventSeed } from "@/lib/admin/pending-invitees";
+import {
+  currentPeriodMonth,
+  formatPeriodMonthLabel,
+  periodMonthToSuggestedDate,
+} from "@/lib/dinner-subjects/period";
 import type { DinnerSubject, DinnerSubjectStatus } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
@@ -17,6 +22,7 @@ import {
 } from "@/lib/ui/nextstep";
 import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_LABELS: Record<DinnerSubjectStatus, string> = {
@@ -25,16 +31,19 @@ const STATUS_LABELS: Record<DinnerSubjectStatus, string> = {
   archived: "Archivé",
 };
 
-function composeHref(subject: DinnerSubject): string {
-  const params = new URLSearchParams({
-    mode: "admin_theme",
-    theme: subject.title,
+/** Prefill Nouveau dîner from a catalog idea (title, city, summary, période → date). */
+function seedNouveauDiner(subject: DinnerSubject): void {
+  setPendingEventSeed({
+    title: subject.title,
     city: subject.city,
+    format: "dinner",
+    subtitle: subject.summary?.trim() || undefined,
+    date: periodMonthToSuggestedDate(subject.periodMonth),
   });
-  return `/admin/tables?${params.toString()}#table-generate`;
 }
 
 export function AdminDinnerSubjectsPanel() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const [subjects, setSubjects] = useState<DinnerSubject[]>([]);
   const [demand, setDemand] = useState<SubjectDemandRow[]>([]);
@@ -278,9 +287,17 @@ export function AdminDinnerSubjectsPanel() {
                     {row.counts.rejected ? ` · ${row.counts.rejected} rejeté(s)` : ""}
                   </p>
                 </div>
-                <Link href={composeHref(row.subject)} className={BTN_PRIMARY}>
-                  Composer table
-                </Link>
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
+                  title="Ouvrir Nouveau dîner avec le titre, la ville et la période"
+                  onClick={() => {
+                    seedNouveauDiner(row.subject);
+                    router.push("/admin/evenements?nouveau=1");
+                  }}
+                >
+                  Composer
+                </button>
               </li>
             ))}
           </ul>
@@ -481,9 +498,17 @@ export function AdminDinnerSubjectsPanel() {
                   </button>
                   {subject.status === "published" ? (
                     <>
-                      <Link href={composeHref(subject)} className={BTN_SECONDARY}>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        title="Ouvrir Nouveau dîner avec le titre, la ville et la période"
+                        onClick={() => {
+                          seedNouveauDiner(subject);
+                          router.push("/admin/evenements?nouveau=1");
+                        }}
+                      >
                         Composer
-                      </Link>
+                      </button>
                       <button
                         type="button"
                         className={BTN_SECONDARY}

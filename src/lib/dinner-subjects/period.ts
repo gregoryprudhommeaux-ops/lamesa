@@ -44,3 +44,13 @@ export function formatPeriodMonthLabel(
     date,
   );
 }
+
+/**
+ * Suggest a concrete YYYY-MM-DD when composing a dinner from a period-only subject.
+ * Uses the 15th of the planning month (mid-period placeholder — admin can edit).
+ */
+export function periodMonthToSuggestedDate(periodMonth: string): string | undefined {
+  const period = periodMonth.trim();
+  if (!isValidPeriodMonth(period)) return undefined;
+  return `${period}-15`;
+}

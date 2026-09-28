@@ -508,7 +508,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   function resetForm(
     invitees: SelectedInvitee[] = [],
     presetDate?: string,
-    seed?: { format?: EventFormat; city?: string; title?: string },
+    seed?: { format?: EventFormat; city?: string; title?: string; subtitle?: string },
   ) {
     const now = splitLocal(new Date().toISOString());
     const date =
@@ -549,7 +549,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setStatus("draft");
     setEventLanguage("es");
     setResponseMode("rsvp");
-    setSubtitle("");
+    setSubtitle(seed?.subtitle?.trim() ?? "");
     setInterestDeadlineAt("");
     setPaymentDeadlineAt("");
     setAllInPriceMinMxn("");
@@ -566,19 +566,28 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const wantsNew = params?.get("nouveau") === "1";
     const dateParam = params?.get("date")?.trim() ?? "";
-    if (pending.invitees.length === 0 && !wantsNew) return;
+    const hasSeed =
+      pending.invitees.length > 0 ||
+      Boolean(pending.title?.trim()) ||
+      Boolean(pending.city?.trim()) ||
+      Boolean(pending.subtitle?.trim()) ||
+      Boolean(pending.date);
+    if (!hasSeed && !wantsNew) return;
     resetForm(
       pending.invitees.map((p) => ({
         ...p,
         inviteAs: "invited" as const,
       })),
-      dateParam || undefined,
+      dateParam || pending.date || undefined,
       {
         format: pending.format,
         city: pending.city,
         title: pending.title,
+        subtitle: pending.subtitle,
       },
     );
+    setFocusPhase("prep");
+    setPhaseOverride(false);
     if (wantsNew && typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("nouveau");
