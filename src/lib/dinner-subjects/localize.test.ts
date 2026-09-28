@@ -4,6 +4,7 @@ import {
   localizeDinnerSubject,
   localizeDinnerSubjectList,
   resolveSubjectSourceLocale,
+  subjectIncompleteI18n,
 } from "@/lib/dinner-subjects/localize";
 import type { DinnerSubject } from "@/lib/types/events";
 
@@ -73,5 +74,26 @@ describe("dinner-subjects/localize", () => {
       }),
     ];
     expect(localizeDinnerSubjectList(rows, "en")[0]?.title).toBe("A-en");
+  });
+
+  it("detects incomplete i18n maps", () => {
+    expect(
+      subjectIncompleteI18n(
+        subject({
+          title: "Fondateurs",
+          titleI18n: { fr: "Fondateurs" },
+        }),
+      ),
+    ).toBe(true);
+    expect(
+      subjectIncompleteI18n(
+        subject({
+          title: "Fondateurs",
+          summary: "Pairs",
+          titleI18n: { fr: "Fondateurs", en: "Founders", es: "Fundadores" },
+          summaryI18n: { fr: "Pairs", en: "Peers", es: "Pares" },
+        }),
+      ),
+    ).toBe(false);
   });
 });

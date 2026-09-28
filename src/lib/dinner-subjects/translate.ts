@@ -7,6 +7,8 @@ import {
 } from "@/lib/dinner-subjects/localize";
 import type { DinnerSubject, DinnerSubjectLocale } from "@/lib/types/events";
 
+export { subjectIncompleteI18n, subjectMissingLocale } from "@/lib/dinner-subjects/localize";
+
 export type SubjectI18nMaps = {
   sourceLocale: DinnerSubjectLocale;
   titleI18n: Partial<Record<DinnerSubjectLocale, string>>;
@@ -76,16 +78,4 @@ export async function buildSubjectI18nMaps(input: {
   );
 
   return { sourceLocale, titleI18n, summaryI18n };
-}
-
-/** True when a locale still needs a stored translation. */
-export function subjectMissingLocale(
-  subject: DinnerSubject,
-  locale: DinnerSubjectLocale,
-): boolean {
-  const source = resolveSubjectSourceLocale(subject);
-  if (locale === source) return false;
-  if (!subject.titleI18n?.[locale]?.trim()) return true;
-  if (subject.summary?.trim() && !subject.summaryI18n?.[locale]?.trim()) return true;
-  return false;
 }

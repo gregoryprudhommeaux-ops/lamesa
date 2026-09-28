@@ -43,3 +43,27 @@ export function localizeDinnerSubjectList(
 ): DinnerSubject[] {
   return subjects.map((s) => localizeDinnerSubject(s, locale));
 }
+
+/** True when a locale still needs a stored translation. */
+export function subjectMissingLocale(
+  subject: Pick<DinnerSubject, "titleI18n" | "summaryI18n" | "sourceLocale" | "summary">,
+  locale: DinnerSubjectLocale,
+): boolean {
+  const source = resolveSubjectSourceLocale(subject);
+  if (locale === source) {
+    return !subject.titleI18n?.[source]?.trim();
+  }
+  if (!subject.titleI18n?.[locale]?.trim()) return true;
+  if (subject.summary?.trim() && !subject.summaryI18n?.[locale]?.trim()) return true;
+  return false;
+}
+
+/** True when any of fr/en/es is missing from stored maps. */
+export function subjectIncompleteI18n(
+  subject: Pick<DinnerSubject, "titleI18n" | "summaryI18n" | "sourceLocale" | "summary">,
+): boolean {
+  for (const locale of DINNER_SUBJECT_LOCALES) {
+    if (subjectMissingLocale(subject, locale)) return true;
+  }
+  return false;
+}

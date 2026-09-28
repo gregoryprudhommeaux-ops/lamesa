@@ -13,6 +13,7 @@ import type {
   DinnerSubjectLocale,
   DinnerSubjectStatus,
 } from "@/lib/types/events";
+import { subjectIncompleteI18n } from "@/lib/dinner-subjects/localize";
 import { buildSubjectI18nMaps } from "@/lib/dinner-subjects/translate";
 
 export type DinnerSubjectInput = {
@@ -125,24 +126,20 @@ export async function ensureDefaultDinnerSubjects(): Promise<DinnerSubject[]> {
   const existing = await listDinnerSubjects({ includeDrafts: true, includeArchived: true });
   if (existing.length > 0) return existing;
 
-  const db = getAdminFirestore();
-  const now = new Date().toISOString();
-  const seeds = buildDefaultDinnerSubjectSeeds();
-  const batch = db.batch();
   const created: DinnerSubject[] = [];
-  for (const seed of seeds) {
-    const ref = db.collection(COLLECTIONS.dinnerSubjects).doc();
-    const doc = {
-      ...seed,
-      city: resolveSubjectCity(seed.city),
-      keywords: normalizeKeywords(seed.keywords),
-      createdAt: now,
-      updatedAt: now,
-    };
-    batch.set(ref, doc);
-    created.push({ id: ref.id, ...doc });
+  for (const seed of buildDefaultDinnerSubjectSeeds()) {
+    created.push(
+      await createDinnerSubject({
+        title: seed.title,
+        summary: seed.summary,
+        periodMonth: seed.periodMonth,
+        city: seed.city,
+        status: seed.status,
+        keywords: seed.keywords,
+        sortOrder: seed.sortOrder,
+      }),
+    );
   }
-  await batch.commit();
   return created.sort(sortSubjects);
 }
 
@@ -233,7 +230,14 @@ export async function updateDinnerSubject(
     input.title !== undefined ? input.title.trim() : existing.title;
   const summaryNext =
     input.summary !== undefined ? input.summary.trim() : (existing.summary ?? "");
-  if (input.title !== undefined || input.summary !== undefined) {
+  // Translate at create is the main path; also (re)fill on edit, Publier, or incomplete maps
+  // so existing ideas published before i18n still get EN/ES titles.
+  const needsI18n =
+    input.title !== undefined ||
+    input.summary !== undefined ||
+    input.status === "published" ||
+    subjectIncompleteI18n(existing);
+  if (needsI18n) {
     const i18n = await buildSubjectI18nMaps({
       title: titleNext,
       summary: summaryNext,
@@ -250,23 +254,19 @@ export async function updateDinnerSubject(
   return mapDoc(next.id, next.data() ?? {});
 }
 
-/** Persist missing locale strings for subjects (lazy backfill on public /themes). */
+/**
+ * Persist missing locale strings for subjects (lazy backfill on public /themes).
+ * Fills all missing fr/en/es maps so a single visit repairs the whole catalog row.
+ */
 export async function backfillSubjectLocale(
   subjects: DinnerSubject[],
-  locale: DinnerSubjectLocale,
+  _locale: DinnerSubjectLocale,
 ): Promise<DinnerSubject[]> {
   if (!isFirebaseAdminConfigured()) return subjects;
   const db = getAdminFirestore();
   const out: DinnerSubject[] = [];
   for (const subject of subjects) {
-    const source = subject.sourceLocale ?? "fr";
-    if (locale === source) {
-      out.push(subject);
-      continue;
-    }
-    const needsTitle = !subject.titleI18n?.[locale]?.trim();
-    const needsSummary = Boolean(subject.summary?.trim()) && !subject.summaryI18n?.[locale]?.trim();
-    if (!needsTitle && !needsSummary) {
+    if (!subjectIncompleteI18n(subject)) {
       out.push(subject);
       continue;
     }
@@ -274,7 +274,7 @@ export async function backfillSubjectLocale(
       const i18n = await buildSubjectI18nMaps({
         title: subject.title,
         summary: subject.summary,
-        sourceLocale: source,
+        sourceLocale: subject.sourceLocale ?? "fr",
         previous: subject,
       });
       await db.collection(COLLECTIONS.dinnerSubjects).doc(subject.id).set(

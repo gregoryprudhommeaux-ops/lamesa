@@ -362,8 +362,9 @@ export function AdminDinnerSubjectsPanel() {
           </button>
         </div>
         <p className="sm:col-span-2 lg:col-span-6 text-xs text-ns-secondary">
-          L’idée est créée en brouillon. Clique <span className="font-semibold">Publier</span> pour
-          la rendre visible sur <span className="font-mono">/themes</span>.
+          L’idée est créée en brouillon — titre et résumé sont traduits auto (FR → EN / ES) à la
+          création. Clique <span className="font-semibold">Publier</span> pour la rendre visible sur{" "}
+          <span className="font-mono">/themes</span> (retraduit aussi si les traductions manquent).
         </p>
         <div className="sm:col-span-2 lg:col-span-6">
           <label className={LABEL_CLASS}>Résumé (optionnel)</label>
