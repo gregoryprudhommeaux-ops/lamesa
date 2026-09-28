@@ -101,6 +101,8 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-28 | Catalogue **sujets de dîners** (période mois + ville, pas de date précise) | Demande déclarée ; past + upcoming à l’inscription |
 | 2026-09-28 | Intérêts sujets : déclarés → admin valide cohérence profil | Seuls les **validés** nourrissent le scan Tables |
 | 2026-09-28 | Demande sujets visible sur Tables + CTA Composer | Calendrier tiré par la demande, pas inventé |
+| 2026-09-28 | Page publique **/sujets** partageable | Auth + profil 100 % avant choix ; catalogue toutes villes |
+| 2026-09-28 | Thématiques hors inscription / hors % complétion | Évite le cercle « 100 % pour choisir ce qui compte dans le 100 % » |
 | 2026-09-26 | Paiement — filtre « Virement déclaré » honnête + CTA Confirmer payé + NBA banque | Déclaré ≠ À relancer |
 | 2026-09-26 | Vague 3 Audience : OUI (form∪playlist) → participation `attending` + filtres intérêt roster | Sync + submit intérêt ; pas de dégrade Payé/Out |
 
@@ -242,3 +244,4 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-27 | Inscription — `dinnerThemesInterest` (thématiques dîners) dans profil + scan Tables |
 | 2026-09-28 | Catalogue sujets (`la_mesa_dinner_subjects`) + multi-select inscription/profil + validation admin cohérence ; free-text complément ; validés → theme-fit |
 | 2026-09-28 | Demande sujets : agrégat validé/pending + file cohérence + CTA Composer table (`?theme=`) |
+| 2026-09-28 | Page publique `/sujets` + gate auth/profil 100 % ; admin publie depuis Tables ; lien partageable |

@@ -5,7 +5,7 @@ import { buildDefaultDinnerSubjectSeeds } from "@/lib/dinner-subjects/defaults";
 import { subjectTimingBucket } from "@/lib/dinner-subjects/period";
 import type { DinnerSubject } from "@/lib/types/events";
 
-/** Public catalog for signup / profile multi-select (published only). */
+/** Public catalog for /sujets page (published only — all cities). */
 export async function GET() {
   try {
     if (!isFirebaseAdminConfigured()) {

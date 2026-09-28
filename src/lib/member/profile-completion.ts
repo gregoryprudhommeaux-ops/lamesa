@@ -1,6 +1,11 @@
 import { isOtherSector } from "@/lib/constants/form-options";
 
 /** Fields that count toward admin-facing profile completion %. */
+/**
+ * Fields that count toward profile completion %.
+ * Catalog subject picks live on the public /sujets page and require 100% first —
+ * they must not count toward completion (would be circular).
+ */
 export const PROFILE_COMPLETION_FIELDS = [
   "fullName",
   "email",
@@ -14,7 +19,6 @@ export const PROFILE_COMPLETION_FIELDS = [
   "extraActivities",
   "canBring",
   "isSeeking",
-  "dinnerThemesInterest",
 ] as const;
 
 export type ProfileCompletionField = (typeof PROFILE_COMPLETION_FIELDS)[number];
@@ -33,7 +37,6 @@ export const PROFILE_COMPLETION_FIELD_LABELS_FR: Record<ProfileCompletionField, 
   extraActivities: "activités",
   canBring: "ce qu’il peut apporter",
   isSeeking: "ce qu’il recherche",
-  dinnerThemesInterest: "thématiques de dîners",
 };
 
 /** Spanish labels for member-facing emails. */
@@ -50,7 +53,6 @@ export const PROFILE_COMPLETION_FIELD_LABELS_ES: Record<ProfileCompletionField, 
   extraActivities: "actividades",
   canBring: "qué puedes aportar",
   isSeeking: "qué buscas",
-  dinnerThemesInterest: "temáticas de cenas",
 };
 
 /** English labels for member-facing UI. */
@@ -67,7 +69,6 @@ export const PROFILE_COMPLETION_FIELD_LABELS_EN: Record<ProfileCompletionField, 
   extraActivities: "interests",
   canBring: "what you can bring",
   isSeeking: "what you’re looking for",
-  dinnerThemesInterest: "dinner themes of interest",
 };
 
 export type ProfileCompletionInput = {
@@ -84,8 +85,6 @@ export type ProfileCompletionInput = {
   extraActivities?: string[] | null;
   canBring?: string | null;
   isSeeking?: string | null;
-  dinnerThemesInterest?: string | null;
-  dinnerSubjectInterests?: Array<{ subjectId?: string; title?: string }> | null;
   source?: string | null;
   profileComplete?: boolean | null;
 };
@@ -104,22 +103,12 @@ function isSectorFilled(profile: ProfileCompletionInput): boolean {
   return true;
 }
 
-function hasDinnerThemes(profile: ProfileCompletionInput): boolean {
-  if (hasText(profile.dinnerThemesInterest)) return true;
-  return Boolean(
-    profile.dinnerSubjectInterests?.some(
-      (row) => hasText(row.subjectId) || hasText(row.title),
-    ),
-  );
-}
-
 function isFieldFilled(
   profile: ProfileCompletionInput,
   field: ProfileCompletionField,
 ): boolean {
   if (field === "extraActivities") return hasActivities(profile.extraActivities);
   if (field === "sector") return isSectorFilled(profile);
-  if (field === "dinnerThemesInterest") return hasDinnerThemes(profile);
   return hasText(profile[field] as string | null | undefined);
 }
 

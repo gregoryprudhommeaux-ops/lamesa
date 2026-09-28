@@ -23,7 +23,6 @@ describe("computeProfileCompletionPercent", () => {
       "activités",
       "ce qu’il peut apporter",
       "ce qu’il recherche",
-      "thématiques de dîners",
     ]);
   });
 
@@ -34,10 +33,10 @@ describe("computeProfileCompletionPercent", () => {
         email: "a@b.com",
         phone: "+521234567890",
       }),
-    ).toBe(23);
+    ).toBe(25);
   });
 
-  it("returns 100 when all fields filled", () => {
+  it("returns 100 when all fields filled (themes not required)", () => {
     const full = {
       fullName: "Ada",
       email: "ada@example.com",
@@ -51,7 +50,6 @@ describe("computeProfileCompletionPercent", () => {
       extraActivities: ["networking"],
       canBring: "B2B product experience",
       isSeeking: "Distribution partners in Mexico",
-      dinnerThemesInterest: "SaaS B2B scale and climate ops",
     };
     expect(computeProfileCompletionPercent(full)).toBe(100);
     expect(listMissingProfileFieldsFr(full)).toEqual([]);
@@ -71,7 +69,6 @@ describe("computeProfileCompletionPercent", () => {
       extraActivities: ["networking"],
       canBring: "B2B",
       isSeeking: "Partners",
-      dinnerThemesInterest: "Energy markets",
     };
     expect(computeProfileCompletionPercent(profile)).toBeLessThan(100);
     expect(listMissingProfileFieldsFr(profile)).toContain("secteur (préciser si Autre)");
@@ -93,54 +90,6 @@ describe("computeProfileCompletionPercent", () => {
         extraActivities: ["networking"],
         canBring: "B2B",
         isSeeking: "Partners",
-        dinnerThemesInterest: "Renewables",
-      }),
-    ).toBe(100);
-  });
-
-  it("counts dinnerThemesInterest in profile completion", () => {
-    const withoutThemes = {
-      fullName: "Ana García",
-      email: "ana@example.com",
-      phone: "+521234567890",
-      company: "Mesa Labs",
-      sector: "tech",
-      position: "founder",
-      city: "Guadalajara",
-      linkedinUrl: "https://linkedin.com/in/ana",
-      invitationMotivation: "Conocer perfiles complementarios",
-      extraActivities: ["Mentoría"],
-      canBring: "Experiencia en producto B2B",
-      isSeeking: "Socios de distribución en México",
-    };
-    expect(computeProfileCompletionPercent(withoutThemes)).toBeLessThan(100);
-    expect(
-      computeProfileCompletionPercent({
-        ...withoutThemes,
-        dinnerThemesInterest: "Distribución B2B en México",
-      }),
-    ).toBe(100);
-  });
-
-  it("counts catalog subject interests as dinner themes completion", () => {
-    const withoutThemes = {
-      fullName: "Ana García",
-      email: "ana@example.com",
-      phone: "+521234567890",
-      company: "Mesa Labs",
-      sector: "tech",
-      position: "founder",
-      city: "Guadalajara",
-      linkedinUrl: "https://linkedin.com/in/ana",
-      invitationMotivation: "Conocer perfiles complementarios",
-      extraActivities: ["Mentoría"],
-      canBring: "Experiencia en producto B2B",
-      isSeeking: "Socios de distribución en México",
-    };
-    expect(
-      computeProfileCompletionPercent({
-        ...withoutThemes,
-        dinnerSubjectInterests: [{ subjectId: "s1", title: "Scale SaaS B2B" }],
       }),
     ).toBe(100);
   });
@@ -159,7 +108,6 @@ describe("computeProfileCompletionPercent", () => {
         invitationMotivation: "Curiosity",
         canBring: "B2B product experience",
         isSeeking: "Distribution partners",
-        dinnerThemesInterest: "B2B distribution",
       }),
     ).toEqual(["activités"]);
   });
@@ -177,7 +125,13 @@ describe("isExpressSignup", () => {
 
 describe("isProfileIncomplete", () => {
   it("is true under 100%", () => {
-    expect(isProfileIncomplete({ fullName: "A", email: "a@b.com" })).toBe(true);
+    expect(
+      isProfileIncomplete({
+        fullName: "Ada",
+        email: "ada@example.com",
+        phone: "+521111111111",
+      }),
+    ).toBe(true);
   });
 
   it("is false at 100%", () => {
@@ -195,7 +149,6 @@ describe("isProfileIncomplete", () => {
         extraActivities: ["networking"],
         canBring: "B2B",
         isSeeking: "Partners",
-        dinnerThemesInterest: "Founder dinners",
       }),
     ).toBe(false);
   });

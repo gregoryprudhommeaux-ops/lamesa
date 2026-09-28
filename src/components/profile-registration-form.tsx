@@ -10,7 +10,6 @@ import {
 import { POSITIONS, SECTORS } from "@/lib/constants/form-options";
 import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
-import { DinnerSubjectPicker } from "@/components/dinner-subject-picker";
 import { PhoneInput, isValidFullPhone } from "@/components/phone-input";
 import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -37,7 +36,6 @@ export function ProfileRegistrationForm({
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [phoneResetKey, setPhoneResetKey] = useState(0);
   const [sector, setSector] = useState("");
-  const [dinnerSubjectIds, setDinnerSubjectIds] = useState<string[]>([]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -81,8 +79,6 @@ export function ProfileRegistrationForm({
       invitationMotivation: String(data.get("invitationMotivation") ?? "").trim(),
       canBring: String(data.get("canBring") ?? "").trim(),
       isSeeking: String(data.get("isSeeking") ?? "").trim(),
-      dinnerThemesInterest: String(data.get("dinnerThemesInterest") ?? "").trim(),
-      dinnerSubjectIds,
       locale,
       website: String(data.get("website") ?? ""),
       referralCode: String(data.get("referralCode") ?? "").trim(),
@@ -105,7 +101,6 @@ export function ProfileRegistrationForm({
       setState("success");
       form.reset();
       setSector("");
-      setDinnerSubjectIds([]);
       setPhoneResetKey((k) => k + 1);
     } catch {
       setState("error");
@@ -123,8 +118,11 @@ export function ProfileRegistrationForm({
           <p className="text-sm font-medium leading-relaxed text-ns-secondary">
             {t("successLoginHint")}
           </p>
-          <Link href="/connexion" className={BTN_PRIMARY}>
+          <Link href="/connexion?next=/sujets" className={BTN_PRIMARY}>
             {t("successLoginCta")}
+          </Link>
+          <Link href="/sujets" className="text-sm font-semibold text-ns-primary underline">
+            {t("successSubjectsLink")}
           </Link>
         </div>
       </div>
@@ -289,40 +287,6 @@ export function ProfileRegistrationForm({
           minLength={2}
           maxLength={280}
           rows={2}
-          className={`${INPUT_CLASS} mt-1 resize-y`}
-          disabled={state === "sending"}
-        />
-      </div>
-
-      <DinnerSubjectPicker
-        locale={locale}
-        selectedIds={dinnerSubjectIds}
-        onChange={setDinnerSubjectIds}
-        disabled={state === "sending"}
-        label={t("fields.dinnerSubjects")}
-        hint={t("fields.dinnerSubjectsHint")}
-        pastLabel={t("fields.dinnerSubjectsPast")}
-        upcomingLabel={t("fields.dinnerSubjectsUpcoming")}
-        emptyLabel={t("fields.dinnerSubjectsEmpty")}
-      />
-
-      <div>
-        <label htmlFor="dinnerThemesInterest" className={LABEL_CLASS}>
-          {t("fields.dinnerThemesInterest")}
-          {dinnerSubjectIds.length > 0 ? (
-            <span className="ml-1 font-normal text-ns-secondary">
-              ({t("fields.optional")})
-            </span>
-          ) : null}
-        </label>
-        <textarea
-          id="dinnerThemesInterest"
-          name="dinnerThemesInterest"
-          required={dinnerSubjectIds.length === 0}
-          minLength={dinnerSubjectIds.length === 0 ? 10 : undefined}
-          maxLength={2000}
-          rows={3}
-          placeholder={t("fields.dinnerThemesInterestPlaceholder")}
           className={`${INPUT_CLASS} mt-1 resize-y`}
           disabled={state === "sending"}
         />

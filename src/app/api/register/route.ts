@@ -21,10 +21,6 @@ import {
   isValidReferralCodeFormat,
   normalizeReferralCode,
 } from "@/lib/member/referral-code";
-import {
-  buildDeclaredSubjectInterests,
-} from "@/lib/dinner-subjects/interests";
-import { getDinnerSubjectsByIds } from "@/lib/dinner-subjects/store";
 import { registrationSchema } from "@/lib/validation";
 
 export async function POST(request: Request) {
@@ -69,16 +65,6 @@ export async function POST(request: Request) {
     }
   }
 
-  const catalog =
-    data.dinnerSubjectIds.length > 0
-      ? await getDinnerSubjectsByIds(data.dinnerSubjectIds)
-      : [];
-  const dinnerSubjectInterests = buildDeclaredSubjectInterests(
-    data.dinnerSubjectIds,
-    catalog,
-    now,
-  );
-
   const record = {
     fullName: data.fullName,
     linkedinUrl: data.linkedinUrl,
@@ -95,8 +81,7 @@ export async function POST(request: Request) {
     invitationMotivation: data.invitationMotivation,
     canBring: data.canBring,
     isSeeking: data.isSeeking,
-    dinnerThemesInterest: data.dinnerThemesInterest,
-    ...(dinnerSubjectInterests.length > 0 ? { dinnerSubjectInterests } : {}),
+    dinnerThemesInterest: data.dinnerThemesInterest || "",
     locale: data.locale,
     source: "la-mesa-registration",
     tags: ["la-mesa", "waitlist", "guadalajara"],

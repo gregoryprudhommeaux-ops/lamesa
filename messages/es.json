@@ -182,10 +182,10 @@
       "invitationMotivation": "¿Por qué te interesa LA MESA?",
       "invitationMotivationPlaceholder": "En unas cuantas frases — qué te atrae de esto.",
       "dinnerSubjects": "Temas de cenas que te interesan",
-      "dinnerSubjectsHint": "Elige temas pasados o próximos (periodo = mes). El equipo valida la coherencia con tu perfil.",
+      "dinnerSubjectsHint": "Todos los temas publicados, todas las ciudades. Periodo = mes.",
       "dinnerSubjectsPast": "Temas pasados",
       "dinnerSubjectsUpcoming": "Temas próximos",
-      "dinnerSubjectsEmpty": "Catálogo temporalmente no disponible — describe tus temáticas abajo.",
+      "dinnerSubjectsEmpty": "Catálogo temporalmente no disponible.",
       "dinnerThemesInterest": "Otra temática (texto libre)",
       "dinnerThemesInterestPlaceholder": "Complemento libre — ej. scale SaaS B2B, sucesión familiar, impacto climate…",
       "optional": "opcional",
@@ -245,8 +245,9 @@
     "submit": "Unirse a la lista",
     "submitting": "Enviando…",
     "success": "Gracias. Ya estás en la lista. Recibirás una invitación cuando una noche encaje con tu perfil.",
-    "successLoginHint": "Para editar tu perfil cuando quieras, inicia sesión con el mismo correo de Google.",
-    "successLoginCta": "Iniciar sesión y editar mi perfil",
+    "successLoginHint": "Inicia sesión con el mismo correo, completa tu perfil al 100 % y elige tus temáticas.",
+    "successLoginCta": "Iniciar sesión para elegir temáticas",
+    "successSubjectsLink": "Ver temáticas",
     "error": "No se pudo enviar. Inténtalo de nuevo.",
     "errors": {
       "already_registered": "Estás intentando crear una cuenta con un correo que ya está en el sistema. Inicia sesión o usa otra dirección de correo.",
@@ -579,6 +580,9 @@
     "fellows": "Otros comensales",
     "guest": "Invitado",
     "viewEvent": "Ver la cena",
+    "subjectsPageHint": "Las temáticas se eligen en la página pública cuando el perfil está al 100 %.",
+    "subjectsPageCta": "Elegir mis temáticas",
+    "subjectsNeedCompleteProfile": "Perfil al {percent}% — complétalo al 100 % para elegir temáticas.",
     "settingsLink": "Ajustes de la cuenta",
     "nextActions": {
       "eyebrow": "Tu próximo paso",
@@ -682,6 +686,32 @@
       "waitlist": "Lista de espera",
       "present": "Pagado",
       "declined": "No asistirá"
+    }
+  },
+  "subjectsPage": {
+    "metaTitle": "Temáticas de cenas | LA MESA",
+    "metaDescription": "Descubre los temas de cenas LA MESA (todas las ciudades). Inicia sesión o regístrate, completa tu perfil y elige tus temáticas.",
+    "title": "Temáticas de cenas",
+    "intro": "Temas que abrimos o hemos abierto. Elige los que te interesan — el equipo valida la coherencia con tu perfil.",
+    "allCitiesNote": "Todas las temáticas son visibles, sea cual sea la ciudad.",
+    "pickerHint": "Marca uno o varios temas. Guardar es para miembros con perfil completo.",
+    "loading": "Cargando…",
+    "gateAnonymous": "¿Miembro? Inicia sesión para guardar tus elecciones. ¿Aún no estás? Crea tu perfil primero.",
+    "gateNotMember": "No hay perfil LA MESA para este correo. Regístrate, completa tu perfil al 100 % y vuelve a elegir.",
+    "gateIncomplete": "Perfil al {percent}% — debe estar al 100 % para elegir temáticas.",
+    "missingFields": "Aún falta: {fields}",
+    "ctaLogin": "Iniciar sesión",
+    "ctaRegister": "Crear mi perfil",
+    "ctaCompleteProfile": "Completar mi perfil",
+    "ctaSave": "Guardar mis elecciones",
+    "saving": "Guardando…",
+    "saved": "Guardado — el equipo lo validará.",
+    "selectAtLeastOne": "Marca al menos un tema para guardar.",
+    "validationNote": "Tus elecciones quedan pendientes hasta la validación de coherencia.",
+    "errors": {
+      "loadFailed": "No se pudo cargar tu perfil. Inténtalo de nuevo.",
+      "saveFailed": "No se pudo guardar. Inténtalo de nuevo.",
+      "profileIncomplete": "Perfil incompleto — llévalo al 100 % y vuelve."
     }
   }
 }

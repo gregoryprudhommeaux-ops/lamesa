@@ -182,10 +182,10 @@
       "invitationMotivation": "Pourquoi LA MESA t’intéresse ?",
       "invitationMotivationPlaceholder": "En quelques phrases — ce qui t’attire ici.",
       "dinnerSubjects": "Sujets de dîners qui t’intéressent",
-      "dinnerSubjectsHint": "Coche les sujets passés ou à venir (période = mois). L’équipe valide la cohérence avec ton profil.",
+      "dinnerSubjectsHint": "Tous les sujets publiés, toutes villes. Période = mois.",
       "dinnerSubjectsPast": "Sujets passés",
       "dinnerSubjectsUpcoming": "Sujets à venir",
-      "dinnerSubjectsEmpty": "Catalogue temporairement indisponible — décris tes thématiques ci-dessous.",
+      "dinnerSubjectsEmpty": "Catalogue temporairement indisponible.",
       "dinnerThemesInterest": "Autre thématique (texte libre)",
       "dinnerThemesInterestPlaceholder": "Complément libre — ex. scale SaaS B2B, succession familiale, impact climate…",
       "optional": "optionnel",
@@ -245,8 +245,9 @@
     "submit": "Rejoindre la liste",
     "submitting": "Envoi en cours…",
     "success": "Merci. Tu es inscrit. Tu recevras une invitation quand une soirée correspondra à ton profil.",
-    "successLoginHint": "Pour modifier ton profil à tout moment, connecte-toi avec le même email Google.",
-    "successLoginCta": "Se connecter et modifier mon profil",
+    "successLoginHint": "Connecte-toi avec le même email, complète ton profil à 100 %, puis choisis tes thématiques.",
+    "successLoginCta": "Se connecter pour choisir mes thématiques",
+    "successSubjectsLink": "Voir les thématiques",
     "error": "Envoi impossible. Réessaie dans un instant.",
     "errors": {
       "already_registered": "Tu essaies de créer un compte avec un email déjà présent dans le système. Connecte-toi, ou utilise une autre adresse email.",
@@ -579,6 +580,9 @@
     "fellows": "Autres convives",
     "guest": "Invité",
     "viewEvent": "Voir le dîner",
+    "subjectsPageHint": "Les thématiques se choisissent sur la page publique, une fois le profil à 100 %.",
+    "subjectsPageCta": "Choisir mes thématiques",
+    "subjectsNeedCompleteProfile": "Profil à {percent}% — complète-le à 100 % pour choisir des thématiques.",
     "settingsLink": "Réglages du compte",
     "nextActions": {
       "eyebrow": "Mon prochain pas",
@@ -682,6 +686,32 @@
       "waitlist": "Liste d'attente",
       "present": "Payé",
       "declined": "Not attending"
+    }
+  },
+  "subjectsPage": {
+    "metaTitle": "Thématiques de dîners | LA MESA",
+    "metaDescription": "Découvre les sujets de dîners LA MESA (toutes villes). Connecte-toi ou inscris-toi, complète ton profil, puis choisis tes thématiques.",
+    "title": "Thématiques de dîners",
+    "intro": "Voici les sujets que nous ouvrons ou avons ouverts. Choisis ceux qui t’intéressent — l’équipe valide la cohérence avec ton profil.",
+    "allCitiesNote": "Toutes les thématiques sont visibles, quelle que soit la ville.",
+    "pickerHint": "Coche un ou plusieurs sujets. Enregistrement réservé aux membres avec profil complet.",
+    "loading": "Chargement…",
+    "gateAnonymous": "Membre ? Connecte-toi pour enregistrer tes choix. Pas encore inscrit ? Crée ton profil d’abord.",
+    "gateNotMember": "Aucun profil LA MESA pour cet email. Inscris-toi, complète ton profil à 100 %, puis reviens choisir.",
+    "gateIncomplete": "Profil à {percent}% — il doit être à 100 % pour choisir des thématiques.",
+    "missingFields": "Encore à compléter : {fields}",
+    "ctaLogin": "Se connecter",
+    "ctaRegister": "Créer mon profil",
+    "ctaCompleteProfile": "Compléter mon profil",
+    "ctaSave": "Enregistrer mes choix",
+    "saving": "Enregistrement…",
+    "saved": "Choix enregistrés — l’équipe les validera.",
+    "selectAtLeastOne": "Coche au moins un sujet pour enregistrer.",
+    "validationNote": "Tes choix restent en attente jusqu’à validation de cohérence par l’équipe.",
+    "errors": {
+      "loadFailed": "Impossible de charger ton profil. Réessaie.",
+      "saveFailed": "Enregistrement impossible. Réessaie.",
+      "profileIncomplete": "Profil incomplet — complète-le à 100 % puis reviens."
     }
   }
 }

@@ -39,19 +39,16 @@ export const registrationSchema = z
     invitationMotivation: z.string().trim().min(10).max(2000),
     canBring: z.string().trim().min(2).max(280),
     isSeeking: z.string().trim().min(2).max(280),
-    /** Free-text complement — optional when catalog subjects are selected. */
+    /**
+     * Legacy optional free-text — catalog picks happen on public /sujets after
+     * the profile is 100% complete, not at signup.
+     */
     dinnerThemesInterest: z
       .string()
       .trim()
       .max(2000)
       .optional()
       .transform((v) => v ?? ""),
-    /** Catalog subject ids (past + upcoming) declared at signup. */
-    dinnerSubjectIds: z
-      .array(z.string().trim().min(1).max(80))
-      .max(12)
-      .optional()
-      .transform((v) => v ?? []),
     locale: z.enum(["fr", "en", "es"]),
     website: z.string().optional(),
     referralCode: z
@@ -67,15 +64,6 @@ export const registrationSchema = z
         code: z.ZodIssueCode.custom,
         message: "sector_other_required",
         path: ["sectorOther"],
-      });
-    }
-    const hasSubjects = data.dinnerSubjectIds.length > 0;
-    const freeText = data.dinnerThemesInterest.trim();
-    if (!hasSubjects && freeText.length < 10) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "dinner_themes_required",
-        path: ["dinnerThemesInterest"],
       });
     }
   });
