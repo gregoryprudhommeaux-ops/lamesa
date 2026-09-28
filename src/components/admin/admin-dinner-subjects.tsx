@@ -46,6 +46,12 @@ export function AdminDinnerSubjectsPanel() {
   const [summary, setSummary] = useState("");
   const [periodMonth, setPeriodMonth] = useState(currentPeriodMonth());
   const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSummary, setEditSummary] = useState("");
+  const [editPeriodMonth, setEditPeriodMonth] = useState(currentPeriodMonth());
+  const [editCity, setEditCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [editSaving, setEditSaving] = useState(false);
 
   const demandById = useMemo(() => {
     const map = new Map<string, SubjectDemandRow>();
@@ -153,9 +159,57 @@ export function AdminDinnerSubjectsPanel() {
       });
       const json = (await res.json()) as { ok?: boolean; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "delete_failed");
+      if (editingId === id) setEditingId(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "delete_failed");
+    }
+  }
+
+  function startEdit(subject: DinnerSubject) {
+    setEditingId(subject.id);
+    setEditTitle(subject.title);
+    setEditSummary(subject.summary ?? "");
+    setEditPeriodMonth(subject.periodMonth);
+    setEditCity(subject.city || DEFAULT_CITY_HUB);
+    setError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditSaving(false);
+  }
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingId || !editTitle.trim()) return;
+    setEditSaving(true);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/dinner-subjects/${encodeURIComponent(editingId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: editTitle.trim(),
+            summary: editSummary.trim(),
+            periodMonth: editPeriodMonth,
+            city: editCity,
+          }),
+        },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        subject?: DinnerSubject;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.subject) throw new Error(json.error ?? "save_failed");
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "save_failed");
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -331,6 +385,73 @@ export function AdminDinnerSubjectsPanel() {
         <ul className="divide-y divide-black/5 rounded-md border border-black/5">
           {subjects.map((subject) => {
             const row = demandById.get(subject.id);
+            if (editingId === subject.id) {
+              return (
+                <li key={subject.id} className="px-3 py-3 text-sm">
+                  <form
+                    onSubmit={(e) => void saveEdit(e)}
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+                  >
+                    <div className="sm:col-span-2 lg:col-span-2">
+                      <label className={LABEL_CLASS}>Titre</label>
+                      <input
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        required
+                        maxLength={120}
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>Période (mois)</label>
+                      <input
+                        type="month"
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editPeriodMonth}
+                        onChange={(e) => setEditPeriodMonth(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>Ville</label>
+                      <select
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                      >
+                        {CITY_HUBS.map((hub) => (
+                          <option key={hub} value={hub}>
+                            {hub}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-6">
+                      <label className={LABEL_CLASS}>Résumé</label>
+                      <input
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editSummary}
+                        onChange={(e) => setEditSummary(e.target.value)}
+                        maxLength={400}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1 sm:col-span-2 lg:col-span-6">
+                      <button type="submit" className={BTN_PRIMARY} disabled={editSaving}>
+                        {editSaving ? "…" : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        disabled={editSaving}
+                        onClick={cancelEdit}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              );
+            }
             return (
               <li
                 key={subject.id}
@@ -350,6 +471,13 @@ export function AdminDinnerSubjectsPanel() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    className={BTN_SECONDARY}
+                    onClick={() => startEdit(subject)}
+                  >
+                    Modifier
+                  </button>
                   {subject.status === "published" ? (
                     <>
                       <Link href={composeHref(subject)} className={BTN_SECONDARY}>
