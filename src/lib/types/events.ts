@@ -394,11 +394,20 @@ export interface WaitlistRegistration {
 /** Catalog entry: a dinner subject open for a period (month) + city — no precise date. */
 export type DinnerSubjectStatus = "draft" | "published" | "archived";
 
+export type DinnerSubjectLocale = "fr" | "en" | "es";
+
 export interface DinnerSubject {
   id: string;
   title: string;
   /** Short blurb shown at signup / profile. */
   summary?: string;
+  /**
+   * Locale of the admin-authored title/summary (defaults to fr).
+   * `titleI18n` / `summaryI18n` hold auto-translations for /themes.
+   */
+  sourceLocale?: DinnerSubjectLocale;
+  titleI18n?: Partial<Record<DinnerSubjectLocale, string>>;
+  summaryI18n?: Partial<Record<DinnerSubjectLocale, string>>;
   /** YYYY-MM — planning period only (no day). */
   periodMonth: string;
   city: string;
