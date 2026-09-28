@@ -178,10 +178,15 @@ export function AdminTableBuilder() {
   const searchParams = useSearchParams();
   const generateSectionRef = useRef<HTMLDivElement>(null);
 
-  const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [city, setCity] = useState<string>(() => {
+    const fromUrl = resolveCityHub(searchParams.get("city") ?? "");
+    return fromUrl ?? DEFAULT_CITY_HUB;
+  });
   const [format, setFormat] = useState<EventFormat>(DEFAULT_EVENT_FORMAT);
-  const [mode, setMode] = useState<TableIdeaMode>("spontaneous");
-  const [theme, setTheme] = useState("");
+  const [mode, setMode] = useState<TableIdeaMode>(() =>
+    searchParams.get("mode") === "admin_theme" ? "admin_theme" : "spontaneous",
+  );
+  const [theme, setTheme] = useState(() => (searchParams.get("theme") ?? "").trim());
 
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -238,9 +243,25 @@ export function AdminTableBuilder() {
     void loadDrafts();
   }, [loadDrafts]);
 
-  // ?generate=1 only focuses the generation controls — it must never trigger an AI call.
+  // Prefill theme / city / mode from demand panel (?theme=&mode=admin_theme&city=).
   useEffect(() => {
-    if (searchParams.get("generate") !== "1") return;
+    const themeFromUrl = (searchParams.get("theme") ?? "").trim();
+    const modeFromUrl = searchParams.get("mode");
+    const cityFromUrl = resolveCityHub(searchParams.get("city") ?? "");
+    if (themeFromUrl) {
+      setTheme(themeFromUrl);
+      setMode("admin_theme");
+    } else if (modeFromUrl === "admin_theme" || modeFromUrl === "spontaneous") {
+      setMode(modeFromUrl);
+    }
+    if (cityFromUrl) setCity(cityFromUrl);
+  }, [searchParams]);
+
+  // ?generate=1 or #table-generate focuses controls — never auto-triggers AI.
+  useEffect(() => {
+    const hash =
+      typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
+    if (searchParams.get("generate") !== "1" && hash !== "table-generate") return;
     generateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusable = generateSectionRef.current?.querySelector<HTMLElement>(
       "input, select, textarea, button",
@@ -705,7 +726,11 @@ export function AdminTableBuilder() {
         </div>
       ) : null}
 
-      <div ref={generateSectionRef} className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      <div
+        id="table-generate"
+        ref={generateSectionRef}
+        className="rounded-2xl border border-gray-100 bg-ns-surface p-5"
+      >
         <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">Génération</h3>
 
         <div className="mt-4 space-y-4">
