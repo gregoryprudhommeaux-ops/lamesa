@@ -16,6 +16,8 @@ type DinnerSubjectPickerProps = {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   disabled?: boolean;
+  /** Fired when the user tries to toggle while the picker is locked. */
+  onLockedClick?: () => void;
   label: string;
   hint: string;
   emptyLabel: string;
@@ -26,6 +28,7 @@ export function DinnerSubjectPicker({
   selectedIds,
   onChange,
   disabled,
+  onLockedClick,
   label,
   hint,
   emptyLabel,
@@ -72,7 +75,10 @@ export function DinnerSubjectPicker({
   }, [past, upcoming, locale]);
 
   function toggle(id: string) {
-    if (disabled) return;
+    if (disabled) {
+      onLockedClick?.();
+      return;
+    }
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter((x) => x !== id));
       return;
@@ -98,12 +104,16 @@ export function DinnerSubjectPicker({
             const period = formatPeriodMonthLabel(subject.periodMonth, locale);
             return (
               <li key={subject.id}>
-                <label
-                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition ${
+                <button
+                  type="button"
+                  className={`flex w-full items-start gap-3 rounded-md border px-3 py-2 text-left text-sm transition ${
                     checked
                       ? "border-ns-primary/40 bg-ns-primary/5"
                       : "border-black/10 bg-white hover:border-black/20"
-                  } ${disabled ? "opacity-60" : ""}`}
+                  } ${disabled ? "cursor-pointer opacity-70" : "cursor-pointer"}`}
+                  onClick={() => toggle(subject.id)}
+                  aria-pressed={checked}
+                  aria-label={`${label}: ${subject.title}`}
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold text-ns-hero">{subject.title}</span>
@@ -117,15 +127,19 @@ export function DinnerSubjectPicker({
                       </span>
                     ) : null}
                   </span>
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 shrink-0 accent-[var(--ns-primary,#0f766e)]"
-                    checked={checked}
-                    disabled={disabled}
-                    onChange={() => toggle(subject.id)}
-                    aria-label={`${label}: ${subject.title}`}
-                  />
-                </label>
+                  <span
+                    className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                      checked
+                        ? "border-[var(--ns-primary,#0f766e)] bg-[var(--ns-primary,#0f766e)] text-white"
+                        : "border-black/30 bg-white"
+                    }`}
+                    aria-hidden
+                  >
+                    {checked ? (
+                      <span className="text-[10px] font-bold leading-none">✓</span>
+                    ) : null}
+                  </span>
+                </button>
               </li>
             );
           })}
