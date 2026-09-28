@@ -20,7 +20,12 @@ import {
 } from "@/lib/member/profile-completion";
 import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
+import { formatPeriodMonthLabel } from "@/lib/dinner-subjects/period";
+import type {
+  AdminEvent,
+  DinnerSubjectInterest,
+  WaitlistRegistration,
+} from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import {
   CompletionCell,
@@ -32,6 +37,12 @@ import { CalendarPlus, Mail, RefreshCw, Trash2, UserPlus, Users, X } from "lucid
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+const SUBJECT_VALIDATION_LABELS: Record<DinnerSubjectInterest["validation"], string> = {
+  pending: "À valider",
+  validated: "Validé",
+  rejected: "Rejeté",
+};
 
 type ProfileReminderDraft = {
   memberId: string;
@@ -55,6 +66,125 @@ function truncatePersoId(id: string, max = 10): string {
   const t = id.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
+}
+
+function SubjectInterestValidationEditor({
+  member,
+  onSaved,
+}: {
+  member: WaitlistRegistration;
+  onSaved: (patch: { dinnerSubjectInterests: DinnerSubjectInterest[] }) => void;
+}) {
+  const authFetch = useAuthFetch();
+  const interests = member.dinnerSubjectInterests ?? [];
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!interests.length) return null;
+
+  async function validate(
+    subjectId: string,
+    validation: "validated" | "rejected",
+  ) {
+    setBusyId(subjectId);
+    setErr(null);
+    try {
+      const note =
+        validation === "rejected"
+          ? window.prompt("Note (optionnel) — pourquoi ce sujet ne colle pas au profil ?") ?? undefined
+          : window.prompt("Note (optionnel) — cohérence profil ↔ sujet") ?? undefined;
+      const res = await authFetch(`/api/admin/waitlist/${encodeURIComponent(member.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectInterestValidation: {
+            subjectId,
+            validation,
+            ...(note?.trim() ? { note: note.trim() } : {}),
+          },
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        dinnerSubjectInterests?: DinnerSubjectInterest[];
+      };
+      if (!res.ok || !json.ok || !json.dinnerSubjectInterests) {
+        setErr(json.error ?? "save_failed");
+        return;
+      }
+      onSaved({ dinnerSubjectInterests: json.dinnerSubjectInterests });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-2 border-t border-gray-100 pt-4">
+      <p className="text-xs font-bold uppercase text-ns-secondary">
+        Sujets catalogue — cohérence profil
+      </p>
+      <ul className="space-y-2">
+        {interests.map((row) => (
+          <li
+            key={row.subjectId}
+            className="rounded-md border border-black/5 bg-ns-brand-light/40 px-2.5 py-2 text-sm"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-ns-hero">{row.title}</p>
+                <p className="text-xs text-ns-secondary">
+                  {row.periodMonth
+                    ? formatPeriodMonthLabel(row.periodMonth, "fr")
+                    : "période —"}
+                  {row.city ? ` · ${row.city}` : ""}
+                  {" · "}
+                  {SUBJECT_VALIDATION_LABELS[row.validation]}
+                </p>
+                {row.validationNote ? (
+                  <p className="mt-0.5 text-xs text-ns-secondary">{row.validationNote}</p>
+                ) : null}
+              </div>
+              {row.validation === "pending" || row.validation === "rejected" ? (
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    disabled={busyId === row.subjectId}
+                    onClick={() => void validate(row.subjectId, "validated")}
+                  >
+                    Valider
+                  </button>
+                  {row.validation === "pending" ? (
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      disabled={busyId === row.subjectId}
+                      onClick={() => void validate(row.subjectId, "rejected")}
+                    >
+                      Rejeter
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={BTN_SECONDARY}
+                  disabled={busyId === row.subjectId}
+                  onClick={() => void validate(row.subjectId, "rejected")}
+                >
+                  Revoir
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {err ? <p className={ERROR_TEXT}>{err}</p> : null}
+    </div>
+  );
 }
 
 function OpsMemberEditor({
@@ -1690,6 +1820,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   </dt>
                   <dd className="whitespace-pre-wrap">{active.dinnerThemesInterest || "—"}</dd>
                 </div>
+                {!isSoftDeleted(active) ? (
+                  <SubjectInterestValidationEditor
+                    member={active}
+                    onSaved={(patch) => {
+                      setRows((prev) =>
+                        prev.map((r) => (r.id === active.id ? { ...r, ...patch } : r)),
+                      );
+                    }}
+                  />
+                ) : null}
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Apporte / cherche</dt>
                   <dd className="whitespace-pre-wrap text-sm">

@@ -57,4 +57,6 @@ export const COLLECTIONS = {
   emailTemplates: "email_templates",
   tableDrafts: "table_drafts",
   eventDescriptionPresets: "event_description_presets",
+  /** Catalog of dinner subjects (period + city) for member interest + demand signals. */
+  dinnerSubjects: "la_mesa_dinner_subjects",
 } as const;

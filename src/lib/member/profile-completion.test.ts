@@ -122,6 +122,29 @@ describe("computeProfileCompletionPercent", () => {
     ).toBe(100);
   });
 
+  it("counts catalog subject interests as dinner themes completion", () => {
+    const withoutThemes = {
+      fullName: "Ana García",
+      email: "ana@example.com",
+      phone: "+521234567890",
+      company: "Mesa Labs",
+      sector: "tech",
+      position: "founder",
+      city: "Guadalajara",
+      linkedinUrl: "https://linkedin.com/in/ana",
+      invitationMotivation: "Conocer perfiles complementarios",
+      extraActivities: ["Mentoría"],
+      canBring: "Experiencia en producto B2B",
+      isSeeking: "Socios de distribución en México",
+    };
+    expect(
+      computeProfileCompletionPercent({
+        ...withoutThemes,
+        dinnerSubjectInterests: [{ subjectId: "s1", title: "Scale SaaS B2B" }],
+      }),
+    ).toBe(100);
+  });
+
   it("lists only missing fields for a near-complete profile", () => {
     expect(
       listMissingProfileFieldsFr({

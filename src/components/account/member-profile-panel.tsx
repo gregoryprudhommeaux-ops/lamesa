@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { DinnerSubjectPicker } from "@/components/dinner-subject-picker";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { POSITIONS, SECTORS, isSectorCode } from "@/lib/constants/form-options";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
@@ -107,6 +108,9 @@ export function MemberProfilePanel({
   const [dinnerThemesInterest, setDinnerThemesInterest] = useState(
     profile.dinnerThemesInterest ?? "",
   );
+  const [dinnerSubjectIds, setDinnerSubjectIds] = useState<string[]>(
+    (profile.dinnerSubjectInterests ?? []).map((row) => row.subjectId),
+  );
   const [canBring, setCanBring] = useState(profile.canBring ?? "");
   const [isSeeking, setIsSeeking] = useState(profile.isSeeking ?? "");
 
@@ -121,6 +125,7 @@ export function MemberProfilePanel({
     setExtraActivities((profile.extraActivities ?? []).join(", "));
     setInvitationMotivation(profile.invitationMotivation ?? "");
     setDinnerThemesInterest(profile.dinnerThemesInterest ?? "");
+    setDinnerSubjectIds((profile.dinnerSubjectInterests ?? []).map((row) => row.subjectId));
     setCanBring(profile.canBring ?? "");
     setIsSeeking(profile.isSeeking ?? "");
   }, [profile]);
@@ -228,6 +233,7 @@ export function MemberProfilePanel({
           extraActivities: [extraActivities.trim()].filter(Boolean),
           invitationMotivation,
           dinnerThemesInterest,
+          dinnerSubjectIds,
           canBring,
           isSeeking,
         }),
@@ -550,12 +556,30 @@ export function MemberProfilePanel({
             onChange={(e) => setIsSeeking(e.target.value)}
           />
         </div>
+        <DinnerSubjectPicker
+          locale={locale}
+          selectedIds={dinnerSubjectIds}
+          onChange={setDinnerSubjectIds}
+          disabled={saving}
+          label={tReg("fields.dinnerSubjects")}
+          hint={tReg("fields.dinnerSubjectsHint")}
+          pastLabel={tReg("fields.dinnerSubjectsPast")}
+          upcomingLabel={tReg("fields.dinnerSubjectsUpcoming")}
+          emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
+        />
         <div>
-          <label className={LABEL_CLASS}>{t("fields.dinnerThemesInterest")}</label>
+          <label className={LABEL_CLASS}>
+            {t("fields.dinnerThemesInterest")}
+            {dinnerSubjectIds.length > 0 ? (
+              <span className="ml-1 font-normal text-ns-secondary">
+                ({tReg("fields.optional")})
+              </span>
+            ) : null}
+          </label>
           <textarea
             className={fieldInputClass(errorField === "dinnerThemesInterest")}
             rows={3}
-            minLength={10}
+            minLength={dinnerSubjectIds.length === 0 ? 10 : undefined}
             maxLength={2000}
             value={dinnerThemesInterest}
             onChange={(e) => setDinnerThemesInterest(e.target.value)}

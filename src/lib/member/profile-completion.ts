@@ -85,6 +85,7 @@ export type ProfileCompletionInput = {
   canBring?: string | null;
   isSeeking?: string | null;
   dinnerThemesInterest?: string | null;
+  dinnerSubjectInterests?: Array<{ subjectId?: string; title?: string }> | null;
   source?: string | null;
   profileComplete?: boolean | null;
 };
@@ -103,12 +104,22 @@ function isSectorFilled(profile: ProfileCompletionInput): boolean {
   return true;
 }
 
+function hasDinnerThemes(profile: ProfileCompletionInput): boolean {
+  if (hasText(profile.dinnerThemesInterest)) return true;
+  return Boolean(
+    profile.dinnerSubjectInterests?.some(
+      (row) => hasText(row.subjectId) || hasText(row.title),
+    ),
+  );
+}
+
 function isFieldFilled(
   profile: ProfileCompletionInput,
   field: ProfileCompletionField,
 ): boolean {
   if (field === "extraActivities") return hasActivities(profile.extraActivities);
   if (field === "sector") return isSectorFilled(profile);
+  if (field === "dinnerThemesInterest") return hasDinnerThemes(profile);
   return hasText(profile[field] as string | null | undefined);
 }
 

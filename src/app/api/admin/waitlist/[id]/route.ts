@@ -11,10 +11,18 @@ import {
   OPS_PRIORITIES,
   normalizeOpsTags,
 } from "@/lib/constants/ops-priority";
+import { setSubjectInterestValidation } from "@/lib/dinner-subjects/interests";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
+import type { DinnerSubjectInterest, WaitlistRegistration } from "@/lib/types/events";
 
 type Params = { params: Promise<{ id: string }> };
+
+const subjectInterestValidationSchema = z.object({
+  subjectId: z.string().trim().min(1).max(80),
+  validation: z.enum(["validated", "rejected"]),
+  note: z.string().trim().max(400).optional(),
+});
 
 const patchSchema = z
   .object({
@@ -23,6 +31,8 @@ const patchSchema = z
     appendOpsNote: z.string().trim().min(8).max(600).optional(),
     opsPriority: z.enum(OPS_PRIORITIES).optional(),
     opsTags: z.array(z.string()).max(12).optional(),
+    /** Admin coherence check for a declared catalog subject interest. */
+    subjectInterestValidation: subjectInterestValidationSchema.optional(),
   })
   .strict()
   .refine((value) => !(value.opsNotes !== undefined && value.appendOpsNote !== undefined), {
@@ -108,11 +118,18 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     const now = new Date().toISOString();
-    const existing = snap.data() as { opsNotes?: string };
+    const existing = snap.data() as WaitlistRegistration & { opsNotes?: string };
     const patch: Record<string, unknown> = {
       updatedAt: now,
-      opsTouchedAt: now,
     };
+    const touchesOps =
+      parsed.data.opsNotes !== undefined ||
+      parsed.data.appendOpsNote !== undefined ||
+      parsed.data.opsPriority !== undefined ||
+      parsed.data.opsTags !== undefined;
+    if (touchesOps) {
+      patch.opsTouchedAt = now;
+    }
     if (parsed.data.opsNotes !== undefined) {
       patch.opsNotes = parsed.data.opsNotes;
     } else if (parsed.data.appendOpsNote !== undefined) {
@@ -124,6 +141,19 @@ export async function PATCH(request: Request, { params }: Params) {
     if (parsed.data.opsTags !== undefined) {
       patch.opsTags = normalizeOpsTags(parsed.data.opsTags);
     }
+    if (parsed.data.subjectInterestValidation) {
+      const nextInterests = setSubjectInterestValidation(
+        existing.dinnerSubjectInterests as DinnerSubjectInterest[] | undefined,
+        parsed.data.subjectInterestValidation.subjectId,
+        parsed.data.subjectInterestValidation.validation,
+        parsed.data.subjectInterestValidation.note,
+        now,
+      );
+      if (!nextInterests) {
+        return NextResponse.json({ ok: false, error: "subject_interest_not_found" }, { status: 404 });
+      }
+      patch.dinnerSubjectInterests = nextInterests;
+    }
 
     await ref.set(patch, { merge: true });
     invalidateAdminCoreCollectionsCache();
@@ -134,7 +164,8 @@ export async function PATCH(request: Request, { params }: Params) {
       opsNotes: patch.opsNotes,
       opsPriority: patch.opsPriority,
       opsTags: patch.opsTags,
-      opsTouchedAt: now,
+      opsTouchedAt: patch.opsTouchedAt,
+      dinnerSubjectInterests: patch.dinnerSubjectInterests,
     });
   } catch (error) {
     console.error("[admin/waitlist PATCH]", error);

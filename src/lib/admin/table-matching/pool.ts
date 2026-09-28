@@ -1,5 +1,6 @@
 import { countsAsInvitation } from "@/lib/admin/member-engagement";
 import { citiesInSameHub, resolveCityHub } from "@/lib/constants/city-hubs";
+import { composeDinnerThemesForMatching } from "@/lib/dinner-subjects/interests";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { computeProfileCompletionPercent } from "@/lib/member/profile-completion";
 import type {
@@ -159,7 +160,10 @@ export function buildEligiblePool(input: {
       extraActivities: member.extraActivities,
       canBring: member.canBring ?? "",
       isSeeking: member.isSeeking ?? "",
-      dinnerThemesInterest: member.dinnerThemesInterest ?? "",
+      dinnerThemesInterest: composeDinnerThemesForMatching(
+        member.dinnerThemesInterest,
+        member.dinnerSubjectInterests,
+      ),
       opsNotes: member.opsNotes ?? "",
       completionPercent,
       completionBand: completionBand(completionPercent),
