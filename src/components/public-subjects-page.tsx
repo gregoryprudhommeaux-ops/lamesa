@@ -13,7 +13,7 @@ import {
 import type { DinnerSubjectInterest, WaitlistRegistration } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Profile = WaitlistRegistration & { id: string };
 
@@ -30,6 +30,7 @@ export function PublicSubjectsPage() {
   const locale = useLocale();
   const { user, loading: authLoading } = useAuth();
   const authFetch = useAuthFetch();
+  const gateRef = useRef<HTMLDivElement | null>(null);
 
   const [gate, setGate] = useState<Gate>("loading");
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -37,6 +38,7 @@ export function PublicSubjectsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nudge, setNudge] = useState<string | null>(null);
 
   const nextThemes = "/themes";
   const loginHref = withNextQuery("/connexion", nextThemes);
@@ -86,6 +88,13 @@ export function PublicSubjectsPage() {
     void loadProfile();
   }, [authLoading, loadProfile]);
 
+  function flashNeedAccount() {
+    const message =
+      gate === "incomplete" ? t("needProfileNudge") : t("needAccountNudge");
+    setNudge(message);
+    gateRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
   async function save() {
     if (gate !== "ready") return;
     setSaving(true);
@@ -126,6 +135,9 @@ export function PublicSubjectsPage() {
       ? listMissingProfileFieldsForLocale(profile, locale)
       : [];
 
+  const showGate =
+    gate === "anonymous" || gate === "not_on_waitlist" || gate === "incomplete";
+
   return (
     <div className="space-y-6">
       <header className="space-y-2 text-center">
@@ -135,64 +147,78 @@ export function PublicSubjectsPage() {
         </p>
       </header>
 
-      <DinnerSubjectPicker
-        locale={locale}
-        selectedIds={selectedIds}
-        onChange={(ids) => {
-          if (gate !== "ready") return;
-          setSelectedIds(ids);
-          setSaved(false);
-        }}
-        disabled={gate !== "ready" || saving}
-        label={t("listLabel")}
-        hint={t("pickerHint")}
-        emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
-      />
-
       {gate === "loading" || authLoading ? (
         <p className="text-center text-sm text-ns-secondary">{t("loading")}</p>
       ) : null}
 
-      {gate === "anonymous" ? (
-        <div className="space-y-3 rounded-md border border-white/10 bg-white/5 p-4 text-center">
-          <p className="text-sm text-ns-secondary">{t("gateAnonymous")}</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            <Link href={loginHref} className={BTN_PRIMARY}>
-              {t("ctaLogin")}
-            </Link>
-            <Link href={signupHref} className={BTN_SECONDARY}>
-              {t("ctaRegister")}
-            </Link>
-          </div>
-        </div>
-      ) : null}
-
-      {gate === "not_on_waitlist" ? (
-        <div className="space-y-3 rounded-md border border-amber-200/40 bg-amber-50/10 p-4 text-center">
-          <p className="text-sm text-ns-secondary">{t("gateNotMember")}</p>
-          <Link href={signupHref} className={BTN_PRIMARY}>
-            {t("ctaRegister")}
-          </Link>
-        </div>
-      ) : null}
-
-      {gate === "incomplete" && profile ? (
-        <div className="space-y-3 rounded-md border border-amber-200/40 bg-amber-50/10 p-4">
-          <p className="text-sm font-semibold text-ns-primary">
-            {t("gateIncomplete", {
-              percent: computeProfileCompletionPercent(profile),
-            })}
+      {showGate ? (
+        <div
+          ref={gateRef}
+          id="themes-gate"
+          className={`space-y-3 rounded-md border p-4 text-center transition ${
+            nudge
+              ? "border-amber-400 bg-amber-50 shadow-sm ring-2 ring-amber-300/60"
+              : "border-amber-200/60 bg-amber-50/40"
+          }`}
+        >
+          <p className="text-sm font-semibold text-ns-hero">
+            {nudge ??
+              (gate === "incomplete" && profile
+                ? t("gateIncomplete", {
+                    percent: computeProfileCompletionPercent(profile),
+                  })
+                : gate === "not_on_waitlist"
+                  ? t("gateNotMember")
+                  : t("gateAnonymous"))}
           </p>
-          {missing.length > 0 ? (
+          {gate === "incomplete" && missing.length > 0 ? (
             <p className="text-xs text-ns-secondary">
               {t("missingFields", { fields: missing.join(", ") })}
             </p>
           ) : null}
-          <Link href={compteHref} className={BTN_PRIMARY}>
-            {t("ctaCompleteProfile")}
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            {gate === "anonymous" ? (
+              <>
+                <Link href={signupHref} className={BTN_PRIMARY}>
+                  {t("ctaRegister")}
+                </Link>
+                <Link href={loginHref} className={BTN_SECONDARY}>
+                  {t("ctaLogin")}
+                </Link>
+              </>
+            ) : null}
+            {gate === "not_on_waitlist" ? (
+              <Link href={signupHref} className={BTN_PRIMARY}>
+                {t("ctaRegister")}
+              </Link>
+            ) : null}
+            {gate === "incomplete" ? (
+              <Link href={compteHref} className={BTN_PRIMARY}>
+                {t("ctaCompleteProfile")}
+              </Link>
+            ) : null}
+          </div>
         </div>
       ) : null}
+
+      <DinnerSubjectPicker
+        locale={locale}
+        selectedIds={selectedIds}
+        onChange={(ids) => {
+          if (gate !== "ready") {
+            flashNeedAccount();
+            return;
+          }
+          setSelectedIds(ids);
+          setSaved(false);
+          setNudge(null);
+        }}
+        disabled={gate !== "ready" || saving}
+        onLockedClick={flashNeedAccount}
+        label={t("listLabel")}
+        hint={t("pickerHint")}
+        emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
+      />
 
       {gate === "ready" ? (
         <div className="flex flex-col items-center gap-2">

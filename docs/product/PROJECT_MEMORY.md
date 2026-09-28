@@ -248,5 +248,6 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-28 | Demande sujets : agrégat validé/pending + file cohérence + CTA Composer table (`?theme=`) |
 | 2026-09-28 | Composer (idée) → Nouveau dîner prérempli (titre, ville, résumé, date mi-période) |
 | 2026-09-28 | Hub Idées `/admin/idees` + nav réordonnée sur le parcours création |
+| 2026-09-28 | `/themes` — clic case verrouillée → nudge « crée ton compte » + bandeau au-dessus |
 | 2026-09-28 | Page publique `/themes` + gate auth/profil 100 % ; admin publie depuis Tables ; lien partageable |
 | 2026-09-28 | `/themes` i18n — `titleI18n`/`summaryI18n` auto (create/update + backfill GET `?locale=`) ; picker refetch locale |
