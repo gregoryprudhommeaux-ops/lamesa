@@ -17,7 +17,10 @@ type AdminShellProps = {
   density?: "default" | "workspace";
 };
 
-/** Top-level destinations — Dashboard is the front door; everything else is a métier hub. */
+/**
+ * Top-level destinations — order follows creation flow:
+ * Dashboard (porte) → Idées → Dîners → Tables → Personnes → Coms.
+ */
 const ADMIN_NAV: Array<{
   href: string;
   label: string;
@@ -25,17 +28,18 @@ const ADMIN_NAV: Array<{
   match: string[];
 }> = [
   { href: "/admin/dashboard", label: "Dashboard", match: ["/admin/dashboard"] },
+  { href: "/admin/idees", label: "Idées", match: ["/admin/idees"] },
   {
     href: "/admin/evenements",
     label: "Dîners",
     match: ["/admin/evenements", "/admin/calendrier"],
   },
+  { href: "/admin/tables", label: "Tables", match: ["/admin/tables"] },
   {
     href: "/admin/personnes",
     label: "Personnes",
     match: ["/admin/personnes", "/admin/inscrits", "/admin/prospects", "/admin/contacts"],
   },
-  { href: "/admin/tables", label: "Tables", match: ["/admin/tables"] },
   { href: "/admin/templates", label: "Coms", match: ["/admin/templates"] },
 ];
 

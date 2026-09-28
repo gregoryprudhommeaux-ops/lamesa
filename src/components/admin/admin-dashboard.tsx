@@ -1990,7 +1990,15 @@ export function AdminDashboardPanel() {
             Les hubs du backend — tout part d’ici.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <Link
+            href="/admin/idees"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Idées</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">Sujets</p>
+            <p className="mt-1 text-xs text-ns-secondary">Catalogue /themes · demande · Composer</p>
+          </Link>
           <Link
             href="/admin/evenements"
             className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
@@ -2002,6 +2010,14 @@ export function AdminDashboardPanel() {
             <p className="mt-1 text-xs text-ns-secondary">
               {kpis.eventsPublished} publiés · pilotage par phase
             </p>
+          </Link>
+          <Link
+            href="/admin/tables"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Tables</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{recentTableDrafts.length}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Brouillons · composition sièges</p>
           </Link>
           <Link
             href="/admin/personnes"
@@ -2024,14 +2040,6 @@ export function AdminDashboardPanel() {
                 : "Templates"}
             </p>
             <p className="mt-1 text-xs text-ns-secondary">Bibliothèque · blasts · nurture</p>
-          </Link>
-          <Link
-            href="/admin/tables"
-            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
-          >
-            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Tables</p>
-            <p className="mt-1 text-lg font-bold text-ns-hero">{recentTableDrafts.length}</p>
-            <p className="mt-1 text-xs text-ns-secondary">Brouillons récents · composition</p>
           </Link>
         </div>
       </section>

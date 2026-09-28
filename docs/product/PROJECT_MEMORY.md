@@ -49,7 +49,7 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 
 - **Dashboard = porte d’entrée** du backend (Maintenant · À traiter · Accès)
 - **Maintenant = moment T** : un seul focus (résultats dernier email / bilan post-dîner CA+satisfaction / prochain dîner) — pas deux colonnes concurrentes ni blocs blancs vides
-- Nav admin courte : Dashboard · Dîners · Personnes · Tables · Coms
+- Nav admin = parcours création : Dashboard · Idées · Dîners · Tables · Personnes · Coms
 - Chrome admin homogène (pas de nav site public dans l’ops)
 - Coms = envoyer / suivre ; créer un template est secondaire
 - Centre de commande par phase (pas fiche événement infinie)
@@ -64,9 +64,10 @@ URL `?phase=` accepts these ids; legacy (`std`, `definitive`, `std_email`, `std_
 | Item | Route | Notes |
 |------|-------|-------|
 | Dashboard | `/admin/dashboard` | Porte — Maintenant = moment T (`resolveDashboardMoment`) |
+| Idées | `/admin/idees` | Sujets /themes · demande · Composer → Nouveau dîner |
 | Dîners | `/admin/evenements` | Pilotage + `?view=calendrier` |
+| Tables | `/admin/tables` | Composition sièges (après Idée → Dîner) |
 | Personnes | `/admin/personnes` | Onglets Membres / Prospects / Mémoire |
-| Tables | `/admin/tables` | Top-level (validé) |
 | Coms | `/admin/templates` | Templates + envois |
 
 Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/admin/calendrier`.
@@ -79,6 +80,7 @@ Legacy redirects : `/admin/inscrits`, `/admin/prospects`, `/admin/contacts`, `/a
 | 2026-09-25 | Command center événement tranches 1–2 | Étape active + roster + drawers |
 | 2026-09-25 | 9 phases produit (`OpsPhaseId`) + suggestOpsPhase | Labels métier + Formal/Places/paiement séparés |
 | 2026-09-26 | Admin IA : Dashboard porte + 5 nav ; Personnes 1 écran onglets ; Tables top-level | Moins de menus plats, une entrée unique |
+| 2026-09-28 | Nav = création : Dashboard · Idées · Dîners · Tables · Personnes · Coms | Idées sorties de Tables ; ordre = parcours réel |
 | 2026-09-26 | Continuité admin : files queue= + NBA Dashboard + Tables?eventId= | Promesses « À traiter » tenues ; contexte dîner portable |
 | 2026-09-26 | Chrome admin unique (workspace) + Coms = envoi d’abord | Fin du whiplash ; intention hub claire |
 | 2026-09-26 | Dashboard moment T (post-event / email pulse / next dinner) | Une info prioritaire selon l’étape du process ; CA + satisfaction après dîner |
@@ -245,5 +247,6 @@ Les 9 phases placent STD, qualification, invitation, paiement, places et feedbac
 | 2026-09-28 | Catalogue sujets (`la_mesa_dinner_subjects`) + multi-select inscription/profil + validation admin cohérence ; free-text complément ; validés → theme-fit |
 | 2026-09-28 | Demande sujets : agrégat validé/pending + file cohérence + CTA Composer table (`?theme=`) |
 | 2026-09-28 | Composer (idée) → Nouveau dîner prérempli (titre, ville, résumé, date mi-période) |
+| 2026-09-28 | Hub Idées `/admin/idees` + nav réordonnée sur le parcours création |
 | 2026-09-28 | Page publique `/themes` + gate auth/profil 100 % ; admin publie depuis Tables ; lien partageable |
 | 2026-09-28 | `/themes` i18n — `titleI18n`/`summaryI18n` auto (create/update + backfill GET `?locale=`) ; picker refetch locale |

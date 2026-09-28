@@ -704,6 +704,10 @@ export function AdminTableBuilder() {
     <div className="space-y-8">
       <div>
         <h2 className="text-xl font-bold text-ns-hero">Tables</h2>
+        <p className="mt-1 text-xs text-ns-secondary">
+          Étape 3 — composer les sièges après Idées → Nouveau dîner. Préremplir le thème depuis
+          Idées (Composer) ou ouvrir depuis un dîner (?eventId=).
+        </p>
         <p className="mt-1 text-sm text-ns-secondary">
           Génère des idées de tables à partir de la waitlist, ajuste les invités puis crée un
           événement ou complète-en un existant.
