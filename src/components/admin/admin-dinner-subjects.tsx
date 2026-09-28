@@ -105,7 +105,7 @@ export function AdminDinnerSubjectsPanel() {
           summary: summary.trim(),
           periodMonth,
           city,
-          status,
+          status: "draft",
         }),
       });
       const json = (await res.json()) as {
@@ -117,7 +117,6 @@ export function AdminDinnerSubjectsPanel() {
       setTitle("");
       setSummary("");
       setPeriodMonth(currentPeriodMonth());
-      setStatus("draft");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "save_failed");
