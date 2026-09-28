@@ -20,8 +20,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STATUS_LABELS: Record<DinnerSubjectStatus, string> = {
-  published: "Publié",
-  draft: "Brouillon",
+  published: "Sur /themes",
+  draft: "Idée (non publiée)",
   archived: "Archivé",
 };
 
@@ -46,7 +46,6 @@ export function AdminDinnerSubjectsPanel() {
   const [summary, setSummary] = useState("");
   const [periodMonth, setPeriodMonth] = useState(currentPeriodMonth());
   const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
-  const [status, setStatus] = useState<DinnerSubjectStatus>("published");
 
   const demandById = useMemo(() => {
     const map = new Map<string, SubjectDemandRow>();
@@ -106,7 +105,7 @@ export function AdminDinnerSubjectsPanel() {
           summary: summary.trim(),
           periodMonth,
           city,
-          status,
+          status: "draft",
         }),
       });
       const json = (await res.json()) as {
@@ -118,7 +117,6 @@ export function AdminDinnerSubjectsPanel() {
       setTitle("");
       setSummary("");
       setPeriodMonth(currentPeriodMonth());
-      setStatus("published");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "save_failed");
@@ -304,25 +302,15 @@ export function AdminDinnerSubjectsPanel() {
             ))}
           </select>
         </div>
-        <div>
-          <label className={LABEL_CLASS}>Statut</label>
-          <select
-            className={`${INPUT_CLASS} mt-1`}
-            value={status}
-            onChange={(e) => setStatus(e.target.value as DinnerSubjectStatus)}
-          >
-            {(Object.keys(STATUS_LABELS) as DinnerSubjectStatus[]).map((key) => (
-              <option key={key} value={key}>
-                {STATUS_LABELS[key]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end">
+        <div className="flex items-end sm:col-span-2 lg:col-span-2">
           <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={saving}>
-            {saving ? "…" : "Ajouter"}
+            {saving ? "…" : "Ajouter l’idée"}
           </button>
         </div>
+        <p className="sm:col-span-2 lg:col-span-6 text-xs text-ns-secondary">
+          L’idée est créée en brouillon. Clique <span className="font-semibold">Publier</span> pour
+          la rendre visible sur <span className="font-mono">/themes</span>.
+        </p>
         <div className="sm:col-span-2 lg:col-span-6">
           <label className={LABEL_CLASS}>Résumé (optionnel)</label>
           <input
@@ -363,25 +351,27 @@ export function AdminDinnerSubjectsPanel() {
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {subject.status === "published" ? (
-                    <Link href={composeHref(subject)} className={BTN_PRIMARY}>
-                      Composer
-                    </Link>
-                  ) : null}
-                  {subject.status !== "published" ? (
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={() => void setSubjectStatus(subject.id, "published")}
-                    >
-                      Publier
-                    </button>
+                    <>
+                      <Link href={composeHref(subject)} className={BTN_SECONDARY}>
+                        Composer
+                      </Link>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        title="Retirer de la page publique /themes"
+                        onClick={() => void setSubjectStatus(subject.id, "archived")}
+                      >
+                        Archiver
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"
-                      className={BTN_SECONDARY}
-                      onClick={() => void setSubjectStatus(subject.id, "archived")}
+                      className={BTN_PRIMARY}
+                      title="Rendre visible sur la page publique /themes"
+                      onClick={() => void setSubjectStatus(subject.id, "published")}
                     >
-                      Archiver
+                      Publier
                     </button>
                   )}
                   <button
