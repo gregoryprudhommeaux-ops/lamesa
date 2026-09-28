@@ -8,7 +8,12 @@ import {
   type SubjectTimingBucket,
 } from "@/lib/dinner-subjects/period";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import type { DinnerSubject, DinnerSubjectStatus } from "@/lib/types/events";
+import type {
+  DinnerSubject,
+  DinnerSubjectLocale,
+  DinnerSubjectStatus,
+} from "@/lib/types/events";
+import { buildSubjectI18nMaps } from "@/lib/dinner-subjects/translate";
 
 export type DinnerSubjectInput = {
   title: string;
@@ -45,6 +50,18 @@ function resolveSubjectCity(city: string | undefined): string {
   return DEFAULT_CITY_HUB;
 }
 
+function mapLocaleMap(
+  raw: unknown,
+): Partial<Record<DinnerSubjectLocale, string>> | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const out: Partial<Record<DinnerSubjectLocale, string>> = {};
+  for (const key of ["fr", "en", "es"] as const) {
+    const value = (raw as Record<string, unknown>)[key];
+    if (typeof value === "string" && value.trim()) out[key] = value.trim();
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 function mapDoc(id: string, data: Record<string, unknown>): DinnerSubject {
   const statusRaw = String(data.status ?? "published");
   const status: DinnerSubjectStatus =
@@ -52,10 +69,16 @@ function mapDoc(id: string, data: Record<string, unknown>): DinnerSubject {
       ? statusRaw
       : "published";
   const keywordsRaw = data.keywords;
+  const sourceRaw = String(data.sourceLocale ?? "fr");
+  const sourceLocale: DinnerSubjectLocale =
+    sourceRaw === "en" || sourceRaw === "es" || sourceRaw === "fr" ? sourceRaw : "fr";
   return {
     id,
     title: String(data.title ?? "").trim(),
     summary: data.summary != null ? String(data.summary).trim() : undefined,
+    sourceLocale,
+    titleI18n: mapLocaleMap(data.titleI18n),
+    summaryI18n: mapLocaleMap(data.summaryI18n),
     periodMonth: String(data.periodMonth ?? "").trim(),
     city: resolveSubjectCity(data.city != null ? String(data.city) : undefined),
     status,
@@ -159,9 +182,14 @@ export async function createDinnerSubject(input: DinnerSubjectInput): Promise<Di
   if (!title || !isValidPeriodMonth(periodMonth)) {
     throw new Error("invalid_subject");
   }
+  const summary = (input.summary ?? "").trim();
+  const i18n = await buildSubjectI18nMaps({ title, summary, sourceLocale: "fr" });
   const doc = {
     title,
-    summary: (input.summary ?? "").trim(),
+    summary,
+    sourceLocale: i18n.sourceLocale,
+    titleI18n: i18n.titleI18n,
+    summaryI18n: i18n.summaryI18n,
     periodMonth,
     city: resolveSubjectCity(input.city),
     status: (input.status ?? "published") as DinnerSubjectStatus,
@@ -183,6 +211,7 @@ export async function updateDinnerSubject(
   const snap = await ref.get();
   if (!snap.exists) return null;
 
+  const existing = mapDoc(snap.id, snap.data() ?? {});
   const patch: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   if (input.title !== undefined) {
     const title = input.title.trim();
@@ -200,9 +229,75 @@ export async function updateDinnerSubject(
   if (input.keywords !== undefined) patch.keywords = normalizeKeywords(input.keywords);
   if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
 
+  const titleNext =
+    input.title !== undefined ? input.title.trim() : existing.title;
+  const summaryNext =
+    input.summary !== undefined ? input.summary.trim() : (existing.summary ?? "");
+  if (input.title !== undefined || input.summary !== undefined) {
+    const i18n = await buildSubjectI18nMaps({
+      title: titleNext,
+      summary: summaryNext,
+      sourceLocale: existing.sourceLocale ?? "fr",
+      previous: existing,
+    });
+    patch.sourceLocale = i18n.sourceLocale;
+    patch.titleI18n = i18n.titleI18n;
+    patch.summaryI18n = i18n.summaryI18n;
+  }
+
   await ref.set(patch, { merge: true });
   const next = await ref.get();
   return mapDoc(next.id, next.data() ?? {});
+}
+
+/** Persist missing locale strings for subjects (lazy backfill on public /themes). */
+export async function backfillSubjectLocale(
+  subjects: DinnerSubject[],
+  locale: DinnerSubjectLocale,
+): Promise<DinnerSubject[]> {
+  if (!isFirebaseAdminConfigured()) return subjects;
+  const db = getAdminFirestore();
+  const out: DinnerSubject[] = [];
+  for (const subject of subjects) {
+    const source = subject.sourceLocale ?? "fr";
+    if (locale === source) {
+      out.push(subject);
+      continue;
+    }
+    const needsTitle = !subject.titleI18n?.[locale]?.trim();
+    const needsSummary = Boolean(subject.summary?.trim()) && !subject.summaryI18n?.[locale]?.trim();
+    if (!needsTitle && !needsSummary) {
+      out.push(subject);
+      continue;
+    }
+    try {
+      const i18n = await buildSubjectI18nMaps({
+        title: subject.title,
+        summary: subject.summary,
+        sourceLocale: source,
+        previous: subject,
+      });
+      await db.collection(COLLECTIONS.dinnerSubjects).doc(subject.id).set(
+        {
+          sourceLocale: i18n.sourceLocale,
+          titleI18n: i18n.titleI18n,
+          summaryI18n: i18n.summaryI18n,
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      );
+      out.push({
+        ...subject,
+        sourceLocale: i18n.sourceLocale,
+        titleI18n: i18n.titleI18n,
+        summaryI18n: i18n.summaryI18n,
+      });
+    } catch (error) {
+      console.warn("[dinner-subjects] backfill failed", subject.id, error);
+      out.push(subject);
+    }
+  }
+  return out;
 }
 
 export async function deleteDinnerSubject(id: string): Promise<boolean> {

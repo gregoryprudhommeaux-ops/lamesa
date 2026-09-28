@@ -36,9 +36,11 @@ export function DinnerSubjectPicker({
 
   useEffect(() => {
     let cancelled = false;
+    setLoadState("loading");
+    const localeParam = encodeURIComponent(locale || "fr");
     void (async () => {
       try {
-        const res = await fetch("/api/dinner-subjects");
+        const res = await fetch(`/api/dinner-subjects?locale=${localeParam}`);
         const json = (await res.json()) as CatalogPayload;
         if (cancelled) return;
         if (!res.ok || !json.ok) {
@@ -55,18 +57,19 @@ export function DinnerSubjectPicker({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale]);
 
   const subjects = useMemo(() => {
     const byId = new Map<string, DinnerSubject>();
     for (const row of [...upcoming, ...past]) {
       if (!byId.has(row.id)) byId.set(row.id, row);
     }
+    const sortLocale = locale === "en" || locale === "es" ? locale : "fr";
     return [...byId.values()].sort((a, b) => {
       if (a.periodMonth !== b.periodMonth) return a.periodMonth.localeCompare(b.periodMonth);
-      return a.title.localeCompare(b.title, "fr");
+      return a.title.localeCompare(b.title, sortLocale);
     });
-  }, [past, upcoming]);
+  }, [past, upcoming, locale]);
 
   function toggle(id: string) {
     if (disabled) return;

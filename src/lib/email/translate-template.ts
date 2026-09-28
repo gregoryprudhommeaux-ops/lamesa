@@ -208,10 +208,29 @@ async function translateWithOpenAi(
   return out;
 }
 
+export type TranslatePlainTextOptions = {
+  /**
+   * When true, allow MyMemory in production if OpenAI is unset.
+   * Use only for public catalog copy (dinner subjects) — never for email templates.
+   */
+  allowPublicFallback?: boolean;
+};
+
+/** Plain-text translate (also used by dinner-subjects catalog i18n). */
+export async function translatePlainText(
+  text: string,
+  from: TemplateLocale,
+  to: TemplateLocale,
+  options?: TranslatePlainTextOptions,
+): Promise<string> {
+  return translateText(text, from, to, options);
+}
+
 async function translateText(
   text: string,
   from: TemplateLocale,
   to: TemplateLocale,
+  options?: TranslatePlainTextOptions,
 ): Promise<string> {
   const { masked, tokens } = maskTemplateVars(text);
   const cfg = openAiConfig();
@@ -221,7 +240,7 @@ async function translateText(
   }
 
   // Production: never exfiltrate email copy to public MyMemory.
-  if (isProductionRuntime()) {
+  if (isProductionRuntime() && !options?.allowPublicFallback) {
     throw new Error("translate_not_configured");
   }
 
