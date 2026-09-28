@@ -145,10 +145,8 @@ export function PublicSubjectsPage() {
           setSaved(false);
         }}
         disabled={gate !== "ready" || saving}
-        label={tReg("fields.dinnerSubjects")}
+        label={t("listLabel")}
         hint={t("pickerHint")}
-        pastLabel={tReg("fields.dinnerSubjectsPast")}
-        upcomingLabel={tReg("fields.dinnerSubjectsUpcoming")}
         emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
       />
 
