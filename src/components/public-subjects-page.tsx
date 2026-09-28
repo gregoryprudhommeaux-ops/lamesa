@@ -133,7 +133,6 @@ export function PublicSubjectsPage() {
         <p className="mx-auto max-w-xl text-sm leading-relaxed text-ns-secondary">
           {t("intro")}
         </p>
-        <p className="text-xs text-ns-secondary">{t("allCitiesNote")}</p>
       </header>
 
       <DinnerSubjectPicker
@@ -145,10 +144,8 @@ export function PublicSubjectsPage() {
           setSaved(false);
         }}
         disabled={gate !== "ready" || saving}
-        label={tReg("fields.dinnerSubjects")}
+        label={t("listLabel")}
         hint={t("pickerHint")}
-        pastLabel={tReg("fields.dinnerSubjectsPast")}
-        upcomingLabel={tReg("fields.dinnerSubjectsUpcoming")}
         emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
       />
 

@@ -3,7 +3,7 @@
 import { formatPeriodMonthLabel } from "@/lib/dinner-subjects/period";
 import type { DinnerSubject } from "@/lib/types/events";
 import { LABEL_CLASS } from "@/lib/ui/nextstep";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type CatalogPayload = {
   ok?: boolean;
@@ -18,8 +18,6 @@ type DinnerSubjectPickerProps = {
   disabled?: boolean;
   label: string;
   hint: string;
-  pastLabel: string;
-  upcomingLabel: string;
   emptyLabel: string;
 };
 
@@ -30,8 +28,6 @@ export function DinnerSubjectPicker({
   disabled,
   label,
   hint,
-  pastLabel,
-  upcomingLabel,
   emptyLabel,
 }: DinnerSubjectPickerProps) {
   const [past, setPast] = useState<DinnerSubject[]>([]);
@@ -61,6 +57,17 @@ export function DinnerSubjectPicker({
     };
   }, []);
 
+  const subjects = useMemo(() => {
+    const byId = new Map<string, DinnerSubject>();
+    for (const row of [...upcoming, ...past]) {
+      if (!byId.has(row.id)) byId.set(row.id, row);
+    }
+    return [...byId.values()].sort((a, b) => {
+      if (a.periodMonth !== b.periodMonth) return a.periodMonth.localeCompare(b.periodMonth);
+      return a.title.localeCompare(b.title, "fr");
+    });
+  }, [past, upcoming]);
+
   function toggle(id: string) {
     if (disabled) return;
     if (selectedIds.includes(id)) {
@@ -71,13 +78,17 @@ export function DinnerSubjectPicker({
     onChange([...selectedIds, id]);
   }
 
-  function renderGroup(title: string, subjects: DinnerSubject[]) {
-    if (!subjects.length) return null;
-    return (
-      <fieldset className="space-y-2">
-        <legend className="text-xs font-bold uppercase tracking-wide text-ns-secondary">
-          {title}
-        </legend>
+  return (
+    <div className="space-y-3">
+      <div>
+        <p className={LABEL_CLASS}>{label}</p>
+        <p className="mt-1 text-xs text-ns-secondary">{hint}</p>
+      </div>
+      {loadState === "loading" ? (
+        <p className="text-sm text-ns-secondary">…</p>
+      ) : loadState === "error" || subjects.length === 0 ? (
+        <p className="text-sm text-ns-secondary">{emptyLabel}</p>
+      ) : (
         <ul className="space-y-2">
           {subjects.map((subject) => {
             const checked = selectedIds.includes(subject.id);
@@ -85,20 +96,13 @@ export function DinnerSubjectPicker({
             return (
               <li key={subject.id}>
                 <label
-                  className={`flex cursor-pointer gap-3 rounded-md border px-3 py-2 text-sm transition ${
+                  className={`flex cursor-pointer items-start gap-3 rounded-md border px-3 py-2 text-sm transition ${
                     checked
                       ? "border-ns-primary/40 bg-ns-primary/5"
                       : "border-black/10 bg-white hover:border-black/20"
                   } ${disabled ? "opacity-60" : ""}`}
                 >
-                  <input
-                    type="checkbox"
-                    className="mt-1 h-4 w-4 accent-[var(--ns-primary,#0f766e)]"
-                    checked={checked}
-                    disabled={disabled}
-                    onChange={() => toggle(subject.id)}
-                  />
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="block font-semibold text-ns-hero">{subject.title}</span>
                     <span className="block text-xs text-ns-secondary">
                       {period}
@@ -110,32 +114,19 @@ export function DinnerSubjectPicker({
                       </span>
                     ) : null}
                   </span>
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 shrink-0 accent-[var(--ns-primary,#0f766e)]"
+                    checked={checked}
+                    disabled={disabled}
+                    onChange={() => toggle(subject.id)}
+                    aria-label={`${label}: ${subject.title}`}
+                  />
                 </label>
               </li>
             );
           })}
         </ul>
-      </fieldset>
-    );
-  }
-
-  const total = past.length + upcoming.length;
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <p className={LABEL_CLASS}>{label}</p>
-        <p className="mt-1 text-xs text-ns-secondary">{hint}</p>
-      </div>
-      {loadState === "loading" ? (
-        <p className="text-sm text-ns-secondary">…</p>
-      ) : loadState === "error" || total === 0 ? (
-        <p className="text-sm text-ns-secondary">{emptyLabel}</p>
-      ) : (
-        <div className="space-y-4">
-          {renderGroup(upcomingLabel, upcoming)}
-          {renderGroup(pastLabel, past)}
-        </div>
       )}
     </div>
   );
