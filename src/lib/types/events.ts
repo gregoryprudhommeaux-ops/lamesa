@@ -332,9 +332,15 @@ export interface WaitlistRegistration {
   isSeeking?: string;
   /**
    * Declared dinner themes the member cares about (industry, experience, problem space).
+   * Free-text complement to `dinnerSubjectInterests` catalog picks.
    * Used by table-matching / dinner creation profile scan — not inferred.
    */
   dinnerThemesInterest?: string;
+  /**
+   * Catalog subject interests (past + upcoming periods). Declared at signup/profile;
+   * admin validates coherence before they feed table pools / theme scan.
+   */
+  dinnerSubjectInterests?: DinnerSubjectInterest[];
   locale: string;
   source: string;
   tags: string[];
@@ -383,6 +389,41 @@ export interface WaitlistRegistration {
   opsTags?: string[];
   /** Last time an admin edited ops fields. */
   opsTouchedAt?: string;
+}
+
+/** Catalog entry: a dinner subject open for a period (month) + city — no precise date. */
+export type DinnerSubjectStatus = "draft" | "published" | "archived";
+
+export interface DinnerSubject {
+  id: string;
+  title: string;
+  /** Short blurb shown at signup / profile. */
+  summary?: string;
+  /** YYYY-MM — planning period only (no day). */
+  periodMonth: string;
+  city: string;
+  status: DinnerSubjectStatus;
+  /** Optional tokens for theme-fit / scan. */
+  keywords?: string[];
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DinnerSubjectInterestValidation = "pending" | "validated" | "rejected";
+
+/** Member interest in a catalog subject — pending until admin validates profile coherence. */
+export interface DinnerSubjectInterest {
+  subjectId: string;
+  /** Title snapshot at declaration (catalog may rename later). */
+  title: string;
+  periodMonth?: string;
+  city?: string;
+  declaredAt: string;
+  validation: DinnerSubjectInterestValidation;
+  validatedAt?: string;
+  /** Admin note on profile ↔ subject coherence. */
+  validationNote?: string;
 }
 
 export interface DatabasePersoContact {

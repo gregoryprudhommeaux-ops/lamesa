@@ -13,6 +13,11 @@ import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-pro
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isOtherSector } from "@/lib/constants/form-options";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
+import {
+  buildDeclaredSubjectInterests,
+  mergeSubjectInterests,
+} from "@/lib/dinner-subjects/interests";
+import { getDinnerSubjectsByIds } from "@/lib/dinner-subjects/store";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 
@@ -62,6 +67,7 @@ const profilePatchSchema = z
     canBring: z.string().trim().max(280).optional(),
     isSeeking: z.string().trim().max(280).optional(),
     dinnerThemesInterest: z.string().trim().max(2000).optional(),
+    dinnerSubjectIds: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.sector !== undefined && isOtherSector(data.sector) && !data.sectorOther?.trim()) {
@@ -130,18 +136,32 @@ export async function PATCH(request: Request) {
   }
 
   const db = getAdminFirestore();
-  const patch = { ...parsed.data };
+  const { dinnerSubjectIds, ...fields } = parsed.data;
+  const patch: Record<string, unknown> = { ...fields };
+  const now = new Date().toISOString();
+
+  if (dinnerSubjectIds !== undefined) {
+    const catalog = await getDinnerSubjectsByIds(dinnerSubjectIds);
+    const declared = buildDeclaredSubjectInterests(dinnerSubjectIds, catalog, now);
+    patch.dinnerSubjectInterests = mergeSubjectInterests(
+      profile.dinnerSubjectInterests,
+      declared,
+    );
+  }
+
   const completeHint =
-    Boolean(patch.company?.trim()) ||
-    Boolean(patch.linkedinUrl?.trim()) ||
-    Boolean(patch.city?.trim()) ||
-    Boolean(patch.invitationMotivation?.trim());
+    Boolean(typeof patch.company === "string" && patch.company.trim()) ||
+    Boolean(typeof patch.linkedinUrl === "string" && patch.linkedinUrl.trim()) ||
+    Boolean(typeof patch.city === "string" && patch.city.trim()) ||
+    Boolean(
+      typeof patch.invitationMotivation === "string" && patch.invitationMotivation.trim(),
+    );
 
   const nextProfileComplete =
     completeHint && profile.profileComplete === false ? true : profile.profileComplete;
 
   const clearSectorOther =
-    patch.sector !== undefined && !isOtherSector(patch.sector)
+    patch.sector !== undefined && !isOtherSector(String(patch.sector))
       ? { sectorOther: FieldValue.delete() }
       : {};
 
@@ -149,7 +169,7 @@ export async function PATCH(request: Request) {
     {
       ...patch,
       ...clearSectorOther,
-      updatedAt: new Date().toISOString(),
+      updatedAt: now,
       uid: user.uid,
       ...(completeHint && profile.profileComplete === false
         ? { profileComplete: true }
@@ -162,8 +182,11 @@ export async function PATCH(request: Request) {
     ...profile,
     ...patch,
     city: (patch.city ?? profile.city) as string,
-    linkedinUrl: patch.linkedinUrl ?? profile.linkedinUrl,
-    sectorOther: patch.sectorOther ?? profile.sectorOther,
+    linkedinUrl: (patch.linkedinUrl as string | undefined) ?? profile.linkedinUrl,
+    sectorOther: (patch.sectorOther as string | undefined) ?? profile.sectorOther,
+    dinnerSubjectInterests:
+      (patch.dinnerSubjectInterests as typeof profile.dinnerSubjectInterests) ??
+      profile.dinnerSubjectInterests,
     profileComplete: nextProfileComplete,
   };
 
