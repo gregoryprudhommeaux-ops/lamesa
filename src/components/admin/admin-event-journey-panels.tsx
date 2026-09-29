@@ -198,6 +198,11 @@ export function AutoRemindersPanel({
       );
   }, [participations]);
 
+  /** Sent but not answered — can get a fresh link (broken / expired token). */
+  const resendCandidates = useMemo(() => {
+    return alreadySentRecipients.filter((p) => !p.satisfactionSurvey?.submittedAt);
+  }, [alreadySentRecipients]);
+
   const pendingSurvey = pendingRecipients.length;
 
   const contentValidated =
@@ -266,32 +271,22 @@ export function AutoRemindersPanel({
     }
   }
 
-  async function sendNow() {
-    const namesPreview = pendingRecipients
-      .slice(0, 8)
-      .map((p) => p.fullName?.trim() || p.email)
-      .join(", ");
-    const more =
-      pendingRecipients.length > 8 ? ` (+${pendingRecipients.length - 8} autres)` : "";
-    if (!contentValidated) {
-      const ok = window.confirm(
-        `Tu n’as pas encore validé la langue (${LOCALE_LABELS[sendLocale]}) et les questions.\n\nEnvoyer quand même à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`,
-      );
-      if (!ok) return;
-    } else if (
-      !window.confirm(
-        `Envoyer le questionnaire de satisfaction à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`,
-      )
-    ) {
-      return;
-    }
+  async function sendSatisfaction(opts: {
+    emails?: string[];
+    resend?: boolean;
+    confirmLabel: string;
+  }) {
+    if (!window.confirm(opts.confirmLabel)) return;
     setSending(true);
     setError(null);
     setMessage(null);
     try {
       const res = await authFetch(`/api/admin/events/${event.id}/send-satisfaction`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          emails: opts.emails,
+          resend: opts.resend,
+        }),
       });
       const json = (await res.json()) as {
         ok?: boolean;
@@ -313,6 +308,33 @@ export function AutoRemindersPanel({
     } finally {
       setSending(false);
     }
+  }
+
+  async function sendNow() {
+    const namesPreview = pendingRecipients
+      .slice(0, 8)
+      .map((p) => p.fullName?.trim() || p.email)
+      .join(", ");
+    const more =
+      pendingRecipients.length > 8 ? ` (+${pendingRecipients.length - 8} autres)` : "";
+    const confirmLabel = !contentValidated
+      ? `Tu n’as pas encore validé la langue (${LOCALE_LABELS[sendLocale]}) et les questions.\n\nEnvoyer quand même à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`
+      : `Envoyer le questionnaire de satisfaction à ${pendingSurvey} personne(s) ?\n${namesPreview}${more}`;
+    await sendSatisfaction({ confirmLabel });
+  }
+
+  async function resendWithoutResponse() {
+    const namesPreview = resendCandidates
+      .slice(0, 8)
+      .map((p) => p.fullName?.trim() || p.email)
+      .join(", ");
+    const more =
+      resendCandidates.length > 8 ? ` (+${resendCandidates.length - 8} autres)` : "";
+    await sendSatisfaction({
+      emails: resendCandidates.map((p) => p.email),
+      resend: true,
+      confirmLabel: `Renvoyer un nouveau lien à ${resendCandidates.length} personne(s) sans réponse (lien cassé / expiré) ?\n${namesPreview}${more}`,
+    });
   }
 
   return (
@@ -507,6 +529,19 @@ export function AutoRemindersPanel({
             >
               {sending ? "Envoi…" : `Envoyer maintenant (${pendingSurvey})`}
             </button>
+            {resendCandidates.length > 0 ? (
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                disabled={sending}
+                title="Nouveau lien pour les invités déjà contactés qui n’ont pas répondu (ex. invalid_token)"
+                onClick={() => void resendWithoutResponse()}
+              >
+                {sending
+                  ? "Envoi…"
+                  : `Renvoyer lien (${resendCandidates.length} sans réponse)`}
+              </button>
+            ) : null}
           </div>
           {message ? <p className="text-xs font-medium text-ns-primary">{message}</p> : null}
           {error ? <p className={ERROR_TEXT}>{error}</p> : null}

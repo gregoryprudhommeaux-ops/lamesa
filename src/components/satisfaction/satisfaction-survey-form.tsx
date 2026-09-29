@@ -1,5 +1,6 @@
 "use client";
 
+import { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
 import {
   SURVEY_COPY,
   SURVEY_SCORE_FIELDS,
@@ -16,10 +17,29 @@ import { useMemo, useState, type FormEvent } from "react";
 const COMMENT_MAX = 1000;
 const SCORES = [0, 1, 2, 3, 4, 5] as const;
 
+function mapSubmitError(
+  code: string | undefined,
+  copy: (typeof SURVEY_COPY)[keyof typeof SURVEY_COPY],
+): string {
+  switch (code) {
+    case "expired_token":
+      return copy.submitExpiredToken;
+    case "invalid_token":
+    case "wrong_token":
+      return copy.submitInvalidToken;
+    case "not_eligible":
+      return copy.submitNotEligible;
+    case "not_found":
+      return copy.submitInvalidToken;
+    default:
+      return copy.submitFailed;
+  }
+}
+
 export function SatisfactionSurveyForm() {
   const searchParams = useSearchParams();
   const routeLocale = useLocale();
-  const token = searchParams.get("token") ?? "";
+  const token = normalizeSurveyToken(searchParams.get("token") ?? "");
   const isPreview =
     searchParams.get("preview") === "1" || searchParams.get("preview") === "true";
   const locale = surveyLocaleFrom(routeLocale);
@@ -94,11 +114,12 @@ export function SatisfactionSurveyForm() {
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        throw new Error(json.error ?? "submit_failed");
+        setError(mapSubmitError(json.error, copy));
+        return;
       }
       setDone(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch {
+      setError(copy.submitFailed);
     } finally {
       setSubmitting(false);
     }

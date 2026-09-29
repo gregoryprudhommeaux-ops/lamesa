@@ -7,11 +7,13 @@ import {
   plainTextFromRichMarkers,
   toIcsUtc,
 } from "@/lib/email/ics";
+import { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
 import {
   signRsvpToken,
   signSurveyToken,
   verifyRsvpToken,
   verifySurveyToken,
+  verifySurveyTokenResult,
 } from "@/lib/email/rsvp-token";
 
 afterEach(() => {
@@ -137,6 +139,30 @@ describe("rsvp-token", () => {
     });
     expect(verifyRsvpToken(rsvp)?.purpose).toBe("rsvp");
     expect(verifySurveyToken(rsvp)).toBeNull();
+  });
+
+  it("normalizes email-client junk around survey tokens", () => {
+    const survey = signSurveyToken({
+      participationId: "p1",
+      eventId: "e1",
+      email: "sophie@example.com",
+    });
+    expect(normalizeSurveyToken(`<${survey}>`)).toBe(survey);
+    expect(normalizeSurveyToken(`${survey}.`)).toBe(survey);
+    expect(verifySurveyTokenResult(`"${survey}"`).ok).toBe(true);
+  });
+
+  it("reports expired survey tokens", () => {
+    const survey = signSurveyToken({
+      participationId: "p1",
+      eventId: "e1",
+      email: "sophie@example.com",
+      exp: Math.floor(Date.now() / 1000) - 10,
+    });
+    expect(verifySurveyTokenResult(survey)).toEqual({
+      ok: false,
+      reason: "expired",
+    });
   });
 
   it("rejects tampered token", () => {

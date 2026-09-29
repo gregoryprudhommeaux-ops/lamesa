@@ -18,13 +18,22 @@ type Params = { params: Promise<{ id: string }> };
 const schema = z.object({
   /** Limit to these emails. Empty / omitted = all eligible guests not yet surveyed. */
   emails: z.array(z.string().email()).max(500).optional(),
+  /**
+   * When true (or when `emails` is set), allow re-sending to guests who already
+   * received the survey but have not submitted yet — for broken/expired links.
+   */
+  resend: z.boolean().optional(),
   dryRun: z.boolean().optional(),
 });
 
-function isEligible(p: AdminEventParticipation): boolean {
+function isEligible(
+  p: AdminEventParticipation,
+  opts: { allowResend: boolean },
+): boolean {
   if (isOrganizerParticipation(p)) return false;
   if (!isPaidGuestStatus(p.status)) return false;
-  if (p.satisfactionSurveySentAt) return false;
+  if (p.satisfactionSurvey?.submittedAt) return false;
+  if (p.satisfactionSurveySentAt && !opts.allowResend) return false;
   return String(p.email ?? "").includes("@");
 }
 
@@ -66,10 +75,11 @@ export async function POST(request: Request, { params }: Params) {
   const emailFilter = parsed.data.emails?.length
     ? new Set(parsed.data.emails.map((e) => normalizeEmail(e)))
     : null;
+  const allowResend = Boolean(parsed.data.resend) || Boolean(emailFilter);
 
   const targets = partsSnap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) }))
-    .filter((p) => isEligible(p))
+    .filter((p) => isEligible(p, { allowResend }))
     .filter((p) => (emailFilter ? emailFilter.has(normalizeEmail(p.email)) : true));
 
   if (targets.length === 0) {
@@ -77,7 +87,9 @@ export async function POST(request: Request, { params }: Params) {
       {
         ok: false,
         error: "no_recipients",
-        detail: "Personne éligible (place payée, questionnaire pas encore envoyé).",
+        detail: allowResend
+          ? "Personne éligible (place payée, pas encore de réponse)."
+          : "Personne éligible (place payée, questionnaire pas encore envoyé).",
       },
       { status: 400 },
     );
