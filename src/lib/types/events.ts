@@ -278,6 +278,13 @@ export interface AdminEventParticipation {
   /** Thank-you + satisfaction survey email sent (~12h after start) */
   satisfactionSurveySentAt?: string;
   satisfactionSurvey?: SatisfactionSurveyAnswers;
+  /**
+   * Opaque durable survey link token (stored + emailed).
+   * Survives RSVP_TOKEN_SECRET rotation; short enough for email clients.
+   */
+  satisfactionSurveyAccessToken?: string;
+  /** SHA-256 hex of the access token (optional secondary lookup). */
+  satisfactionSurveyAccessTokenHash?: string;
 }
 
 
