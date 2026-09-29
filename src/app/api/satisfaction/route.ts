@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifySurveyToken } from "@/lib/email/rsvp-token";
+import { verifySurveyTokenResult } from "@/lib/email/rsvp-token";
 import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type {
@@ -38,10 +38,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
   }
 
-  const payload = verifySurveyToken(parsed.data.token);
-  if (!payload) {
-    return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
+  const verified = verifySurveyTokenResult(parsed.data.token);
+  if (!verified.ok) {
+    const error =
+      verified.reason === "expired"
+        ? "expired_token"
+        : verified.reason === "wrong_purpose"
+          ? "wrong_token"
+          : "invalid_token";
+    console.warn("[satisfaction POST] token rejected", { reason: verified.reason });
+    return NextResponse.json({ ok: false, error }, { status: 401 });
   }
+  const payload = verified.payload;
 
   const db = getAdminFirestore();
   const ref = db.collection(COLLECTIONS.participations).doc(payload.participationId);
@@ -55,6 +63,9 @@ export async function POST(request: Request) {
     ...(snap.data() as Omit<AdminEventParticipation, "id">),
   };
   if (participation.eventId !== payload.eventId) {
+    console.warn("[satisfaction POST] event mismatch", {
+      participationId: payload.participationId,
+    });
     return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
   }
 

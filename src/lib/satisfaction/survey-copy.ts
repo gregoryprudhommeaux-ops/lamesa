@@ -23,6 +23,11 @@ export type SatisfactionSurveyCopy = {
   thanksTitle: string;
   thanksBody: string;
   invalidLink: string;
+  /** Shown when POST /api/satisfaction rejects the token. */
+  submitInvalidToken: string;
+  submitExpiredToken: string;
+  submitNotEligible: string;
+  submitFailed: string;
   previewBanner: string;
   previewDoneTitle: string;
   previewDoneBody: string;
@@ -52,6 +57,13 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     thanksBody: "Gracias. Lo leemos antes de armar la siguiente mesa.",
     invalidLink:
       "Enlace no válido. Abre el cuestionario desde el correo de agradecimiento.",
+    submitInvalidToken:
+      "Este enlace ya no funciona. Pídele al equipo LA MESA que te reenvíe el cuestionario.",
+    submitExpiredToken:
+      "Este enlace ha caducado. Pídele al equipo LA MESA que te reenvíe el cuestionario.",
+    submitNotEligible:
+      "Este cuestionario no está disponible para tu plaza. Escribe al equipo LA MESA.",
+    submitFailed: "No se pudo enviar. Inténtalo de nuevo en un momento.",
     previewBanner: "Vista previa admin — puedes hacer clic; no se guarda nada.",
     previewDoneTitle: "Vista previa OK",
     previewDoneBody:
@@ -81,6 +93,13 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     thanksBody: "Merci. On lit ça avant d’armer la prochaine table.",
     invalidLink:
       "Lien invalide. Ouvre le questionnaire depuis l’email de remerciement.",
+    submitInvalidToken:
+      "Ce lien ne fonctionne plus. Demande à l’équipe LA MESA de te renvoyer le questionnaire.",
+    submitExpiredToken:
+      "Ce lien a expiré. Demande à l’équipe LA MESA de te renvoyer le questionnaire.",
+    submitNotEligible:
+      "Ce questionnaire n’est pas disponible pour ta place. Écris à l’équipe LA MESA.",
+    submitFailed: "Envoi impossible. Réessaie dans un instant.",
     previewBanner: "Aperçu admin — tu peux tout cliquer ; rien n’est enregistré.",
     previewDoneTitle: "Aperçu OK",
     previewDoneBody:
@@ -110,6 +129,13 @@ export const SURVEY_COPY: Record<SurveyLocale, SatisfactionSurveyCopy> = {
     thanksBody: "Thanks. We read this before we build the next table.",
     invalidLink:
       "Invalid link. Open the questionnaire from the thank-you email.",
+    submitInvalidToken:
+      "This link no longer works. Ask the LA MESA team to resend the survey.",
+    submitExpiredToken:
+      "This link has expired. Ask the LA MESA team to resend the survey.",
+    submitNotEligible:
+      "This survey isn’t available for your seat. Contact the LA MESA team.",
+    submitFailed: "Couldn’t submit. Try again in a moment.",
     previewBanner: "Admin preview — click through freely; nothing is saved.",
     previewDoneTitle: "Preview OK",
     previewDoneBody:
