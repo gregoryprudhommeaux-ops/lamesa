@@ -24,6 +24,8 @@ function isNextResponse(value: unknown): value is NextResponse {
 
 const patchSchema = z.object({
   dinnerSubjectIds: z.array(z.string().trim().min(1).max(80)).max(12),
+  /** Free-text community wish — same field as inscription `dinnerThemesInterest`. */
+  dinnerThemesInterest: z.string().trim().max(2000).optional(),
 });
 
 /**
@@ -82,16 +84,25 @@ export async function PATCH(request: Request) {
     profile.dinnerSubjectInterests,
     declared,
   );
+  const dinnerThemesInterest =
+    parsed.data.dinnerThemesInterest !== undefined
+      ? parsed.data.dinnerThemesInterest.trim().slice(0, 2000)
+      : undefined;
 
   const db = getAdminFirestore();
   await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
     {
       dinnerSubjectInterests,
+      ...(dinnerThemesInterest !== undefined ? { dinnerThemesInterest } : {}),
       updatedAt: now,
       uid: user.uid,
     },
     { merge: true },
   );
 
-  return NextResponse.json({ ok: true, dinnerSubjectInterests });
+  return NextResponse.json({
+    ok: true,
+    dinnerSubjectInterests,
+    ...(dinnerThemesInterest !== undefined ? { dinnerThemesInterest } : {}),
+  });
 }

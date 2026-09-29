@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregateSubjectDemand,
+  listCommunityThemeSuggestions,
   listPendingSubjectValidations,
 } from "@/lib/dinner-subjects/demand";
 import type { DinnerSubject, WaitlistRegistration } from "@/lib/types/events";
@@ -122,5 +123,42 @@ describe("dinner-subjects/demand", () => {
     expect(pending[0]?.memberId).toBe("a");
     expect(pending[0]?.subjectId).toBe("s-pe");
     expect(pending[1]?.memberId).toBe("b");
+  });
+
+  it("lists community theme suggestions newest first, skips empty", () => {
+    const rows = listCommunityThemeSuggestions(
+      [
+        {
+          id: "old",
+          fullName: "Ana",
+          email: "ana@example.com",
+          company: "Co A",
+          dinnerThemesInterest: "  Succession familiale  ",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+        },
+        {
+          id: "empty",
+          fullName: "Bob",
+          email: "bob@example.com",
+          company: "",
+          dinnerThemesInterest: "   ",
+          updatedAt: "2026-03-01T00:00:00.000Z",
+        },
+        {
+          id: "new",
+          fullName: "Carla",
+          email: "carla@example.com",
+          company: "Co C",
+          dinnerThemesInterest: "Scale SaaS LatAm",
+          updatedAt: "2026-02-15T00:00:00.000Z",
+        },
+      ],
+      40,
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.memberId).toBe("new");
+    expect(rows[0]?.text).toBe("Scale SaaS LatAm");
+    expect(rows[1]?.memberId).toBe("old");
+    expect(rows[1]?.text).toBe("Succession familiale");
   });
 });

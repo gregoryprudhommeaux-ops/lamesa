@@ -3,6 +3,7 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
 import type {
+  CommunityThemeSuggestion,
   PendingSubjectValidation,
   SubjectDemandRow,
 } from "@/lib/dinner-subjects/demand";
@@ -48,6 +49,9 @@ export function AdminDinnerSubjectsPanel() {
   const [subjects, setSubjects] = useState<DinnerSubject[]>([]);
   const [demand, setDemand] = useState<SubjectDemandRow[]>([]);
   const [pending, setPending] = useState<PendingSubjectValidation[]>([]);
+  const [communitySuggestions, setCommunitySuggestions] = useState<
+    CommunityThemeSuggestion[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -85,6 +89,7 @@ export function AdminDinnerSubjectsPanel() {
         ok?: boolean;
         demand?: SubjectDemandRow[];
         pendingValidations?: PendingSubjectValidation[];
+        communitySuggestions?: CommunityThemeSuggestion[];
         error?: string;
       };
       if (!subjectsRes.ok || !subjectsJson.ok) {
@@ -96,6 +101,7 @@ export function AdminDinnerSubjectsPanel() {
       setSubjects(subjectsJson.subjects ?? []);
       setDemand(demandJson.demand ?? []);
       setPending(demandJson.pendingValidations ?? []);
+      setCommunitySuggestions(demandJson.communitySuggestions ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "fetch_failed");
     } finally {
@@ -329,6 +335,57 @@ export function AdminDinnerSubjectsPanel() {
                 >
                   Ouvrir fiche
                 </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {!loading && communitySuggestions.length > 0 ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-900">
+            Suggestions de la communauté ({communitySuggestions.length})
+          </p>
+          <p className="mb-2 text-xs text-ns-secondary">
+            Texte libre depuis /themes ou l’inscription — préremplir « Nouveau sujet » pour en faire
+            une idée.
+          </p>
+          <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+            {communitySuggestions.map((row) => (
+              <li
+                key={row.memberId}
+                className="flex flex-wrap items-start justify-between gap-2 border-b border-emerald-100/80 pb-2 last:border-0 last:pb-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="whitespace-pre-wrap font-medium text-ns-hero">{row.text}</p>
+                  <p className="mt-0.5 text-xs text-ns-secondary">
+                    {row.fullName}
+                    {row.company ? ` · ${row.company}` : ""}
+                    {row.updatedAt
+                      ? ` · ${new Date(row.updatedAt).toLocaleDateString("fr-FR")}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    title="Préremplir le formulaire Nouveau sujet"
+                    onClick={() => {
+                      const line = row.text.trim().replace(/\s+/g, " ");
+                      setTitle(line.slice(0, 120));
+                      setSummary(line.slice(0, 400));
+                    }}
+                  >
+                    → Idée
+                  </button>
+                  <Link
+                    href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.memberId)}`}
+                    className={BTN_SECONDARY}
+                  >
+                    Fiche
+                  </Link>
+                </div>
               </li>
             ))}
           </ul>

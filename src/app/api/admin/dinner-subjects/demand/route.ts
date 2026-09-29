@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import {
   aggregateSubjectDemand,
+  listCommunityThemeSuggestions,
   listPendingSubjectValidations,
 } from "@/lib/dinner-subjects/demand";
 import {
@@ -25,6 +26,7 @@ export async function GET(request: Request) {
       ok: true,
       demand: [],
       pendingValidations: [],
+      communitySuggestions: [],
       dev: true,
     });
   }
@@ -38,7 +40,13 @@ export async function GET(request: Request) {
     const activeMembers = core.waitlist.filter((m) => !isSoftDeleted(m));
     const demand = aggregateSubjectDemand(subjects, activeMembers);
     const pendingValidations = listPendingSubjectValidations(activeMembers);
-    return NextResponse.json({ ok: true, demand, pendingValidations });
+    const communitySuggestions = listCommunityThemeSuggestions(activeMembers);
+    return NextResponse.json({
+      ok: true,
+      demand,
+      pendingValidations,
+      communitySuggestions,
+    });
   } catch (error) {
     console.error("[admin/dinner-subjects/demand GET]", error);
     return NextResponse.json({ ok: false, error: "fetch_failed" }, { status: 502 });
