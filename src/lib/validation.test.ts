@@ -23,12 +23,12 @@ describe("registrationSchema canBring/isSeeking boundaries", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts registration without LinkedIn", () => {
+  it("rejects registration without LinkedIn", () => {
     const result = registrationSchema.safeParse({ ...baseInput, linkedinUrl: "" });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
-  it("rejects an invalid LinkedIn when provided", () => {
+  it("rejects an invalid LinkedIn URL", () => {
     const result = registrationSchema.safeParse({
       ...baseInput,
       linkedinUrl: "https://example.com/not-linkedin",

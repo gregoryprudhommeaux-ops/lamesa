@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CITY_HUBS } from "./constants/city-hubs";
 import { isOtherSector } from "./constants/form-options";
-import { isValidLinkedInUrl } from "./linkedin";
+import { isValidLinkedInUrl, normalizeLinkedInUrl } from "./linkedin";
 
 export const registrationSchema = z
   .object({
@@ -9,9 +9,9 @@ export const registrationSchema = z
     linkedinUrl: z
       .string()
       .trim()
-      .optional()
-      .transform((v) => v ?? "")
-      .refine((v) => v === "" || isValidLinkedInUrl(v), {
+      .min(1)
+      .transform((v) => normalizeLinkedInUrl(v) || v)
+      .refine((v) => isValidLinkedInUrl(v), {
         message: "invalid_linkedin",
       }),
     email: z.string().trim().email().max(254),
