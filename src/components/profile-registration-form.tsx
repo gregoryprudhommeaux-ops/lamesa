@@ -49,7 +49,7 @@ export function ProfileRegistrationForm({
     const linkedinUrl = linkedinRaw
       ? normalizeLinkedInUrl(linkedinRaw) || linkedinRaw
       : "";
-    if (linkedinUrl && !isValidLinkedInUrl(linkedinUrl)) {
+    if (!linkedinUrl || !isValidLinkedInUrl(linkedinUrl)) {
       setState("error");
       setErrorDetail("invalid_linkedin");
       return;
@@ -153,6 +153,7 @@ export function ProfileRegistrationForm({
           <input
             id="linkedinUrl"
             name="linkedinUrl"
+            required
             placeholder={t("fields.linkedinPlaceholder")}
             className={INPUT_CLASS}
             disabled={state === "sending"}

@@ -207,7 +207,7 @@ export function MemberProfilePanel({
 
     const normalizedLinkedin = normalizeLinkedinField();
     const linkedinTrimmed = (normalizedLinkedin || linkedinUrl).trim();
-    if (linkedinTrimmed && !isValidLinkedInUrl(linkedinTrimmed)) {
+    if (!linkedinTrimmed || !isValidLinkedInUrl(linkedinTrimmed)) {
       showSaveError(`${t("saveFailedPrefix")} ${t("errors.invalid_linkedin")}`, "linkedinUrl");
       setSaving(false);
       return;
@@ -383,6 +383,7 @@ export function MemberProfilePanel({
             id="member-linkedin"
             className={fieldInputClass(errorField === "linkedinUrl")}
             value={linkedinUrl}
+            required
             onChange={(e) => {
               setLinkedinUrl(e.target.value);
               if (errorField === "linkedinUrl") {
@@ -392,7 +393,7 @@ export function MemberProfilePanel({
             }}
             onBlur={() => {
               const normalized = normalizeLinkedinField();
-              if (normalized || !linkedinUrl.trim()) {
+              if (normalized) {
                 if (errorField === "linkedinUrl") {
                   setErrorField(null);
                   setError(null);
