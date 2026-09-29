@@ -32,6 +32,16 @@ export type PendingSubjectValidation = {
   declaredAt: string;
 };
 
+/** Free-text theme wish from /themes or inscription (`dinnerThemesInterest`). */
+export type CommunityThemeSuggestion = {
+  memberId: string;
+  fullName: string;
+  email: string;
+  company: string;
+  text: string;
+  updatedAt: string;
+};
+
 function emptyCounts(): SubjectDemandCounts {
   return { declared: 0, pending: 0, validated: 0, rejected: 0 };
 }
@@ -122,4 +132,35 @@ export function listPendingSubjectValidations(
     }
   }
   return rows.sort((a, b) => a.declaredAt.localeCompare(b.declaredAt));
+}
+
+/**
+ * Free-text “what themes would you like to see?” from members.
+ * Newest first — soft-deleted members should be filtered by the caller.
+ */
+export function listCommunityThemeSuggestions(
+  members: Array<
+    Pick<
+      WaitlistRegistration,
+      "id" | "fullName" | "email" | "company" | "dinnerThemesInterest" | "updatedAt"
+    >
+  >,
+  limit = 40,
+): CommunityThemeSuggestion[] {
+  const rows: CommunityThemeSuggestion[] = [];
+  for (const member of members) {
+    const text = member.dinnerThemesInterest?.trim() ?? "";
+    if (!text) continue;
+    rows.push({
+      memberId: member.id,
+      fullName: member.fullName?.trim() || "—",
+      email: member.email,
+      company: member.company?.trim() || "",
+      text: text.slice(0, 2000),
+      updatedAt: member.updatedAt || "",
+    });
+  }
+  return rows
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .slice(0, Math.max(1, Math.min(limit, 100)));
 }

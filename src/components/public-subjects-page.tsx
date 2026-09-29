@@ -11,7 +11,13 @@ import {
   listMissingProfileFieldsForLocale,
 } from "@/lib/member/profile-completion";
 import type { DinnerSubjectInterest, WaitlistRegistration } from "@/lib/types/events";
-import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import {
+  BTN_PRIMARY,
+  BTN_SECONDARY,
+  ERROR_TEXT,
+  INPUT_CLASS,
+  LABEL_CLASS,
+} from "@/lib/ui/nextstep";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
@@ -24,6 +30,8 @@ type Gate =
   | "incomplete"
   | "ready";
 
+const SUGGESTION_MAX = 2000;
+
 export function PublicSubjectsPage() {
   const t = useTranslations("subjectsPage");
   const tReg = useTranslations("registration");
@@ -34,6 +42,7 @@ export function PublicSubjectsPage() {
   const [gate, setGate] = useState<Gate>("loading");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [suggestion, setSuggestion] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +83,7 @@ export function PublicSubjectsPage() {
           (row: DinnerSubjectInterest) => row.subjectId,
         ),
       );
+      setSuggestion(json.profile.dinnerThemesInterest?.trim() ?? "");
       setGate(isProfileIncomplete(json.profile) ? "incomplete" : "ready");
     } catch {
       setError(t("errors.loadFailed"));
@@ -88,18 +98,24 @@ export function PublicSubjectsPage() {
 
   async function save() {
     if (gate !== "ready") return;
+    const trimmedSuggestion = suggestion.trim();
+    if (selectedIds.length === 0 && !trimmedSuggestion) return;
     setSaving(true);
     setSaved(false);
     setError(null);
     try {
       const res = await authFetch("/api/me/dinner-subjects", {
         method: "PATCH",
-        body: JSON.stringify({ dinnerSubjectIds: selectedIds }),
+        body: JSON.stringify({
+          dinnerSubjectIds: selectedIds,
+          dinnerThemesInterest: trimmedSuggestion,
+        }),
       });
       const json = (await res.json()) as {
         ok?: boolean;
         error?: string;
         dinnerSubjectInterests?: DinnerSubjectInterest[];
+        dinnerThemesInterest?: string;
       };
       if (!res.ok || !json.ok) {
         if (json.error === "profile_incomplete") {
@@ -110,8 +126,14 @@ export function PublicSubjectsPage() {
         }
         return;
       }
-      if (json.dinnerSubjectInterests && profile) {
-        setProfile({ ...profile, dinnerSubjectInterests: json.dinnerSubjectInterests });
+      if (profile) {
+        setProfile({
+          ...profile,
+          dinnerSubjectInterests:
+            json.dinnerSubjectInterests ?? profile.dinnerSubjectInterests,
+          dinnerThemesInterest:
+            json.dinnerThemesInterest ?? trimmedSuggestion,
+        });
       }
       setSaved(true);
     } catch {
@@ -125,6 +147,8 @@ export function PublicSubjectsPage() {
     profile && gate === "incomplete"
       ? listMissingProfileFieldsForLocale(profile, locale)
       : [];
+  const canSave =
+    gate === "ready" && (selectedIds.length > 0 || suggestion.trim().length > 0);
 
   return (
     <div className="space-y-6">
@@ -148,6 +172,30 @@ export function PublicSubjectsPage() {
         hint={t("pickerHint")}
         emptyLabel={tReg("fields.dinnerSubjectsEmpty")}
       />
+
+      <div className="space-y-2">
+        <label className={LABEL_CLASS} htmlFor="themes-community-suggestion">
+          {t("suggestionLabel")}
+        </label>
+        <p className="text-xs text-ns-secondary">{t("suggestionHint")}</p>
+        <textarea
+          id="themes-community-suggestion"
+          className={`${INPUT_CLASS} min-h-[88px] resize-y`}
+          value={suggestion}
+          maxLength={SUGGESTION_MAX}
+          disabled={gate !== "ready" || saving}
+          placeholder={t("suggestionPlaceholder")}
+          onChange={(e) => {
+            if (gate !== "ready") return;
+            setSuggestion(e.target.value.slice(0, SUGGESTION_MAX));
+            setSaved(false);
+          }}
+          rows={3}
+        />
+        <p className="text-xs text-ns-secondary">
+          {suggestion.length}/{SUGGESTION_MAX}
+        </p>
+      </div>
 
       {gate === "loading" || authLoading ? (
         <p className="text-center text-sm text-ns-secondary">{t("loading")}</p>
@@ -199,13 +247,13 @@ export function PublicSubjectsPage() {
           <button
             type="button"
             className={BTN_PRIMARY}
-            disabled={saving || selectedIds.length === 0}
+            disabled={saving || !canSave}
             onClick={() => void save()}
           >
             {saving ? t("saving") : t("ctaSave")}
           </button>
-          {selectedIds.length === 0 ? (
-            <p className="text-xs text-ns-secondary">{t("selectAtLeastOne")}</p>
+          {!canSave ? (
+            <p className="text-xs text-ns-secondary">{t("selectOrSuggest")}</p>
           ) : null}
           {saved ? <p className="text-sm font-semibold text-emerald-700">{t("saved")}</p> : null}
           <p className="max-w-md text-center text-xs text-ns-secondary">{t("validationNote")}</p>
