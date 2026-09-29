@@ -13,14 +13,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "subjectsPage" });
   const path = `/${locale}/themes`;
+  const title = t("metaTitle");
+  const description = t("metaDescription");
+  /** Explicit og:image — child openGraph without images drops the layout logo for LinkedIn. */
+  const ogImage = {
+    url: "/og-image.png",
+    width: 1200,
+    height: 630,
+    alt: "LA MESA",
+    type: "image/png" as const,
+  };
   return {
-    title: t("metaTitle"),
-    description: t("metaDescription"),
+    title,
+    description,
     openGraph: {
-      title: t("metaTitle"),
-      description: t("metaDescription"),
-      url: `${PRODUCTION_SITE_URL}${path}`,
       type: "website",
+      locale: locale === "es" ? "es_MX" : locale === "fr" ? "fr_FR" : "en_US",
+      siteName: "LA MESA",
+      title,
+      description,
+      url: `${PRODUCTION_SITE_URL}${path}`,
+      images: [ogImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage.url],
     },
     alternates: {
       canonical: `${PRODUCTION_SITE_URL}${path}`,
