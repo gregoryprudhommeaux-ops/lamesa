@@ -330,12 +330,3 @@ export function isDatabasePersoConfigured(): boolean {
     process.env.DATABASE_PERSO_API_TOKEN?.trim()
   );
 }
-
-/** Prefer production alias without Vercel SSO (team *.vercel.app URLs often 401). */
-export function getDatabasePersoBaseUrl(): string | null {
-  try {
-    return getConfig().baseUrl;
-  } catch {
-    return null;
-  }
-}
