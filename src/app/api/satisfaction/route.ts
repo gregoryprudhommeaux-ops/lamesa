@@ -1,11 +1,8 @@
 import { NextResponse } from "next/server";
-import { verifySurveyTokenResult } from "@/lib/email/rsvp-token";
 import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import type {
-  AdminEventParticipation,
-  SatisfactionSurveyAnswers,
-} from "@/lib/types/events";
+import { resolveSurveyAccess } from "@/lib/satisfaction/survey-access-token";
+import type { SatisfactionSurveyAnswers } from "@/lib/types/events";
 import { z } from "zod";
 
 const score = z.number().int().min(0).max(5);
@@ -38,37 +35,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
   }
 
-  const verified = verifySurveyTokenResult(parsed.data.token);
-  if (!verified.ok) {
-    const error =
-      verified.reason === "expired"
-        ? "expired_token"
-        : verified.reason === "wrong_purpose"
-          ? "wrong_token"
-          : "invalid_token";
-    console.warn("[satisfaction POST] token rejected", { reason: verified.reason });
-    return NextResponse.json({ ok: false, error }, { status: 401 });
-  }
-  const payload = verified.payload;
-
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.participations).doc(payload.participationId);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  const resolved = await resolveSurveyAccess(parsed.data.token);
+  if (!resolved.ok) {
+    console.warn("[satisfaction POST] token rejected", { error: resolved.error });
+    return NextResponse.json({ ok: false, error: resolved.error }, { status: 401 });
   }
 
-  const participation = {
-    id: snap.id,
-    ...(snap.data() as Omit<AdminEventParticipation, "id">),
-  };
-  if (participation.eventId !== payload.eventId) {
-    console.warn("[satisfaction POST] event mismatch", {
-      participationId: payload.participationId,
-    });
-    return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
-  }
-
+  const { participation, via } = resolved;
   if (!isPaidGuestStatus(participation.status)) {
     return NextResponse.json({ ok: false, error: "not_eligible" }, { status: 403 });
   }
@@ -90,7 +63,11 @@ export async function POST(request: Request) {
     submittedAt: now,
   };
 
-  await ref.set({ satisfactionSurvey: survey, updatedAt: now }, { merge: true });
+  await getAdminFirestore()
+    .collection(COLLECTIONS.participations)
+    .doc(participation.id)
+    .set({ satisfactionSurvey: survey, updatedAt: now }, { merge: true });
 
+  console.info("[satisfaction POST] accepted", { via, participationId: participation.id });
   return NextResponse.json({ ok: true });
 }

@@ -73,17 +73,24 @@ export function resolveMemberNextActions(input: {
 
   for (const p of surveyCandidates) {
     const ev = input.eventsById.get(p.eventId)!;
+    const base = input.siteBaseUrl.replace(/\/$/, "");
     let surveyUrl = `/${input.locale}/satisfaction`;
-    try {
-      const token = signSurveyToken({
-        participationId: p.id,
-        eventId: p.eventId,
-        email: p.email || email,
-      });
-      surveyUrl = `${input.siteBaseUrl.replace(/\/$/, "")}/${input.locale}/satisfaction?token=${encodeURIComponent(token)}`;
-    } catch {
-      // Missing RSVP_TOKEN_SECRET in prod — still surface the action without link token.
-      surveyUrl = `/${input.locale}/satisfaction`;
+    const opaque = p.satisfactionSurveyAccessToken?.trim();
+    if (opaque) {
+      // Durable token issued at send time — preferred over HMAC.
+      surveyUrl = `${base}/${input.locale}/satisfaction?token=${encodeURIComponent(opaque)}`;
+    } else {
+      try {
+        const token = signSurveyToken({
+          participationId: p.id,
+          eventId: p.eventId,
+          email: p.email || email,
+        });
+        surveyUrl = `${base}/${input.locale}/satisfaction?token=${encodeURIComponent(token)}`;
+      } catch {
+        // Missing RSVP_TOKEN_SECRET in prod — still surface the action without link token.
+        surveyUrl = `/${input.locale}/satisfaction`;
+      }
     }
     actions.push({
       id: `survey:${p.id}`,

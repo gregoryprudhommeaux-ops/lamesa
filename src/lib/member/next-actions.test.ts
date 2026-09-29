@@ -57,6 +57,7 @@ describe("resolveMemberNextActions", () => {
           eventId: "past",
           status: "confirmed",
           satisfactionSurveySentAt: "2026-09-26T08:00:00.000Z",
+          satisfactionSurveyAccessToken: "opaqueSurveyTokenForMemberLink0123456789ab",
         }),
         part({
           id: "p2",
