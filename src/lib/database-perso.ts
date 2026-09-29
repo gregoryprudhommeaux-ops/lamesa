@@ -14,8 +14,8 @@ export class DatabasePersoError extends Error {
 }
 
 function getConfig() {
-  const baseUrl = process.env.DATABASE_PERSO_BASE_URL?.replace(/\/$/, "");
-  const token = process.env.DATABASE_PERSO_API_TOKEN;
+  const baseUrl = process.env.DATABASE_PERSO_BASE_URL?.trim().replace(/\/$/, "");
+  const token = process.env.DATABASE_PERSO_API_TOKEN?.trim();
   if (!baseUrl || !token) {
     throw new DatabasePersoError(
       "DATABASE_PERSO_BASE_URL and DATABASE_PERSO_API_TOKEN are required.",
@@ -53,7 +53,11 @@ async function fetchDatabasePerso<T>(
     const body = await res.text().catch(() => "");
 
     if (res.status === 401) {
-      throw new DatabasePersoError("Unauthorized", "unauthorized", 401);
+      throw new DatabasePersoError(
+        "Perso a rejeté le token (401). Aligner DATABASE_PERSO_API_TOKEN LA MESA ↔ database-perso puis redeploy.",
+        "unauthorized",
+        401,
+      );
     }
     if (!res.ok) {
       throw new DatabasePersoError(
@@ -325,4 +329,13 @@ export function isDatabasePersoConfigured(): boolean {
     process.env.DATABASE_PERSO_BASE_URL?.trim() &&
     process.env.DATABASE_PERSO_API_TOKEN?.trim()
   );
+}
+
+/** Prefer production alias without Vercel SSO (team *.vercel.app URLs often 401). */
+export function getDatabasePersoBaseUrl(): string | null {
+  try {
+    return getConfig().baseUrl;
+  } catch {
+    return null;
+  }
 }
