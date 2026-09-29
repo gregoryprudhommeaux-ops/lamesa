@@ -32,9 +32,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = t("title");
   const description = t("description");
   const ogImage = {
-    url: "/og-image.png",
-    width: 1200,
-    height: 630,
+    url: "/og-share.png",
+    width: 2400,
+    height: 1260,
     alt: "LA MESA",
     type: "image/png",
   };
