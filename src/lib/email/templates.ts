@@ -97,6 +97,8 @@ export type TemplateVars = {
   wherePublic?: string;
   /** Express signup URL for non-members */
   registerUrl?: string;
+  /** Public /themes catalog (member interest picks; needs 100% profile) */
+  themesUrl?: string;
 };
 
 export function applyTemplateVars(text: string, vars: TemplateVars): string {
@@ -137,7 +139,8 @@ export function applyTemplateVars(text: string, vars: TemplateVars): string {
     .replaceAll("{{paymentDeadlineBlock}}", vars.paymentDeadlineBlock ?? "")
     .replaceAll("{{seatScarcityBlock}}", vars.seatScarcityBlock ?? "")
     .replaceAll("{{wherePublic}}", vars.wherePublic ?? vars.where ?? "")
-    .replaceAll("{{registerUrl}}", vars.registerUrl ?? "");
+    .replaceAll("{{registerUrl}}", vars.registerUrl ?? "")
+    .replaceAll("{{themesUrl}}", vars.themesUrl ?? "");
 }
 
 /** Language used when sending email / WhatsApp for an event. */
