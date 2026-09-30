@@ -699,7 +699,7 @@ export function AdminEmailTemplatesPanel() {
                 </>
               ) : null}
               {activeKey === "profile_incomplete" ? (
-                <>, {"{{missingFields}}"}</>
+                <>, {"{{missingFields}}"}, {"{{themesUrl}}"}</>
               ) : null}
               …
             </p>

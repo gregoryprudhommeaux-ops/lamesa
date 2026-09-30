@@ -16,7 +16,7 @@ import {
   isProfileIncomplete,
   listMissingProfileFieldsEs,
 } from "@/lib/member/profile-completion";
-import { getSiteUrl } from "@/lib/site-url";
+import { emailPublicBaseUrl } from "@/lib/site-url";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import { FieldValue } from "firebase-admin/firestore";
 
@@ -31,6 +31,7 @@ export type ProfileIncompletePreview = {
   subject: string;
   body: string;
   loginUrl: string;
+  themesUrl: string;
   missingFields: string;
   month: string;
 };
@@ -55,14 +56,25 @@ type ProfileIncompleteMember = Pick<
   | "profileIncompleteNudgeMonth"
 >;
 
-function loginUrlCtaHtml(loginUrl: string, bodyText: string): string {
-  const TOKEN = "__LM_LOGIN__";
+function profileIncompleteCtaHtml(
+  loginUrl: string,
+  themesUrl: string,
+  bodyText: string,
+): string {
+  const LOGIN_TOKEN = "__LM_LOGIN__";
+  const THEMES_TOKEN = "__LM_THEMES__";
   let prepared = bodyText;
-  if (loginUrl) prepared = prepared.split(loginUrl).join(TOKEN);
+  if (loginUrl) prepared = prepared.split(loginUrl).join(LOGIN_TOKEN);
+  if (themesUrl) prepared = prepared.split(themesUrl).join(THEMES_TOKEN);
   let html = escapeEmailHtml(prepared).replace(/\n/g, "<br/>");
   if (loginUrl) {
-    html = html.split(TOKEN).join(
+    html = html.split(LOGIN_TOKEN).join(
       `<a href="${escapeEmailHtml(loginUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 18px;border-radius:999px;margin:8px 0;">Completar mi perfil</a>`,
+    );
+  }
+  if (themesUrl) {
+    html = html.split(THEMES_TOKEN).join(
+      `<a href="${escapeEmailHtml(themesUrl)}" style="display:inline-block;background:transparent;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 18px;border-radius:999px;border:2px solid #111;margin:8px 0;">Elegir mis temas</a>`,
     );
   }
   return html;
@@ -116,7 +128,9 @@ export async function buildProfileIncompletePreview(input: {
   }
 
   const locale = "es" as const;
-  const loginUrl = `${getSiteUrl()}/${locale}/connexion`;
+  const base = emailPublicBaseUrl();
+  const loginUrl = `${base}/${locale}/connexion`;
+  const themesUrl = `${base}/${locale}/themes`;
   const missing = listMissingProfileFieldsEs(input.member);
   const missingFields = missing.length > 0 ? missing.join(", ") : "algunos datos";
 
@@ -125,6 +139,7 @@ export async function buildProfileIncompletePreview(input: {
     fullName: input.member.fullName ?? "",
     email,
     loginUrl,
+    themesUrl,
     missingFields,
     eventTitle: "",
     when: "",
@@ -139,6 +154,7 @@ export async function buildProfileIncompletePreview(input: {
       subject: applyTemplateVars(template.subject, vars),
       body: applyTemplateVars(template.body, vars),
       loginUrl,
+      themesUrl,
       missingFields,
       month,
     },
@@ -178,9 +194,12 @@ export async function sendProfileIncompleteEmail(input: {
   let subject: string;
   let bodyText: string;
   let loginUrl: string;
+  let themesUrl: string;
 
   if (hasCustom) {
-    loginUrl = `${getSiteUrl()}/es/connexion`;
+    const base = emailPublicBaseUrl();
+    loginUrl = `${base}/es/connexion`;
+    themesUrl = `${base}/es/themes`;
     subject = customSubject!;
     bodyText = customBody!;
   } else {
@@ -197,11 +216,12 @@ export async function sendProfileIncompleteEmail(input: {
     subject = preview.preview.subject;
     bodyText = preview.preview.body;
     loginUrl = preview.preview.loginUrl;
+    themesUrl = preview.preview.themesUrl;
   }
 
   const html = wrapLaMesaEmailHtml({
     lang: "es",
-    bodyHtml: loginUrlCtaHtml(loginUrl, bodyText),
+    bodyHtml: profileIncompleteCtaHtml(loginUrl, themesUrl, bodyText),
   });
 
   const result = await sendTransactionalEmail({
