@@ -10,6 +10,21 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  async redirects() {
+    // Legacy admin test emails used /survey/demo (never a real page).
+    return [
+      {
+        source: "/:locale(es|fr|en)/survey/demo",
+        destination: "/:locale/satisfaction?preview=1",
+        permanent: false,
+      },
+      {
+        source: "/:locale(es|fr|en)/survey/:slug",
+        destination: "/:locale/satisfaction?preview=1",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -22,6 +37,10 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/og-image.png",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
+      {
+        source: "/og-share.png",
         headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
       },
     ];

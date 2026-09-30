@@ -4,7 +4,9 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendCalendarInviteEmail } from "@/lib/email/send-calendar-invite";
+import { templateLabel } from "@/lib/email/template-defaults";
 import {
   countSeatedParticipations,
   DEFAULT_GUEST_CAPACITY,
@@ -15,7 +17,7 @@ import { listFormalInviteRecipients } from "@/lib/events/formal-invite-recipient
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -146,6 +148,7 @@ export async function POST(request: Request, { params }: Params) {
   let skipped = 0;
   let waitlisted = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const target of targets) {
     if (isOrganizerParticipation({ email: target.email })) {
@@ -167,16 +170,8 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     if (!participation) {
-      const ensured = await ensureWaitlistProfileByEmail({
-        email: target.email,
-        fullName: target.fullName,
-        company: target.company,
-        phone: target.phone,
-        source: "la-mesa-std-invite",
-        locale: event.eventLanguage === "en" || event.eventLanguage === "es"
-          ? event.eventLanguage
-          : "fr",
-      });
+      // Never invent a plateforme inscrit — only link an existing member.
+      const existingMember = await findWaitlistByEmail(target.email);
 
       const status = nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
@@ -185,10 +180,10 @@ export async function POST(request: Request, { params }: Params) {
       const ref = await db.collection(COLLECTIONS.participations).add({
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
-        companyName: target.company || ensured?.company || "",
-        phone: target.phone || ensured?.phone || "",
-        ...(ensured?.id ? { contactId: ensured.id } : {}),
+        fullName: target.fullName || existingMember?.fullName || target.email,
+        companyName: target.company || existingMember?.company || "",
+        phone: target.phone || existingMember?.phone || "",
+        ...(existingMember?.id ? { contactId: existingMember.id } : {}),
         status,
         statusSource: "admin",
         createdAt: now,
@@ -199,10 +194,10 @@ export async function POST(request: Request, { params }: Params) {
         id: ref.id,
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
-        companyName: target.company || ensured?.company || "",
-        phone: target.phone || ensured?.phone || "",
-        ...(ensured?.id ? { contactId: ensured.id } : {}),
+        fullName: target.fullName || existingMember?.fullName || target.email,
+        companyName: target.company || existingMember?.company || "",
+        phone: target.phone || existingMember?.phone || "",
+        ...(existingMember?.id ? { contactId: existingMember.id } : {}),
         status,
         statusSource: "admin",
         createdAt: now,
@@ -244,10 +239,24 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     sent += 1;
+    sentEmails.push(target.email);
     await db.collection(COLLECTIONS.participations).doc(participation.id).set(
       { calendarInviteSentAt: now, updatedAt: now },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "calendar_invite",
+      templateLabel: templateLabel("calendar_invite"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "calendar_invite",
+    });
   }
 
   if (sent > 0) {

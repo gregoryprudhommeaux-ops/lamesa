@@ -2,16 +2,24 @@ import type { AdminEvent, AdminEventParticipation, WaitlistRegistration } from "
 import { generateTableIdeas } from "./ai-provider";
 import { buildEligiblePool } from "./pool";
 import { TableIdeasError } from "./schemas";
-import { fillBalancedSeatsAroundSeed, rankCandidates, selectBalancedTable } from "./score";
+import {
+  fillBalancedSeatsAroundSeed,
+  isThemePrimaryQualified,
+  rankCandidates,
+  selectBalancedTable,
+  type RankedCandidate,
+  type ThemeFitBand,
+} from "./score";
 import type { AiCandidateCard, TableCandidate, TableIdeaMode } from "./types";
 
 export { TableIdeasError } from "./schemas";
 export type { TableIdeasErrorCode } from "./schemas";
+export type { ThemeFitBand } from "./score";
 
 /** AI providers only ever see the top-ranked slice of the eligible pool. */
 export const AI_CANDIDATE_CAP = 80;
-const PRIMARY_SEATS = 15;
-const ALTERNATE_SEATS = 5;
+export const PRIMARY_SEATS = 15;
+export const ALTERNATE_SEATS = 5;
 
 export type TableIdeaSeat = {
   id: string;
@@ -21,6 +29,12 @@ export type TableIdeaSeat = {
   sector: string;
   position: string;
   city: string;
+  /** Past formal invites across dinners (deprioritized in scoring). */
+  invitationCount: number;
+  /** Invited on the immediately previous event — strongest deprioritization. */
+  invitedToPreviousEvent: boolean;
+  /** Lexical theme fit when composing in admin_theme mode. */
+  themeFitBand?: ThemeFitBand;
 };
 
 export type ComposedTableIdea = {
@@ -45,7 +59,7 @@ type RawIdea = {
   alternateMemberIds: string[];
 };
 
-function toSeat(candidate: TableCandidate): TableIdeaSeat {
+function toSeat(candidate: TableCandidate, themeFitBand?: ThemeFitBand): TableIdeaSeat {
   return {
     id: candidate.id,
     fullName: candidate.fullName,
@@ -54,7 +68,21 @@ function toSeat(candidate: TableCandidate): TableIdeaSeat {
     sector: candidate.sector,
     position: candidate.position,
     city: candidate.city,
+    invitationCount: candidate.invitationCount,
+    invitedToPreviousEvent: candidate.invitedToPreviousEvent,
+    ...(themeFitBand ? { themeFitBand } : {}),
   };
+}
+
+function humanizeInternalWarning(warning: string): string {
+  const themeShort = /^theme_pool_short:(\d+):(\d+):(\d+)$/.exec(warning);
+  if (themeShort) {
+    const seated = Number(themeShort[1]);
+    const target = Number(themeShort[2]);
+    const qualified = Number(themeShort[3]);
+    return `${qualified} profil(s) qualifié(s) fort/moyen pour ${target} places (${seated} assis) — recrute des inscrits alignés ou change de thème. Pas de remplissage hors-sujet.`;
+  }
+  return warning;
 }
 
 function mergeWarnings(...groups: string[][]): string[] {
@@ -62,9 +90,10 @@ function mergeWarnings(...groups: string[][]): string[] {
   const merged: string[] = [];
   for (const group of groups) {
     for (const warning of group) {
-      if (seen.has(warning)) continue;
-      seen.add(warning);
-      merged.push(warning);
+      const human = humanizeInternalWarning(warning);
+      if (seen.has(human)) continue;
+      seen.add(human);
+      merged.push(human);
     }
   }
   return merged;
@@ -91,45 +120,74 @@ function buildDeterministicIdea(input: {
   mode: TableIdeaMode;
   theme?: string;
   city: string;
-  ranked: ReturnType<typeof rankCandidates>;
+  ranked: RankedCandidate[];
   aiFallbackReason?: "not_configured" | "provider_failed";
 }): RawIdea {
+  const adminTheme = input.mode === "admin_theme" ? input.theme?.trim() : undefined;
+  const themeStrict = Boolean(adminTheme);
   const selected = selectBalancedTable(input.ranked, {
     primarySize: PRIMARY_SEATS,
     alternateSize: ALTERNATE_SEATS,
+    themeStrict,
   });
   const sectors = topLabels(selected.primary, "sector");
   const positions = topLabels(selected.primary, "position");
-  const theme =
-    input.mode === "admin_theme" && input.theme?.trim()
-      ? input.theme.trim()
+  const themeTitle =
+    adminTheme && adminTheme.length > 0
+      ? adminTheme
       : sectors.length > 0
         ? `Table ${sectors.slice(0, 2).join(" × ")} — ${input.city}`
         : `Table ${input.city}`;
 
+  const themeFitCounts = {
+    strong: selected.primary.filter((c) => c.themeFitBand === "strong").length,
+    medium: selected.primary.filter((c) => c.themeFitBand === "medium").length,
+    weak: selected.primary.filter((c) => c.themeFitBand === "weak").length,
+    none: selected.primary.filter((c) => !c.themeFitBand || c.themeFitBand === "none").length,
+  };
+  const qualifiedInPool = input.ranked.filter((c) =>
+    isThemePrimaryQualified(c.themeFitBand),
+  ).length;
+
   const aiWarning =
     input.aiFallbackReason === "provider_failed"
-      ? "Composition déterministe — l’IA n’a pas répondu (scoring interne utilisé)."
-      : "Composition déterministe — IA non configurée.";
+      ? "Composition déterministe — l’IA n’a pas répondu (scoring thème + historique utilisé)."
+      : "Composition déterministe — IA non configurée (scoring thème + historique).";
+
+  const themeWarnings: string[] = [];
+  if (adminTheme) {
+    if (qualifiedInPool === 0) {
+      themeWarnings.push(
+        "Aucun profil fort/moyen sur ce thème — recrute des inscrits alignés ou change de thématique. Besoin marché non couvert par le pool actuel.",
+      );
+    }
+  }
 
   return {
-    title: theme.slice(0, 120),
-    themeAngle:
-      input.mode === "admin_theme" && input.theme?.trim()
-        ? `Composition autour du thème « ${input.theme.trim()} ».`
-        : `Composition déterministe pour ${input.city}.`,
-    rationale:
-      "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil). Une IA configurée enrichit thèmes et explications.",
+    title: themeTitle.slice(0, 120),
+    themeAngle: adminTheme
+      ? `Composition autour du thème « ${adminTheme} » — uniquement profils fort/moyen (pas de remplissage).`
+      : `Composition déterministe pour ${input.city}.`,
+    rationale: adminTheme
+      ? `Table qualité : sièges réservés aux profils alignés fort/moyen sur « ${adminTheme} » (dinnerThemesInterest, secteur, poste, notes ops). Un effectif court = recruter ou revoir le thème.`
+      : "Table assemblée à partir du scoring interne (priorité aux non-invités récents, diversité secteur/entreprise, complétion de profil).",
     commonalities: [
+      ...(adminTheme
+        ? [
+            `Alignement thème : ${themeFitCounts.strong} fort / ${themeFitCounts.medium} moyen (qualifiés ${selected.primary.length}/${PRIMARY_SEATS})`,
+          ]
+        : []),
       ...(sectors.length ? [`Secteurs représentés : ${sectors.join(", ")}`] : []),
       ...(positions.length ? [`Postes : ${positions.join(", ")}`] : []),
       `Ville : ${input.city}`,
     ],
     complementarities: [
-      "Mix de profils pour éviter une table mono-secteur",
+      adminTheme
+        ? "Qualité d’abord : pas de titulaires hors-thème pour remplir la table"
+        : "Mix de profils pour éviter une table mono-secteur",
       "Priorité aux membres non invités à la table précédente",
     ],
-    warnings: [aiWarning, ...selected.warnings],
+    warnings: mergeWarnings([aiWarning, ...themeWarnings], selected.warnings),
     primaryMemberIds: selected.primary.map((c) => c.id),
     alternateMemberIds: selected.alternates.map((c) => c.id),
   };
@@ -137,8 +195,9 @@ function buildDeterministicIdea(input: {
 
 function reconcileWithPool(
   idea: RawIdea,
-  ranked: ReturnType<typeof rankCandidates>,
+  ranked: RankedCandidate[],
   candidatesById: Map<string, TableCandidate>,
+  themeStrict: boolean,
 ): ComposedTableIdea {
   const balanced = fillBalancedSeatsAroundSeed(
     ranked,
@@ -146,18 +205,22 @@ function reconcileWithPool(
       primaryIds: idea.primaryMemberIds,
       alternateIds: idea.alternateMemberIds,
     },
-    { primarySize: PRIMARY_SEATS, alternateSize: ALTERNATE_SEATS },
+    { primarySize: PRIMARY_SEATS, alternateSize: ALTERNATE_SEATS, themeStrict },
   );
 
+  const bandById = new Map(ranked.map((c) => [c.id, c.themeFitBand]));
+
   const fillWarnings: string[] = [];
-  for (const id of balanced.primary.map((c) => c.id)) {
-    if (!idea.primaryMemberIds.includes(id)) {
-      fillWarnings.push(`filled missing primary seat deterministically: ${id}`);
+  if (!themeStrict) {
+    for (const id of balanced.primary.map((c) => c.id)) {
+      if (!idea.primaryMemberIds.includes(id)) {
+        fillWarnings.push(`filled missing primary seat deterministically: ${id}`);
+      }
     }
-  }
-  for (const id of balanced.alternates.map((c) => c.id)) {
-    if (!idea.alternateMemberIds.includes(id)) {
-      fillWarnings.push(`filled missing alternate seat deterministically: ${id}`);
+    for (const id of balanced.alternates.map((c) => c.id)) {
+      if (!idea.alternateMemberIds.includes(id)) {
+        fillWarnings.push(`filled missing alternate seat deterministically: ${id}`);
+      }
     }
   }
 
@@ -168,8 +231,12 @@ function reconcileWithPool(
     commonalities: idea.commonalities,
     complementarities: idea.complementarities,
     warnings: mergeWarnings(idea.warnings, balanced.warnings, fillWarnings),
-    primary: balanced.primary.map((c) => toSeat(candidatesById.get(c.id)!)),
-    alternates: balanced.alternates.map((c) => toSeat(candidatesById.get(c.id)!)),
+    primary: balanced.primary.map((c) =>
+      toSeat(candidatesById.get(c.id)!, bandById.get(c.id)),
+    ),
+    alternates: balanced.alternates.map((c) =>
+      toSeat(candidatesById.get(c.id)!, bandById.get(c.id)),
+    ),
   };
 }
 
@@ -195,7 +262,9 @@ export async function composeTableIdeas(input: {
     throw new TableIdeasError("pool_too_small");
   }
 
-  const ranked = rankCandidates(pool.candidates);
+  const themeForRanking =
+    input.mode === "admin_theme" && input.theme?.trim() ? input.theme.trim() : undefined;
+  const ranked = rankCandidates(pool.candidates, { theme: themeForRanking });
   const candidatesById = new Map<string, TableCandidate>(ranked.map((c) => [c.id, c]));
   const aiCardsById = new Map(pool.aiCards.map((aiCard) => [aiCard.id, aiCard]));
 
@@ -241,7 +310,9 @@ export async function composeTableIdeas(input: {
     ];
   }
 
-  const ideas = rawIdeas.map((idea) => reconcileWithPool(idea, ranked, candidatesById));
+  const ideas = rawIdeas.map((idea) =>
+    reconcileWithPool(idea, ranked, candidatesById, Boolean(themeForRanking)),
+  );
 
   return { ideas, poolSize: pool.candidates.length };
 }

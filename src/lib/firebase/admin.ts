@@ -1,3 +1,5 @@
+import "server-only";
+
 import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
@@ -27,6 +29,8 @@ export function getAdminFirestore(): Firestore {
         privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
       }),
     });
+  } else {
+    app = getApps()[0]!;
   }
 
   const databaseId =
@@ -34,7 +38,7 @@ export function getAdminFirestore(): Firestore {
     process.env.FIREBASE_FIRESTORE_DATABASE_ID?.trim() ||
     undefined;
 
-  db = databaseId ? getFirestore(app!, databaseId) : getFirestore(app!);
+  db = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
   return db;
 }
 
@@ -45,10 +49,14 @@ export const COLLECTIONS = {
   contactActivities: "la_mesa_contact_activities",
   /** Singleton ops docs (e.g. `last_email_campaign`). */
   ops: "la_mesa_ops",
+  /** Append-only email blast history for dashboard performance. */
+  emailCampaigns: "la_mesa_email_campaigns",
   events: "events",
   participations: "event_participations",
   respondents: "event_respondents",
   emailTemplates: "email_templates",
   tableDrafts: "table_drafts",
   eventDescriptionPresets: "event_description_presets",
+  /** Catalog of dinner subjects (period + city) for member interest + demand signals. */
+  dinnerSubjects: "la_mesa_dinner_subjects",
 } as const;

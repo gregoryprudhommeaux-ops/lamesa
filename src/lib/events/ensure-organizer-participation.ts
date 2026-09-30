@@ -1,10 +1,12 @@
 import { primaryOrganizerEmail } from "@/lib/email/event-mail-addressing";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { COLLECTIONS } from "@/lib/firebase/admin";
+import { isOrganizerParticipation } from "@/lib/events/capacity";
 import type { Firestore } from "firebase-admin/firestore";
 
 /**
  * Ensures the platform organizer is seated on the event (does not use a guest seat).
+ * Status is always **Invité** (`comped`): COST yes, CA no — seat absorbed by event margin.
  * Calendar invite / ICS reminders go to this participation when invitations are launched.
  */
 export async function ensureOrganizerParticipation(
@@ -18,15 +20,31 @@ export async function ensureOrganizerParticipation(
     .where("eventId", "==", eventId)
     .get();
 
-  const hit = existing.docs.find(
-    (d) => normalizeEmail(String(d.data().email ?? "")) === email,
-  );
+  const hits = existing.docs.filter((d) => {
+    const data = d.data();
+    return (
+      normalizeEmail(String(data.email ?? "")) === email ||
+      isOrganizerParticipation({
+        email: String(data.email ?? ""),
+        isOrganizer: data.isOrganizer,
+        fullName: data.fullName != null ? String(data.fullName) : undefined,
+      })
+    );
+  });
 
-  if (hit) {
-    const data = hit.data();
-    if (!data.isOrganizer) {
-      await hit.ref.set({ isOrganizer: true, updatedAt: now }, { merge: true });
-    }
+  if (hits.length > 0) {
+    await Promise.all(
+      hits.map(async (hit) => {
+        const data = hit.data();
+        const patch: Record<string, unknown> = { updatedAt: now };
+        if (!data.isOrganizer) patch.isOrganizer = true;
+        // Organizer is never a paying seat — normalize legacy `confirmed` → Invité.
+        if (String(data.status ?? "") !== "comped") patch.status = "comped";
+        if (Object.keys(patch).length > 1) {
+          await hit.ref.set(patch, { merge: true });
+        }
+      }),
+    );
     return;
   }
 
@@ -35,7 +53,7 @@ export async function ensureOrganizerParticipation(
     email,
     fullName: "Gregory Prudhommeaux",
     companyName: "LA MESA",
-    status: "confirmed",
+    status: "comped",
     statusSource: "admin",
     isOrganizer: true,
     createdAt: now,

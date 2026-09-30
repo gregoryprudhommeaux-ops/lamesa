@@ -13,18 +13,8 @@ import { Eye, EyeOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
+import { safeMemberNextPath } from "@/lib/auth/safe-next-path";
 import { useEffect, useState, type FormEvent } from "react";
-
-/** Relative app path only — blocks open redirects. */
-function safeNextPath(raw: string | null): string | null {
-  if (!raw) return null;
-  const path = raw.trim();
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("://")) return null;
-  if (path.includes("\\")) return null;
-  // Admin lives outside [locale]
-  if (path === "/admin" || path.startsWith("/admin/")) return null;
-  return path;
-}
 
 type AuthMode = "signin" | "signup";
 
@@ -134,10 +124,16 @@ function PasswordField({
 
 export function MemberLoginPanel() {
   const t = useTranslations("account");
-  const { user, loading, isAdmin, configured } = useAuth();
+  const { user, loading, configured } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
+  const nextPath = safeMemberNextPath(searchParams.get("next"));
+  const completeProfileIntent = Boolean(
+    nextPath &&
+      (nextPath === "/compte" ||
+        nextPath.startsWith("/compte?") ||
+        nextPath.startsWith("/compte/")),
+  );
   const [mode, setMode] = useState<AuthMode>(
     searchParams.get("mode") === "signup" ? "signup" : "signin",
   );
@@ -153,17 +149,14 @@ export function MemberLoginPanel() {
 
   useEffect(() => {
     if (loading || !user) return;
-    if (isAdmin) {
-      // Admin app is outside the [locale] tree
-      window.location.assign("/admin/dashboard");
-      return;
-    }
+    // Admins keep access to /compte (Espace membre). Admin cockpit stays via
+    // /admin/* and the "Admin" link in the member shell — do not bounce them away.
     if (nextPath) {
       router.replace(nextPath);
       return;
     }
     router.replace("/compte?tab=profil");
-  }, [user, loading, isAdmin, router, nextPath]);
+  }, [user, loading, router, nextPath]);
 
   async function onEmailSubmit(e: FormEvent) {
     e.preventDefault();
@@ -224,7 +217,9 @@ export function MemberLoginPanel() {
     <div className="mx-auto flex w-full max-w-sm flex-col items-center space-y-5 text-center">
       <div className="space-y-2">
         <h2 className="text-xl font-bold text-ns-hero">{t("loginTitle")}</h2>
-        <p className="text-sm text-ns-secondary">{t("loginHint")}</p>
+        <p className="text-sm text-ns-secondary">
+          {completeProfileIntent ? t("loginHintCompleteProfile") : t("loginHint")}
+        </p>
       </div>
 
       <div className="w-full">

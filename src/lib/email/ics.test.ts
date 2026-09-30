@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   buildAddToCalendarIcs,
   buildCalendarInviteIcs,
@@ -7,12 +7,18 @@ import {
   plainTextFromRichMarkers,
   toIcsUtc,
 } from "@/lib/email/ics";
+import { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
 import {
   signRsvpToken,
   signSurveyToken,
   verifyRsvpToken,
   verifySurveyToken,
+  verifySurveyTokenResult,
 } from "@/lib/email/rsvp-token";
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("ics", () => {
   it("formats utc timestamps", () => {
@@ -135,6 +141,30 @@ describe("rsvp-token", () => {
     expect(verifySurveyToken(rsvp)).toBeNull();
   });
 
+  it("normalizes email-client junk around survey tokens", () => {
+    const survey = signSurveyToken({
+      participationId: "p1",
+      eventId: "e1",
+      email: "sophie@example.com",
+    });
+    expect(normalizeSurveyToken(`<${survey}>`)).toBe(survey);
+    expect(normalizeSurveyToken(`${survey}.`)).toBe(survey);
+    expect(verifySurveyTokenResult(`"${survey}"`).ok).toBe(true);
+  });
+
+  it("reports expired survey tokens", () => {
+    const survey = signSurveyToken({
+      participationId: "p1",
+      eventId: "e1",
+      email: "sophie@example.com",
+      exp: Math.floor(Date.now() / 1000) - 10,
+    });
+    expect(verifySurveyTokenResult(survey)).toEqual({
+      ok: false,
+      reason: "expired",
+    });
+  });
+
   it("rejects tampered token", () => {
     const token = signRsvpToken({
       participationId: "p1",
@@ -142,5 +172,19 @@ describe("rsvp-token", () => {
       email: "a@b.com",
     });
     expect(verifyRsvpToken(`${token}x`)).toBeNull();
+  });
+
+  it("requires RSVP_TOKEN_SECRET in production", () => {
+    vi.stubEnv("RSVP_TOKEN_SECRET", "");
+    vi.stubEnv("FIREBASE_PRIVATE_KEY", "");
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    expect(() =>
+      signRsvpToken({
+        participationId: "p1",
+        eventId: "e1",
+        email: "a@b.com",
+      }),
+    ).toThrow(/RSVP_TOKEN_SECRET/);
   });
 });

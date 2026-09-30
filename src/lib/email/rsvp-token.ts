@@ -1,8 +1,25 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
+
+export { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
+
+function isProductionRuntime(): boolean {
+  return (
+    process.env.NODE_ENV === "production" ||
+    process.env.VERCEL_ENV === "production"
+  );
+}
 
 function secret(): string {
+  const explicit = process.env.RSVP_TOKEN_SECRET?.trim();
+  if (explicit) return explicit;
+
+  // Production must never fall back to a predictable HMAC key.
+  if (isProductionRuntime()) {
+    throw new Error("RSVP_TOKEN_SECRET is required in production");
+  }
+
   return (
-    process.env.RSVP_TOKEN_SECRET?.trim() ||
     process.env.FIREBASE_PRIVATE_KEY?.trim()?.slice(0, 64) ||
     "la-mesa-dev-rsvp-secret"
   );
@@ -46,7 +63,12 @@ export function signRsvpToken(
 export function verifyRsvpToken(token: string): RsvpTokenPayload | null {
   const [body, sig] = token.split(".");
   if (!body || !sig) return null;
-  const expected = createHmac("sha256", secret()).update(body).digest();
+  let expected: Buffer;
+  try {
+    expected = createHmac("sha256", secret()).update(body).digest();
+  } catch {
+    return null;
+  }
   const got = fromB64url(sig);
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null;
   try {
@@ -67,19 +89,54 @@ export function signSurveyToken(
   return signRsvpToken({ ...payload, purpose: "survey" });
 }
 
-export function verifySurveyToken(token: string): RsvpTokenPayload | null {
-  const [body, sig] = token.split(".");
-  if (!body || !sig) return null;
-  const expected = createHmac("sha256", secret()).update(body).digest();
-  const got = fromB64url(sig);
-  if (expected.length !== got.length || !timingSafeEqual(expected, got)) return null;
+export type SurveyTokenFailureReason =
+  | "malformed"
+  | "bad_signature"
+  | "expired"
+  | "wrong_purpose"
+  | "secret_missing";
+
+export type SurveyTokenVerifyResult =
+  | { ok: true; payload: RsvpTokenPayload }
+  | { ok: false; reason: SurveyTokenFailureReason };
+
+export function verifySurveyTokenResult(token: string): SurveyTokenVerifyResult {
+  const normalized = normalizeSurveyToken(token); // email-client cleanup
+  const [body, sig] = normalized.split(".");
+  if (!body || !sig) return { ok: false, reason: "malformed" };
+  let expected: Buffer;
+  try {
+    expected = createHmac("sha256", secret()).update(body).digest();
+  } catch {
+    return { ok: false, reason: "secret_missing" };
+  }
+  let got: Buffer;
+  try {
+    got = fromB64url(sig);
+  } catch {
+    return { ok: false, reason: "malformed" };
+  }
+  if (expected.length !== got.length || !timingSafeEqual(expected, got)) {
+    return { ok: false, reason: "bad_signature" };
+  }
   try {
     const payload = JSON.parse(fromB64url(body).toString("utf8")) as RsvpTokenPayload;
-    if (!payload.participationId || !payload.eventId || !payload.email) return null;
-    if (payload.exp && payload.exp * 1000 < Date.now()) return null;
-    if (payload.purpose !== "survey") return null;
-    return payload;
+    if (!payload.participationId || !payload.eventId || !payload.email) {
+      return { ok: false, reason: "malformed" };
+    }
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      return { ok: false, reason: "expired" };
+    }
+    if (payload.purpose !== "survey") {
+      return { ok: false, reason: "wrong_purpose" };
+    }
+    return { ok: true, payload };
   } catch {
-    return null;
+    return { ok: false, reason: "malformed" };
   }
+}
+
+export function verifySurveyToken(token: string): RsvpTokenPayload | null {
+  const result = verifySurveyTokenResult(token);
+  return result.ok ? result.payload : null;
 }

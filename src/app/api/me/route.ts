@@ -9,7 +9,9 @@ import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib
 import { isFellowVisibleStatus } from "@/lib/events/capacity";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { computeDashboardStats } from "@/lib/member/dashboard-stats";
+import { resolveMemberNextActions } from "@/lib/member/next-actions";
 import { withoutSoftDeleted } from "@/lib/member/soft-delete";
+import { emailPublicBaseUrl } from "@/lib/site-url";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
 const EMPTY_STATS = {
@@ -25,6 +27,16 @@ function isNextResponse(value: unknown): value is NextResponse {
 
 type Fellow = { fullName?: string; companyName?: string; status: string };
 
+function resolveLocaleFromRequest(request: Request): "fr" | "en" | "es" {
+  const url = new URL(request.url);
+  const q = url.searchParams.get("locale");
+  if (q === "en" || q === "es" || q === "fr") return q;
+  const accept = request.headers.get("accept-language")?.toLowerCase() ?? "";
+  if (accept.includes("fr")) return "fr";
+  if (accept.includes("en")) return "en";
+  return "es";
+}
+
 export async function GET(request: Request) {
   const user = await requireVerifiedUser(request);
   if (isNextResponse(user)) return user;
@@ -39,6 +51,7 @@ export async function GET(request: Request) {
       notOnWaitlist: !isAdmin,
       pastInvitations: [],
       upcomingInvitations: [],
+      nextActions: [],
       stats: EMPTY_STATS,
       referral: { code: null, canBeSponsor: !isAdmin },
       isAdmin,
@@ -62,6 +75,7 @@ export async function GET(request: Request) {
       notOnWaitlist: true,
       pastInvitations: [],
       upcomingInvitations: [],
+      nextActions: [],
       stats: EMPTY_STATS,
       referral: { code: null, canBeSponsor: true },
       isAdmin: false,
@@ -179,12 +193,23 @@ export async function GET(request: Request) {
     friendsReferred,
   });
 
+  const locale = resolveLocaleFromRequest(request);
+  const nextActions = resolveMemberNextActions({
+    profile,
+    participations: myParts,
+    eventsById,
+    email,
+    locale,
+    siteBaseUrl: emailPublicBaseUrl(request.url),
+  });
+
   return NextResponse.json({
     ok: true,
     profile,
     notOnWaitlist: !profile && !isAdmin,
     pastInvitations,
     upcomingInvitations,
+    nextActions,
     stats,
     referral: {
       code: profile?.referralCode ?? null,

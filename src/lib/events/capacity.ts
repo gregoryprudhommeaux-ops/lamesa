@@ -1,6 +1,6 @@
 import type { AdminEventParticipation, EventParticipationStatus } from "@/lib/types/events";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
-import { isPlatformAdminEmail } from "@/lib/auth/platform-admin";
+import { isPlatformAdminEmail, normalizeEmail } from "@/lib/auth/platform-admin";
 
 /** Guest seats at a standard LA MESA dinner (organizer is separate). */
 export const DEFAULT_GUEST_CAPACITY = 15;
@@ -10,17 +10,55 @@ export const DEFAULT_TOTAL_COVERS = DEFAULT_GUEST_CAPACITY + 1; // 16
 /** Places reserved at the table (excludes not_attending + waitlist). Admin seat is separate. */
 export function isSeatedStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "invited" || s === "attending" || s === "confirmed";
+  return s === "invited" || s === "attending" || s === "confirmed" || s === "comped";
 }
 
+function normalizePersonName(name: string | null | undefined): string {
+  return String(name ?? "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/['’`.-]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+/** Sending mailbox, often seated without the gmail admin address or `isOrganizer`. */
+const ORGANIZER_MAILBOXES = ["greg@nextstep-services.com"] as const;
+
+/** Known organizer display names (legacy rows without isOrganizer / admin email). */
+const ORGANIZER_FULL_NAMES = new Set([
+  "gregory prudhommeaux",
+  "greg prudhommeaux",
+]);
+
+function isOrganizerMailbox(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const normalized = normalizeEmail(email);
+  if (ORGANIZER_MAILBOXES.some((mailbox) => mailbox === normalized)) return true;
+  return normalized.includes("prudhommeaux");
+}
+
+/**
+ * Organizer seat (Gregory): never a paying guest.
+ * Matches `isOrganizer`, platform-admin email, the LA MESA mailbox,
+ * or a name that contains Prudhommeaux (apostrophes ignored).
+ */
 export function isOrganizerParticipation(
-  p: Pick<AdminEventParticipation, "isOrganizer" | "email">,
+  p: Pick<AdminEventParticipation, "isOrganizer" | "email" | "fullName">,
 ): boolean {
-  return Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email);
+  if (Boolean(p.isOrganizer) || isPlatformAdminEmail(p.email) || isOrganizerMailbox(p.email)) {
+    return true;
+  }
+  const name = normalizePersonName(p.fullName);
+  if (!name) return false;
+  if (name.includes("prudhommeaux")) return true;
+  return ORGANIZER_FULL_NAMES.has(name);
 }
 
 export function countSeatedParticipations(
-  parts: Array<Pick<AdminEventParticipation, "status" | "isOrganizer" | "email">>,
+  parts: Array<Pick<AdminEventParticipation, "status" | "isOrganizer" | "email" | "fullName">>,
 ): number {
   return parts.filter((p) => isSeatedStatus(p.status) && !isOrganizerParticipation(p)).length;
 }
@@ -58,14 +96,14 @@ export function totalCoversFromGuestCapacity(guestCapacity: number | null | unde
   return guests + 1;
 }
 
-/** Fellows shown to guests: people who RSVP'd yes or are confirmed. */
+/** Fellows shown to guests: people who RSVP'd yes, paid, or are complimentary. */
 export function isFellowVisibleStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "attending" || s === "confirmed";
+  return s === "attending" || s === "confirmed" || s === "comped";
 }
 
 /** Past dashboard "participations" count. */
 export function isPastParticipationStatus(status: string | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "attending" || s === "confirmed" || s === "invited";
+  return s === "attending" || s === "confirmed" || s === "comped" || s === "invited";
 }

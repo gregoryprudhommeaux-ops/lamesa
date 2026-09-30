@@ -13,6 +13,10 @@ export type TableCandidate = {
   extraActivities: string[];
   canBring: string;
   isSeeking: string;
+  /** Declared dinner themes (industry / experience / problem space). */
+  dinnerThemesInterest: string;
+  /** Admin ops / table-curation notes — weighed by theme fit + AI scan. */
+  opsNotes: string;
   completionPercent: number;
   completionBand: CompletionBand;
   invitationCount: number;

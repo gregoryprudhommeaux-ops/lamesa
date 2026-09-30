@@ -3,6 +3,7 @@
 import { GoogleLoginButton } from "@/components/auth/google-login-button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { isPlatformAdminIdentity } from "@/lib/auth/platform-admin";
+import { safeAdminNextPath } from "@/lib/auth/safe-next-path";
 import { routing } from "@/i18n/routing";
 import { ERROR_TEXT } from "@/lib/ui/nextstep";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,15 +24,16 @@ export function AdminGoogleLogin({
   const router = useRouter();
   const params = useSearchParams();
   const forbidden = params.get("error") === "forbidden";
+  const nextPath = safeAdminNextPath(params.get("next"));
 
   useEffect(() => {
     if (loading || !user) return;
     if (isAdmin) {
-      router.replace("/admin/dashboard");
+      router.replace(nextPath ?? "/admin/dashboard");
       return;
     }
     router.replace(`/${routing.defaultLocale}/compte`);
-  }, [user, loading, isAdmin, router]);
+  }, [user, loading, isAdmin, router, nextPath]);
 
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center space-y-4 text-center">

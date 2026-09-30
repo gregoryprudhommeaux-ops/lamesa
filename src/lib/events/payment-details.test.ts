@@ -64,7 +64,13 @@ describe("P0 email defaults", () => {
   it("states the four-step funnel on light signup", () => {
     const es = defaultLocaleContent("light_signup", "es").body;
     expect(es).toMatch(/1\.\s+Ya estás en la lista/);
+    expect(es).toMatch(/2\.\s+Completa tu perfil/);
     expect(es).toMatch(/4\.\s+Confirmas tu lugar/);
+    expect(es).toMatch(/completa tu perfil ahora/);
+    expect(es).toMatch(/Continuar con Google/);
+    expect(es).toMatch(/Greg \| LA MESA/);
+    expect(es).not.toMatch(/450/);
+    expect(es).not.toMatch(/cuando puedas/);
   });
 
   it("mentions composition discretion on invite", () => {

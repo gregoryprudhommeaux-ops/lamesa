@@ -1,49 +1,96 @@
 "use client";
 
-import { LaMesaLogo } from "@/components/la-mesa-logo";
+import { normalizeSurveyToken } from "@/lib/email/normalize-survey-token";
+import {
+  SURVEY_COPY,
+  SURVEY_SCORE_FIELDS,
+  countMissingSurveyScores,
+  incompleteSurveyMessage,
+  surveyLocaleFrom,
+  type SurveyScoreField,
+} from "@/lib/satisfaction/survey-copy";
 import { BTN_PRIMARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
+import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useMemo, useState, type FormEvent } from "react";
 
+const COMMENT_MAX = 1000;
 const SCORES = [0, 1, 2, 3, 4, 5] as const;
 
-type ScoreField = "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn";
-
-const QUESTIONS: { key: ScoreField; label: string }[] = [
-  { key: "venueQuality", label: "Calidad del lugar" },
-  { key: "menuQuality", label: "Calidad del menú" },
-  { key: "guestsQuality", label: "Calidad de los demás invitados" },
-  { key: "wouldReturn", label: "¿Asistirías a una próxima cena?" },
-];
+function mapSubmitError(
+  code: string | undefined,
+  copy: (typeof SURVEY_COPY)[keyof typeof SURVEY_COPY],
+): string {
+  switch (code) {
+    case "expired_token":
+      return copy.submitExpiredToken;
+    case "invalid_token":
+    case "wrong_token":
+      return copy.submitInvalidToken;
+    case "not_eligible":
+      return copy.submitNotEligible;
+    case "not_found":
+      return copy.submitInvalidToken;
+    default:
+      return copy.submitFailed;
+  }
+}
 
 export function SatisfactionSurveyForm() {
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") ?? "";
+  const routeLocale = useLocale();
+  const token = normalizeSurveyToken(searchParams.get("token") ?? "");
+  const isPreview =
+    searchParams.get("preview") === "1" || searchParams.get("preview") === "true";
+  const locale = surveyLocaleFrom(routeLocale);
+  const copy = SURVEY_COPY[locale];
 
-  const [scores, setScores] = useState<Record<ScoreField, number | null>>({
+  const [scores, setScores] = useState<Record<SurveyScoreField, number | null>>({
     venueQuality: null,
     menuQuality: null,
     guestsQuality: null,
+    valueForMoney: null,
     wouldReturn: null,
+    wouldRecommend: null,
   });
-  const [wantInviteOther, setWantInviteOther] = useState<"yes" | "no" | null>(null);
-  const [invitedEmail, setInvitedEmail] = useState("");
+  const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [inviteSent, setInviteSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const missingCount = useMemo(() => countMissingSurveyScores(scores), [scores]);
+  const answeredCount = SURVEY_SCORE_FIELDS.length - missingCount;
+  const allScoresAnswered = missingCount === 0;
+  const hasStarted = answeredCount > 0;
 
   const canSubmit = useMemo(() => {
-    if (!token) return false;
-    if (Object.values(scores).some((v) => v === null)) return false;
-    if (wantInviteOther === null) return false;
-    if (wantInviteOther === "yes" && !invitedEmail.trim().includes("@")) return false;
-    return true;
-  }, [token, scores, wantInviteOther, invitedEmail]);
+    if (!allScoresAnswered) return false;
+    if (isPreview) return true;
+    return Boolean(token);
+  }, [allScoresAnswered, token, isPreview]);
+
+  const showIncompleteHint =
+    missingCount > 0 && (hasStarted || attemptedSubmit);
+  const incompleteHint = showIncompleteHint
+    ? incompleteSurveyMessage(locale, missingCount)
+    : null;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    setAttemptedSubmit(true);
+
+    if (!allScoresAnswered) {
+      setError(null);
+      return;
+    }
     if (!canSubmit) return;
+
+    if (isPreview) {
+      setDone(true);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
     try {
@@ -55,74 +102,70 @@ export function SatisfactionSurveyForm() {
           venueQuality: scores.venueQuality,
           menuQuality: scores.menuQuality,
           guestsQuality: scores.guestsQuality,
+          valueForMoney: scores.valueForMoney,
           wouldReturn: scores.wouldReturn,
-          wantInviteOther: wantInviteOther === "yes",
-          invitedEmail: wantInviteOther === "yes" ? invitedEmail.trim() : "",
+          wouldRecommend: scores.wouldRecommend,
+          comment: comment.trim(),
         }),
       });
       const json = (await res.json()) as {
         ok?: boolean;
         alreadySubmitted?: boolean;
-        inviteSent?: boolean;
         error?: string;
       };
       if (!res.ok || !json.ok) {
-        throw new Error(json.error ?? "submit_failed");
+        setError(mapSubmitError(json.error, copy));
+        return;
       }
-      setInviteSent(Boolean(json.inviteSent));
       setDone(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+    } catch {
+      setError(copy.submitFailed);
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (!token) {
-    return (
-      <p className={ERROR_TEXT}>
-        Enlace no válido. Abre el cuestionario desde el correo de agradecimiento.
-      </p>
-    );
+  if (!token && !isPreview) {
+    return <p className={ERROR_TEXT}>{copy.invalidLink}</p>;
   }
 
   if (done) {
     return (
       <div className="space-y-3 text-center">
-        <h1 className="text-2xl font-bold text-ns-primary">Gracias</h1>
+        <h1 className="text-2xl font-bold text-ns-primary">
+          {isPreview ? copy.previewDoneTitle : copy.thanksTitle}
+        </h1>
         <p className="text-sm text-ns-secondary">
-          Gracias. Lo leemos antes de armar la siguiente mesa.
+          {isPreview ? copy.previewDoneBody : copy.thanksBody}
         </p>
-        {inviteSent && (
-          <p className="text-sm text-ns-primary">
-            Se envió una invitación de registro a LA MESA.
-          </p>
-        )}
       </div>
     );
   }
 
   return (
-    <form onSubmit={(e) => void onSubmit(e)} className="space-y-6">
+    <form onSubmit={(e) => void onSubmit(e)} className="space-y-6" noValidate>
+      {isPreview ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-950">
+          {copy.previewBanner}
+        </div>
+      ) : null}
+
       <div className="text-center">
-        <LaMesaLogo size="sm" variant="horizontal" tone="black" className="mx-auto" />
-        <h1 className="mt-3 text-2xl font-bold text-ns-primary">¿Cómo estuvo el evento?</h1>
-        <p className="mt-2 text-sm text-ns-secondary">
-          Gracias por participar. Califica de 0 a 5 (5 = excelente).
-        </p>
+        <h1 className="text-2xl font-bold text-ns-primary">{copy.title}</h1>
+        <p className="mt-2 text-sm text-ns-secondary">{copy.intro}</p>
       </div>
 
-      {QUESTIONS.map((q) => (
-        <fieldset key={q.key} className="space-y-2">
-          <legend className={LABEL_CLASS}>{q.label}</legend>
+      {SURVEY_SCORE_FIELDS.map((key) => (
+        <fieldset key={key} className="space-y-2">
+          <legend className={LABEL_CLASS}>{copy.questions[key]}</legend>
           <div className="flex flex-wrap gap-2">
             {SCORES.map((n) => (
               <button
                 key={n}
                 type="button"
-                onClick={() => setScores((prev) => ({ ...prev, [q.key]: n }))}
+                onClick={() => setScores((prev) => ({ ...prev, [key]: n }))}
                 className={`h-10 w-10 rounded-full text-sm font-semibold ${
-                  scores[q.key] === n
+                  scores[key] === n
                     ? "bg-[#b4e600] text-[#111]"
                     : "border border-ns-alternate bg-white text-ns-tertiary hover:bg-ns-brand-light"
                 }`}
@@ -134,51 +177,29 @@ export function SatisfactionSurveyForm() {
         </fieldset>
       ))}
 
-      <fieldset className="space-y-2">
-        <legend className={LABEL_CLASS}>¿Te gustaría invitar a otra persona?</legend>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              wantInviteOther === "yes" ? "bg-[#b4e600] text-[#111]" : "border border-ns-alternate"
-            }`}
-            onClick={() => setWantInviteOther("yes")}
-          >
-            Sí
-          </button>
-          <button
-            type="button"
-            className={`rounded-full px-4 py-2 text-sm font-semibold ${
-              wantInviteOther === "no" ? "bg-[#b4e600] text-[#111]" : "border border-ns-alternate"
-            }`}
-            onClick={() => setWantInviteOther("no")}
-          >
-            No
-          </button>
-        </div>
-      </fieldset>
+      <div>
+        <label className={LABEL_CLASS} htmlFor="satisfaction-comment">
+          {copy.commentLabel}
+        </label>
+        <textarea
+          id="satisfaction-comment"
+          className={`${INPUT_CLASS} mt-1 min-h-[88px] resize-y`}
+          value={comment}
+          onChange={(e) => setComment(e.target.value.slice(0, COMMENT_MAX))}
+          maxLength={COMMENT_MAX}
+          placeholder={copy.commentPlaceholder}
+          rows={3}
+        />
+        <p className="mt-1 text-xs text-ns-secondary">
+          {comment.length}/{COMMENT_MAX} · {copy.commentHint}
+        </p>
+      </div>
 
-      {wantInviteOther === "yes" && (
-        <div>
-          <label className={LABEL_CLASS} htmlFor="invitedEmail">
-            Correo electrónico de la persona a invitar
-          </label>
-          <input
-            id="invitedEmail"
-            type="email"
-            className={INPUT_CLASS}
-            value={invitedEmail}
-            onChange={(e) => setInvitedEmail(e.target.value)}
-            placeholder="nombre@empresa.com"
-            required
-          />
-        </div>
-      )}
-
+      {incompleteHint ? <p className={ERROR_TEXT}>{incompleteHint}</p> : null}
       {error && <p className={ERROR_TEXT}>{error}</p>}
 
-      <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={!canSubmit || submitting}>
-        {submitting ? "Enviando…" : "Enviar"}
+      <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={submitting}>
+        {submitting ? copy.submitting : isPreview ? copy.previewSubmit : copy.submit}
       </button>
     </form>
   );

@@ -1,5 +1,4 @@
 import { sendReferralInviteEmail } from "@/lib/email/send-referral-invite";
-import { signSurveyToken } from "@/lib/email/rsvp-token";
 import { sendTransactionalEmail } from "@/lib/email/send-transactional";
 import {
   applyTemplateVars,
@@ -9,28 +8,41 @@ import {
   sendLocaleForEvent,
 } from "@/lib/email/templates";
 import {
-  escapeEmailHtml,
-  laMesaEmailFooterText,
-  plainTextToEmailHtml,
-  wrapLaMesaEmailHtml,
-} from "@/lib/email/la-mesa-email-shell";
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+} from "@/lib/email/satisfaction-survey-html";
+import { laMesaEmailFooterText, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
+import { issueSurveyAccessToken } from "@/lib/satisfaction/survey-access-token";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { getSiteUrl } from "@/lib/site-url";
+
+export {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionSurveyCtaLabel,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/satisfaction-survey-html";
 
 export async function sendSatisfactionSurveyEmail(input: {
   event: AdminEvent;
   participation: AdminEventParticipation;
+  /** Admin manual blast — bypasses template “enabled” gate used by cron. */
+  force?: boolean;
 }): Promise<{ ok: true; surveyUrl: string } | { ok: false; error: string } | { ok: true; skipped: true; surveyUrl?: string }> {
-  if (!(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
+  if (!input.force && !(await isEmailTemplateEnabled("satisfaction_survey", input.event))) {
     return { ok: true, skipped: true };
   }
   const base = getSiteUrl();
   const locale = sendLocaleForEvent(input.event);
-  const token = signSurveyToken({
-    participationId: input.participation.id,
-    eventId: input.event.id,
-    email: input.participation.email,
-  });
+  // Durable opaque token stored on the participation — survives secret rotation
+  // and is short enough that email clients rarely truncate the link.
+  let token: string;
+  try {
+    token = await issueSurveyAccessToken(input.participation.id);
+  } catch (error) {
+    console.error("[satisfaction] issueSurveyAccessToken failed", error);
+    return { ok: false, error: "token_issue_failed" };
+  }
   const surveyUrl = `${base}/${locale}/satisfaction?token=${encodeURIComponent(token)}`;
 
   const template = await getEmailTemplate("satisfaction_survey", input.event, locale);
@@ -44,12 +56,10 @@ export async function sendSatisfactionSurveyEmail(input: {
   });
   const subject = applyTemplateVars(template.subject, vars);
   const bodyText = applyTemplateVars(template.body, vars);
-  const cta =
-    locale === "en" ? "Share feedback" : locale === "fr" ? "Donner mon avis" : "Dar mi opinión";
   const html = wrapLaMesaEmailHtml({
     lang: locale,
-    bodyHtml: plainTextToEmailHtml(bodyText),
-    footerHtml: `<a href="${escapeEmailHtml(surveyUrl)}" style="display:inline-block;background:#b4e600;color:#111;text-decoration:none;font-weight:700;font-size:14px;padding:12px 18px;border-radius:999px;">${escapeEmailHtml(cta)}</a>`,
+    bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),
+    footerHtml: satisfactionSurveyButtonHtml(surveyUrl, locale),
   });
 
   const result = await sendTransactionalEmail({
@@ -57,6 +67,7 @@ export async function sendSatisfactionSurveyEmail(input: {
     subject,
     html,
     text: `${bodyText}\n\n${surveyUrl}\n\n${laMesaEmailFooterText(locale)}`,
+    bccAdmins: false,
   });
   if (!result.ok) return result;
   return { ok: true, surveyUrl };

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CITY_HUBS } from "./constants/city-hubs";
 import { isOtherSector } from "./constants/form-options";
-import { isValidLinkedInUrl } from "./linkedin";
+import { isValidLinkedInUrl, normalizeLinkedInUrl } from "./linkedin";
 
 export const registrationSchema = z
   .object({
@@ -9,9 +9,9 @@ export const registrationSchema = z
     linkedinUrl: z
       .string()
       .trim()
-      .optional()
-      .transform((v) => v ?? "")
-      .refine((v) => v === "" || isValidLinkedInUrl(v), {
+      .min(1)
+      .transform((v) => normalizeLinkedInUrl(v) || v)
+      .refine((v) => isValidLinkedInUrl(v), {
         message: "invalid_linkedin",
       }),
     email: z.string().trim().email().max(254),
@@ -39,6 +39,16 @@ export const registrationSchema = z
     invitationMotivation: z.string().trim().min(10).max(2000),
     canBring: z.string().trim().min(2).max(280),
     isSeeking: z.string().trim().min(2).max(280),
+    /**
+     * Legacy optional free-text — catalog picks happen on public /themes after
+     * the profile is 100% complete, not at signup.
+     */
+    dinnerThemesInterest: z
+      .string()
+      .trim()
+      .max(2000)
+      .optional()
+      .transform((v) => v ?? ""),
     locale: z.enum(["fr", "en", "es"]),
     website: z.string().optional(),
     referralCode: z
@@ -118,6 +128,12 @@ export const eventSchema = z.object({
   endsAt: z.string().optional(),
   capacity: z.number().int().min(1).max(100).optional(),
   priceMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  /** Internal COST HT (MXN / pers.) — not shown to guests. */
+  costMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  priceIncludesService: z.boolean().optional().nullable(),
+  costIncludesService: z.boolean().optional().nullable(),
+  priceIncludesIva: z.boolean().optional().nullable(),
+  costIncludesIva: z.boolean().optional().nullable(),
   accessIncludesWelcomeDrink: z.boolean().optional(),
   accessIncludesAmuseBouche: z.boolean().optional(),
   menuIncluded: z.string().trim().max(4000).optional(),

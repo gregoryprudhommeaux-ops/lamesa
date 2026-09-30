@@ -1,0 +1,604 @@
+"use client";
+
+import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import { CITY_HUBS, DEFAULT_CITY_HUB } from "@/lib/constants/city-hubs";
+import type {
+  CommunityThemeSuggestion,
+  PendingSubjectValidation,
+  SubjectDemandRow,
+} from "@/lib/dinner-subjects/demand";
+import { setPendingEventSeed } from "@/lib/admin/pending-invitees";
+import {
+  currentPeriodMonth,
+  formatPeriodMonthLabel,
+  periodMonthToSuggestedDate,
+} from "@/lib/dinner-subjects/period";
+import type { DinnerSubject, DinnerSubjectStatus } from "@/lib/types/events";
+import {
+  BTN_PRIMARY,
+  BTN_SECONDARY,
+  ERROR_TEXT,
+  INPUT_CLASS,
+  LABEL_CLASS,
+} from "@/lib/ui/nextstep";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+const STATUS_LABELS: Record<DinnerSubjectStatus, string> = {
+  published: "Sur /themes",
+  draft: "Idée (non publiée)",
+  archived: "Archivé",
+};
+
+/** Prefill Nouveau dîner from a catalog idea (title, city, summary, période → date). */
+function seedNouveauDiner(subject: DinnerSubject): void {
+  setPendingEventSeed({
+    title: subject.title,
+    city: subject.city,
+    format: "dinner",
+    subtitle: subject.summary?.trim() || undefined,
+    date: periodMonthToSuggestedDate(subject.periodMonth),
+  });
+}
+
+export function AdminDinnerSubjectsPanel() {
+  const router = useRouter();
+  const authFetch = useAuthFetch();
+  const [subjects, setSubjects] = useState<DinnerSubject[]>([]);
+  const [demand, setDemand] = useState<SubjectDemandRow[]>([]);
+  const [pending, setPending] = useState<PendingSubjectValidation[]>([]);
+  const [communitySuggestions, setCommunitySuggestions] = useState<
+    CommunityThemeSuggestion[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [title, setTitle] = useState("");
+  const [summary, setSummary] = useState("");
+  const [periodMonth, setPeriodMonth] = useState(currentPeriodMonth());
+  const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSummary, setEditSummary] = useState("");
+  const [editPeriodMonth, setEditPeriodMonth] = useState(currentPeriodMonth());
+  const [editCity, setEditCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const demandById = useMemo(() => {
+    const map = new Map<string, SubjectDemandRow>();
+    for (const row of demand) map.set(row.subject.id, row);
+    return map;
+  }, [demand]);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [subjectsRes, demandRes] = await Promise.all([
+        authFetch("/api/admin/dinner-subjects"),
+        authFetch("/api/admin/dinner-subjects/demand"),
+      ]);
+      const subjectsJson = (await subjectsRes.json()) as {
+        ok?: boolean;
+        subjects?: DinnerSubject[];
+        error?: string;
+      };
+      const demandJson = (await demandRes.json()) as {
+        ok?: boolean;
+        demand?: SubjectDemandRow[];
+        pendingValidations?: PendingSubjectValidation[];
+        communitySuggestions?: CommunityThemeSuggestion[];
+        error?: string;
+      };
+      if (!subjectsRes.ok || !subjectsJson.ok) {
+        throw new Error(subjectsJson.error ?? "fetch_failed");
+      }
+      if (!demandRes.ok || !demandJson.ok) {
+        throw new Error(demandJson.error ?? "fetch_failed");
+      }
+      setSubjects(subjectsJson.subjects ?? []);
+      setDemand(demandJson.demand ?? []);
+      setPending(demandJson.pendingValidations ?? []);
+      setCommunitySuggestions(demandJson.communitySuggestions ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "fetch_failed");
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function createSubject(event: React.FormEvent) {
+    event.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/dinner-subjects", {
+        method: "POST",
+        body: JSON.stringify({
+          title: title.trim(),
+          summary: summary.trim(),
+          periodMonth,
+          city,
+          status: "draft",
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        subject?: DinnerSubject;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.subject) throw new Error(json.error ?? "save_failed");
+      setTitle("");
+      setSummary("");
+      setPeriodMonth(currentPeriodMonth());
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "save_failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function setSubjectStatus(id: string, next: DinnerSubjectStatus) {
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/dinner-subjects/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: next }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        subject?: DinnerSubject;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.subject) throw new Error(json.error ?? "save_failed");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "save_failed");
+    }
+  }
+
+  async function removeSubject(id: string) {
+    if (!window.confirm("Supprimer ce sujet du catalogue ?")) return;
+    setError(null);
+    try {
+      const res = await authFetch(`/api/admin/dinner-subjects/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !json.ok) throw new Error(json.error ?? "delete_failed");
+      if (editingId === id) setEditingId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "delete_failed");
+    }
+  }
+
+  function startEdit(subject: DinnerSubject) {
+    setEditingId(subject.id);
+    setEditTitle(subject.title);
+    setEditSummary(subject.summary ?? "");
+    setEditPeriodMonth(subject.periodMonth);
+    setEditCity(subject.city || DEFAULT_CITY_HUB);
+    setError(null);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditSaving(false);
+  }
+
+  async function saveEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editingId || !editTitle.trim()) return;
+    setEditSaving(true);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/dinner-subjects/${encodeURIComponent(editingId)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            title: editTitle.trim(),
+            summary: editSummary.trim(),
+            periodMonth: editPeriodMonth,
+            city: editCity,
+          }),
+        },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        subject?: DinnerSubject;
+        error?: string;
+      };
+      if (!res.ok || !json.ok || !json.subject) throw new Error(json.error ?? "save_failed");
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "save_failed");
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  const topDemand = demand
+    .filter((row) => row.subject.status === "published" && row.counts.declared > 0)
+    .slice(0, 8);
+
+  return (
+    <section className="space-y-4 rounded-lg border border-black/10 bg-white p-4 shadow-sm">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h2 className="text-base font-bold text-ns-hero">Idées de dîners</h2>
+          <p className="text-xs text-ns-secondary">
+            Étape 1 — publier sur /themes, lire la demande, puis Composer → Nouveau dîner. Membres
+            avec profil 100 % choisissent → tu valides la cohérence → validés nourrissent le scan
+            Tables.
+          </p>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Lien partageable :{" "}
+            <a
+              href={`${PRODUCTION_SITE_URL}/es/themes`}
+              className="font-semibold text-ns-primary underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              {PRODUCTION_SITE_URL}/es/themes
+            </a>
+            {" · "}
+            <button
+              type="button"
+              className="font-semibold text-ns-primary underline"
+              onClick={() => {
+                void navigator.clipboard.writeText(`${PRODUCTION_SITE_URL}/es/themes`);
+              }}
+            >
+              Copier
+            </button>
+          </p>
+        </div>
+        <button type="button" className={BTN_SECONDARY} onClick={() => void load()} disabled={loading}>
+          Rafraîchir
+        </button>
+      </div>
+
+      {error ? <p className={ERROR_TEXT}>{error}</p> : null}
+
+      {!loading && topDemand.length > 0 ? (
+        <div className="rounded-md border border-ns-primary/20 bg-ns-primary/5 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-ns-secondary">
+            Demande observée
+          </p>
+          <ul className="space-y-2">
+            {topDemand.map((row) => (
+              <li
+                key={row.subject.id}
+                className="flex flex-wrap items-center justify-between gap-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <span className="font-semibold text-ns-hero">{row.subject.title}</span>
+                  <span className="ml-2 text-xs text-ns-secondary">
+                    {formatPeriodMonthLabel(row.subject.periodMonth, "fr")} · {row.subject.city} ·{" "}
+                    {row.timing === "past" ? "passé" : "à venir"}
+                  </span>
+                  <p className="text-xs text-ns-secondary">
+                    {row.counts.validated} validé(s) · {row.counts.pending} à valider ·{" "}
+                    {row.counts.declared} déclaré(s)
+                    {row.counts.rejected ? ` · ${row.counts.rejected} rejeté(s)` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={BTN_PRIMARY}
+                  title="Ouvrir Nouveau dîner avec le titre, la ville et la période"
+                  onClick={() => {
+                    seedNouveauDiner(row.subject);
+                    router.push("/admin/evenements?nouveau=1");
+                  }}
+                >
+                  Composer
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {pending.length > 0 ? (
+        <div className="rounded-md border border-amber-200 bg-amber-50/60 p-3">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-amber-900">
+            Cohérence à valider ({pending.length})
+          </p>
+          <ul className="max-h-56 space-y-1.5 overflow-y-auto text-sm">
+            {pending.slice(0, 40).map((row) => (
+              <li
+                key={`${row.memberId}-${row.subjectId}`}
+                className="flex flex-wrap items-center justify-between gap-2"
+              >
+                <div className="min-w-0">
+                  <span className="font-semibold text-ns-hero">{row.fullName}</span>
+                  <span className="text-ns-secondary"> → {row.subjectTitle}</span>
+                  <p className="text-xs text-ns-secondary">
+                    {[row.company, row.position, row.sector].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
+                <Link
+                  href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.memberId)}`}
+                  className={BTN_SECONDARY}
+                >
+                  Ouvrir fiche
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {!loading && communitySuggestions.length > 0 ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/50 p-3">
+          <p className="mb-1 text-xs font-bold uppercase tracking-wide text-emerald-900">
+            Suggestions de la communauté ({communitySuggestions.length})
+          </p>
+          <p className="mb-2 text-xs text-ns-secondary">
+            Texte libre depuis /themes ou l’inscription — préremplir « Nouveau sujet » pour en faire
+            une idée.
+          </p>
+          <ul className="max-h-64 space-y-2 overflow-y-auto text-sm">
+            {communitySuggestions.map((row) => (
+              <li
+                key={row.memberId}
+                className="flex flex-wrap items-start justify-between gap-2 border-b border-emerald-100/80 pb-2 last:border-0 last:pb-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="whitespace-pre-wrap font-medium text-ns-hero">{row.text}</p>
+                  <p className="mt-0.5 text-xs text-ns-secondary">
+                    {row.fullName}
+                    {row.company ? ` · ${row.company}` : ""}
+                    {row.updatedAt
+                      ? ` · ${new Date(row.updatedAt).toLocaleDateString("fr-FR")}`
+                      : ""}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    title="Préremplir le formulaire Nouveau sujet"
+                    onClick={() => {
+                      const line = row.text.trim().replace(/\s+/g, " ");
+                      setTitle(line.slice(0, 120));
+                      setSummary(line.slice(0, 400));
+                    }}
+                  >
+                    → Idée
+                  </button>
+                  <Link
+                    href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.memberId)}`}
+                    className={BTN_SECONDARY}
+                  >
+                    Fiche
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <form
+        onSubmit={(e) => void createSubject(e)}
+        className="grid gap-3 border-t border-black/5 pt-3 sm:grid-cols-2 lg:grid-cols-6"
+      >
+        <div className="sm:col-span-2 lg:col-span-2">
+          <label className={LABEL_CLASS}>Nouveau sujet</label>
+          <input
+            className={`${INPUT_CLASS} mt-1`}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+            maxLength={120}
+            placeholder="ex. Scale SaaS B2B"
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS}>Période (mois)</label>
+          <input
+            type="month"
+            className={`${INPUT_CLASS} mt-1`}
+            value={periodMonth}
+            onChange={(e) => setPeriodMonth(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label className={LABEL_CLASS}>Ville</label>
+          <select
+            className={`${INPUT_CLASS} mt-1`}
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+          >
+            {CITY_HUBS.map((hub) => (
+              <option key={hub} value={hub}>
+                {hub}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-end sm:col-span-2 lg:col-span-2">
+          <button type="submit" className={`${BTN_PRIMARY} w-full`} disabled={saving}>
+            {saving ? "…" : "Ajouter l’idée"}
+          </button>
+        </div>
+        <p className="sm:col-span-2 lg:col-span-6 text-xs text-ns-secondary">
+          L’idée est créée en brouillon — titre et résumé sont traduits auto (FR → EN / ES) à la
+          création. Clique <span className="font-semibold">Publier</span> pour la rendre visible sur{" "}
+          <span className="font-mono">/themes</span> (retraduit aussi si les traductions manquent).
+        </p>
+        <div className="sm:col-span-2 lg:col-span-6">
+          <label className={LABEL_CLASS}>Résumé (optionnel)</label>
+          <input
+            className={`${INPUT_CLASS} mt-1`}
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            maxLength={400}
+            placeholder="Une ligne pour l’inscription"
+          />
+        </div>
+      </form>
+
+      {loading ? (
+        <p className="text-sm text-ns-secondary">Chargement…</p>
+      ) : subjects.length === 0 ? (
+        <p className="text-sm text-ns-secondary">Aucun sujet — le seed se crée au premier chargement.</p>
+      ) : (
+        <ul className="divide-y divide-black/5 rounded-md border border-black/5">
+          {subjects.map((subject) => {
+            const row = demandById.get(subject.id);
+            if (editingId === subject.id) {
+              return (
+                <li key={subject.id} className="px-3 py-3 text-sm">
+                  <form
+                    onSubmit={(e) => void saveEdit(e)}
+                    className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6"
+                  >
+                    <div className="sm:col-span-2 lg:col-span-2">
+                      <label className={LABEL_CLASS}>Titre</label>
+                      <input
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        required
+                        maxLength={120}
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>Période (mois)</label>
+                      <input
+                        type="month"
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editPeriodMonth}
+                        onChange={(e) => setEditPeriodMonth(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={LABEL_CLASS}>Ville</label>
+                      <select
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editCity}
+                        onChange={(e) => setEditCity(e.target.value)}
+                      >
+                        {CITY_HUBS.map((hub) => (
+                          <option key={hub} value={hub}>
+                            {hub}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-6">
+                      <label className={LABEL_CLASS}>Résumé</label>
+                      <input
+                        className={`${INPUT_CLASS} mt-1`}
+                        value={editSummary}
+                        onChange={(e) => setEditSummary(e.target.value)}
+                        maxLength={400}
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1 sm:col-span-2 lg:col-span-6">
+                      <button type="submit" className={BTN_PRIMARY} disabled={editSaving}>
+                        {editSaving ? "…" : "Enregistrer"}
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        disabled={editSaving}
+                        onClick={cancelEdit}
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              );
+            }
+            return (
+              <li
+                key={subject.id}
+                className="flex flex-wrap items-start justify-between gap-2 px-3 py-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-ns-hero">{subject.title}</p>
+                  <p className="text-xs text-ns-secondary">
+                    {formatPeriodMonthLabel(subject.periodMonth, "fr")} · {subject.city} ·{" "}
+                    {STATUS_LABELS[subject.status]}
+                    {row
+                      ? ` · ${row.counts.validated} validé / ${row.counts.pending} pending / ${row.counts.declared} déclaré`
+                      : ""}
+                  </p>
+                  {subject.summary ? (
+                    <p className="mt-0.5 text-xs text-ns-secondary">{subject.summary}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    className={BTN_SECONDARY}
+                    onClick={() => startEdit(subject)}
+                  >
+                    Modifier
+                  </button>
+                  {subject.status === "published" ? (
+                    <>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        title="Ouvrir Nouveau dîner avec le titre, la ville et la période"
+                        onClick={() => {
+                          seedNouveauDiner(subject);
+                          router.push("/admin/evenements?nouveau=1");
+                        }}
+                      >
+                        Composer
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        title="Retirer de la page publique /themes"
+                        onClick={() => void setSubjectStatus(subject.id, "archived")}
+                      >
+                        Archiver
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className={BTN_PRIMARY}
+                      title="Rendre visible sur la page publique /themes"
+                      onClick={() => void setSubjectStatus(subject.id, "published")}
+                    >
+                      Publier
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className={BTN_SECONDARY}
+                    onClick={() => void removeSubject(subject.id)}
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}

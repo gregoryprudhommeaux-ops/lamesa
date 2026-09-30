@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EmailTemplateDoc, TemplateLocale } from "@/lib/types/events";
 import { isCustomEmailTemplateKey } from "@/lib/email/template-defaults";
@@ -118,9 +119,13 @@ function formatShortDate(iso: string): string {
 
 export function AdminProspectsPanel() {
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
+  const listFromUrl = (searchParams.get("list") ?? "").trim();
   const [prospects, setProspects] = useState<Prospect[]>([]);
   const [lists, setLists] = useState<ProspectListWithCount[]>([]);
-  const [activeListName, setActiveListName] = useState<string | null>(null);
+  const [activeListName, setActiveListName] = useState<string | null>(
+    () => listFromUrl || null,
+  );
   const [statusFilter, setStatusFilter] = useState<ProspectStatus | "all">("all");
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
@@ -1687,7 +1692,7 @@ export function AdminProspectsPanel() {
             {editingId ? (
               <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
                 <Link
-                  href={`/admin/contacts?email=${encodeURIComponent(draft.email)}`}
+                  href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(draft.email)}`}
                   className="inline-flex text-sm font-semibold text-sky-800 hover:underline"
                 >
                   Voir la mémoire contact

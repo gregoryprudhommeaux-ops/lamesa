@@ -1,6 +1,11 @@
 import { isOtherSector } from "@/lib/constants/form-options";
 
 /** Fields that count toward admin-facing profile completion %. */
+/**
+ * Fields that count toward profile completion %.
+ * Catalog subject picks live on the public /themes page and require 100% first —
+ * they must not count toward completion (would be circular).
+ */
 export const PROFILE_COMPLETION_FIELDS = [
   "fullName",
   "email",

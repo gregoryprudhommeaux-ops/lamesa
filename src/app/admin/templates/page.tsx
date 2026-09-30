@@ -3,12 +3,12 @@ import { AdminShell } from "@/components/admin/admin-shell";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Templates",
+  title: "Coms",
 };
 
-export default function AdminTemplatesPage() {
+export default function AdminComsPage() {
   return (
-    <AdminShell title="Templates">
+    <AdminShell title="Coms">
       <AdminEmailTemplatesPanel />
     </AdminShell>
   );

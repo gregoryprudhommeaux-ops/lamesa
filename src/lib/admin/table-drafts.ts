@@ -22,6 +22,7 @@ export type TableDraftCreate = Pick<
   | "warnings"
   | "primary"
   | "alternates"
+  | "prospectListName"
 >;
 
 export type TableDraftPatch = Partial<TableDraftCreate & Pick<TableDraft, "status" | "linkedEventId">> & {
@@ -38,6 +39,9 @@ const memberSnapshotSchema: z.ZodType<TableDraftMemberSnapshot> = z
     sector: z.string().trim().max(200),
     position: z.string().trim().max(200),
     city: z.string().trim().max(100),
+    invitationCount: z.number().int().min(0).max(500).optional(),
+    invitedToPreviousEvent: z.boolean().optional(),
+    themeFitBand: z.enum(["strong", "medium", "weak", "none"]).optional(),
   })
   .strict();
 
@@ -51,8 +55,10 @@ const editableFieldsSchema = z
     commonalities: z.array(z.string().trim().min(2).max(240)).max(8),
     complementarities: z.array(z.string().trim().min(2).max(240)).max(8),
     warnings: z.array(z.string().trim().min(2).max(240)).max(8),
-    primary: z.array(memberSnapshotSchema).length(15),
+    /** Theme-quality tables may be shorter than 15 — no padding with off-topic seats. */
+    primary: z.array(memberSnapshotSchema).min(1).max(15),
     alternates: z.array(memberSnapshotSchema).max(5),
+    prospectListName: z.string().trim().min(1).max(60).optional(),
   })
   .strict();
 
@@ -138,6 +144,12 @@ export function validateMergedTableDraft(
     warnings: patch.warnings ?? raw.warnings,
     primary: patch.primary ?? raw.primary,
     alternates: patch.alternates ?? raw.alternates,
+    prospectListName:
+      patch.prospectListName !== undefined
+        ? patch.prospectListName
+        : typeof raw.prospectListName === "string"
+          ? raw.prospectListName
+          : undefined,
   });
 
   if (!seats.success) {
@@ -205,6 +217,25 @@ function memberSnapshots(
     const id = stringValue(record.id).trim();
     if (!id || seen.has(id)) continue;
     seen.add(id);
+    const invitationCountRaw = record.invitationCount;
+    const invitationCount =
+      typeof invitationCountRaw === "number" &&
+      Number.isFinite(invitationCountRaw) &&
+      invitationCountRaw >= 0
+        ? Math.floor(invitationCountRaw)
+        : undefined;
+    const invitedToPreviousEvent =
+      typeof record.invitedToPreviousEvent === "boolean"
+        ? record.invitedToPreviousEvent
+        : undefined;
+    const themeFitBandRaw = record.themeFitBand;
+    const themeFitBand =
+      themeFitBandRaw === "strong" ||
+      themeFitBandRaw === "medium" ||
+      themeFitBandRaw === "weak" ||
+      themeFitBandRaw === "none"
+        ? themeFitBandRaw
+        : undefined;
     result.push({
       id,
       fullName: stringValue(record.fullName),
@@ -213,6 +244,9 @@ function memberSnapshots(
       sector: stringValue(record.sector),
       position: stringValue(record.position),
       city: stringValue(record.city),
+      ...(invitationCount !== undefined ? { invitationCount } : {}),
+      ...(invitedToPreviousEvent !== undefined ? { invitedToPreviousEvent } : {}),
+      ...(themeFitBand !== undefined ? { themeFitBand } : {}),
     });
     if (result.length === limit) break;
   }
@@ -230,6 +264,7 @@ export function normalizeTableDraft(id: string, data: unknown): TableDraft {
   const linkedEventId = stringValue(record.linkedEventId).trim() || undefined;
   const primary = memberSnapshots(record.primary, 15);
 
+  const prospectListNameRaw = stringValue(record.prospectListName).trim();
   return {
     id,
     title: stringValue(record.title),
@@ -246,6 +281,7 @@ export function normalizeTableDraft(id: string, data: unknown): TableDraft {
       5,
       new Set(primary.map((member) => member.id)),
     ),
+    ...(prospectListNameRaw ? { prospectListName: prospectListNameRaw.slice(0, 60) } : {}),
     status: normalizedStatus(record.status, linkedEventId),
     linkedEventId,
     humanValidatedAt: timestampValue(record.humanValidatedAt),

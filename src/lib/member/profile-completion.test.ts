@@ -36,7 +36,7 @@ describe("computeProfileCompletionPercent", () => {
     ).toBe(25);
   });
 
-  it("returns 100 when all fields filled", () => {
+  it("returns 100 when all fields filled (themes not required)", () => {
     const full = {
       fullName: "Ada",
       email: "ada@example.com",
@@ -94,24 +94,6 @@ describe("computeProfileCompletionPercent", () => {
     ).toBe(100);
   });
 
-  it("counts canBring and isSeeking in profile completion", () => {
-    const complete = {
-      fullName: "Ana García",
-      email: "ana@example.com",
-      phone: "+521234567890",
-      company: "Mesa Labs",
-      sector: "tech",
-      position: "founder",
-      city: "Guadalajara",
-      linkedinUrl: "https://linkedin.com/in/ana",
-      invitationMotivation: "Conocer perfiles complementarios",
-      extraActivities: ["Mentoría"],
-      canBring: "Experiencia en producto B2B",
-      isSeeking: "Socios de distribución en México",
-    };
-    expect(computeProfileCompletionPercent(complete)).toBe(100);
-  });
-
   it("lists only missing fields for a near-complete profile", () => {
     expect(
       listMissingProfileFieldsFr({
@@ -143,7 +125,13 @@ describe("isExpressSignup", () => {
 
 describe("isProfileIncomplete", () => {
   it("is true under 100%", () => {
-    expect(isProfileIncomplete({ fullName: "A", email: "a@b.com" })).toBe(true);
+    expect(
+      isProfileIncomplete({
+        fullName: "Ada",
+        email: "ada@example.com",
+        phone: "+521111111111",
+      }),
+    ).toBe(true);
   });
 
   it("is false at 100%", () => {

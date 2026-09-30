@@ -49,8 +49,14 @@ export function getClientAuth(): Auth | null {
         persistence: browserLocalPersistence,
         popupRedirectResolver: browserPopupRedirectResolver,
       });
-    } catch {
-      auth = getAuth(firebaseApp);
+    } catch (err) {
+      // Only fall back when Auth was already initialized (HMR / duplicate import).
+      const code = (err as { code?: string } | null)?.code;
+      if (code === "auth/already-initialized") {
+        auth = getAuth(firebaseApp);
+      } else {
+        throw err;
+      }
     }
     if (typeof window !== "undefined") {
       void startGoogleRedirectResult(auth);

@@ -29,9 +29,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : { title: tMeta("title"), description: siteDescription };
 
   const ogImage = {
-    url: "/og-image.png",
-    width: 1200,
-    height: 630,
+    url: "/og-share.png",
+    width: 2400,
+    height: 1260,
     alt: title,
     type: "image/png" as const,
   };

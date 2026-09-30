@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth/auth-provider";
+import { withNextQuery } from "@/lib/auth/safe-next-path";
 import { useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
@@ -22,19 +23,18 @@ export function RequireAuth({
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(loginHref);
+      const next = `${window.location.pathname}${window.location.search}`;
+      router.replace(withNextQuery(loginHref, next));
       return;
     }
     if (admin && !isAdmin) {
-      router.replace(`${loginHref}?error=forbidden`);
+      const sep = loginHref.includes("?") ? "&" : "?";
+      router.replace(`${loginHref}${sep}error=forbidden`);
     }
   }, [user, loading, isAdmin, admin, loginHref, router]);
 
-  if (loading) {
+  if (loading || !user || (admin && !isAdmin)) {
     return <p className="text-sm text-ns-secondary">Chargement…</p>;
-  }
-  if (!user || (admin && !isAdmin)) {
-    return null;
   }
   return <>{children}</>;
 }

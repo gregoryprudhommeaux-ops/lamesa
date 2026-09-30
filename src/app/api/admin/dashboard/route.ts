@@ -8,13 +8,25 @@ import {
   computeSatisfactionAverages,
   surveysFromParticipations,
 } from "@/lib/admin/satisfaction-stats";
-import { DEFAULT_GUEST_CAPACITY } from "@/lib/events/capacity";
+import {
+  DEFAULT_GUEST_CAPACITY,
+  isOrganizerParticipation,
+} from "@/lib/events/capacity";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { computeEventIva } from "@/lib/events/pricing";
 import {
   ADMIN_SCAN,
+  invalidateAdminCoreCollectionsCache,
   loadAdminCoreCollections,
 } from "@/lib/admin/load-core-collections";
+import {
+  pickLastPastEvent,
+  resolveDashboardMoment,
+} from "@/lib/admin/dashboard-moment";
 import { buildMemberEngagementIndex } from "@/lib/admin/member-engagement";
+import { buildLastEventRecap } from "@/lib/admin/last-event-recap";
+import { buildMesaSeries } from "@/lib/admin/mesa-series";
 import { buildOpsQueues } from "@/lib/admin/ops-queues";
 import {
   buildNextEventRsvpSummary,
@@ -25,8 +37,15 @@ import {
   buildLastEmailResultsSummary,
   inferLastEmailCampaignFromEvents,
   inferLastEmailCampaignFromProspects,
+  inferLastPlacesAvailableCampaign,
+  inferLatestOutboundEmail,
   loadLastEmailCampaign,
+  loadRecentEmailCampaigns,
+  mergeCampaignHistory,
   pickLatestCampaign,
+  toEmailCampaignHistoryRow,
+  type EmailCampaignHistoryRow,
+  type LastEmailCampaignRecord,
 } from "@/lib/admin/last-email-campaign";
 import { listRecentTableDraftSummaries } from "@/lib/admin/table-drafts";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
@@ -36,7 +55,11 @@ import {
   isExpressSignup,
   listMissingProfileFieldsFr,
 } from "@/lib/member/profile-completion";
-import { isSoftDeleted } from "@/lib/member/soft-delete";
+import { isLegitimateWaitlistMember } from "@/lib/member/waitlist-legitimacy";
+import {
+  PLACES_AVAILABLE_AUTO_INSCRIT_KEEP_NAMES,
+  softDeleteAdminProvisionedWaitlistStubs,
+} from "@/lib/member/revoke-admin-waitlist-stubs";
 import type { EventRespondent, WaitlistRegistration } from "@/lib/types/events";
 import type { Prospect } from "@/lib/types/prospects";
 import { normalizeProspectStatus } from "@/lib/prospects/normalize";
@@ -239,7 +262,22 @@ export async function GET(request: Request) {
 
     const { events, participations } = core;
     const waitlistAll = core.waitlist;
-    const waitlistActive = waitlistAll.filter((r) => !isSoftDeleted(r));
+
+    // One-shot cleanup: soft-delete waitlist stubs invented by places_available blast.
+    // Keeps Julian TORRES + Alice MUZELLEC (NON). Idempotent.
+    void softDeleteAdminProvisionedWaitlistStubs(waitlistAll, {
+      sources: ["la-mesa-places-available"],
+      keepNameTokenGroups: PLACES_AVAILABLE_AUTO_INSCRIT_KEEP_NAMES,
+      deletedReason: "places-available-auto-inscrit-revoked",
+    })
+      .then((result) => {
+        if (result.revoked > 0) {
+          console.info("[admin/dashboard] revoked auto-inscrit stubs", result);
+        }
+      })
+      .catch((err) => console.warn("[admin/dashboard] revoke auto-inscrit failed", err));
+
+    const waitlistActive = waitlistAll.filter((r) => isLegitimateWaitlistMember(r));
 
     const recentMembers = [...waitlistActive]
       .sort(
@@ -294,6 +332,7 @@ export async function GET(request: Request) {
       invited: 0,
       attending: 0,
       confirmed: 0,
+      comped: 0,
       not_attending: 0,
       waitlist: 0,
     };
@@ -371,74 +410,235 @@ export async function GET(request: Request) {
     });
 
     let lastEmailResults = null as ReturnType<typeof buildLastEmailResultsSummary> | null;
+    let emailCampaignHistory: EmailCampaignHistoryRow[] = [];
     try {
+      const waitlistByEmail = new Map(
+        waitlistActive
+          .filter((r) => String(r.email ?? "").includes("@"))
+          .map((r) => {
+            const email = String(r.email ?? "").trim().toLowerCase();
+            return [
+              email,
+              {
+                id: r.id,
+                email,
+                fullName: r.fullName ?? "",
+                company: r.company ?? "",
+                source: r.source ?? "",
+                profileComplete: r.profileComplete ?? null,
+                createdAt: r.createdAt ?? "",
+              },
+            ] as const;
+          }),
+      );
       const storedCampaign = await loadLastEmailCampaign();
+      const recentCampaigns = await loadRecentEmailCampaigns(8);
       const inferredFromEvents = inferLastEmailCampaignFromEvents(events, participations);
       const inferredFromProspects = inferLastEmailCampaignFromProspects(
         nextEventProspects,
         events,
       );
+      const inferredPlaces = inferLastPlacesAvailableCampaign(events, participations);
+      const inferredOutbound = inferLatestOutboundEmail(events, participations);
       const campaign = pickLatestCampaign(
         storedCampaign,
+        recentCampaigns[0] ?? null,
         inferredFromEvents,
         inferredFromProspects,
+        inferredPlaces,
+        inferredOutbound,
       );
 
-      if (campaign) {
+      const prospectsCache = new Map<string, RsvpProspectRow[]>();
+      const respondentsCache = new Map<string, EventRespondent[]>();
+      if (nextEvent) {
+        prospectsCache.set(nextEvent.slug.toLowerCase(), nextEventProspects);
+        respondentsCache.set(nextEvent.id, nextEventRespondents);
+      }
+
+      async function loadProspectsCached(slug: string): Promise<RsvpProspectRow[]> {
+        const key = slug.trim().toLowerCase();
+        if (!key) return [];
+        if (prospectsCache.has(key)) return prospectsCache.get(key)!;
+        try {
+          const rows = await loadProspectsForEventSlug(db, slug);
+          prospectsCache.set(key, rows);
+          return rows;
+        } catch (error) {
+          console.error("[admin/dashboard] prospects cache", slug, error);
+          prospectsCache.set(key, []);
+          return [];
+        }
+      }
+
+      async function loadRespondentsCached(eventId: string): Promise<EventRespondent[]> {
+        if (!eventId) return [];
+        if (respondentsCache.has(eventId)) return respondentsCache.get(eventId)!;
+        try {
+          const rows = await loadRespondentsForEvent(db, eventId);
+          respondentsCache.set(eventId, rows);
+          return rows;
+        } catch (error) {
+          console.error("[admin/dashboard] respondents cache", eventId, error);
+          respondentsCache.set(eventId, []);
+          return [];
+        }
+      }
+
+      async function summarizeCampaign(c: LastEmailCampaignRecord) {
         const campaignEventId =
-          campaign.eventId ||
+          c.eventId ||
           events.find(
             (e) =>
-              campaign.eventSlug &&
-              e.slug.trim().toLowerCase() === campaign.eventSlug.trim().toLowerCase(),
+              c.eventSlug &&
+              e.slug.trim().toLowerCase() === c.eventSlug.trim().toLowerCase(),
           )?.id ||
           null;
         const campaignSlug =
-          campaign.eventSlug ||
-          (campaign.templateKey
-            ? eventSlugFromOutreachTemplateKey(campaign.templateKey)
-            : null);
-
-        let lastRespondents = nextEventRespondents;
-        let lastProspects = nextEventProspects;
-        const sameAsNext =
-          nextEvent &&
-          ((campaignEventId && campaignEventId === nextEvent.id) ||
-            (campaignSlug &&
-              campaignSlug.toLowerCase() === nextEvent.slug.trim().toLowerCase()));
-
-        if (!sameAsNext && campaignEventId) {
-          try {
-            lastRespondents = await loadRespondentsForEvent(db, campaignEventId);
-          } catch (error) {
-            console.error("[admin/dashboard] last-email respondents", error);
-            lastRespondents = [];
-          }
-        }
-        if (!sameAsNext && campaignSlug) {
-          try {
-            lastProspects = await loadProspectsForEventSlug(db, campaignSlug);
-          } catch (error) {
-            console.error("[admin/dashboard] last-email prospects", error);
-            lastProspects = [];
-          }
-        }
-
-        lastEmailResults = buildLastEmailResultsSummary({
+          c.eventSlug ||
+          (c.templateKey ? eventSlugFromOutreachTemplateKey(c.templateKey) : null);
+        const [lastRespondents, lastProspects] = await Promise.all([
+          campaignEventId ? loadRespondentsCached(campaignEventId) : Promise.resolve([]),
+          campaignSlug ? loadProspectsCached(campaignSlug) : Promise.resolve([]),
+        ]);
+        return buildLastEmailResultsSummary({
           campaign: {
-            ...campaign,
-            eventId: campaign.eventId || campaignEventId,
-            eventSlug: campaign.eventSlug || campaignSlug,
+            ...c,
+            eventId: c.eventId || campaignEventId,
+            eventSlug: c.eventSlug || campaignSlug,
           },
           events,
           participations,
           respondents: lastRespondents,
           prospects: lastProspects,
+          waitlistByEmail,
         });
       }
+
+      if (campaign) {
+        lastEmailResults = await summarizeCampaign(campaign);
+      }
+
+      const historySource = mergeCampaignHistory(recentCampaigns, [
+        campaign,
+        inferredOutbound,
+        inferredFromEvents,
+        inferredFromProspects,
+        inferredPlaces,
+        storedCampaign,
+      ]);
+      const historyRows: EmailCampaignHistoryRow[] = [];
+      for (const c of historySource.slice(0, 6)) {
+        // Skip duplicate of the live last-email row when ids match.
+        if (
+          lastEmailResults &&
+          c.id &&
+          lastEmailResults.id &&
+          c.id === lastEmailResults.id
+        ) {
+          historyRows.push(toEmailCampaignHistoryRow(lastEmailResults, c.id));
+          continue;
+        }
+        if (
+          lastEmailResults &&
+          !c.id &&
+          c.templateKey === lastEmailResults.templateKey &&
+          c.sentAt === lastEmailResults.sentAt
+        ) {
+          historyRows.push(
+            toEmailCampaignHistoryRow(lastEmailResults, lastEmailResults.id),
+          );
+          continue;
+        }
+        const summary = await summarizeCampaign(c);
+        historyRows.push(toEmailCampaignHistoryRow(summary, c.id ?? summary.templateKey));
+      }
+      emailCampaignHistory = historyRows;
     } catch (error) {
       console.error("[admin/dashboard] last-email results", error);
     }
+
+    const pastEvent = pickLastPastEvent(events);
+    let pastEventFocus = null as {
+      eventId: string;
+      eventSlug: string;
+      title: string;
+      startsAt: string;
+      confirmedCount: number;
+      revenueMxn: number;
+      priceMxn: number | null;
+      surveySentCount: number;
+      surveyResponseCount: number;
+      satisfaction: ReturnType<typeof computeEventSatisfaction>;
+    } | null;
+
+    if (pastEvent) {
+      // Persist organizer = Invité (COST oui, CA non) then coerce in-memory for this response.
+      try {
+        await ensureOrganizerParticipation(db, pastEvent.id);
+        invalidateAdminCoreCollectionsCache();
+      } catch (error) {
+        console.warn("[admin/dashboard] ensure organizer", error);
+      }
+      for (const p of participations) {
+        if (p.eventId !== pastEvent.id) continue;
+        if (!isOrganizerParticipation(p)) continue;
+        p.isOrganizer = true;
+        if (normalizeParticipationStatus(p.status) !== "comped") {
+          p.status = "comped";
+        }
+      }
+
+      const pastParts = participations.filter((p) => p.eventId === pastEvent.id);
+      const guests = pastParts.filter((p) => !isOrganizerParticipation(p));
+      const confirmedGuests = guests.filter(
+        (p) => normalizeParticipationStatus(p.status) === "confirmed",
+      );
+      const priceRaw =
+        typeof pastEvent.priceMxn === "number" && Number.isFinite(pastEvent.priceMxn)
+          ? pastEvent.priceMxn
+          : 0;
+      const unitTtc = computeEventIva(priceRaw, {
+        includeIva: pastEvent.priceIncludesIva !== false,
+        includeService: pastEvent.priceIncludesService !== false,
+      }).totalWithIva;
+      const revenueMxn =
+        Math.round(unitTtc * confirmedGuests.length * 100) / 100;
+      const sat = computeEventSatisfaction(guests);
+      pastEventFocus = {
+        eventId: pastEvent.id,
+        eventSlug: pastEvent.slug,
+        title: pastEvent.title,
+        startsAt: pastEvent.startsAt,
+        confirmedCount: confirmedGuests.length,
+        revenueMxn,
+        priceMxn: priceRaw > 0 ? priceRaw : null,
+        surveySentCount: sat.sentCount,
+        surveyResponseCount: sat.responseCount,
+        satisfaction: sat,
+      };
+    }
+
+    const dashboardMoment = resolveDashboardMoment({
+      lastEmail: lastEmailResults
+        ? {
+            templateKey: lastEmailResults.templateKey,
+            sentAt: lastEmailResults.sentAt,
+            eventId: lastEmailResults.eventId,
+          }
+        : null,
+      nextEvent: nextEventRsvp
+        ? { eventId: nextEventRsvp.eventId, startsAt: nextEventRsvp.startsAt }
+        : null,
+      pastEvent: pastEventFocus
+        ? {
+            eventId: pastEventFocus.eventId,
+            startsAt: pastEventFocus.startsAt,
+            surveySentCount: pastEventFocus.surveySentCount,
+            surveyResponseCount: pastEventFocus.surveyResponseCount,
+          }
+        : null,
+    });
 
     return NextResponse.json({
       ok: true,
@@ -465,7 +665,12 @@ export async function GET(request: Request) {
       recentTableDrafts,
       opsQueues,
       nextEventRsvp,
+      lastEventRecap: buildLastEventRecap(events, participations),
+      mesaSeries: buildMesaSeries(events, participations),
       lastEmailResults,
+      emailCampaignHistory,
+      pastEventFocus,
+      dashboardMoment,
     });
   } catch (error) {
     console.error("[admin/dashboard]", error);

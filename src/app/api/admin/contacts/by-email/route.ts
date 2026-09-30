@@ -13,7 +13,11 @@ import { buildContactStats } from "@/lib/contacts/contact-stats";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { findProspectByEmail } from "@/lib/prospects/store";
 import { normalizeProspectEmail } from "@/lib/prospects/normalize";
-import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
+import type {
+  AdminEvent,
+  AdminEventParticipation,
+  EventRespondent,
+} from "@/lib/types/events";
 
 export async function GET(request: Request) {
   const admin = await requirePlatformAdmin(request);
@@ -30,11 +34,12 @@ export async function GET(request: Request) {
 
   try {
     const db = getAdminFirestore();
-    const [prospect, waitlist, activities, partsSnap] = await Promise.all([
+    const [prospect, waitlist, activities, partsSnap, respondentsSnap] = await Promise.all([
       findProspectByEmail(email),
       findWaitlistByEmailIncludingDeleted(email),
       listActivitiesByEmail(email, 100),
       db.collection(COLLECTIONS.participations).where("email", "==", email).limit(100).get(),
+      db.collection(COLLECTIONS.respondents).where("email", "==", email).limit(100).get(),
     ]);
 
     let participations: AdminEventParticipation[] = partsSnap.docs.map((d) => ({
@@ -61,7 +66,17 @@ export async function GET(request: Request) {
       participations = [...byId.values()];
     }
 
-    const eventIds = [...new Set(participations.map((p) => p.eventId).filter(Boolean))];
+    const respondents: EventRespondent[] = respondentsSnap.docs.map((d) => ({
+      id: d.id,
+      ...(d.data() as Omit<EventRespondent, "id">),
+    }));
+
+    const eventIds = [
+      ...new Set([
+        ...participations.map((p) => p.eventId),
+        ...respondents.map((r) => r.eventId),
+      ].filter(Boolean)),
+    ];
     const events: AdminEvent[] = (
       await Promise.all(
         eventIds.map(async (id) => {
@@ -84,6 +99,7 @@ export async function GET(request: Request) {
       prospect,
       participations,
       events: eventLites,
+      respondents,
     });
     const timeline = buildContactTimeline({ activities, derived });
     const stats = buildContactStats({
@@ -93,6 +109,7 @@ export async function GET(request: Request) {
       participations,
       events: eventLites,
       activities: timeline,
+      respondents,
     });
 
     return NextResponse.json({

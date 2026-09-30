@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyRsvpToken } from "@/lib/email/rsvp-token";
-import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
+import { sendAdminRsvpYesEmail } from "@/lib/email/send-admin-rsvp-yes";
 import {
   countSeatedParticipations,
   DEFAULT_GUEST_CAPACITY,
@@ -76,6 +76,9 @@ export async function processRsvpClick(input: {
       eventId?: string;
       email?: string;
       status?: string;
+      fullName?: string;
+      companyName?: string;
+      phone?: string;
     };
     if (data.eventId !== payload.eventId) {
       return redirect("invalid");
@@ -147,6 +150,7 @@ export async function processRsvpClick(input: {
     );
 
     const guestEmail = String(data.email ?? "").trim();
+    const guestName = String(data.fullName ?? "").trim() || guestEmail;
     if (guestEmail.includes("@")) {
       void import("@/lib/contacts/activities-store").then(({ recordContactActivity }) =>
         recordContactActivity({
@@ -165,6 +169,28 @@ export async function processRsvpClick(input: {
       );
     }
 
+    if (response === "yes" && guestEmail.includes("@")) {
+      void sendAdminRsvpYesEmail({
+        fullName: guestName,
+        email: guestEmail,
+        company: data.companyName,
+        phone: data.phone,
+        eventTitle: eventTitle || payload.eventId,
+        eventSlug: event?.slug,
+        channel: "rsvp_button",
+        status: next,
+      }).then((adminMail) => {
+        if (!adminMail.ok) {
+          console.error("[rsvp] admin OUI notify FAILED:", adminMail.error, {
+            to: "gregory.prudhommeaux@gmail.com",
+            email: guestEmail,
+          });
+        } else {
+          console.info("[rsvp] admin OUI notify sent", { email: guestEmail });
+        }
+      });
+    }
+
     // Non-members must create a LA MESA account (YES or NO).
     if (event && guestEmail.includes("@")) {
       const waitlist = await findWaitlistByEmail(guestEmail);
@@ -180,54 +206,10 @@ export async function processRsvpClick(input: {
       }
     }
 
-    if (response === "yes" && event && guestEmail.includes("@")) {
-      try {
-        const partsSnap = await db
-          .collection(COLLECTIONS.participations)
-          .where("eventId", "==", payload.eventId)
-          .limit(500)
-          .get();
-        const parts = partsSnap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<AdminEventParticipation, "id">),
-        }));
-        const capacity =
-          typeof event.capacity === "number" && event.capacity > 0
-            ? event.capacity
-            : DEFAULT_GUEST_CAPACITY;
-        const seated = countSeatedParticipations(parts);
-        const existing = parts.find((p) => p.id === payload.participationId);
-        const partRow = {
-          id: payload.participationId,
-          eventId: payload.eventId,
-          email: guestEmail,
-          fullName: existing?.fullName,
-          status: next,
-          statusSource: "guest" as const,
-          ...(existing
-            ? {
-                companyName: existing.companyName,
-                phone: existing.phone,
-                calendarInviteSentAt: existing.calendarInviteSentAt,
-                placesAvailableSentAt: existing.placesAvailableSentAt,
-              }
-            : {}),
-        } as AdminEventParticipation;
-        const seatsLeft = seated <= capacity && next !== "waitlist";
-
-        if (seatsLeft && normalizeParticipationStatus(partRow.status) !== "confirmed") {
-          void sendTemplatedEventEmail({
-            key: "payment_relance",
-            event,
-            participation: partRow,
-          }).catch((err) => console.error("[rsvp] payment_relance after yes", err));
-        }
-        if (next === "waitlist") {
-          return okRedirect("waitlist");
-        }
-      } catch (err) {
-        console.error("[rsvp] post-yes follow-up", err);
-      }
+    // Payment copy stays on the formal invite and the RSVP page.
+    // payment_relance is a manual follow-up from the payment phase, once per guest.
+    if (response === "yes" && next === "waitlist") {
+      return okRedirect("waitlist");
     }
 
     return okRedirect();

@@ -20,7 +20,12 @@ import {
 } from "@/lib/member/profile-completion";
 import { isFranconetworkMember } from "@/lib/member/franconetwork-member";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
-import type { AdminEvent, WaitlistRegistration } from "@/lib/types/events";
+import { formatPeriodMonthLabel } from "@/lib/dinner-subjects/period";
+import type {
+  AdminEvent,
+  DinnerSubjectInterest,
+  WaitlistRegistration,
+} from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import {
   CompletionCell,
@@ -28,10 +33,16 @@ import {
   formatRegistrantDate,
   registrantSubtitle as buildRegistrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { CalendarPlus, Mail, Trash2, UserPlus, Users, X } from "lucide-react";
+import { CalendarPlus, Mail, RefreshCw, Trash2, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+
+const SUBJECT_VALIDATION_LABELS: Record<DinnerSubjectInterest["validation"], string> = {
+  pending: "À valider",
+  validated: "Validé",
+  rejected: "Rejeté",
+};
 
 type ProfileReminderDraft = {
   memberId: string;
@@ -55,6 +66,125 @@ function truncatePersoId(id: string, max = 10): string {
   const t = id.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max)}…`;
+}
+
+function SubjectInterestValidationEditor({
+  member,
+  onSaved,
+}: {
+  member: WaitlistRegistration;
+  onSaved: (patch: { dinnerSubjectInterests: DinnerSubjectInterest[] }) => void;
+}) {
+  const authFetch = useAuthFetch();
+  const interests = member.dinnerSubjectInterests ?? [];
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  if (!interests.length) return null;
+
+  async function validate(
+    subjectId: string,
+    validation: "validated" | "rejected",
+  ) {
+    setBusyId(subjectId);
+    setErr(null);
+    try {
+      const note =
+        validation === "rejected"
+          ? window.prompt("Note (optionnel) — pourquoi ce sujet ne colle pas au profil ?") ?? undefined
+          : window.prompt("Note (optionnel) — cohérence profil ↔ sujet") ?? undefined;
+      const res = await authFetch(`/api/admin/waitlist/${encodeURIComponent(member.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subjectInterestValidation: {
+            subjectId,
+            validation,
+            ...(note?.trim() ? { note: note.trim() } : {}),
+          },
+        }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        dinnerSubjectInterests?: DinnerSubjectInterest[];
+      };
+      if (!res.ok || !json.ok || !json.dinnerSubjectInterests) {
+        setErr(json.error ?? "save_failed");
+        return;
+      }
+      onSaved({ dinnerSubjectInterests: json.dinnerSubjectInterests });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-2 border-t border-gray-100 pt-4">
+      <p className="text-xs font-bold uppercase text-ns-secondary">
+        Sujets catalogue — cohérence profil
+      </p>
+      <ul className="space-y-2">
+        {interests.map((row) => (
+          <li
+            key={row.subjectId}
+            className="rounded-md border border-black/5 bg-ns-brand-light/40 px-2.5 py-2 text-sm"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-ns-hero">{row.title}</p>
+                <p className="text-xs text-ns-secondary">
+                  {row.periodMonth
+                    ? formatPeriodMonthLabel(row.periodMonth, "fr")
+                    : "période —"}
+                  {row.city ? ` · ${row.city}` : ""}
+                  {" · "}
+                  {SUBJECT_VALIDATION_LABELS[row.validation]}
+                </p>
+                {row.validationNote ? (
+                  <p className="mt-0.5 text-xs text-ns-secondary">{row.validationNote}</p>
+                ) : null}
+              </div>
+              {row.validation === "pending" || row.validation === "rejected" ? (
+                <div className="flex flex-wrap gap-1">
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    disabled={busyId === row.subjectId}
+                    onClick={() => void validate(row.subjectId, "validated")}
+                  >
+                    Valider
+                  </button>
+                  {row.validation === "pending" ? (
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      disabled={busyId === row.subjectId}
+                      onClick={() => void validate(row.subjectId, "rejected")}
+                    >
+                      Rejeter
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={BTN_SECONDARY}
+                  disabled={busyId === row.subjectId}
+                  onClick={() => void validate(row.subjectId, "rejected")}
+                >
+                  Revoir
+                </button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+      {err ? <p className={ERROR_TEXT}>{err}</p> : null}
+    </div>
+  );
 }
 
 function OpsMemberEditor({
@@ -243,6 +373,13 @@ type ContextMenuState = { x: number; y: number } | null;
 type ReferralFilter = "all" | "with_referrer" | "without_referrer" | "deactivated";
 type ProfileFilter = "all" | "incomplete" | "no_auth";
 type SourceFilter = "all" | "franconetwork";
+/** Dashboard “À traiter” deep-links — ops queues on waitlist. */
+type QueueFilter = "all" | "priority" | "review" | "no-show";
+
+function parseQueueFilter(raw: string | null): QueueFilter {
+  if (raw === "priority" || raw === "review" || raw === "no-show") return raw;
+  return "all";
+}
 
 export function AdminRegistrantsPanel({ title }: { title: string }) {
   const authFetch = useAuthFetch();
@@ -255,6 +392,8 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
   const [deleting, setDeleting] = useState(false);
   const [sendingFnMail, setSendingFnMail] = useState(false);
   const [sendingProfileMail, setSendingProfileMail] = useState(false);
+  const [syncingPerso, setSyncingPerso] = useState(false);
+  const [bulkSyncingPerso, setBulkSyncingPerso] = useState(false);
   const [loadingProfilePreview, setLoadingProfilePreview] = useState(false);
   const [profileReminderDraft, setProfileReminderDraft] =
     useState<ProfileReminderDraft | null>(null);
@@ -269,6 +408,9 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     if (p === "incomplete" || p === "no_auth") return p;
     return "all";
   });
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>(() =>
+    parseQueueFilter(searchParams.get("queue")),
+  );
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() =>
     searchParams.get("source") === "franconetwork" ? "franconetwork" : "all",
   );
@@ -366,6 +508,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       }
       if (profileFilter === "no_auth" && r.uid?.trim()) return false;
       if (sourceFilter === "franconetwork" && !isFranconetworkMember(r)) return false;
+      if (queueFilter === "priority" && resolveOpsPriority(r.opsPriority) !== "priority") {
+        return false;
+      }
+      if (queueFilter === "review" && resolveOpsPriority(r.opsPriority) !== "review") {
+        return false;
+      }
+      if (queueFilter === "no-show") {
+        const tags = (r.opsTags ?? []).map((t) => t.toLowerCase());
+        if (!tags.includes("no-show")) return false;
+      }
       if (sector && r.sector !== sector) return false;
       if (position && r.position !== position) return false;
       if (city && (r.city ?? "").trim().toLowerCase() !== city.trim().toLowerCase()) return false;
@@ -389,7 +541,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter]);
+  }, [rows, q, sector, position, city, company, referralFilter, profileFilter, sourceFilter, queueFilter]);
 
   const filteredSorted = useMemo(
     () =>
@@ -413,7 +565,8 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       company ||
       referralFilter !== "all" ||
       profileFilter !== "all" ||
-      sourceFilter !== "all",
+      sourceFilter !== "all" ||
+      queueFilter !== "all",
   );
   const allFilteredSelected =
     filtered.length > 0 && filtered.every((r) => selectedIds.has(r.id));
@@ -546,6 +699,13 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
     setReferralFilter("all");
     setProfileFilter("all");
     setSourceFilter("all");
+    setQueueFilter("all");
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("queue");
+    params.delete("profile");
+    params.delete("source");
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : "?", { scroll: false });
   }
 
   async function sendFnAnnouncement(member: WaitlistRegistration, force = false) {
@@ -595,6 +755,140 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setSendingFnMail(false);
+    }
+  }
+
+  async function syncPerso(member: WaitlistRegistration) {
+    setSyncingPerso(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch(
+        `/api/admin/waitlist/${encodeURIComponent(member.id)}/sync-perso`,
+        { method: "POST" },
+      );
+      const json = (await res.json()) as {
+        ok?: boolean;
+        status?: "synced" | "failed" | "skipped";
+        error?: string;
+        databasePersoContactId?: string;
+        databasePersoSyncedAt?: string;
+        enrichedFields?: string[];
+        fullName?: string;
+        company?: string;
+        linkedinUrl?: string;
+      };
+      const enriched = Array.isArray(json.enrichedFields) ? json.enrichedFields : [];
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "sync_failed");
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === member.id
+              ? {
+                  ...r,
+                  ...(json.fullName ? { fullName: json.fullName } : {}),
+                  ...(json.company ? { company: json.company } : {}),
+                  ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
+                  databasePersoSyncStatus: "failed",
+                  databasePersoSyncError: json.error ?? "sync_failed",
+                }
+              : r,
+          ),
+        );
+        return;
+      }
+      if (json.status === "skipped") {
+        setActionMsg(
+          `Perso skip (${json.error ?? "skipped"}) pour ${member.email}${
+            enriched.length ? ` · enrichi: ${enriched.join(", ")}` : ""
+          }.`,
+        );
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === member.id
+              ? {
+                  ...r,
+                  ...(json.fullName ? { fullName: json.fullName } : {}),
+                  ...(json.company ? { company: json.company } : {}),
+                  ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
+                  databasePersoSyncStatus: "skipped",
+                  databasePersoSyncError: undefined,
+                }
+              : r,
+          ),
+        );
+        return;
+      }
+      setActionMsg(
+        `Perso sync OK · ${member.email}${
+          enriched.length ? ` · enrichi depuis Perso: ${enriched.join(", ")}` : ""
+        }`,
+      );
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === member.id
+            ? {
+                ...r,
+                ...(json.fullName ? { fullName: json.fullName } : {}),
+                ...(json.company ? { company: json.company } : {}),
+                ...(json.linkedinUrl ? { linkedinUrl: json.linkedinUrl } : {}),
+                databasePersoSyncStatus: "synced",
+                databasePersoContactId: json.databasePersoContactId ?? r.databasePersoContactId,
+                databasePersoSyncedAt: json.databasePersoSyncedAt ?? new Date().toISOString(),
+                databasePersoSyncError: undefined,
+              }
+            : r,
+        ),
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSyncingPerso(false);
+    }
+  }
+
+  async function bulkResyncPersoFailed() {
+    const failedCount = rows.filter((r) => r.databasePersoSyncStatus === "failed").length;
+    if (failedCount === 0) {
+      setActionMsg("Aucun profil en échec Perso.");
+      return;
+    }
+    if (
+      !window.confirm(
+        `Relancer la sync bidirectionnelle Perso pour jusqu’à 25 profils en échec (sur ${failedCount} visibles en base) ?`,
+      )
+    ) {
+      return;
+    }
+    setBulkSyncingPerso(true);
+    setActionMsg(null);
+    setError(null);
+    try {
+      const res = await authFetch("/api/admin/waitlist/resync-perso-failed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limit: 25 }),
+      });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        scanned?: number;
+        synced?: number;
+        failed?: number;
+        skipped?: number;
+      };
+      if (!res.ok || !json.ok) {
+        setError(json.error ?? "sync_failed");
+        return;
+      }
+      setActionMsg(
+        `Perso bulk · scannés ${json.scanned ?? 0} · OK ${json.synced ?? 0} · échec ${json.failed ?? 0} · skip ${json.skipped ?? 0}`,
+      );
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBulkSyncingPerso(false);
     }
   }
 
@@ -849,6 +1143,16 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
           </button>
           <button
             type="button"
+            disabled={bulkSyncingPerso}
+            onClick={() => void bulkResyncPersoFailed()}
+            className={`${BTN_SECONDARY} inline-flex items-center gap-2 text-sm`}
+            title="Relancer Perso ↔ LA MESA pour les profils en échec (pull enrichissement + push)"
+          >
+            <RefreshCw className={`h-4 w-4 ${bulkSyncingPerso ? "animate-spin" : ""}`} />
+            {bulkSyncingPerso ? "Perso bulk…" : "Resync Perso failed"}
+          </button>
+          <button
+            type="button"
             disabled={hygieneLoading}
             onClick={() => void loadAuthHygiene()}
             className={`${BTN_SECONDARY} text-sm`}
@@ -895,7 +1199,7 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                   {hygiene.authWithoutProfile.slice(0, 40).map((u) => (
                     <li key={u.uid}>
                       <a
-                        href={`/admin/contacts?email=${encodeURIComponent(u.email)}`}
+                        href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(u.email)}`}
                         className="font-medium underline-offset-2 hover:underline"
                       >
                         {u.email}
@@ -967,6 +1271,30 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div>
+            <label className={LABEL_CLASS} htmlFor="filter-queue">
+              File ops
+            </label>
+            <select
+              id="filter-queue"
+              value={queueFilter}
+              onChange={(e) => {
+                const next = parseQueueFilter(e.target.value);
+                setQueueFilter(next);
+                const params = new URLSearchParams(searchParams.toString());
+                if (next === "all") params.delete("queue");
+                else params.set("queue", next);
+                const qs = params.toString();
+                router.replace(qs ? `?${qs}` : "?", { scroll: false });
+              }}
+              className={INPUT_CLASS}
+            >
+              <option value="all">Toutes</option>
+              <option value="priority">À prioriser</option>
+              <option value="review">À revoir</option>
+              <option value="no-show">No-show</option>
+            </select>
+          </div>
           <div>
             <label className={LABEL_CLASS} htmlFor="filter-profile">
               Profil
@@ -1292,6 +1620,11 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                                   ? "text-red-700"
                                   : "text-ns-secondary"
                             }`}
+                            title={
+                              status === "failed" && r.databasePersoSyncError
+                                ? r.databasePersoSyncError
+                                : undefined
+                            }
                           >
                             {status}
                           </span>
@@ -1366,10 +1699,10 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                     </a>
                     {active.email?.includes("@") ? (
                       <Link
-                        href={`/admin/contacts?email=${encodeURIComponent(active.email)}`}
+                        href={`/admin/personnes?tab=memoire&email=${encodeURIComponent(active.email)}`}
                         className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-900 hover:bg-sky-100"
                       >
-                        Mémoire contact
+                        Parcours · surveys · CA
                       </Link>
                     ) : null}
                   </dd>
@@ -1440,15 +1773,37 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 </div>
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Database Perso</dt>
-                  <dd>
-                    {(active.databasePersoSyncStatus ??
-                      (active.databasePersoContactId ? "synced" : undefined)) === "synced"
-                      ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
-                      : active.databasePersoSyncStatus === "failed"
-                        ? "Échec sync"
-                        : active.databasePersoSyncStatus === "skipped"
-                          ? "Non configuré / skip"
-                          : "—"}
+                  <dd className="space-y-2">
+                    <p>
+                      {(active.databasePersoSyncStatus ??
+                        (active.databasePersoContactId ? "synced" : undefined)) === "synced"
+                        ? `Sync OK${active.databasePersoContactId ? ` · ${active.databasePersoContactId}` : ""}`
+                        : active.databasePersoSyncStatus === "failed"
+                          ? "Échec sync"
+                          : active.databasePersoSyncStatus === "skipped"
+                            ? "Non configuré / skip"
+                            : "—"}
+                    </p>
+                    {active.databasePersoSyncStatus === "failed" &&
+                    active.databasePersoSyncError ? (
+                      <p
+                        className="break-words font-mono text-[11px] text-red-700/90"
+                        title={active.databasePersoSyncError}
+                      >
+                        {active.databasePersoSyncError}
+                      </p>
+                    ) : null}
+                    {!isSoftDeleted(active) ? (
+                      <button
+                        type="button"
+                        className={`${BTN_SECONDARY} inline-flex w-full items-center justify-center gap-2 text-sm`}
+                        disabled={syncingPerso}
+                        onClick={() => void syncPerso(active)}
+                      >
+                        <RefreshCw className={`h-4 w-4 ${syncingPerso ? "animate-spin" : ""}`} />
+                        {syncingPerso ? "Sync Perso…" : "Resync Perso ↔"}
+                      </button>
+                    ) : null}
                   </dd>
                 </div>
                 <div>
@@ -1458,6 +1813,32 @@ export function AdminRegistrantsPanel({ title }: { title: string }) {
                 <div>
                   <dt className="text-xs font-bold uppercase text-ns-secondary">Motivation</dt>
                   <dd className="whitespace-pre-wrap">{active.invitationMotivation || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">
+                    Thématiques de dîners
+                  </dt>
+                  <dd className="whitespace-pre-wrap">{active.dinnerThemesInterest || "—"}</dd>
+                </div>
+                {!isSoftDeleted(active) ? (
+                  <SubjectInterestValidationEditor
+                    member={active}
+                    onSaved={(patch) => {
+                      setRows((prev) =>
+                        prev.map((r) => (r.id === active.id ? { ...r, ...patch } : r)),
+                      );
+                    }}
+                  />
+                ) : null}
+                <div>
+                  <dt className="text-xs font-bold uppercase text-ns-secondary">Apporte / cherche</dt>
+                  <dd className="whitespace-pre-wrap text-sm">
+                    <span className="font-medium text-ns-secondary">Apporte :</span>{" "}
+                    {active.canBring?.trim() || "—"}
+                    <br />
+                    <span className="font-medium text-ns-secondary">Cherche :</span>{" "}
+                    {active.isSeeking?.trim() || "—"}
+                  </dd>
                 </div>
                 {isFranconetworkMember(active) && !isSoftDeleted(active) ? (
                   <div className="space-y-2 border-t border-gray-100 pt-4">

@@ -12,7 +12,7 @@ import {
   DEFAULT_GUEST_CAPACITY,
 } from "@/lib/events/capacity";
 import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
-import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import { z } from "zod";
 
 const inviteesSchema = z.object({
@@ -60,8 +60,6 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
   }
 
-  const eventLang = String(eventSnap.data()?.eventLanguage ?? "fr");
-  const locale = eventLang === "en" || eventLang === "es" ? eventLang : "fr";
   const now = new Date().toISOString();
   const capacity = Number(eventSnap.data()?.capacity ?? DEFAULT_GUEST_CAPACITY);
   const existing = await db
@@ -82,7 +80,6 @@ export async function POST(request: Request, { params }: Params) {
   let added = 0;
   let skipped = 0;
   let waitlisted = 0;
-  let waitlistProvisioned = 0;
 
   try {
     await ensureOrganizerParticipation(db, eventId, now);
@@ -105,23 +102,14 @@ export async function POST(request: Request, { params }: Params) {
       if (status === "invited") seated += 1;
       else waitlisted += 1;
 
-      const ensured = await ensureWaitlistProfileByEmail({
-        email,
-        fullName: inv.fullName,
-        company: inv.companyName,
-        locale,
-        source: "la-mesa-std-invite",
-      });
-      if (ensured?.provisioned || ensured?.revived) {
-        waitlistProvisioned += 1;
-      }
+      const existingMember = await findWaitlistByEmail(email);
 
       await db.collection(COLLECTIONS.participations).add({
         eventId,
         email,
-        fullName: inv.fullName ?? ensured?.fullName ?? null,
-        companyName: inv.companyName ?? ensured?.company ?? null,
-        contactId: inv.contactId ?? ensured?.id ?? null,
+        fullName: inv.fullName ?? existingMember?.fullName ?? null,
+        companyName: inv.companyName ?? existingMember?.company ?? null,
+        contactId: inv.contactId ?? existingMember?.id ?? null,
         status,
         statusSource: "admin",
         createdAt: now,
@@ -152,7 +140,8 @@ export async function POST(request: Request, { params }: Params) {
       added,
       skipped,
       waitlisted,
-      waitlistProvisioned,
+      /** Always 0 — admin invite must never invent plateforme inscrits. */
+      waitlistProvisioned: 0,
     });
   } catch (error) {
     console.error("[admin/events invitees POST]", error);

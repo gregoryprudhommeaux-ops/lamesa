@@ -15,7 +15,10 @@ export type EngagementParticipation = Pick<
   "id" | "email" | "contactId" | "status" | "isOrganizer" | "eventId"
 >;
 
-export type EngagementEvent = Pick<AdminEvent, "id" | "priceMxn">;
+export type EngagementEvent = Pick<
+  AdminEvent,
+  "id" | "priceMxn" | "priceIncludesIva" | "priceIncludesService"
+>;
 
 export type EngagementMember = Pick<WaitlistRegistration, "id" | "email" | "referralCode">;
 
@@ -28,11 +31,23 @@ function normalizeEmail(email: string | null | undefined): string {
 /** Invitation pathway: guest was invited (not merely put on event waitlist). */
 export function countsAsInvitation(status: string | null | undefined): boolean {
   const s = normalizeParticipationStatus(status);
-  return s === "invited" || s === "attending" || s === "confirmed" || s === "not_attending";
+  return (
+    s === "invited" ||
+    s === "attending" ||
+    s === "confirmed" ||
+    s === "comped" ||
+    s === "not_attending"
+  );
 }
 
+/** Paid seat — generates CA. */
 export function countsAsConfirmed(status: string | null | undefined): boolean {
   return normalizeParticipationStatus(status) === "confirmed";
+}
+
+/** Complimentary “Invité” — seated, COST yes, CA no. */
+export function countsAsComplimentary(status: string | null | undefined): boolean {
+  return normalizeParticipationStatus(status) === "comped";
 }
 
 export function countReferralsMade(
@@ -67,10 +82,17 @@ export function buildMemberEngagementIndex(input: {
     >
   >;
 }): Map<string, MemberEngagement> {
-  const priceByEvent = new Map<string, number>();
+  const priceByEvent = new Map<
+    string,
+    { price: number; includeIva: boolean; includeService: boolean }
+  >();
   for (const ev of input.events) {
     const price = typeof ev.priceMxn === "number" && Number.isFinite(ev.priceMxn) ? ev.priceMxn : 0;
-    priceByEvent.set(ev.id, price);
+    priceByEvent.set(ev.id, {
+      price,
+      includeIva: ev.priceIncludesIva !== false,
+      includeService: ev.priceIncludesService !== false,
+    });
   }
 
   const partsByEmail = new Map<string, EngagementParticipation[]>();
@@ -106,8 +128,11 @@ export function buildMemberEngagementIndex(input: {
       if (countsAsInvitation(part.status)) invitationsSent += 1;
       if (countsAsConfirmed(part.status)) {
         eventsConfirmed += 1;
-        const priceBeforeTax = priceByEvent.get(part.eventId) ?? 0;
-        revenueMxn += computeEventIva(priceBeforeTax).totalWithIva;
+        const ticket = priceByEvent.get(part.eventId);
+        revenueMxn += computeEventIva(ticket?.price ?? 0, {
+          includeIva: ticket?.includeIva !== false,
+          includeService: ticket?.includeService !== false,
+        }).totalWithIva;
       }
     }
 

@@ -4,8 +4,11 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendTemplatedEventEmail } from "@/lib/email/send-calendar-invite";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
+import { splitPaymentRelanceBatch } from "@/lib/events/payment-relance-batch";
 import { normalizeParticipationStatus } from "@/lib/events/participation-status";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
@@ -22,7 +25,7 @@ const schema = z.object({
 function isAwaitingPayment(p: AdminEventParticipation): boolean {
   if (isOrganizerParticipation(p)) return false;
   const status = normalizeParticipationStatus(p.status);
-  if (status === "confirmed" || status === "not_attending") return false;
+  if (status === "confirmed" || status === "comped" || status === "not_attending") return false;
   // Prefer people who already got the formal invite; still include seated unpaid.
   return Boolean(p.calendarInviteSentAt) || status === "invited" || status === "attending" || status === "waitlist";
 }
@@ -63,24 +66,28 @@ export async function POST(request: Request, { params }: Params) {
     ? new Set(parsed.data.emails.map((e) => normalizeEmail(e)))
     : null;
 
-  const targets = partsSnap.docs
+  const awaiting = partsSnap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Omit<AdminEventParticipation, "id">) }))
     .filter((p) => isAwaitingPayment(p))
     .filter((p) => (emailFilter ? emailFilter.has(normalizeEmail(p.email)) : true))
     .filter((p) => String(p.email ?? "").includes("@"));
 
-  if (targets.length === 0) {
+  if (awaiting.length === 0) {
     return NextResponse.json(
       { ok: false, error: "no_recipients", detail: "Personne en statut « À relancer »." },
       { status: 400 },
     );
   }
 
+  const { toSend: targets, alreadySent, declared } = splitPaymentRelanceBatch(awaiting);
+
   if (parsed.data.dryRun) {
     return NextResponse.json({
       ok: true,
       dryRun: true,
       count: targets.length,
+      alreadySent: alreadySent.length,
+      declared: declared.length,
       emails: targets.map((t) => t.email),
     });
   }
@@ -90,6 +97,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const p of targets) {
     const result = await sendTemplatedEventEmail({
@@ -107,10 +115,24 @@ export async function POST(request: Request, { params }: Params) {
       continue;
     }
     sent += 1;
+    sentEmails.push(p.email);
     await db.collection(COLLECTIONS.participations).doc(p.id).set(
       { paymentRelanceSentAt: now, updatedAt: now },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: "payment_relance",
+      templateLabel: templateLabel("payment_relance"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: event.slug,
+      eventId,
+      eventTitle: event.title,
+      source: "payment_relance",
+    });
   }
 
   return NextResponse.json({
@@ -118,6 +140,8 @@ export async function POST(request: Request, { params }: Params) {
     sent,
     failed,
     skipped,
+    alreadySent: alreadySent.length,
+    declared: declared.length,
     targeted: targets.length,
     errors: errors.slice(0, 20),
   });

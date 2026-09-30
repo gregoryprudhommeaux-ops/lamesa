@@ -43,7 +43,7 @@ export function paymentDeadlineBlock(
       : "avant la date butoir indiquée pour cet événement";
     return [
       "<bold>Important — règlement ACCESS :</bold>",
-      `Ta place ne sera validée que si le ticket ACCESS est réglé ${when}. Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.`,
+      `Ta place ne sera validée que si le ticket ACCESS est réglé par virement bancaire ${when} (pas de paiement en ligne sur le site). Si ce n’est pas le cas, nous devrons proposer ta place à un autre membre.`,
     ].join("\n");
   }
   if (locale === "en") {
@@ -52,7 +52,7 @@ export function paymentDeadlineBlock(
       : "by the payment deadline set for this event";
     return [
       "<bold>Important — ACCESS payment:</bold>",
-      `Your spot will only be confirmed once the ACCESS ticket is paid ${when}. If not, we will offer your seat to another member.`,
+      `Your spot will only be confirmed once the ACCESS ticket is paid by bank transfer ${when} (no online payment on the site). If not, we will offer your seat to another member.`,
     ].join("\n");
   }
   const when = dateLabel
@@ -60,7 +60,7 @@ export function paymentDeadlineBlock(
     : "antes de la fecha límite indicada para este evento";
   return [
     "<bold>Importante — pago ACCESS:</bold>",
-    `Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga ${when}. De lo contrario, ofreceremos tu lugar a otro miembro.`,
+    `Tu lugar quedará confirmado únicamente si el ticket ACCESS se paga por transferencia bancaria ${when} (sin pago en línea en el sitio). De lo contrario, ofreceremos tu lugar a otro miembro.`,
   ].join("\n");
 }
 

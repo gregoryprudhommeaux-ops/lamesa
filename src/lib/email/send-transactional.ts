@@ -14,9 +14,12 @@ export type SendTransactionalEmailInput = {
   subject: string;
   html: string;
   text?: string;
-  /** Extra BCC beyond admin copies. Defaults include platform admins via eventMailAddressing. */
+  /** Extra BCC addresses (never see each other in `to`). */
   bcc?: string[];
-  /** When true (default), BCC configured platform admins unless they are already in `to`. */
+  /**
+   * When true, BCC configured platform admins (unless already in `to`).
+   * Default **false** — guest blasts must not flood the organizer inbox.
+   */
   bccAdmins?: boolean;
   attachments?: TransactionalAttachment[];
 };
@@ -66,8 +69,8 @@ export async function sendTransactionalEmail(
   const toEmails = new Set(to.map((r) => r.email));
   const bccEmails = new Set<string>();
 
-  if (input.bccAdmins !== false) {
-    // Use addressing of the first recipient to derive admin BCCs
+  if (input.bccAdmins === true) {
+    // Opt-in only — personalised blasts should not flood the organizer inbox.
     const addressing = eventMailAddressing(to[0]!.email);
     for (const email of addressing.bcc ?? []) {
       if (!toEmails.has(email)) bccEmails.add(email);

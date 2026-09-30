@@ -2,10 +2,15 @@
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import { Link } from "@/i18n/navigation";
 import { POSITIONS, SECTORS, isSectorCode } from "@/lib/constants/form-options";
 import { CITY_HUBS, resolveCityHub } from "@/lib/constants/city-hubs";
 import { isValidLinkedInUrl, normalizeLinkedInUrl } from "@/lib/linkedin";
-import { listMissingProfileFieldsForLocale } from "@/lib/member/profile-completion";
+import {
+  computeProfileCompletionPercent,
+  isProfileIncomplete,
+  listMissingProfileFieldsForLocale,
+} from "@/lib/member/profile-completion";
 import type { WaitlistRegistration } from "@/lib/types/events";
 import {
   BTN_PRIMARY,
@@ -202,7 +207,7 @@ export function MemberProfilePanel({
 
     const normalizedLinkedin = normalizeLinkedinField();
     const linkedinTrimmed = (normalizedLinkedin || linkedinUrl).trim();
-    if (linkedinTrimmed && !isValidLinkedInUrl(linkedinTrimmed)) {
+    if (!linkedinTrimmed || !isValidLinkedInUrl(linkedinTrimmed)) {
       showSaveError(`${t("saveFailedPrefix")} ${t("errors.invalid_linkedin")}`, "linkedinUrl");
       setSaving(false);
       return;
@@ -378,8 +383,23 @@ export function MemberProfilePanel({
             id="member-linkedin"
             className={fieldInputClass(errorField === "linkedinUrl")}
             value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
-            onBlur={() => normalizeLinkedinField()}
+            required
+            onChange={(e) => {
+              setLinkedinUrl(e.target.value);
+              if (errorField === "linkedinUrl") {
+                setErrorField(null);
+                setError(null);
+              }
+            }}
+            onBlur={() => {
+              const normalized = normalizeLinkedinField();
+              if (normalized) {
+                if (errorField === "linkedinUrl") {
+                  setErrorField(null);
+                  setError(null);
+                }
+              }
+            }}
             placeholder={tReg("fields.linkedinPlaceholder")}
             aria-invalid={errorField === "linkedinUrl"}
             aria-describedby="member-linkedin-hint"
@@ -528,6 +548,21 @@ export function MemberProfilePanel({
             value={isSeeking}
             onChange={(e) => setIsSeeking(e.target.value)}
           />
+        </div>
+        <div className="rounded-md border border-ns-primary/20 bg-ns-primary/5 px-3 py-3">
+          <p className={LABEL_CLASS}>{tReg("fields.dinnerSubjects")}</p>
+          <p className="mt-1 text-xs text-ns-secondary">{t("subjectsPageHint")}</p>
+          {isProfileIncomplete(profile) ? (
+            <p className="mt-2 text-xs font-semibold text-amber-800">
+              {t("subjectsNeedCompleteProfile", {
+                percent: computeProfileCompletionPercent(profile),
+              })}
+            </p>
+          ) : (
+            <Link href="/themes" className={`${BTN_SECONDARY} mt-3 inline-flex`}>
+              {t("subjectsPageCta")}
+            </Link>
+          )}
         </div>
         <div>
           <label className={LABEL_CLASS}>{t("fields.invitationMotivation")}</label>

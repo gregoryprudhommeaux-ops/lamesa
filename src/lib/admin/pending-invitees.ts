@@ -31,12 +31,16 @@ export type TableMemberInviteEmail = {
   contactId?: string;
 };
 
-/** Optional event fields seeded when creating an event from Table Builder. */
+/** Optional event fields seeded when creating an event from Table Builder / sujets. */
 export type PendingEventSeed = {
   invitees: PendingInvitee[];
   format?: EventFormat;
   city?: string;
   title?: string;
+  /** Prefill event subtitle (e.g. subject summary). */
+  subtitle?: string;
+  /** Suggested YYYY-MM-DD for the new dinner form. */
+  date?: string;
 };
 
 /** Converts primary table members into waitlist invitees; never call with alternates. */
@@ -74,8 +78,17 @@ export function setPendingInvitees(
     ...(seed?.format ? { format: seed.format } : {}),
     ...(seed?.city?.trim() ? { city: seed.city.trim() } : {}),
     ...(seed?.title?.trim() ? { title: seed.title.trim() } : {}),
+    ...(seed?.subtitle?.trim() ? { subtitle: seed.subtitle.trim() } : {}),
+    ...(seed?.date && /^\d{4}-\d{2}-\d{2}$/.test(seed.date.trim())
+      ? { date: seed.date.trim() }
+      : {}),
   };
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+/** Seed Nouveau dîner without invitees (e.g. Composer depuis une idée /themes). */
+export function setPendingEventSeed(seed: Omit<PendingEventSeed, "invitees">): void {
+  setPendingInvitees([], seed);
 }
 
 function isPendingInvitee(item: unknown): item is PendingInvitee {
@@ -107,11 +120,14 @@ export function consumePendingEventSeed(): PendingEventSeed {
     const invitees = Array.isArray(record.invitees)
       ? record.invitees.filter(isPendingInvitee)
       : [];
+    const dateRaw = typeof record.date === "string" ? record.date.trim() : "";
     return {
       invitees,
       format: isEventFormat(record.format) ? record.format : undefined,
       city: typeof record.city === "string" ? record.city : undefined,
       title: typeof record.title === "string" ? record.title : undefined,
+      subtitle: typeof record.subtitle === "string" ? record.subtitle : undefined,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(dateRaw) ? dateRaw : undefined,
     };
   } catch {
     return { invitees: [] };

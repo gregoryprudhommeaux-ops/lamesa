@@ -4,6 +4,7 @@ const CANONICAL: EventParticipationStatus[] = [
   "invited",
   "attending",
   "confirmed",
+  "comped",
   "not_attending",
   "waitlist",
 ];
@@ -23,6 +24,23 @@ export const PARTICIPATION_STATUSES: EventParticipationStatus[] = [
   "invited",
   "attending",
   "confirmed",
+  "comped",
   "not_attending",
   "waitlist",
 ];
+
+/** Paid seat — generates CA. */
+export function isPaidSeatStatus(status: string | null | undefined): boolean {
+  return normalizeParticipationStatus(status) === "confirmed";
+}
+
+/** Complimentary “Invité” — seated, COST yes, CA no. */
+export function isComplimentarySeatStatus(status: string | null | undefined): boolean {
+  return normalizeParticipationStatus(status) === "comped";
+}
+
+/** Seat held at the table (paid or complimentary), excluding waitlist / out. */
+export function isHeldSeatStatus(status: string | null | undefined): boolean {
+  const s = normalizeParticipationStatus(status);
+  return s === "confirmed" || s === "comped";
+}

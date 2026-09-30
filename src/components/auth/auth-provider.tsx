@@ -5,7 +5,6 @@ import { getClientAuth, isFirebaseClientConfigured } from "@/lib/firebase/client
 import {
   clearGoogleRedirectPending,
   completeGoogleRedirect,
-  isGoogleRedirectPending,
 } from "@/lib/firebase/google-redirect";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import {
@@ -45,23 +44,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let cancelled = false;
     let unsub = () => {};
+
     (async () => {
+      // Always await redirect result before attaching the listener so a lost
+      // sessionStorage pending flag cannot race RequireAuth into a bounce.
       try {
-        if (isGoogleRedirectPending()) {
-          await completeGoogleRedirect(auth);
-          clearGoogleRedirectPending();
-        }
+        await completeGoogleRedirect(auth);
       } catch {
+        // Domain / network errors — still subscribe for any existing session.
+      } finally {
         clearGoogleRedirectPending();
       }
+      if (cancelled) return;
       unsub = onAuthStateChanged(auth, (next) => {
+        if (cancelled) return;
         setUser(next);
         setLoading(false);
       });
     })();
 
-    return () => unsub();
+    return () => {
+      cancelled = true;
+      unsub();
+    };
   }, [configured]);
 
   const getIdToken = useCallback(async () => {
@@ -72,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const auth = getClientAuth();
     if (auth) await signOut(auth);
+    setUser(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(

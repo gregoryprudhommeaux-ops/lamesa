@@ -17,7 +17,9 @@ import {
   type PlacesAvailableBucket,
 } from "@/lib/events/places-available-candidates";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import { ensureWaitlistProfileByEmail } from "@/lib/member/ensure-waitlist-for-auth";
+import { findWaitlistByEmail } from "@/lib/auth/member.server";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
+import { templateLabel } from "@/lib/email/template-defaults";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 import { z } from "zod";
 
@@ -186,6 +188,7 @@ export async function POST(request: Request, { params }: Params) {
   let failed = 0;
   let skipped = 0;
   const errors: string[] = [];
+  const sentEmails: string[] = [];
 
   for (const target of targets) {
     if (isOrganizerParticipation({ email: target.email })) {
@@ -200,17 +203,8 @@ export async function POST(request: Request, { params }: Params) {
     let participation = partsByEmail.get(target.email) ?? null;
 
     if (!participation) {
-      const ensured = await ensureWaitlistProfileByEmail({
-        email: target.email,
-        fullName: target.fullName,
-        company: target.company,
-        phone: target.phone,
-        source: "la-mesa-places-available",
-        locale:
-          event.eventLanguage === "en" || event.eventLanguage === "es"
-            ? event.eventLanguage
-            : "fr",
-      });
+      // Never auto-create a waitlist "inscrit" — only link if they already signed up.
+      const existingMember = await findWaitlistByEmail(target.email);
 
       const status = nextInviteStatus(capacity, seated);
       if (status === "invited") seated += 1;
@@ -218,10 +212,10 @@ export async function POST(request: Request, { params }: Params) {
       const ref = await db.collection(COLLECTIONS.participations).add({
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
-        companyName: target.company || ensured?.company || "",
-        phone: target.phone || ensured?.phone || "",
-        ...(ensured?.id ? { contactId: ensured.id } : {}),
+        fullName: target.fullName || existingMember?.fullName || target.email,
+        companyName: target.company || existingMember?.company || "",
+        phone: target.phone || existingMember?.phone || "",
+        ...(existingMember?.id ? { contactId: existingMember.id } : {}),
         status,
         statusSource: "admin",
         createdAt: now,
@@ -231,7 +225,7 @@ export async function POST(request: Request, { params }: Params) {
         id: ref.id,
         eventId,
         email: target.email,
-        fullName: target.fullName || ensured?.fullName || target.email,
+        fullName: target.fullName || existingMember?.fullName || target.email,
         status,
         statusSource: "admin",
       };
@@ -253,6 +247,7 @@ export async function POST(request: Request, { params }: Params) {
     }
 
     sent += 1;
+    sentEmails.push(target.email);
     await db.collection(COLLECTIONS.participations).doc(participation.id).set(
       {
         placesAvailableSentAt: now,
@@ -261,6 +256,19 @@ export async function POST(request: Request, { params }: Params) {
       },
       { merge: true },
     );
+  }
+
+  if (sentEmails.length > 0) {
+    void recordLastEmailCampaign({
+      templateKey: `places_available:${slug}`,
+      templateLabel: templateLabel("places_available"),
+      sentAt: now,
+      recipientEmails: sentEmails,
+      eventSlug: slug,
+      eventId,
+      eventTitle: event.title,
+      source: "places_available",
+    });
   }
 
   return NextResponse.json({

@@ -3,14 +3,15 @@
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
 import { labelEventFormat, type EventFormat } from "@/lib/constants/event-formats";
+import type { LastEventRecap, LastEventRecapPerson, LastEventSurveyRow } from "@/lib/admin/last-event-recap";
+import type { MesaSeriesSummary } from "@/lib/admin/mesa-series";
 import { formatScore, type SatisfactionAverages } from "@/lib/admin/satisfaction-stats";
+import type { DashboardMoment } from "@/lib/admin/dashboard-moment";
+import { formatMxn } from "@/lib/events/pricing";
 import {
-  CompletionCell,
-  WelcomeEmailCell,
   formatRegistrantDate,
-  registrantSubtitle,
 } from "@/components/admin/registrant-table-cells";
-import { BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
+import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT } from "@/lib/ui/nextstep";
 import { X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -120,9 +121,72 @@ type LastEmailResults = {
   pending: number;
   confirmed: number;
   inviteSent: number;
+  registered: number;
+  registeredExpress: number;
+  registeredComplete: number;
+  responseRate: number;
+  yesRate: number;
+  confirmedRate: number;
   sansReponseListName?: string;
   yesGuests: NextEventRsvpYesGuest[];
-  source: "cold_outreach" | "save_the_date" | "inferred";
+  noGuests: NextEventRsvpYesGuest[];
+  recipients: EmailCampaignRecipient[];
+  source:
+    | "cold_outreach"
+    | "save_the_date"
+    | "std_relance"
+    | "places_available"
+    | "calendar_invite"
+    | "payment_relance"
+    | "satisfaction_survey"
+    | "inferred";
+};
+
+type EmailCampaignRecipient = {
+  id: string;
+  email: string;
+  fullName: string;
+  company: string;
+  outcome:
+    | "confirmed"
+    | "yes"
+    | "invite_sent"
+    | "no"
+    | "other"
+    | "registered"
+    | "pending";
+  signupKind?: "express" | "complete" | null;
+};
+
+type EmailCampaignHistoryRow = {
+  id: string;
+  templateKey: string;
+  templateLabel: string;
+  sentAt: string;
+  recipientCount: number;
+  yes: number;
+  no: number;
+  pending: number;
+  confirmed: number;
+  registered: number;
+  responseRate: number;
+  yesRate: number;
+  confirmedRate: number;
+  eventTitle: string | null;
+  eventId: string | null;
+};
+
+type PastEventFocus = {
+  eventId: string;
+  eventSlug: string;
+  title: string;
+  startsAt: string;
+  confirmedCount: number;
+  revenueMxn: number;
+  priceMxn: number | null;
+  surveySentCount: number;
+  surveyResponseCount: number;
+  satisfaction: SatisfactionAverages & { sentCount: number };
 };
 
 type DistributionMember = {
@@ -173,31 +237,33 @@ type DashboardPayload = {
   recentTableDrafts?: RecentTableDraft[];
   opsQueues?: OpsQueues;
   nextEventRsvp?: NextEventRsvp | null;
+  lastEventRecap?: LastEventRecap | null;
+  mesaSeries?: MesaSeriesSummary | null;
   lastEmailResults?: LastEmailResults | null;
+  emailCampaignHistory?: EmailCampaignHistoryRow[];
+  pastEventFocus?: PastEventFocus | null;
+  dashboardMoment?: DashboardMoment | null;
 };
 
 const CATEGORIES: {
   key: keyof Pick<
     SatisfactionAverages,
-    "venueQuality" | "menuQuality" | "guestsQuality" | "wouldReturn"
+    | "venueQuality"
+    | "menuQuality"
+    | "guestsQuality"
+    | "valueForMoney"
+    | "wouldReturn"
+    | "wouldRecommend"
   >;
   label: string;
 }[] = [
   { key: "venueQuality", label: "Endroit" },
   { key: "menuQuality", label: "Menu" },
-  { key: "guestsQuality", label: "Autres invités" },
-  { key: "wouldReturn", label: "Reviendrait" },
+  { key: "guestsQuality", label: "Sélection participants" },
+  { key: "valueForMoney", label: "Qualité / prix" },
+  { key: "wouldReturn", label: "Autres tables" },
+  { key: "wouldRecommend", label: "En parlerait" },
 ];
-
-function KpiCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{label}</p>
-      <p className="mt-2 text-3xl font-black text-ns-tertiary">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-ns-secondary">{hint}</p> : null}
-    </div>
-  );
-}
 
 function OpsQueueCard({
   title,
@@ -226,7 +292,7 @@ function OpsQueueCard({
           {rows.slice(0, 5).map((row) => (
             <li key={row.id}>
               <Link
-                href={`/admin/inscrits?id=${encodeURIComponent(row.id)}`}
+                href={`/admin/personnes?tab=membres&id=${encodeURIComponent(row.id)}`}
                 className="block rounded-lg px-2 py-1.5 hover:bg-ns-brand-light/60"
               >
                 <span className="block truncate text-sm font-semibold text-ns-tertiary">
@@ -401,7 +467,7 @@ function ResponseCounters({
         <p className="mt-1 text-2xl font-black text-amber-950">{pending}</p>
         {sansReponseListName ? (
           <Link
-            href={`/admin/prospects?list=${encodeURIComponent(sansReponseListName)}`}
+            href={`/admin/personnes?tab=prospects&list=${encodeURIComponent(sansReponseListName)}`}
             className="mt-1 block text-[10px] font-semibold text-amber-900/90 hover:underline"
           >
             Liste relance →
@@ -412,20 +478,64 @@ function ResponseCounters({
   );
 }
 
+function lastEmailTemplateRoot(templateKey: string): string {
+  return templateKey.split(":")[0] ?? templateKey;
+}
+
+function lastEmailModeHint(results: LastEmailResults): string {
+  switch (lastEmailTemplateRoot(results.templateKey)) {
+    case "places_available":
+    case "calendar_invite":
+      return "Boutons OUI / NON (RSVP)";
+    case "save_the_date":
+    case "std_relance":
+    case "interest_ack":
+      return "Save the Date / intérêt";
+    case "payment_relance":
+      return "Relance paiement";
+    case "participation_confirmed":
+      return "Confirmation de paiement";
+    case "satisfaction_survey":
+      return "Questionnaire";
+    default:
+      return results.responseMode === "rsvp"
+        ? "Boutons OUI / NON (RSVP)"
+        : results.responseMode === "interest"
+          ? "Save the Date / intérêt"
+          : "Envoi tracké";
+  }
+}
+
+function lastEmailChaseTitles(
+  templateKey: string,
+): { yes: string; no: string } | null {
+  switch (lastEmailTemplateRoot(templateKey)) {
+    case "satisfaction_survey":
+    case "participation_confirmed":
+      return null;
+    case "payment_relance":
+      return {
+        yes: "Relancés — toujours à encaisser",
+        no: "Ont dit non",
+      };
+    default:
+      return {
+        yes: "Ont dit oui — à relancer pour le paiement",
+        no: "Ont dit non",
+      };
+  }
+}
+
 function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
   const eventHref = results.eventId
     ? `/admin/evenements?id=${encodeURIComponent(results.eventId)}`
     : null;
   const noTotal = results.no + results.other;
-  const modeHint =
-    results.responseMode === "interest"
-      ? "Save the Date / intérêt"
-      : results.responseMode === "rsvp"
-        ? "RSVP classique"
-        : "Envoi sans formulaire de réponse";
+  const modeHint = lastEmailModeHint(results);
+  const chase = lastEmailChaseTitles(results.templateKey);
 
   return (
-    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
@@ -438,9 +548,14 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
             Envoyé le {formatSentAt(results.sentAt)}
             {results.eventTitle ? ` · ${results.eventTitle}` : ""}
           </p>
-          <p className="mt-1 max-w-xl text-[11px] leading-snug text-ns-secondary">
-            OUI = intérêt. Confirmés = places payées. Invité = mail formel envoyé, pas encore
-            payé.
+          <p className="mt-1 max-w-2xl text-[11px] leading-snug text-ns-secondary">
+            {results.recipientCount} mails envoyés · {results.responseRate}% de réponses ·{" "}
+            {results.yes} OUI · {noTotal} NON · {results.registered} inscrits LA MESA (
+            {results.registeredComplete} complet
+            {results.registeredExpress > 0
+              ? ` · ${results.registeredExpress} express`
+              : ""}
+            ).
           </p>
         </div>
         {eventHref ? (
@@ -460,30 +575,317 @@ function LastEmailResultsCard({ results }: { results: LastEmailResults }) {
         )}
       </div>
 
-      {results.responseMode === "none" ? (
-        <p className="mt-4 text-sm text-ns-secondary">
-          Cet envoi n’est pas lié à un formulaire OUI/NON — pas de décompte de réponses.
-        </p>
-      ) : (
-        <>
-          <ResponseCounters
-            contactedLabel="Envoyés"
-            contacted={results.recipientCount}
-            yes={results.yes}
-            confirmed={results.confirmed}
-            inviteSent={results.inviteSent}
-            noTotal={noTotal}
-            noHint={
-              results.other > 0
-                ? `${results.no} non · ${results.other} autre`
-                : undefined
-            }
-            pending={results.pending}
-            sansReponseListName={results.sansReponseListName}
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+            Envoyés
+          </p>
+          <p className="mt-1 text-2xl font-black text-ns-tertiary">
+            {results.recipientCount}
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            Oui
+          </p>
+          <p className="mt-1 text-2xl font-black text-emerald-900">{results.yes}</p>
+          <p className="text-[10px] text-emerald-800/80">{results.yesRate}%</p>
+        </div>
+        <div className="rounded-xl border border-rose-100 bg-rose-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-rose-800">Non</p>
+          <p className="mt-1 text-2xl font-black text-rose-900">{noTotal}</p>
+        </div>
+        <div className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+            Confirmés
+          </p>
+          <p className="mt-1 text-2xl font-black text-sky-950">{results.confirmed}</p>
+          <p className="text-[10px] text-sky-900/80">Payés</p>
+        </div>
+        <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-indigo-900">
+            Inscrits
+          </p>
+          <p className="mt-1 text-2xl font-black text-indigo-950">{results.registered}</p>
+          <p className="text-[10px] text-indigo-900/80">
+            {results.registeredComplete} complet
+            {results.registeredExpress > 0
+              ? ` · ${results.registeredExpress} express`
+              : ""}
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Sans réponse
+          </p>
+          <p className="mt-1 text-2xl font-black text-amber-950">{results.pending}</p>
+        </div>
+      </div>
+
+      {chase ? (
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <NamedGuestList
+            title={chase.yes}
+            empty="Aucun OUI pour l’instant."
+            guests={results.yesGuests}
+            tone="yes"
           />
-          <YesGuestsList yes={results.yes} yesGuests={results.yesGuests} />
-        </>
+          <NamedGuestList
+            title={chase.no}
+            empty="Aucun NON pour l’instant."
+            guests={results.noGuests}
+            tone="no"
+          />
+        </div>
+      ) : null}
+
+      <ContactedRecipientsList recipients={results.recipients} />
+    </div>
+  );
+}
+
+function NamedGuestList({
+  title,
+  empty,
+  guests,
+  tone,
+}: {
+  title: string;
+  empty: string;
+  guests: NextEventRsvpYesGuest[];
+  tone: "yes" | "no";
+}) {
+  const border =
+    tone === "yes" ? "border-emerald-100/80 bg-white/70" : "border-rose-100/80 bg-white/70";
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white/50 p-3">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">{title}</p>
+      <p className="mt-0.5 text-[11px] text-ns-secondary">{guests.length} personne{guests.length === 1 ? "" : "s"}</p>
+      {guests.length === 0 ? (
+        <p className="mt-2 text-sm text-ns-secondary">{empty}</p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {guests.map((g) => (
+            <li key={g.id} className={`rounded-lg border px-2.5 py-1.5 ${border}`}>
+              <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                {g.fullName || g.email || "Sans nom"}
+              </span>
+              <span className="block truncate text-[11px] text-ns-secondary">
+                {g.company || g.email}
+              </span>
+              {tone === "yes" && g.seat === "confirmed" ? (
+                <span className="mt-1 inline-flex rounded-full bg-sky-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-900">
+                  Payé
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
       )}
+    </div>
+  );
+}
+
+function outcomeLabel(outcome: EmailCampaignRecipient["outcome"]): string {
+  switch (outcome) {
+    case "confirmed":
+      return "Payé";
+    case "invite_sent":
+      return "Invité";
+    case "yes":
+      return "Oui";
+    case "no":
+      return "Non";
+    case "other":
+      return "Autre";
+    case "registered":
+      return "Inscrit";
+    default:
+      return "Sans réponse";
+  }
+}
+
+function outcomeClass(outcome: EmailCampaignRecipient["outcome"]): string {
+  switch (outcome) {
+    case "confirmed":
+      return "bg-sky-100 text-sky-900";
+    case "invite_sent":
+      return "bg-violet-100 text-violet-900";
+    case "yes":
+      return "bg-emerald-100 text-emerald-900";
+    case "no":
+      return "bg-rose-100 text-rose-900";
+    case "other":
+      return "bg-orange-100 text-orange-900";
+    case "registered":
+      return "bg-indigo-100 text-indigo-900";
+    default:
+      return "bg-amber-100 text-amber-950";
+  }
+}
+
+function ContactedRecipientsList({
+  recipients,
+}: {
+  recipients: EmailCampaignRecipient[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="mt-4 border-t border-gray-100/80 pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Gens contactés · résultat
+          </p>
+          <p className="mt-0.5 text-[11px] text-ns-secondary">
+            {recipients.length} dans ce blast
+          </p>
+        </div>
+        {recipients.length > 0 ? (
+          <button
+            type="button"
+            className="text-xs font-semibold text-ns-primary hover:underline"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? "Masquer la liste" : `Voir les ${recipients.length} destinataires →`}
+          </button>
+        ) : null}
+      </div>
+      {recipients.length === 0 ? (
+        <p className="mt-2 text-sm text-ns-secondary">
+          Aucun destinataire enregistré pour ce blast.
+        </p>
+      ) : null}
+      {expanded && recipients.length > 0 ? (
+        <ul className="mt-2 grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+          {recipients.map((r) => (
+            <li
+              key={r.id}
+              className="rounded-lg border border-gray-100 bg-white/70 px-2.5 py-1.5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                    {r.fullName || r.email || "Sans nom"}
+                  </span>
+                  <span className="block truncate text-[11px] text-ns-secondary">
+                    {r.company || r.email}
+                  </span>
+                </div>
+                <span
+                  className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${outcomeClass(r.outcome)}`}
+                >
+                  {outcomeLabel(r.outcome)}
+                </span>
+              </div>
+              {r.signupKind ? (
+                <span className="mt-1 inline-flex rounded-full bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900">
+                  {r.signupKind === "express" ? "Express" : "Profil complet"}
+                </span>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function newestEmailCampaignsFirst(
+  rows: EmailCampaignHistoryRow[],
+): EmailCampaignHistoryRow[] {
+  return [...rows].sort((a, b) => {
+    const am = new Date(a.sentAt).getTime();
+    const bm = new Date(b.sentAt).getTime();
+    return (Number.isFinite(bm) ? bm : 0) - (Number.isFinite(am) ? am : 0);
+  });
+}
+
+function EmailCampaignHistoryTable({ rows }: { rows: EmailCampaignHistoryRow[] }) {
+  const [showArchive, setShowArchive] = useState(false);
+  if (rows.length === 0) return null;
+  const ordered = newestEmailCampaignsFirst(rows);
+  const archiveCount = ordered.length - 1;
+  const visible = showArchive ? ordered : ordered.slice(0, 1);
+  return (
+    <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            Historique des envois
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Le dernier envoi. Les précédents restent dans les archives.
+          </p>
+        </div>
+        {archiveCount > 0 ? (
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+            aria-expanded={showArchive}
+            onClick={() => setShowArchive((open) => !open)}
+          >
+            {showArchive
+              ? "Masquer les archives"
+              : archiveCount === 1
+                ? "Archives · 1 envoi précédent"
+                : `Archives · ${archiveCount} envois précédents`}
+          </button>
+        ) : null}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[720px] text-left text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+              <th className="py-2 pr-3 font-semibold">Email</th>
+              <th className="py-2 pr-3 font-semibold">Date</th>
+              <th className="py-2 pr-3 font-semibold">Envoyés</th>
+              <th className="py-2 pr-3 font-semibold">OUI</th>
+              <th className="py-2 pr-3 font-semibold">NON</th>
+              <th className="py-2 pr-3 font-semibold">Confirmés</th>
+              <th className="py-2 pr-3 font-semibold">Inscrits</th>
+              <th className="py-2 font-semibold">Réponse</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((row, index) => (
+              <tr key={row.id} className="border-b border-gray-50 align-top">
+                <td className="py-2.5 pr-3">
+                  <p className="font-semibold text-ns-tertiary">
+                    {row.templateLabel}
+                    {index === 0 ? (
+                      <span className="ml-2 align-middle text-[10px] font-bold uppercase tracking-wide text-ns-primary">
+                        Dernier
+                      </span>
+                    ) : null}
+                  </p>
+                  {row.eventTitle ? (
+                    <p className="mt-0.5 text-[11px] text-ns-secondary">{row.eventTitle}</p>
+                  ) : null}
+                </td>
+                <td className="py-2.5 pr-3 whitespace-nowrap text-ns-secondary">
+                  {formatSentAt(row.sentAt)}
+                </td>
+                <td className="py-2.5 pr-3 font-semibold tabular-nums">{row.recipientCount}</td>
+                <td className="py-2.5 pr-3 tabular-nums text-emerald-800">
+                  {row.yes}
+                  <span className="text-ns-secondary"> · {row.yesRate}%</span>
+                </td>
+                <td className="py-2.5 pr-3 tabular-nums text-rose-800">{row.no}</td>
+                <td className="py-2.5 pr-3 tabular-nums text-sky-900">
+                  {row.confirmed}
+                  <span className="text-ns-secondary"> · {row.confirmedRate}%</span>
+                </td>
+                <td className="py-2.5 pr-3 tabular-nums text-indigo-900">{row.registered}</td>
+                <td className="py-2.5 font-bold tabular-nums text-ns-tertiary">
+                  {row.responseRate}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -497,7 +899,7 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
       : "RSVP classique";
 
   return (
-    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm lg:col-span-2 xl:col-span-3">
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
@@ -545,25 +947,163 @@ function NextEventRsvpCard({ rsvp }: { rsvp: NextEventRsvp }) {
   );
 }
 
+function PastEventFocusCard({ focus }: { focus: PastEventFocus }) {
+  const eventHref = `/admin/evenements?id=${encodeURIComponent(focus.eventId)}&phase=feedback`;
+  const sat = focus.satisfaction;
+  const pendingSurveys = Math.max(0, focus.surveySentCount - focus.surveyResponseCount);
+  const responseRate =
+    focus.surveySentCount > 0
+      ? Math.round((focus.surveyResponseCount / focus.surveySentCount) * 100)
+      : null;
+
+  return (
+    <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+            Après le dîner · bilan
+          </p>
+          <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">
+            {focus.title}
+          </h4>
+          <p className="mt-0.5 text-sm capitalize text-ns-secondary">
+            {formatNextEventWhen(focus.startsAt)}
+          </p>
+        </div>
+        <Link
+          href={eventHref}
+          className="shrink-0 text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Feedback événement →
+        </Link>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+            CA total
+          </p>
+          <p className="mt-1 text-xl font-black text-emerald-950 sm:text-2xl">
+            {focus.revenueMxn > 0 ? formatMxn(focus.revenueMxn, "fr") : "—"}
+          </p>
+          <p className="text-[10px] text-emerald-800/80">
+            {focus.confirmedCount} payé{focus.confirmedCount === 1 ? "" : "s"}
+            {focus.priceMxn ? ` · ${formatMxn(focus.priceMxn, "fr")} HT` : ""}
+          </p>
+        </div>
+        <div className="rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-sky-900">
+            Survey envoyés
+          </p>
+          <p className="mt-1 text-2xl font-black text-sky-950">{focus.surveySentCount}</p>
+          <p className="text-[10px] text-sky-900/80">
+            {focus.surveySentCount === 0 ? "Pas encore envoyé" : "Mails satisfaction"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-violet-100 bg-violet-50/70 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-violet-900">
+            Réponses
+          </p>
+          <p className="mt-1 text-2xl font-black text-violet-950">
+            {focus.surveyResponseCount}
+          </p>
+          <p className="text-[10px] text-violet-900/80">
+            {responseRate !== null
+              ? `${responseRate}% · ${pendingSurveys} en attente`
+              : "En attente d’envoi"}
+          </p>
+        </div>
+        <div className="rounded-xl border border-amber-100 bg-amber-50/80 px-3 py-2.5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-amber-900">
+            Note globale
+          </p>
+          <p className="mt-1 text-2xl font-black text-amber-950">
+            {sat.responseCount === 0 ? "—" : formatScore(sat.overall)}
+            {sat.responseCount > 0 ? (
+              <span className="text-sm font-semibold text-amber-900/70"> / 5</span>
+            ) : null}
+          </p>
+          <p className="text-[10px] text-amber-900/80">
+            {sat.wouldRecommend === null
+              ? "Pas encore de scores"
+              : `En parlerait ${formatScore(sat.wouldRecommend)}/5`}
+          </p>
+        </div>
+      </div>
+
+      {sat.responseCount > 0 ? (
+        <div className="mt-4 rounded-xl border border-gray-100 bg-white/60 p-3">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Détail satisfaction
+          </p>
+          <CategoryBars sat={sat} />
+        </div>
+      ) : focus.surveySentCount > 0 ? (
+        <p className="mt-4 text-sm text-ns-secondary">
+          Questionnaire parti — les réponses arriveront ici au fil de l’eau.
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-ns-secondary">
+          Envoie le questionnaire de satisfaction pour compléter le bilan.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function IdleMomentCard() {
+  return (
+    <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5">
+      <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+        Rien en cours
+      </p>
+      <p className="mt-2 text-sm text-ns-secondary">
+        Crée le prochain dîner ou lance un envoi depuis Coms / Personnes.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-3">
+        <Link
+          href="/admin/evenements?nouveau=1"
+          className="text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Nouvel événement →
+        </Link>
+        <Link
+          href="/admin/templates"
+          className="text-xs font-semibold text-ns-primary hover:underline"
+        >
+          Coms →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function CategoryBars({ sat }: { sat: SatisfactionAverages }) {
   return (
-    <div className="space-y-3">
+    <ul className="max-w-md space-y-2">
       {CATEGORIES.map((c) => {
         const score = sat[c.key];
         const pct = score === null ? 0 : Math.max(0, Math.min(100, (score / 5) * 100));
         return (
-          <div key={c.key}>
-            <div className="mb-1 flex justify-between text-xs">
-              <span className="font-medium text-ns-tertiary">{c.label}</span>
-              <span className="font-bold text-ns-primary">{formatScore(score)} / 5</span>
+          <li key={c.key} className="grid grid-cols-[minmax(0,1fr)_7rem_2.75rem] items-center gap-3">
+            <span className="truncate text-xs font-medium text-ns-tertiary">{c.label}</span>
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-ns-brand-light"
+              role="img"
+              aria-label={`${c.label} : ${formatScore(score)} sur 5`}
+            >
+              <div
+                className="h-full rounded-full bg-[#b4e600]"
+                style={{ width: `${pct}%` }}
+              />
             </div>
-            <div className="h-3 overflow-hidden rounded-full bg-ns-brand-light">
-              <div className="h-full rounded-full bg-[#b4e600]" style={{ width: `${pct}%` }} />
-            </div>
-          </div>
+            <span className="text-right text-xs font-bold tabular-nums text-ns-primary">
+              {formatScore(score)}
+            </span>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }
 
@@ -629,7 +1169,7 @@ function DistributionDetailModal({
               {selection.members.map((m) => (
                 <li key={m.id}>
                   <Link
-                    href={`/admin/inscrits?id=${encodeURIComponent(m.id)}`}
+                    href={`/admin/personnes?tab=membres&id=${encodeURIComponent(m.id)}`}
                     className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
                     onClick={onClose}
                   >
@@ -802,6 +1342,372 @@ function DashboardSkeleton() {
   );
 }
 
+type LastEventPanel = "contacted" | "registered" | "revenue" | "satisfaction";
+
+function formatRecapMxn(amount: number): string {
+  return new Intl.NumberFormat("fr-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function recapPersonHref(eventId: string, person: { contactId: string | null }): string {
+  if (person.contactId) {
+    return `/admin/personnes?tab=membres&id=${encodeURIComponent(person.contactId)}`;
+  }
+  return `/admin/evenements?id=${encodeURIComponent(eventId)}`;
+}
+
+function RecapPersonLine({
+  eventId,
+  person,
+  detail,
+  onClose,
+}: {
+  eventId: string;
+  person: LastEventRecapPerson;
+  detail?: string;
+  onClose: () => void;
+}) {
+  return (
+    <li>
+      <Link
+        href={recapPersonHref(eventId, person)}
+        className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
+        onClick={onClose}
+      >
+        <span className="block truncate text-sm font-semibold text-ns-tertiary">
+          {person.fullName}
+        </span>
+        <span className="block truncate text-[11px] text-ns-secondary">
+          {[person.company, person.email].filter(Boolean).join(" · ") || "—"}
+        </span>
+        {detail ? <span className="mt-1 block text-[11px] text-ns-secondary">{detail}</span> : null}
+      </Link>
+    </li>
+  );
+}
+
+function SurveyScoreLine({ row }: { row: LastEventSurveyRow }) {
+  const bits = [
+    `Endroit ${row.venueQuality}`,
+    `Menu ${row.menuQuality}`,
+    `Sélection ${row.guestsQuality}`,
+    row.valueForMoney === null ? null : `Prix ${row.valueForMoney}`,
+    `Retour ${row.wouldReturn}`,
+    row.wouldRecommend === null ? null : `En parlerait ${row.wouldRecommend}`,
+  ].filter(Boolean);
+  return <span className="mt-1 block text-[11px] text-ns-secondary">{bits.join(" · ")}</span>;
+}
+
+export function LastEventRecapCard({ recap }: { recap: LastEventRecap }) {
+  const [panel, setPanel] = useState<LastEventPanel | null>(null);
+  const eventHref = `/admin/evenements?id=${encodeURIComponent(recap.eventId)}`;
+  const feedbackHref = `${eventHref}&phase=feedback`;
+
+  useEffect(() => {
+    if (!panel) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") setPanel(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panel]);
+
+  const tiles: Array<{
+    id: LastEventPanel;
+    label: string;
+    value: string;
+    hint: string;
+  }> = [
+    {
+      id: "contacted",
+      label: "Contactées",
+      value: String(recap.contacted),
+      hint: "Emails envoyés",
+    },
+    {
+      id: "registered",
+      label: "Inscrites",
+      value: String(recap.registered),
+      hint:
+        recap.complimentary > 0
+          ? `Places payées · ${recap.complimentary} invitée${recap.complimentary > 1 ? "s" : ""}`
+          : "Places payées",
+    },
+    {
+      id: "revenue",
+      label: "CA généré",
+      value: recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn),
+      hint:
+        recap.priceMxn === null
+          ? "Prix ACCESS non renseigné"
+          : `${recap.registered} payée${recap.registered > 1 ? "s" : ""} · ${recap.saleFormula}`,
+    },
+    {
+      id: "satisfaction",
+      label: "Note",
+      value:
+        recap.satisfactionOverall === null ? "—" : `${formatScore(recap.satisfactionOverall)}/5`,
+      hint:
+        recap.satisfactionResponses === 0
+          ? "Aucune réponse"
+          : `${recap.satisfactionResponses} réponse${recap.satisfactionResponses > 1 ? "s" : ""}`,
+    },
+  ];
+
+  const panelTitle =
+    panel === "contacted"
+      ? "Personnes contactées"
+      : panel === "registered"
+        ? "Qui a participé"
+        : panel === "revenue"
+          ? "Chiffre d’affaires"
+          : "Notes de satisfaction";
+
+  return (
+    <>
+      <div className="rounded-2xl border border-ns-primary/25 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+              Dernier dîner
+            </p>
+            <h4 className="mt-1 text-lg font-black text-ns-tertiary sm:text-xl">{recap.title}</h4>
+            <p className="mt-0.5 text-sm text-ns-secondary">{formatNextEventWhen(recap.startsAt)}</p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Link
+              href={feedbackHref}
+              className="text-xs font-semibold text-ns-primary hover:underline"
+            >
+              Feedback événement →
+            </Link>
+            <Link href={eventHref} className="text-xs font-semibold text-ns-primary hover:underline">
+              Ouvrir l’événement →
+            </Link>
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {tiles.map((tile) => (
+            <button
+              key={tile.id}
+              type="button"
+              onClick={() => setPanel(tile.id)}
+              className="rounded-xl border border-gray-100 bg-white/80 px-3 py-2.5 text-left transition hover:border-ns-primary/40 hover:bg-white"
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                {tile.label}
+              </p>
+              <p className="mt-1 text-2xl font-black text-ns-tertiary">{tile.value}</p>
+              <p className="text-[10px] text-ns-secondary">{tile.hint}</p>
+            </button>
+          ))}
+        </div>
+        {recap.costMxn != null && recap.priceMxn != null ? (
+          <p className="mt-3 text-sm text-ns-secondary">
+            Résultat {formatRecapMxn(recap.marginMxn)} — encaissé {recap.registered} payants, coût{" "}
+            {recap.registered + recap.complimentary} couverts.
+          </p>
+        ) : null}
+        {recap.satisfactionResponses > 0 ? (
+          <div className="mt-4 rounded-xl border border-gray-100 bg-white/60 p-3">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Détail satisfaction
+            </p>
+            <CategoryBars sat={recap.satisfaction} />
+          </div>
+        ) : recap.satisfactionSent > 0 ? (
+          <p className="mt-4 text-sm text-ns-secondary">
+            Questionnaire parti — les réponses arriveront ici au fil de l’eau.
+          </p>
+        ) : (
+          <p className="mt-4 text-sm text-ns-secondary">
+            Envoie le questionnaire de satisfaction pour compléter le bilan.
+          </p>
+        )}
+      </div>
+
+      {panel ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={panelTitle}
+          onClick={() => setPanel(null)}
+        >
+          <div
+            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl bg-white shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  {recap.title}
+                </p>
+                <h3 className="mt-1 text-lg font-bold text-ns-hero">{panelTitle}</h3>
+              </div>
+              <button
+                type="button"
+                className="shrink-0 text-ns-secondary hover:text-ns-tertiary"
+                onClick={() => setPanel(null)}
+                aria-label="Fermer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-2 py-2">
+              {panel === "contacted" ? (
+                recap.contactedPeople.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-ns-secondary">
+                    Aucun email enregistré pour ce dîner.
+                  </p>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {recap.contactedPeople.map((person) => (
+                      <RecapPersonLine
+                        key={person.id}
+                        eventId={recap.eventId}
+                        person={person}
+                        detail={person.channels.join(" · ")}
+                        onClose={() => setPanel(null)}
+                      />
+                    ))}
+                  </ul>
+                )
+              ) : null}
+              {panel === "registered" ? (
+                recap.registeredPeople.length === 0 ? (
+                  <p className="px-3 py-4 text-sm text-ns-secondary">Aucune place payée.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-50">
+                    {recap.registeredPeople.map((person) => (
+                      <RecapPersonLine
+                        key={person.id}
+                        eventId={recap.eventId}
+                        person={person}
+                        detail={
+                          recap.priceMxn === null
+                            ? "Payé · montant non renseigné"
+                            : `Payé · ${formatRecapMxn(person.amountMxn)}`
+                        }
+                        onClose={() => setPanel(null)}
+                      />
+                    ))}
+                  </ul>
+                )
+              ) : null}
+              {panel === "revenue" ? (
+                <div className="px-3 py-3">
+                  <p className="text-2xl font-black text-ns-tertiary">
+                    {recap.priceMxn === null ? "—" : formatRecapMxn(recap.revenueMxn)}
+                  </p>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {recap.priceMxn === null
+                      ? "Le prix ACCESS de ce dîner n’est pas renseigné."
+                      : `${recap.registered} payée${recap.registered > 1 ? "s" : ""}${
+                          recap.complimentary > 0
+                            ? ` · ${recap.complimentary} invitée${recap.complimentary > 1 ? "s" : ""}`
+                            : ""
+                        } · ${recap.saleFormula} · base HT ${formatRecapMxn(recap.revenueBeforeTaxMxn)}${
+                          recap.priceIncludesIva
+                            ? ` · IVA ${formatRecapMxn(recap.ivaMxn)}`
+                            : ""
+                        }${
+                          recap.priceIncludesService
+                            ? ` · svc ${formatRecapMxn(recap.serviceMxn)}`
+                            : ""
+                        }`}
+                  </p>
+                  {recap.costMxn != null ? (
+                    <p className="mt-1 text-xs text-ns-secondary">
+                      COST TTC {formatRecapMxn(recap.costTotalMxn)} · marge{" "}
+                      {formatRecapMxn(recap.marginMxn)}
+                    </p>
+                  ) : null}
+                  {recap.registeredPeople.length > 0 ? (
+                    <ul className="mt-3 divide-y divide-gray-50">
+                      {recap.registeredPeople.map((person) => (
+                        <RecapPersonLine
+                          key={person.id}
+                          eventId={recap.eventId}
+                          person={person}
+                          detail={
+                            recap.priceMxn === null ? "—" : formatRecapMxn(person.amountMxn)
+                          }
+                          onClose={() => setPanel(null)}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="mt-3 text-sm text-ns-secondary">Aucune place payée.</p>
+                  )}
+                </div>
+              ) : null}
+              {panel === "satisfaction" ? (
+                <div className="px-3 py-3">
+                  <p className="text-2xl font-black text-ns-tertiary">
+                    {recap.satisfactionOverall === null
+                      ? "—"
+                      : formatScore(recap.satisfactionOverall)}
+                    <span className="text-base text-ns-secondary"> / 5</span>
+                  </p>
+                  <p className="mt-1 text-xs text-ns-secondary">
+                    {recap.satisfactionResponses} réponse
+                    {recap.satisfactionResponses > 1 ? "s" : ""}
+                    {recap.satisfactionSent > 0
+                      ? ` · ${recap.satisfactionSent} questionnaire${recap.satisfactionSent > 1 ? "s" : ""} envoyé${recap.satisfactionSent > 1 ? "s" : ""}`
+                      : ""}
+                  </p>
+                  {recap.satisfactionResponses > 0 ? (
+                    <div className="mt-4">
+                      <CategoryBars sat={recap.satisfaction} />
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-ns-secondary">Pas encore de note.</p>
+                  )}
+                  {recap.surveyRows.length > 0 ? (
+                    <ul className="mt-4 divide-y divide-gray-50">
+                      {recap.surveyRows.map((row) => (
+                        <li key={row.id}>
+                          <Link
+                            href={recapPersonHref(recap.eventId, row)}
+                            className="block rounded-lg px-3 py-2.5 transition hover:bg-ns-brand-light/60"
+                            onClick={() => setPanel(null)}
+                          >
+                            <span className="flex items-baseline justify-between gap-2">
+                              <span className="truncate text-sm font-semibold text-ns-tertiary">
+                                {row.fullName}
+                              </span>
+                              <span className="shrink-0 text-sm font-black text-ns-tertiary">
+                                {formatScore(row.overall)}
+                              </span>
+                            </span>
+                            <span className="block truncate text-[11px] text-ns-secondary">
+                              {[row.company, row.email].filter(Boolean).join(" · ") || "—"}
+                            </span>
+                            <SurveyScoreLine row={row} />
+                            {row.comment ? (
+                              <span className="mt-1 block text-[11px] text-ns-tertiary">
+                                {row.comment}
+                              </span>
+                            ) : null}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function AdminDashboardPanel() {
   const authFetch = useAuthFetch();
   const router = useRouter();
@@ -868,7 +1774,12 @@ export function AdminDashboardPanel() {
     recentTableDrafts = [],
     opsQueues,
     nextEventRsvp = null,
+    lastEventRecap = null,
+    mesaSeries = null,
     lastEmailResults = null,
+    emailCampaignHistory = [],
+    pastEventFocus = null,
+    dashboardMoment = null,
   } = data;
   const withScores = events.filter((e) => e.satisfaction.responseCount > 0);
   const avgCompletion =
@@ -887,433 +1798,609 @@ export function AdminDashboardPanel() {
     noShow: [],
   };
 
+  const moment: DashboardMoment = dashboardMoment ?? {
+    kind: "idle",
+    label: "Rien en cours",
+    reason: "Créer le prochain dîner ou lancer un envoi.",
+  };
+
+  const nba = (() => {
+    if (moment.kind === "post_event" && pastEventFocus) {
+      const needsSend = pastEventFocus.surveySentCount === 0;
+      return {
+        id: needsSend ? "send_satisfaction" : "review_feedback",
+        label: needsSend ? "Envoyer la satisfaction" : "Voir le feedback",
+        href: `/admin/evenements?id=${encodeURIComponent(pastEventFocus.eventId)}&phase=feedback`,
+        reason: needsSend
+          ? `${pastEventFocus.title} — questionnaire pas encore parti.`
+          : `${pastEventFocus.title} — ${pastEventFocus.surveyResponseCount}/${pastEventFocus.surveySentCount} réponses · CA ${pastEventFocus.revenueMxn > 0 ? formatMxn(pastEventFocus.revenueMxn, "fr") : "—"}.`,
+      };
+    }
+    if (moment.kind === "email_pulse" && lastEmailResults) {
+      const eventHref = lastEmailResults.eventId
+        ? `/admin/evenements?id=${encodeURIComponent(lastEmailResults.eventId)}`
+        : "/admin/templates";
+      return {
+        id: "email_results",
+        label: lastEmailResults.eventId ? "Ouvrir l’événement" : "Voir Coms",
+        href: eventHref,
+        reason: `${lastEmailResults.templateLabel || lastEmailResults.templateKey} — ${lastEmailResults.yes} OUI · ${lastEmailResults.pending} sans réponse.`,
+      };
+    }
+    if (moment.kind === "next_dinner" && nextEventRsvp) {
+      return {
+        id: "continue_dinner",
+        label: "Continuer le dîner",
+        href: `/admin/evenements?id=${encodeURIComponent(nextEventRsvp.eventId)}`,
+        reason: `${nextEventRsvp.title} — reprendre le pilotage par phase.`,
+      };
+    }
+    if (queues.incomplete.length > 0) {
+      return {
+        id: "incomplete",
+        label: `Traiter ${queues.incomplete.length} profil${queues.incomplete.length > 1 ? "s" : ""} incomplet${queues.incomplete.length > 1 ? "s" : ""}`,
+        href: "/admin/personnes?tab=membres&profile=incomplete",
+        reason: "Nurture avant d’inviter — express ou complétion < 50 %.",
+      };
+    }
+    if (queues.priority.length > 0) {
+      return {
+        id: "priority",
+        label: `Voir ${queues.priority.length} à prioriser`,
+        href: "/admin/personnes?tab=membres&queue=priority",
+        reason: "Contacts marqués prioritaires sur la waitlist.",
+      };
+    }
+    if (queues.review.length > 0) {
+      return {
+        id: "review",
+        label: `Voir ${queues.review.length} à revoir`,
+        href: "/admin/personnes?tab=membres&queue=review",
+        reason: "Contacts à clarifier avant la prochaine vague.",
+      };
+    }
+    if (queues.noShow.length > 0) {
+      return {
+        id: "no_show",
+        label: `Voir ${queues.noShow.length} no-show`,
+        href: "/admin/personnes?tab=membres&queue=no-show",
+        reason: "Tag no-show — décider avant une prochaine invite.",
+      };
+    }
+    return {
+      id: "new_event",
+      label: "Nouvel événement",
+      href: "/admin/evenements?nouveau=1",
+      reason: "Aucun dîner à venir — créer le prochain.",
+    };
+  })();
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-xl font-bold text-ns-hero">Dashboard</h2>
           <p className="mt-1 text-sm text-ns-secondary">
-            Cockpit ops : dernier email (réponses), prochain dîner, vivier et satisfaction.
+            Porte d’entrée ops — le signal du moment T, puis les hubs.
+          </p>
+          <p className="mt-2 text-sm text-ns-tertiary">
+            <span className="font-semibold">Action prioritaire :</span>{" "}
+            <span className="text-ns-secondary">{nba.reason}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className={`${BTN_SECONDARY} text-sm`} onClick={() => void load()}>
             Rafraîchir
           </button>
-          <Link href="/admin/templates" className={`${BTN_SECONDARY} text-sm`}>
-            Templates email
-          </Link>
-          <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
-            Nouvel événement
+          {nba.id !== "new_event" ? (
+            <Link href="/admin/evenements?nouveau=1" className={`${BTN_SECONDARY} text-sm`}>
+              Nouvel événement
+            </Link>
+          ) : null}
+          <Link href={nba.href} className={`${BTN_PRIMARY} text-sm`}>
+            {nba.label}
           </Link>
         </div>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Membres waitlist" value={kpis.waitlistUsers} />
-        <KpiCard
-          label="Événements"
-          value={kpis.eventsTotal}
-          hint={`${kpis.eventsPublished} publiés · ${kpis.eventsUpcoming} à venir`}
-        />
-        <KpiCard label="Participations" value={kpis.participationsTotal} />
-        <KpiCard
-          label="Satisfaction globale"
-          value={satisfaction.overall === null ? "—" : `${formatScore(satisfaction.overall)}/5`}
-          hint={`${kpis.surveysResponses} réponses · ${kpis.eventsWithSurvey} dîners`}
-        />
-      </section>
-
+      {/* Bande 1 — Maintenant (un seul focus = moment T) */}
       <section>
         <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Files ops
+            Maintenant
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            D’abord les réponses du dernier email — puis le prochain dîner et le vivier
-            (profils, priorités).
+            <span className="font-semibold text-ns-tertiary">{moment.label}</span>
+            {" — "}
+            {moment.reason}
           </p>
         </div>
-        <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {lastEmailResults ? (
-            <LastEmailResultsCard results={lastEmailResults} />
-          ) : (
-            <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-5 lg:col-span-2 xl:col-span-3">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
-                Dernier email
-              </p>
-              <p className="mt-2 text-sm text-ns-secondary">
-                Aucun envoi tracké pour l’instant — envoie un Save the Date ou une campagne
-                Prospects pour voir les OUI / NON ici.
-              </p>
-              <Link
-                href="/admin/prospects"
-                className="mt-3 inline-block text-xs font-semibold text-ns-primary hover:underline"
-              >
-                Prospects →
-              </Link>
-            </div>
-          )}
-          {nextEventRsvp &&
-          (!lastEmailResults?.eventId ||
-            lastEmailResults.eventId !== nextEventRsvp.eventId) ? (
-            <NextEventRsvpCard rsvp={nextEventRsvp} />
-          ) : null}
+        {moment.kind === "post_event" &&
+        lastEventRecap &&
+        lastEventRecap.eventId === pastEventFocus?.eventId ? (
+          <LastEventRecapCard recap={lastEventRecap} />
+        ) : moment.kind === "post_event" && pastEventFocus ? (
+          <PastEventFocusCard focus={pastEventFocus} />
+        ) : moment.kind === "email_pulse" && lastEmailResults ? (
+          <LastEmailResultsCard results={lastEmailResults} />
+        ) : moment.kind === "next_dinner" && nextEventRsvp ? (
+          <NextEventRsvpCard rsvp={nextEventRsvp} />
+        ) : (
+          <IdleMomentCard />
+        )}
+      </section>
+
+      {/* Bande 2 — À traiter */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+            À traiter
+          </h3>
+          <p className="mt-1 text-xs text-ns-secondary">
+            Files prioritaires — un clic vers Personnes.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <OpsQueueCard
             title="Profils incomplets"
-            href="/admin/inscrits?profile=incomplete"
+            href="/admin/personnes?tab=membres&profile=incomplete"
             rows={queues.incomplete}
           />
-          <OpsQueueCard title="À prioriser" href="/admin/inscrits" rows={queues.priority} />
-          <OpsQueueCard title="À revoir" href="/admin/inscrits" rows={queues.review} />
-          <OpsQueueCard title="No-show" href="/admin/inscrits" rows={queues.noShow} />
+          <OpsQueueCard
+            title="À prioriser"
+            href="/admin/personnes?tab=membres&queue=priority"
+            rows={queues.priority}
+          />
+          <OpsQueueCard
+            title="À revoir"
+            href="/admin/personnes?tab=membres&queue=review"
+            rows={queues.review}
+          />
+          <OpsQueueCard
+            title="No-show"
+            href="/admin/personnes?tab=membres&queue=no-show"
+            rows={queues.noShow}
+          />
         </div>
+        {needingAttention > 0 ? (
+          <Link
+            href="/admin/personnes?tab=membres&profile=incomplete"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
+          >
+            <div>
+              <p className="text-sm font-bold text-amber-950">
+                {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
+              </p>
+              <p className="mt-0.5 text-xs text-amber-900/80">
+                Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
+              </p>
+            </div>
+            <span className="text-xs font-semibold text-amber-900">Ouvrir Personnes →</span>
+          </Link>
+        ) : null}
       </section>
 
-      {needingAttention > 0 ? (
-        <Link
-          href="/admin/inscrits?profile=incomplete"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 transition hover:border-amber-300 hover:bg-amber-100/80"
-        >
-          <div>
-            <p className="text-sm font-bold text-amber-950">
-              {needingAttention} profil{needingAttention > 1 ? "s" : ""} à compléter
-            </p>
-            <p className="mt-0.5 text-xs text-amber-900/80">
-              Express ou complétion &lt; 50 % — prioriser le nurture avant d’inviter.
-            </p>
-          </div>
-          <span className="text-xs font-semibold text-amber-900">Voir les inscrits →</span>
-        </Link>
-      ) : null}
-
+      {/* Bande 3 — Accès */}
       <section>
         <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Répartition membres
+            Accès
           </h3>
           <p className="mt-1 text-xs text-ns-secondary">
-            Sur la waitlist active : secteur, position et hub ville (ZMG → Guadalajara).
+            Les hubs du backend — tout part d’ici.
           </p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-3">
-          <DistributionCard
-            title="Secteurs"
-            items={distributions?.sectors ?? []}
-            total={kpis.waitlistUsers}
-            kind="sector"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "sector",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Positions"
-            items={distributions?.positions ?? []}
-            total={kpis.waitlistUsers}
-            kind="position"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "position",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-          <DistributionCard
-            title="Hubs"
-            items={distributions?.cities ?? []}
-            total={kpis.waitlistUsers}
-            kind="city"
-            onSelect={(item) =>
-              setDistributionSelection({
-                kind: "city",
-                value: item.value,
-                members: item.members ?? [],
-              })
-            }
-          />
-        </div>
-      </section>
-
-      {distributionSelection ? (
-        <DistributionDetailModal
-          selection={distributionSelection}
-          onClose={() => setDistributionSelection(null)}
-        />
-      ) : null}
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Intelligence du vivier
-            </h3>
-            <p className="mt-1 text-xs text-ns-secondary">
-              Dernières compositions enregistrées dans le Table Builder
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <Link
+            href="/admin/idees"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Idées</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">Sujets</p>
+            <p className="mt-1 text-xs text-ns-secondary">Catalogue /themes · demande · Composer</p>
+          </Link>
+          <Link
+            href="/admin/evenements"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Dîners</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {kpis.eventsUpcoming} à venir
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href="/admin/tables" className={`${BTN_SECONDARY} text-sm`}>
-              Ouvrir le Table Builder
-            </Link>
-            <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-sm`}>
-              Générer des idées
-            </Link>
-          </div>
-        </div>
-
-        {recentTableDrafts.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">
-            Aucun brouillon de table pour le moment.
-          </p>
-        ) : (
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {recentTableDrafts.map((draft) => (
-              <div
-                key={draft.id}
-                className="rounded-xl border border-gray-100 bg-ns-brand-light/40 p-4"
-              >
-                <p className="font-semibold text-ns-tertiary">{draft.title || "Table sans titre"}</p>
-                <p className="mt-1 text-xs text-ns-secondary">
-                  {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
-                  {" · "}
-                  {draft.city ? labelCityHubFr(draft.city) : "Ville non renseignée"}
-                </p>
-                <p className="mt-3 text-sm text-ns-tertiary">
-                  {draft.primaryCount} titulaire{draft.primaryCount === 1 ? "" : "s"} ·{" "}
-                  {draft.alternateCount} suppléant{draft.alternateCount === 1 ? "" : "s"}
-                </p>
-                <p className="mt-2 text-xs text-ns-secondary">
-                  Mis à jour {formatRegistrantDate(draft.updatedAt)}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-              Derniers inscrits
-            </h3>
             <p className="mt-1 text-xs text-ns-secondary">
-              Du plus récent au plus ancien
-              {avgCompletion !== null ? ` · complétion moyenne ${avgCompletion}%` : ""}
+              {kpis.eventsPublished} publiés · pilotage par phase
             </p>
-          </div>
-          <Link href="/admin/inscrits" className="text-xs font-semibold text-ns-primary hover:underline">
-            Voir tous les membres →
+          </Link>
+          <Link
+            href="/admin/tables"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Tables</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{recentTableDrafts.length}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Brouillons · composition sièges</p>
+          </Link>
+          <Link
+            href="/admin/personnes"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Personnes
+            </p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">{kpis.waitlistUsers}</p>
+            <p className="mt-1 text-xs text-ns-secondary">Membres · Prospects · Mémoire</p>
+          </Link>
+          <Link
+            href="/admin/templates"
+            className="rounded-2xl border border-gray-100 bg-ns-surface p-4 transition hover:border-ns-primary/40 hover:bg-ns-brand-light/40"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">Coms</p>
+            <p className="mt-1 text-lg font-bold text-ns-hero">
+              {emailCampaignHistory.length > 0
+                ? `${emailCampaignHistory.length} envoi${emailCampaignHistory.length > 1 ? "s" : ""}`
+                : "Templates"}
+            </p>
+            <p className="mt-1 text-xs text-ns-secondary">Bibliothèque · blasts · nurture</p>
           </Link>
         </div>
-
-        {recentRegistrants.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun inscrit pour le moment.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Inscrit</th>
-                  <th className="py-2 pr-3 font-semibold">Inscription</th>
-                  <th className="py-2 pr-3 font-semibold">Complétion</th>
-                  <th
-                    className="py-2 pr-3 font-semibold"
-                    title="Mail auto après inscription (express = compléter le profil)"
-                  >
-                    Mail auto
-                  </th>
-                  <th className="py-2 font-semibold">Contact</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentRegistrants.map((r) => {
-                  const subtitle = registrantSubtitle(r);
-                  return (
-                    <tr
-                      key={r.id}
-                      className="cursor-pointer border-b border-gray-50 align-top transition hover:bg-ns-brand-light/60"
-                      onClick={() => {
-                        router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          router.push(`/admin/inscrits?id=${encodeURIComponent(r.id)}`);
-                        }
-                      }}
-                      tabIndex={0}
-                      role="link"
-                    >
-                      <td className="py-3 pr-3">
-                        <p className="font-semibold text-ns-tertiary">{r.fullName || "—"}</p>
-                        {subtitle ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{subtitle}</p>
-                        ) : null}
-                        {r.isExpress ? (
-                          <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
-                            Express
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-3 pr-3 whitespace-nowrap text-ns-secondary">
-                        {formatRegistrantDate(r.createdAt)}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <CompletionCell
-                          percent={r.completionPercent}
-                          missingFields={r.missingFields ?? []}
-                        />
-                      </td>
-                      <td className="py-3 pr-3">
-                        <WelcomeEmailCell
-                          status={r.welcomeEmailStatus}
-                          sentAt={r.welcomeEmailSentAt}
-                          isExpress={r.isExpress}
-                        />
-                      </td>
-                      <td className="py-3">
-                        <a
-                          href={`mailto:${r.email}`}
-                          className="block text-ns-primary hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {r.email || "—"}
-                        </a>
-                        {r.phone ? (
-                          <p className="mt-0.5 text-xs text-ns-secondary">{r.phone}</p>
-                        ) : null}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      {/* Approfondir — densifié sous la porte */}
+      <section className="space-y-4 border-t border-gray-100 pt-6">
+        <div className="mb-3">
           <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Funnel participations
+            Approfondir
           </h3>
-          <div className="mt-5 flex flex-wrap items-start justify-between gap-3 sm:flex-nowrap sm:gap-2">
-            <FunnelStage label="Invités" value={kpis.invited} />
-            <FunnelArrow />
-            <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
-            <FunnelArrow />
-            <FunnelStage label="Présents" value={kpis.attending} />
+          <p className="mt-1 text-xs text-ns-secondary">
+            Signaux utiles — sans concurrencer l’action prioritaire ci-dessus.
+          </p>
+        </div>
+
+        {mesaSeries && mesaSeries.dinnerCount > 0 ? (
+          <div className="rounded-2xl border border-ns-primary/20 bg-gradient-to-br from-ns-surface via-ns-surface to-ns-brand-light/40 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-primary">
+                  Évolution LA MESA
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  {mesaSeries.dinnerCount} dîner{mesaSeries.dinnerCount > 1 ? "s" : ""} passé
+                  {mesaSeries.dinnerCount > 1 ? "s" : ""} · CA payés seulement (Invité = COST)
+                </p>
+              </div>
+              <p className="text-right">
+                <span className="block text-2xl font-black text-ns-tertiary">
+                  {formatMxn(mesaSeries.revenueMxn, "fr")}
+                </span>
+                <span className="text-[11px] text-ns-secondary">
+                  marge {formatMxn(mesaSeries.marginMxn, "fr")}
+                  {mesaSeries.avgSatisfaction != null
+                    ? ` · sat ${formatScore(mesaSeries.avgSatisfaction)}/5`
+                    : ""}
+                </span>
+              </p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-[11px] text-ns-secondary">
+              <span>{mesaSeries.totalPaidSeats} places payées</span>
+              <span>·</span>
+              <span>{mesaSeries.totalComplimentarySeats} invitées</span>
+              <span>·</span>
+              <span>COST {formatMxn(mesaSeries.costTotalMxn, "fr")}</span>
+            </div>
+            <ul className="mt-3 divide-y divide-gray-100">
+              {mesaSeries.dinners.slice(0, 6).map((d) => (
+                <li key={d.eventId} className="flex items-baseline justify-between gap-2 py-2">
+                  <Link
+                    href={`/admin/evenements?id=${encodeURIComponent(d.eventId)}&phase=feedback`}
+                    className="min-w-0 truncate text-sm font-semibold text-ns-tertiary hover:text-ns-primary hover:underline"
+                  >
+                    {d.title}
+                  </Link>
+                  <span className="shrink-0 tabular-nums text-sm font-bold text-ns-tertiary">
+                    {formatMxn(d.revenueMxn, "fr")}
+                    <span className="ml-2 text-[11px] font-normal text-ns-secondary">
+                      {d.paidSeats} payé{d.paidSeats > 1 ? "s" : ""}
+                      {d.satisfactionOverall != null
+                        ? ` · ${formatScore(d.satisfactionOverall)}`
+                        : ""}
+                      {d.fillRate != null ? ` · ${Math.round(d.fillRate * 100)}%` : ""}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-gray-100 pt-4 text-sm sm:grid-cols-3">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Déclinés</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.notAttending}</span>
+        ) : null}
+
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Funnel participations
+            </h4>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-2 sm:flex-nowrap">
+              <FunnelStage label="Invités" value={kpis.invited} />
+              <FunnelArrow />
+              <FunnelStage label="Confirmés" value={kpis.confirmed} emphasize />
+              <FunnelArrow />
+              <FunnelStage label="Présents" value={kpis.attending} />
             </div>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-ns-secondary">Liste d’attente</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">{kpis.waitlistSeats}</span>
+            <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1 border-t border-gray-100 pt-3 text-xs sm:grid-cols-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Déclinés</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.notAttending}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-ns-secondary">Waitlist</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {kpis.waitlistSeats}
+                </span>
+              </div>
+              <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
+                <span className="text-ns-secondary">En parlerait</span>
+                <span className="font-semibold tabular-nums text-ns-tertiary">
+                  {satisfaction.wouldRecommend === null
+                    ? "—"
+                    : `${formatScore(satisfaction.wouldRecommend)}/5`}
+                </span>
+              </div>
             </div>
-            <div className="col-span-2 flex items-baseline justify-between gap-2 sm:col-span-1">
-              <span className="text-ns-secondary">Taux « inviter un ami »</span>
-              <span className="font-semibold tabular-nums text-ns-tertiary">
-                {satisfaction.inviteYesRate === null ? "—" : `${satisfaction.inviteYesRate}%`}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                Satisfaction cumulée
+              </h4>
+              <span className="text-[11px] text-ns-secondary">
+                {kpis.surveysResponses} réponses · {kpis.eventsWithSurvey} dîners
               </span>
             </div>
+            {satisfaction.responseCount === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+            ) : (
+              <div className="mt-3">
+                <p className="mb-3 text-3xl font-black text-ns-tertiary">
+                  {formatScore(satisfaction.overall)}
+                  <span className="text-base text-ns-secondary"> / 5</span>
+                </p>
+                <CategoryBars sat={satisfaction} />
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Notes moyennes cumulées
-          </h3>
-          {satisfaction.responseCount === 0 ? (
-            <p className="mt-4 text-sm text-ns-secondary">Pas encore de réponses survey.</p>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Vivier · tables
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  Derniers brouillons Table Builder
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link href="/admin/tables" className={`${BTN_SECONDARY} text-xs`}>
+                  Tables
+                </Link>
+                <Link href="/admin/tables?generate=1" className={`${BTN_SECONDARY} text-xs`}>
+                  Générer
+                </Link>
+              </div>
+            </div>
+            {recentTableDrafts.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun brouillon.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {recentTableDrafts.slice(0, 3).map((draft) => (
+                  <li
+                    key={draft.id}
+                    className="rounded-xl border border-gray-100 bg-ns-brand-light/40 px-3 py-2"
+                  >
+                    <p className="truncate text-sm font-semibold text-ns-tertiary">
+                      {draft.title || "Table sans titre"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-ns-secondary">
+                      {labelEventFormat(draft.format as EventFormat | undefined, "fr")}
+                      {" · "}
+                      {draft.primaryCount} tit. · {draft.alternateCount} supp.
+                      {" · "}
+                      {formatRegistrantDate(draft.updatedAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+                  Derniers inscrits
+                </h4>
+                <p className="mt-0.5 text-[11px] text-ns-secondary">
+                  {avgCompletion !== null ? `Complétion moy. ${avgCompletion}%` : "Plus récents"}
+                </p>
+              </div>
+              <Link
+                href="/admin/personnes?tab=membres"
+                className="text-xs font-semibold text-ns-primary hover:underline"
+              >
+                Tous →
+              </Link>
+            </div>
+            {recentRegistrants.length === 0 ? (
+              <p className="mt-3 text-sm text-ns-secondary">Aucun inscrit.</p>
+            ) : (
+              <ul className="mt-3 divide-y divide-gray-50">
+                {recentRegistrants.slice(0, 5).map((r) => (
+                  <li key={r.id}>
+                    <button
+                      type="button"
+                      className="flex w-full items-start justify-between gap-2 px-1 py-2 text-left hover:bg-ns-brand-light/50"
+                      onClick={() =>
+                        router.push(
+                          `/admin/personnes?tab=membres&id=${encodeURIComponent(r.id)}`,
+                        )
+                      }
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-semibold text-ns-tertiary">
+                          {r.fullName || "—"}
+                        </span>
+                        <span className="block truncate text-[11px] text-ns-secondary">
+                          {r.email}
+                          {r.isExpress ? " · Express" : ""}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-ns-secondary">
+                        {r.completionPercent}%
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Répartition waitlist
+          </h4>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <DistributionCard
+              title="Secteurs"
+              items={distributions?.sectors ?? []}
+              total={kpis.waitlistUsers}
+              kind="sector"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "sector",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Positions"
+              items={distributions?.positions ?? []}
+              total={kpis.waitlistUsers}
+              kind="position"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "position",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+            <DistributionCard
+              title="Hubs"
+              items={distributions?.cities ?? []}
+              total={kpis.waitlistUsers}
+              kind="city"
+              onSelect={(item) =>
+                setDistributionSelection({
+                  kind: "city",
+                  value: item.value,
+                  members: item.members ?? [],
+                })
+              }
+            />
+          </div>
+        </div>
+
+        {distributionSelection ? (
+          <DistributionDetailModal
+            selection={distributionSelection}
+            onClose={() => setDistributionSelection(null)}
+          />
+        ) : null}
+
+        <div>
+          <h4 className="mb-2 text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+            Historique emails
+          </h4>
+          <EmailCampaignHistoryTable rows={emailCampaignHistory} />
+        </div>
+
+        <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Satisfaction par dîner
+            </h4>
+            <p className="text-[11px] text-ns-secondary">
+              {withScores.length} avec réponses
+            </p>
+          </div>
+
+          {events.length === 0 ? (
+            <p className="mt-3 text-sm text-ns-secondary">Aucun événement.</p>
           ) : (
-            <div className="mt-4">
-              <p className="mb-4 text-4xl font-black text-ns-tertiary">
-                {formatScore(satisfaction.overall)}
-                <span className="text-lg text-ns-secondary"> / 5</span>
-              </p>
-              <CategoryBars sat={satisfaction} />
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
+                    <th className="py-2 pr-3 font-semibold">Dîner</th>
+                    <th className="py-2 pr-3 font-semibold">Date</th>
+                    <th className="py-2 pr-3 font-semibold">Réponses</th>
+                    <th className="py-2 pr-3 font-semibold">Moy.</th>
+                    <th className="py-2 pr-3 font-semibold">Lieu</th>
+                    <th className="py-2 pr-3 font-semibold">Menu</th>
+                    <th className="py-2 pr-3 font-semibold">Sélection</th>
+                    <th className="py-2 pr-3 font-semibold">Q/P</th>
+                    <th className="py-2 pr-3 font-semibold">Tables</th>
+                    <th className="py-2 font-semibold">Bouche</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map((ev) => {
+                    const s = ev.satisfaction;
+                    const date = new Date(ev.startsAt);
+                    return (
+                      <tr key={ev.id} className="border-b border-gray-50">
+                        <td className="py-2.5 pr-3">
+                          <Link
+                            href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
+                            className="font-semibold text-ns-primary hover:underline"
+                          >
+                            {ev.title}
+                          </Link>
+                        </td>
+                        <td className="py-2.5 pr-3 text-ns-secondary">
+                          {Number.isNaN(date.getTime())
+                            ? "—"
+                            : date.toLocaleDateString("fr-FR", {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              })}
+                        </td>
+                        <td className="py-2.5 pr-3">
+                          {s.responseCount}
+                          <span className="text-ns-secondary">/{s.sentCount}</span>
+                        </td>
+                        <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
+                          {formatScore(s.overall)}
+                        </td>
+                        <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.valueForMoney)}</td>
+                        <td className="py-2.5 pr-3">{formatScore(s.wouldReturn)}</td>
+                        <td className="py-2.5">{formatScore(s.wouldRecommend)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
-      </section>
-
-      <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-            Satisfaction par dîner
-          </h3>
-          <p className="text-xs text-ns-secondary">
-            {withScores.length} dîner{withScores.length === 1 ? "" : "s"} avec réponses
-          </p>
-        </div>
-
-        {events.length === 0 ? (
-          <p className="mt-4 text-sm text-ns-secondary">Aucun événement.</p>
-        ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 text-xs uppercase tracking-wide text-ns-secondary">
-                  <th className="py-2 pr-3 font-semibold">Dîner</th>
-                  <th className="py-2 pr-3 font-semibold">Date</th>
-                  <th className="py-2 pr-3 font-semibold">Réponses</th>
-                  <th className="py-2 pr-3 font-semibold">Moy.</th>
-                  <th className="py-2 pr-3 font-semibold">Lieu</th>
-                  <th className="py-2 pr-3 font-semibold">Menu</th>
-                  <th className="py-2 pr-3 font-semibold">Invités</th>
-                  <th className="py-2 font-semibold">Retour</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.map((ev) => {
-                  const s = ev.satisfaction;
-                  const date = new Date(ev.startsAt);
-                  return (
-                    <tr key={ev.id} className="border-b border-gray-50">
-                      <td className="py-2.5 pr-3">
-                        <Link
-                          href={`/admin/evenements?id=${encodeURIComponent(ev.id)}`}
-                          className="font-semibold text-ns-primary hover:underline"
-                        >
-                          {ev.title}
-                        </Link>
-                      </td>
-                      <td className="py-2.5 pr-3 text-ns-secondary">
-                        {Number.isNaN(date.getTime())
-                          ? "—"
-                          : date.toLocaleDateString("fr-FR", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                      </td>
-                      <td className="py-2.5 pr-3">
-                        {s.responseCount}
-                        <span className="text-ns-secondary">/{s.sentCount}</span>
-                      </td>
-                      <td className="py-2.5 pr-3 font-bold text-ns-tertiary">
-                        {formatScore(s.overall)}
-                      </td>
-                      <td className="py-2.5 pr-3">{formatScore(s.venueQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.menuQuality)}</td>
-                      <td className="py-2.5 pr-3">{formatScore(s.guestsQuality)}</td>
-                      <td className="py-2.5">{formatScore(s.wouldReturn)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
     </div>
   );

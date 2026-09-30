@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { isPlatformAdminIdentity, normalizeEmail } from "@/lib/auth/platform-admin";
 import { requireVerifiedUser } from "@/lib/auth/member.server";
 import { sendInterestAckEmail } from "@/lib/email/send-interest-ack";
+import { sendAdminRsvpYesEmail } from "@/lib/email/send-admin-rsvp-yes";
 import {
   eventInterestSchema,
   isInterestDeadlinePassed,
   splitFullName,
 } from "@/lib/events/event-interest";
+import { ensureOuiParticipationForEmail } from "@/lib/events/apply-interest-oui-to-participations";
 import { syncInterestRespondentToProspectLists } from "@/lib/events/sync-interest-to-prospect-lists";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { ensureWaitlistProfileForAuth } from "@/lib/member/ensure-waitlist-for-auth";
@@ -128,6 +130,12 @@ export async function POST(request: Request, { params }: Params) {
   const existingDoc =
     existingByEmail.docs.find((d) => String(d.data().eventId ?? "") === eventDoc.id) ?? null;
 
+  const previousInterest = existingDoc
+    ? String(existingDoc.data().interestResponse ?? "").toLowerCase()
+    : "";
+  const isFirstYes =
+    data.interestResponse === "yes" && previousInterest !== "yes";
+
   let id: string;
   let respondentRef = existingDoc?.ref;
   if (existingDoc) {
@@ -146,6 +154,28 @@ export async function POST(request: Request, { params }: Params) {
     id: eventDoc.id,
     ...(eventData as Omit<AdminEvent, "id">),
   };
+
+  if (isFirstYes) {
+    void sendAdminRsvpYesEmail({
+      fullName: waitlist.fullName || `${firstName} ${lastName}`.trim() || email,
+      email,
+      company: waitlist.company,
+      phone: waitlist.phone,
+      eventTitle: event.title?.trim() || slug,
+      eventSlug: slug,
+      channel: "interest_form",
+      status: "interest_yes",
+    }).then((adminMail) => {
+      if (!adminMail.ok) {
+        console.error("[interest] admin OUI notify FAILED:", adminMail.error, {
+          to: "gregory.prudhommeaux@gmail.com",
+          email,
+        });
+      } else {
+        console.info("[interest] admin OUI notify sent", { email });
+      }
+    });
+  }
 
   const mail = await sendInterestAckEmail({
     event,
@@ -173,6 +203,18 @@ export async function POST(request: Request, { params }: Params) {
     waitlist,
     logPrefix: "[interest]",
   });
+
+  // Vague 3 — OUI lands on Audience roster as attending.
+  if (data.interestResponse === "yes") {
+    void ensureOuiParticipationForEmail({
+      db,
+      eventId: eventDoc.id,
+      email,
+      fullName: waitlist.fullName || `${firstName} ${lastName}`.trim(),
+      companyName: waitlist.company,
+      now,
+    }).catch((err) => console.warn("[interest] audience OUI upsert failed", err));
+  }
 
   // Keep SANS RÉPONSE playlist aligned after each answer.
   void import("@/lib/events/sync-std-sans-reponse-list")

@@ -1,21 +1,8 @@
 import { NextResponse } from "next/server";
-import { normalizeEmail } from "@/lib/auth/platform-admin";
-import { findWaitlistByEmail, findWaitlistByReferralCode } from "@/lib/auth/member.server";
-import { verifySurveyToken } from "@/lib/email/rsvp-token";
-import { sendSatisfactionGuestInvite } from "@/lib/email/send-satisfaction-survey";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
-import {
-  buildReferralCode,
-  normalizeReferralCode,
-  randomSuffix,
-} from "@/lib/member/referral-code";
-import type {
-  AdminEventParticipation,
-  SatisfactionSurveyAnswers,
-  WaitlistRegistration,
-} from "@/lib/types/events";
-import { getSiteUrl } from "@/lib/site-url";
+import { resolveSurveyAccess } from "@/lib/satisfaction/survey-access-token";
+import type { SatisfactionSurveyAnswers } from "@/lib/types/events";
 import { z } from "zod";
 
 const score = z.number().int().min(0).max(5);
@@ -25,32 +12,11 @@ const submitSchema = z.object({
   venueQuality: score,
   menuQuality: score,
   guestsQuality: score,
+  valueForMoney: score,
   wouldReturn: score,
-  wantInviteOther: z.boolean(),
-  invitedEmail: z.union([z.string().trim().email().max(254), z.literal("")]).optional(),
+  wouldRecommend: score,
+  comment: z.string().max(1000).optional(),
 });
-
-async function ensureReferralCode(
-  profile: WaitlistRegistration & { id: string },
-): Promise<string | null> {
-  if (profile.referralCode?.trim()) {
-    return normalizeReferralCode(profile.referralCode);
-  }
-  if (!isFirebaseAdminConfigured()) return null;
-  const db = getAdminFirestore();
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    const code = buildReferralCode(profile.fullName, () => randomSuffix(2));
-    const collision = await findWaitlistByReferralCode(code);
-    if (!collision) {
-      await db.collection(COLLECTIONS.waitlist).doc(profile.id).set(
-        { referralCode: code, updatedAt: new Date().toISOString() },
-        { merge: true },
-      );
-      return code;
-    }
-  }
-  return null;
-}
 
 export async function POST(request: Request) {
   if (!isFirebaseAdminConfigured()) {
@@ -69,32 +35,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "validation" }, { status: 400 });
   }
 
-  if (parsed.data.wantInviteOther && !parsed.data.invitedEmail?.trim()) {
-    return NextResponse.json({ ok: false, error: "invited_email_required" }, { status: 400 });
+  const resolved = await resolveSurveyAccess(parsed.data.token);
+  if (!resolved.ok) {
+    console.warn("[satisfaction POST] token rejected", { error: resolved.error });
+    return NextResponse.json({ ok: false, error: resolved.error }, { status: 401 });
   }
 
-  const payload = verifySurveyToken(parsed.data.token);
-  if (!payload) {
-    return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
-  }
-
-  const db = getAdminFirestore();
-  const ref = db.collection(COLLECTIONS.participations).doc(payload.participationId);
-  const snap = await ref.get();
-  if (!snap.exists) {
-    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
-  }
-
-  const participation = {
-    id: snap.id,
-    ...(snap.data() as Omit<AdminEventParticipation, "id">),
-  };
-  if (participation.eventId !== payload.eventId) {
-    return NextResponse.json({ ok: false, error: "invalid_token" }, { status: 401 });
-  }
-
-  const status = normalizeParticipationStatus(participation.status);
-  if (status !== "confirmed" && status !== "attending") {
+  const { participation, via } = resolved;
+  if (!isPaidGuestStatus(participation.status)) {
     return NextResponse.json({ ok: false, error: "not_eligible" }, { status: 403 });
   }
 
@@ -103,46 +51,23 @@ export async function POST(request: Request) {
   }
 
   const now = new Date().toISOString();
-  const invitedEmail = parsed.data.wantInviteOther
-    ? normalizeEmail(parsed.data.invitedEmail ?? "")
-    : undefined;
-
+  const comment = parsed.data.comment?.trim() || undefined;
   const survey: SatisfactionSurveyAnswers = {
     venueQuality: parsed.data.venueQuality,
     menuQuality: parsed.data.menuQuality,
     guestsQuality: parsed.data.guestsQuality,
+    valueForMoney: parsed.data.valueForMoney,
     wouldReturn: parsed.data.wouldReturn,
-    wantInviteOther: parsed.data.wantInviteOther,
-    invitedEmail: invitedEmail || undefined,
+    wouldRecommend: parsed.data.wouldRecommend,
+    ...(comment ? { comment } : {}),
     submittedAt: now,
   };
 
-  await ref.set({ satisfactionSurvey: survey, updatedAt: now }, { merge: true });
+  await getAdminFirestore()
+    .collection(COLLECTIONS.participations)
+    .doc(participation.id)
+    .set({ satisfactionSurvey: survey, updatedAt: now }, { merge: true });
 
-  let inviteSent = false;
-  if (invitedEmail && invitedEmail !== normalizeEmail(participation.email)) {
-    const sponsorName = participation.fullName?.trim() || "Un amigo";
-    let inviteUrl = `${getSiteUrl()}/es/inscription`;
-
-    const profile = await findWaitlistByEmail(normalizeEmail(participation.email));
-    if (profile) {
-      const code = await ensureReferralCode(profile);
-      if (code) {
-        inviteUrl = `${getSiteUrl()}/es/inscription?ref=${encodeURIComponent(code)}`;
-      }
-    }
-
-    const mail = await sendSatisfactionGuestInvite({
-      to: invitedEmail,
-      sponsorFullName: sponsorName,
-      inviteUrl,
-      locale: "es",
-    });
-    inviteSent = mail.ok;
-    if (!mail.ok) {
-      console.error("[satisfaction] guest invite failed", mail.error);
-    }
-  }
-
-  return NextResponse.json({ ok: true, inviteSent });
+  console.info("[satisfaction POST] accepted", { via, participationId: participation.id });
+  return NextResponse.json({ ok: true });
 }

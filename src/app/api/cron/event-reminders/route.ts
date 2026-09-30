@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { recordLastEmailCampaign } from "@/lib/admin/last-email-campaign";
 import { sendSatisfactionSurveyEmail } from "@/lib/email/send-satisfaction-survey";
+import { templateLabel } from "@/lib/email/template-defaults";
 import { isOrganizerParticipation } from "@/lib/events/capacity";
-import { normalizeParticipationStatus } from "@/lib/events/participation-status";
+import { isPaidGuestStatus } from "@/lib/events/survey-eligibility";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
 
@@ -9,6 +11,7 @@ import type { AdminEvent, AdminEventParticipation } from "@/lib/types/events";
  * Daily follow-up only (satisfaction survey).
  * Pre-event reminders live in the ICS VALARM (native calendar), not email cron.
  *
+ * Opt-in per event: `satisfactionSurveyAutoSend === true`.
  * Window: 12h–48h after startsAt, so a once-daily job still catches dinners
  * regardless of exact start time.
  */
@@ -43,6 +46,7 @@ async function runDailyFollowups() {
   const errors: string[] = [];
 
   for (const event of events) {
+    if (event.satisfactionSurveyAutoSend !== true) continue;
     if (!event.startsAt) continue;
     const startMs = new Date(event.startsAt).getTime();
     if (Number.isNaN(startMs)) continue;
@@ -55,19 +59,21 @@ async function runDailyFollowups() {
       .where("eventId", "==", event.id)
       .get();
 
+    const sentEmails: string[] = [];
+    let sentAt = "";
+
     for (const doc of partsSnap.docs) {
       const p = {
         id: doc.id,
         ...(doc.data() as Omit<AdminEventParticipation, "id">),
       };
       checked += 1;
-      const status = normalizeParticipationStatus(p.status);
 
       if (isOrganizerParticipation(p)) {
         skipped += 1;
         continue;
       }
-      if (status !== "confirmed" && status !== "attending") {
+      if (!isPaidGuestStatus(p.status)) {
         skipped += 1;
         continue;
       }
@@ -83,11 +89,26 @@ async function runDailyFollowups() {
       }
       if (result.ok) {
         surveysSent += 1;
+        sentEmails.push(p.email);
         const stamp = new Date().toISOString();
+        sentAt = stamp;
         await doc.ref.set({ satisfactionSurveySentAt: stamp, updatedAt: stamp }, { merge: true });
       } else {
         errors.push(`${p.email}:satisfaction_survey:${result.error}`);
       }
+    }
+
+    if (sentEmails.length > 0) {
+      void recordLastEmailCampaign({
+        templateKey: "satisfaction_survey",
+        templateLabel: templateLabel("satisfaction_survey"),
+        sentAt,
+        recipientEmails: sentEmails,
+        eventSlug: event.slug,
+        eventId: event.id,
+        eventTitle: event.title,
+        source: "satisfaction_survey",
+      });
     }
   }
 

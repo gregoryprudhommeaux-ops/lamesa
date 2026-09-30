@@ -1,4 +1,5 @@
 import type { TableCandidate } from "./types";
+import { scoreThemeFit } from "./theme-fit";
 
 export const TABLE_SCORE = {
   notPreviousEvent: 30,
@@ -10,10 +11,38 @@ export const TABLE_SCORE = {
   sectorOverFour: -12,
 } as const;
 
+export type ThemeFitBand = "strong" | "medium" | "weak" | "none";
+
 export type RankedCandidate = TableCandidate & {
   baseScore: number;
   reasons: string[];
+  themeFitBand?: ThemeFitBand;
 };
+
+export type RankCandidatesOptions = {
+  /** When set (admin_theme), boost / penalize by lexical theme fit. */
+  theme?: string;
+};
+
+export type SelectBalancedOptions = {
+  primarySize?: number;
+  alternateSize?: number;
+  /**
+   * Theme tables: seat only theme-qualified members. Never pad with
+   * off-topic profiles — a short roster is a recruit / theme signal.
+   */
+  themeStrict?: boolean;
+};
+
+/** Titulaires thème : alignement clair seulement (pas de remplissage). */
+export function isThemePrimaryQualified(band?: ThemeFitBand): boolean {
+  return band === "strong" || band === "medium";
+}
+
+/** Remplaçants thème : fort/moyen/faible — jamais « none ». */
+export function isThemeAlternateQualified(band?: ThemeFitBand): boolean {
+  return band === "strong" || band === "medium" || band === "weak";
+}
 
 const DEFAULT_PRIMARY_SIZE = 15;
 const DEFAULT_ALTERNATE_SIZE = 5;
@@ -48,7 +77,10 @@ function sanitizeSeatCount(value: number | undefined, fallback: number): number 
   return Math.max(0, Math.floor(value));
 }
 
-function scoreCandidate(candidate: TableCandidate): RankedCandidate {
+function scoreCandidate(
+  candidate: TableCandidate,
+  options?: RankCandidatesOptions,
+): RankedCandidate {
   let baseScore = 0;
   const reasons: string[] = [];
 
@@ -77,7 +109,16 @@ function scoreCandidate(candidate: TableCandidate): RankedCandidate {
     reasons.push("recent co-presence");
   }
 
-  return { ...candidate, baseScore, reasons };
+  let themeFitBand: RankedCandidate["themeFitBand"];
+  const theme = options?.theme?.trim();
+  if (theme) {
+    const fit = scoreThemeFit(candidate, theme);
+    baseScore += fit.score;
+    themeFitBand = fit.band;
+    reasons.push(...fit.reasons.map((reason) => `theme: ${reason}`));
+  }
+
+  return { ...candidate, baseScore, reasons, themeFitBand };
 }
 
 function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
@@ -149,13 +190,18 @@ function resolveSeedSeats(
   return seats;
 }
 
-export function rankCandidates(candidates: TableCandidate[]): RankedCandidate[] {
-  return dedupeByIdFirstWins(candidates).map(scoreCandidate).sort(compareRanked);
+export function rankCandidates(
+  candidates: TableCandidate[],
+  options?: RankCandidatesOptions,
+): RankedCandidate[] {
+  return dedupeByIdFirstWins(candidates)
+    .map((candidate) => scoreCandidate(candidate, options))
+    .sort(compareRanked);
 }
 
 export function selectBalancedTable(
   ranked: RankedCandidate[],
-  options?: { primarySize?: number; alternateSize?: number },
+  options?: SelectBalancedOptions,
 ): {
   primary: RankedCandidate[];
   alternates: RankedCandidate[];
@@ -163,10 +209,14 @@ export function selectBalancedTable(
 } {
   const primarySize = sanitizeSeatCount(options?.primarySize, DEFAULT_PRIMARY_SIZE);
   const alternateSize = sanitizeSeatCount(options?.alternateSize, DEFAULT_ALTERNATE_SIZE);
+  const themeStrict = Boolean(options?.themeStrict);
   const warnings: string[] = [];
 
   const uniqueRanked = dedupeByIdFirstWins(ranked);
-  const remaining = [...uniqueRanked].sort(compareRanked);
+  const primaryPool = themeStrict
+    ? uniqueRanked.filter((c) => isThemePrimaryQualified(c.themeFitBand))
+    : uniqueRanked;
+  const remaining = [...primaryPool].sort(compareRanked);
   const primary: RankedCandidate[] = [];
 
   while (primary.length < primarySize && remaining.length > 0) {
@@ -176,11 +226,21 @@ export function selectBalancedTable(
     remaining.splice(index, 1);
   }
 
-  const alternates = remaining
-    .sort(compareRanked)
-    .slice(0, alternateSize);
+  const primaryIds = new Set(primary.map((c) => c.id));
+  const alternatePool = themeStrict
+    ? uniqueRanked.filter(
+        (c) => !primaryIds.has(c.id) && isThemeAlternateQualified(c.themeFitBand),
+      )
+    : uniqueRanked.filter((c) => !primaryIds.has(c.id));
+  const alternates = alternatePool.sort(compareRanked).slice(0, alternateSize);
 
-  if (uniqueRanked.length < primarySize + alternateSize) {
+  if (themeStrict) {
+    if (primary.length < primarySize) {
+      warnings.push(
+        `theme_pool_short:${primary.length}:${primarySize}:${primaryPool.length}`,
+      );
+    }
+  } else if (uniqueRanked.length < primarySize + alternateSize) {
     warnings.push(
       `pool too small: ${uniqueRanked.length} eligible members for ${primarySize + alternateSize} seats`,
     );
@@ -198,7 +258,7 @@ export function selectBalancedTable(
 export function fillBalancedSeatsAroundSeed(
   ranked: RankedCandidate[],
   seed: { primaryIds: string[]; alternateIds: string[] },
-  options?: { primarySize?: number; alternateSize?: number },
+  options?: SelectBalancedOptions,
 ): {
   primary: RankedCandidate[];
   alternates: RankedCandidate[];
@@ -206,17 +266,25 @@ export function fillBalancedSeatsAroundSeed(
 } {
   const primarySize = sanitizeSeatCount(options?.primarySize, DEFAULT_PRIMARY_SIZE);
   const alternateSize = sanitizeSeatCount(options?.alternateSize, DEFAULT_ALTERNATE_SIZE);
+  const themeStrict = Boolean(options?.themeStrict);
   const warnings: string[] = [];
 
   const uniqueRanked = dedupeByIdFirstWins(ranked);
   const rankedById = new Map(uniqueRanked.map((c) => [c.id, c]));
   const usedIds = new Set<string>();
 
-  const primary = resolveSeedSeats(rankedById, seed.primaryIds).slice(0, primarySize);
+  const seedPrimary = resolveSeedSeats(rankedById, seed.primaryIds).filter((c) =>
+    themeStrict ? isThemePrimaryQualified(c.themeFitBand) : true,
+  );
+  const primary = seedPrimary.slice(0, primarySize);
   for (const member of primary) usedIds.add(member.id);
 
   const remaining = uniqueRanked
-    .filter((c) => !usedIds.has(c.id))
+    .filter((c) => {
+      if (usedIds.has(c.id)) return false;
+      if (themeStrict && !isThemePrimaryQualified(c.themeFitBand)) return false;
+      return true;
+    })
     .sort(compareRanked);
 
   while (primary.length < primarySize && remaining.length > 0) {
@@ -227,9 +295,11 @@ export function fillBalancedSeatsAroundSeed(
     remaining.splice(index, 1);
   }
 
-  const alternateSeeds = resolveSeedSeats(rankedById, seed.alternateIds).filter(
-    (c) => !usedIds.has(c.id),
-  );
+  const alternateSeeds = resolveSeedSeats(rankedById, seed.alternateIds).filter((c) => {
+    if (usedIds.has(c.id)) return false;
+    if (themeStrict && !isThemeAlternateQualified(c.themeFitBand)) return false;
+    return true;
+  });
   const alternates: RankedCandidate[] = [];
   for (const seedAlt of alternateSeeds) {
     if (alternates.length >= alternateSize) break;
@@ -238,7 +308,11 @@ export function fillBalancedSeatsAroundSeed(
   }
 
   const remainingForAlts = uniqueRanked
-    .filter((c) => !usedIds.has(c.id))
+    .filter((c) => {
+      if (usedIds.has(c.id)) return false;
+      if (themeStrict && !isThemeAlternateQualified(c.themeFitBand)) return false;
+      return true;
+    })
     .sort(compareRanked);
   for (const candidate of remainingForAlts) {
     if (alternates.length >= alternateSize) break;
@@ -246,7 +320,14 @@ export function fillBalancedSeatsAroundSeed(
     usedIds.add(candidate.id);
   }
 
-  if (uniqueRanked.length < primarySize + alternateSize) {
+  if (themeStrict) {
+    const qualifiedPrimary = uniqueRanked.filter((c) =>
+      isThemePrimaryQualified(c.themeFitBand),
+    ).length;
+    if (primary.length < primarySize) {
+      warnings.push(`theme_pool_short:${primary.length}:${primarySize}:${qualifiedPrimary}`);
+    }
+  } else if (uniqueRanked.length < primarySize + alternateSize) {
     warnings.push(
       `pool too small: ${uniqueRanked.length} eligible members for ${primarySize + alternateSize} seats`,
     );

@@ -1,25 +1,36 @@
 "use client";
 
 import { ContactPicker, type SelectedInvitee } from "@/components/admin/contact-picker";
-import { EventEmailTemplateEditor } from "@/components/admin/admin-event-email-template-editor";
 import { FormalInviteOuiPanel } from "@/components/admin/admin-event-formal-invite-panel";
 import { AdminEventPaymentFollowupPanel } from "@/components/admin/admin-event-payment-followup";
+import { AdminEventCheckinPanel } from "@/components/admin/admin-event-checkin-panel";
 import { AdminEventPlacesAvailablePanel } from "@/components/admin/admin-event-places-available-panel";
+import { AdminEventParticipantRoster } from "@/components/admin/admin-event-participant-roster";
 import { EventDescriptionPresetsBar } from "@/components/admin/admin-event-description-presets";
+import { EventTemplateDrawer } from "@/components/admin/event-template-drawer";
 import {
   AutoRemindersPanel,
   StdRelancePanel,
 } from "@/components/admin/admin-event-journey-panels";
+import { EventPhaseSection } from "@/components/admin/admin-event-phase-section";
 import {
-  EventPhaseNav,
-  EventPhaseSection,
-  type EventPhaseId,
-  type EventPhaseMeta,
-} from "@/components/admin/admin-event-phase-section";
+  EventCommandHeader,
+  EventCommandPhaseNav,
+} from "@/components/admin/event-command-header";
 import { AdminEventInterestInbox } from "@/components/admin/admin-event-interest-inbox";
 import { AdminEventSatisfactionResults } from "@/components/admin/admin-event-satisfaction";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
+import {
+  type InterestDisplayStatus,
+} from "@/lib/admin/interest-display";
+import {
+  normalizeOpsPhaseId,
+  opsPhasesForMode,
+  type OpsPhaseId,
+  type OpsPhaseMeta,
+} from "@/lib/admin/ops-phases";
 import { consumePendingEventSeed } from "@/lib/admin/pending-invitees";
+import { suggestOpsPhase } from "@/lib/admin/suggest-ops-phase";
 import { DRESS_CODES, PARKING_OPTIONS } from "@/lib/constants/form-options";
 import {
   DEFAULT_EVENT_FORMAT,
@@ -50,15 +61,18 @@ import {
 } from "@/lib/events/utils";
 import { applyInviteTemplateVars } from "@/lib/email/build-event-invite-template";
 import {
-  countSeatedParticipations,
   DEFAULT_TOTAL_COVERS,
   guestCapacityFromTotalCovers,
   totalCoversFromGuestCapacity,
-  totalCoversWithAdmin,
 } from "@/lib/events/capacity";
-import { computeEventIva, formatMxn } from "@/lib/events/pricing";
+import {
+  computeSeatPriceBreakdown,
+  formatMxn,
+  resolveIncludesFlag,
+} from "@/lib/events/pricing";
 import { resolveEventPricingMode, type EventPricingMode } from "@/lib/events/pricing-mode";
-import { Copy, Mail, MessageCircle, Plus, Save, Trash2, X } from "lucide-react";
+import { Copy, Mail, Plus, Save, Trash2, X } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type AdminEventsProps = {
@@ -82,6 +96,87 @@ function openNativePicker(e: { currentTarget: HTMLInputElement }) {
   } catch {
     // Unsupported or blocked by browser — user can still type.
   }
+}
+
+/** Visible Avec / Sans control for IVA or service. */
+function PricingFlagToggle({
+  label,
+  included,
+  onChange,
+  yesLabel,
+  noLabel,
+}: {
+  label: string;
+  included: boolean;
+  onChange: (next: boolean) => void;
+  yesLabel: string;
+  noLabel: string;
+}) {
+  return (
+    <div className="mt-2">
+      <p className={`${LABEL_CLASS} mb-1.5`}>{label}</p>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+            included
+              ? "bg-ns-primary text-ns-tertiary"
+              : "border border-ns-alternate bg-white text-ns-secondary hover:border-ns-primary"
+          }`}
+        >
+          {yesLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+            !included
+              ? "bg-ns-primary text-ns-tertiary"
+              : "border border-ns-alternate bg-white text-ns-secondary hover:border-ns-primary"
+          }`}
+        >
+          {noLabel}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PriceBreakdownBox({
+  base,
+  includeIva,
+  includeService,
+  totalLabel,
+}: {
+  base: number;
+  includeIva: boolean;
+  includeService: boolean;
+  totalLabel: string;
+}) {
+  if (!Number.isFinite(base) || base <= 0) return null;
+  const b = computeSeatPriceBreakdown(base, { includeIva, includeService });
+  return (
+    <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
+      {b.ivaIncluded ? (
+        <p>
+          IVA (16%): <strong>{formatMxn(b.iva, "es")}</strong>
+        </p>
+      ) : (
+        <p className="text-ns-secondary">IVA : non inclus (négo)</p>
+      )}
+      {b.serviceIncluded ? (
+        <p className="mt-0.5">
+          Service (15%): <strong>{formatMxn(b.service, "es")}</strong>
+        </p>
+      ) : (
+        <p className="mt-0.5 text-ns-secondary">Service : non inclus (négo)</p>
+      )}
+      <p className="mt-0.5">
+        {totalLabel}: <strong>{formatMxn(b.total, "es")}</strong>
+      </p>
+    </div>
+  );
 }
 
 function toLocalInputFromIso(iso?: string | null): string {
@@ -132,6 +227,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [endTime, setEndTime] = useState("22:30");
   const [capacity, setCapacity] = useState(DEFAULT_TOTAL_COVERS);
   const [priceMxn, setPriceMxn] = useState<string>("450");
+  const [costMxn, setCostMxn] = useState<string>("");
+  const [priceIncludesService, setPriceIncludesService] = useState(true);
+  const [costIncludesService, setCostIncludesService] = useState(true);
+  const [priceIncludesIva, setPriceIncludesIva] = useState(true);
+  const [costIncludesIva, setCostIncludesIva] = useState(true);
   const [pricingMode, setPricingMode] = useState<EventPricingMode>("ticket_onsite");
   const [accessIncludesWelcomeDrink, setAccessIncludesWelcomeDrink] = useState(true);
   const [accessIncludesAmuseBouche, setAccessIncludesAmuseBouche] = useState(false);
@@ -162,49 +262,30 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   const [sendingSaveTheDate, setSendingSaveTheDate] = useState(false);
   const [inviteSendResult, setInviteSendResult] = useState<string | null>(null);
   const [inviteSendOk, setInviteSendOk] = useState(false);
-  const [openPhases, setOpenPhases] = useState<Set<EventPhaseId>>(
-    () => new Set<EventPhaseId>(["std", "definitive", "std_email"]),
-  );
-  const [activePhaseNav, setActivePhaseNav] = useState<EventPhaseId | null>("std");
+  /** Command-center focus: only one phase open in the work zone. */
+  const [focusPhase, setFocusPhase] = useState<OpsPhaseId>("prep");
+  /** When set, user overrode the suggested phase — show “revenir à la suggestion”. */
+  const [phaseOverride, setPhaseOverride] = useState(false);
+  /** OUI without formal invite — feeds suggestOpsPhase interestSignals. */
+  const [yesPendingFormal, setYesPendingFormal] = useState(0);
+  /** Interest OUI/NON/… by email — bridge Audience roster ↔ playlists. */
+  const [interestByEmail, setInterestByEmail] = useState<Record<
+    string,
+    InterestDisplayStatus
+  > | null>(null);
 
   const isInterestMode = responseMode === "interest";
 
-  const journeyPhases: EventPhaseMeta[] = useMemo(() => {
-    if (isInterestMode) {
-      return [
-        { id: "std", number: 1, title: "Save the Date", summary: "Infos pour annoncer la date" },
-        { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, paiement" },
-        { id: "std_email", number: 3, title: "Email STD + liste", summary: "Template, invités, envoi" },
-        { id: "std_relance", number: 4, title: "Relance STD", summary: "Sans réponse → Prospects" },
-        { id: "formal", number: 5, title: "Invitation formelle", summary: "Envoi + suivi paiement" },
-        { id: "auto", number: 6, title: "Relances auto", summary: "ICS + satisfaction" },
-      ];
-    }
-    return [
-      { id: "std", number: 1, title: "Infos événement", summary: "Identité & calendrier" },
-      { id: "definitive", number: 2, title: "Éléments définitifs", summary: "Lieu, tarif, statut" },
-      { id: "std_email", number: 3, title: "Invités", summary: "Groupe à inviter" },
-      { id: "formal", number: 4, title: "Invitation", summary: "ICS + YES/NO" },
-      { id: "auto", number: 5, title: "Relances auto", summary: "ICS + satisfaction" },
-    ];
-  }, [isInterestMode]);
+  const journeyPhases: OpsPhaseMeta[] = useMemo(
+    () => opsPhasesForMode(isInterestMode),
+    [isInterestMode],
+  );
 
-  function togglePhase(id: EventPhaseId) {
-    setOpenPhases((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    setActivePhaseNav(id);
-  }
-
-  function jumpToPhase(id: EventPhaseId) {
-    setOpenPhases((prev) => new Set(prev).add(id));
-    setActivePhaseNav(id);
-    requestAnimationFrame(() => {
-      document.getElementById(`phase-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+  function phaseMeta(id: OpsPhaseId): OpsPhaseMeta {
+    return (
+      journeyPhases.find((p) => p.id === id) ??
+      opsPhasesForMode(true).find((p) => p.id === id)!
+    );
   }
 
   const activeEvent = useMemo(
@@ -216,6 +297,97 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     () => participations.filter((p) => p.eventId === activeId),
     [participations, activeId],
   );
+
+  /** Refresh interest map when roster / STD contact set changes. */
+  const interestRefreshKey = useMemo(() => {
+    if (!activeId) return "";
+    const parts = participations.filter((p) => p.eventId === activeId);
+    const stdSent = parts.filter((p) => p.saveTheDateSentAt).length;
+    return `${activeId}:${parts.length}:${stdSent}`;
+  }, [activeId, participations]);
+
+  const opsSuggestion = useMemo(() => {
+    const eventForSuggest = activeEvent ?? {
+      title,
+      startsAt: combineLocal(eventDate, startTime) || new Date().toISOString(),
+      venueName,
+      address,
+      status,
+      responseMode,
+      saveTheDateSentAt: undefined,
+      capacity: guestCapacityFromTotalCovers(capacity),
+    };
+    return suggestOpsPhase({
+      event: {
+        ...eventForSuggest,
+        title: title.trim() || eventForSuggest.title,
+        venueName,
+        address,
+        status,
+        responseMode,
+        capacity: guestCapacityFromTotalCovers(capacity),
+        saveTheDateSentAt: activeEvent?.saveTheDateSentAt,
+      },
+      draft: { title, eventDate, venueName, address },
+      participations: activeParticipations,
+      interestSignals: isInterestMode ? { yesPendingFormal } : undefined,
+    });
+  }, [
+    activeEvent,
+    activeParticipations,
+    title,
+    eventDate,
+    startTime,
+    venueName,
+    address,
+    status,
+    responseMode,
+    capacity,
+    isInterestMode,
+    yesPendingFormal,
+  ]);
+
+  function syncUrl(eventId: string | null, phase: OpsPhaseId) {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (eventId) url.searchParams.set("id", eventId);
+    else url.searchParams.delete("id");
+    url.searchParams.set("phase", phase);
+    url.searchParams.delete("nouveau");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+  }
+
+  function focusOnPhase(id: OpsPhaseId, opts?: { fromSuggestion?: boolean }) {
+    const normalized = normalizeOpsPhaseId(id, { interestMode: isInterestMode });
+    setFocusPhase(normalized);
+    if (opts?.fromSuggestion) setPhaseOverride(false);
+    else setPhaseOverride(true);
+    syncUrl(activeId, normalized);
+    requestAnimationFrame(() => {
+      document.getElementById("event-command-workzone")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function jumpToPhase(id: OpsPhaseId) {
+    focusOnPhase(id);
+  }
+
+  function applySuggestedPhase() {
+    focusOnPhase(opsSuggestion.phaseId, { fromSuggestion: true });
+  }
+
+  // If mode flips (interest ↔ rsvp), drop focus on phases that no longer exist.
+  useEffect(() => {
+    if (!journeyPhases.some((p) => p.id === focusPhase)) {
+      setFocusPhase(opsSuggestion.phaseId);
+      setPhaseOverride(false);
+      syncUrl(activeId, opsSuggestion.phaseId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when mode/phases change
+  }, [isInterestMode, journeyPhases]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -250,26 +422,93 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     void loadAll();
   }, [loadAll]);
 
-  /** Open event from ?id= (calendar deep-link) once list is loaded. */
+  /** OUI playlist pending formal — drives NBA Formal vs Qualify. */
+  useEffect(() => {
+    if (!activeId || !isInterestMode) {
+      setYesPendingFormal(0);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/admin/events/${activeId}/send-formal-invites`);
+        const json = (await res.json()) as {
+          ok?: boolean;
+          recipients?: { calendarInviteSentAt?: string | null }[];
+        };
+        if (cancelled) return;
+        if (!res.ok || !json.ok) {
+          setYesPendingFormal(0);
+          return;
+        }
+        const pending = (json.recipients ?? []).filter((r) => !r.calendarInviteSentAt).length;
+        setYesPendingFormal(pending);
+      } catch {
+        if (!cancelled) setYesPendingFormal(0);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, isInterestMode, authFetch, activeParticipations]);
+
+  /** Bridge interest playlists → Audience/roster chips (email join only). */
+  useEffect(() => {
+    if (!activeId || !isInterestMode) {
+      setInterestByEmail(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/admin/events/${activeId}/interest-status`);
+        const json = (await res.json()) as {
+          ok?: boolean;
+          byEmail?: Record<string, InterestDisplayStatus>;
+        };
+        if (cancelled) return;
+        if (res.ok && json.ok) {
+          setInterestByEmail(json.byEmail ?? {});
+        } else {
+          setInterestByEmail(null);
+        }
+      } catch {
+        if (!cancelled) setInterestByEmail(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, isInterestMode, interestRefreshKey, authFetch]);
+
+  /** Open event from ?id= (calendar / command-center deep-link) once list is loaded. */
   useEffect(() => {
     if (loading || events.length === 0) return;
     if (typeof window === "undefined") return;
-    const id = new URLSearchParams(window.location.search).get("id");
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("id");
+    const phaseParam = params.get("phase");
     if (!id) return;
     const event = events.find((e) => e.id === id);
     if (!event) return;
-    if (activeId === id) return;
-    openEdit(event);
-    const url = new URL(window.location.href);
-    url.searchParams.delete("id");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+    if (activeId !== id) {
+      openEdit(event, { preserveUrl: true, phaseFromUrl: phaseParam });
+      return;
+    }
+    if (phaseParam) {
+      const normalized = normalizeOpsPhaseId(phaseParam, {
+        interestMode: event.responseMode === "interest",
+      });
+      setFocusPhase(normalized);
+      setPhaseOverride(true);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open once when events arrive
   }, [loading, events]);
 
   function resetForm(
     invitees: SelectedInvitee[] = [],
     presetDate?: string,
-    seed?: { format?: EventFormat; city?: string; title?: string },
+    seed?: { format?: EventFormat; city?: string; title?: string; subtitle?: string },
   ) {
     const now = splitLocal(new Date().toISOString());
     const date =
@@ -289,6 +528,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setEndTime(times.endTime);
     setCapacity(Math.max(DEFAULT_TOTAL_COVERS, (invitees.length || 0) + 1));
     setPriceMxn("450");
+    setCostMxn("");
+    setPriceIncludesService(true);
+    setCostIncludesService(true);
+    setPriceIncludesIva(true);
+    setCostIncludesIva(true);
     setPricingMode("ticket_onsite");
     setAccessIncludesWelcomeDrink(true);
     setAccessIncludesAmuseBouche(false);
@@ -305,13 +549,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setStatus("draft");
     setEventLanguage("es");
     setResponseMode("rsvp");
-    setSubtitle("");
+    setSubtitle(seed?.subtitle?.trim() ?? "");
     setInterestDeadlineAt("");
     setPaymentDeadlineAt("");
     setAllInPriceMinMxn("");
     setAllInPriceMaxMxn("");
     setMesaNumber("");
     setSelectedInvitees(invitees);
+    setYesPendingFormal(0);
+    setInterestByEmail(null);
   }
 
   useEffect(() => {
@@ -320,19 +566,28 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const wantsNew = params?.get("nouveau") === "1";
     const dateParam = params?.get("date")?.trim() ?? "";
-    if (pending.invitees.length === 0 && !wantsNew) return;
+    const hasSeed =
+      pending.invitees.length > 0 ||
+      Boolean(pending.title?.trim()) ||
+      Boolean(pending.city?.trim()) ||
+      Boolean(pending.subtitle?.trim()) ||
+      Boolean(pending.date);
+    if (!hasSeed && !wantsNew) return;
     resetForm(
       pending.invitees.map((p) => ({
         ...p,
         inviteAs: "invited" as const,
       })),
-      dateParam || undefined,
+      dateParam || pending.date || undefined,
       {
         format: pending.format,
         city: pending.city,
         title: pending.title,
+        subtitle: pending.subtitle,
       },
     );
+    setFocusPhase("prep");
+    setPhaseOverride(false);
     if (wantsNew && typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.delete("nouveau");
@@ -345,9 +600,15 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
   function openCreate() {
     resetForm([]);
+    setFocusPhase("prep");
+    setPhaseOverride(false);
+    syncUrl(null, "prep");
   }
 
-  function openEdit(event: AdminEvent) {
+  function openEdit(
+    event: AdminEvent,
+    opts?: { preserveUrl?: boolean; phaseFromUrl?: string | null },
+  ) {
     const start = splitLocal(event.startsAt);
     const end = splitLocal(event.endsAt);
     setActiveId(event.id);
@@ -365,6 +626,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
     setPriceMxn(
       event.priceMxn != null && Number.isFinite(event.priceMxn) ? String(event.priceMxn) : "",
     );
+    setCostMxn(
+      event.costMxn != null && Number.isFinite(event.costMxn) ? String(event.costMxn) : "",
+    );
+    setPriceIncludesService(resolveIncludesFlag(event.priceIncludesService));
+    setCostIncludesService(resolveIncludesFlag(event.costIncludesService));
+    setPriceIncludesIva(resolveIncludesFlag(event.priceIncludesIva));
+    setCostIncludesIva(resolveIncludesFlag(event.costIncludesIva));
     setPricingMode(resolveEventPricingMode(event));
     setAccessIncludesWelcomeDrink(Boolean(event.accessIncludesWelcomeDrink));
     setAccessIncludesAmuseBouche(Boolean(event.accessIncludesAmuseBouche));
@@ -414,6 +682,26 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
         : "",
     );
     setSelectedInvitees([]);
+
+    const parts = participations.filter((p) => p.eventId === event.id);
+    const suggested = suggestOpsPhase({
+      event,
+      draft: {
+        title: event.title,
+        eventDate: start.date,
+        venueName: event.venueName ?? "",
+        address: event.address ?? "",
+      },
+      participations: parts,
+    });
+    const interest = event.responseMode === "interest";
+    const urlPhase = opts?.phaseFromUrl
+      ? normalizeOpsPhaseId(opts.phaseFromUrl, { interestMode: interest })
+      : null;
+    const nextPhase = opts?.phaseFromUrl && urlPhase ? urlPhase : suggested.phaseId;
+    setFocusPhase(nextPhase);
+    setPhaseOverride(Boolean(opts?.phaseFromUrl));
+    syncUrl(event.id, nextPhase);
   }
 
   function eventPayload() {
@@ -432,6 +720,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
       endsAt: endsAtIso,
       capacity: guestCapacityFromTotalCovers(capacity),
       priceMxn: priceMxn.trim() === "" ? null : Number(priceMxn),
+      costMxn: costMxn.trim() === "" ? null : Number(costMxn),
+      priceIncludesService,
+      costIncludesService,
+      priceIncludesIva,
+      costIncludesIva,
       pricingMode,
       accessIncludesWelcomeDrink,
       accessIncludesAmuseBouche,
@@ -464,8 +757,8 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
   async function saveEvent(phaseLabel?: string) {
     if (!title.trim() || !eventDate || !startTime) {
       setSaveOk(null);
-      setError("Titre, date et heure de début sont obligatoires (phase Save the Date).");
-      jumpToPhase("std");
+      setError("Titre, date et heure de début sont obligatoires (phase Préparation).");
+      jumpToPhase("prep");
       return;
     }
     setSaving(true);
@@ -849,23 +1142,48 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 : labels.newEvent}
             </h3>
             <p className="mt-1 text-sm text-ns-secondary">
-              Parcours en phases : Save the Date → définitif → emails → invitation formelle.
+              Une étape à la fois — en-tête = situation + action prioritaire.
             </p>
           </div>
 
-          <EventPhaseNav
+          <EventCommandHeader
+            title={title.trim() || (activeEvent?.title ?? "")}
+            modeLabel={isInterestMode ? "Save the Date / interest" : "RSVP classique"}
+            phaseLabel={
+              journeyPhases.find((p) => p.id === focusPhase)?.title ?? focusPhase
+            }
+            phaseSummary={journeyPhases.find((p) => p.id === focusPhase)?.summary}
+            kpis={opsSuggestion.kpis}
+            blockers={opsSuggestion.blockers}
+            nextBestAction={opsSuggestion.nextBestAction}
+            onDoNextBestAction={() =>
+              focusOnPhase(opsSuggestion.nextBestAction.phaseId, {
+                fromSuggestion: true,
+              })
+            }
+            showResetSuggested={
+              phaseOverride && focusPhase !== opsSuggestion.phaseId
+            }
+            onResetToSuggested={applySuggestedPhase}
+          />
+
+          <EventCommandPhaseNav
             phases={journeyPhases}
-            activeId={activePhaseNav}
+            activeId={focusPhase}
+            completedIds={opsSuggestion.completedPhaseIds}
+            suggestedId={opsSuggestion.phaseId}
             onJump={jumpToPhase}
           />
 
+          <div id="event-command-workzone" className="scroll-mt-28 space-y-3">
           <EventPhaseSection
-            phase={journeyPhases.find((p) => p.id === "std")!}
-            open={openPhases.has("std")}
-            onToggle={() => togglePhase("std")}
+            hideWhenCollapsed
+            phase={phaseMeta("prep")}
+            open={focusPhase === "prep"}
+            onToggle={() => jumpToPhase("prep")}
             footer={phaseSaveFooter(
-              "Save the Date",
-              "Titre, date, intro, capacité…",
+              "Préparation",
+              "Identité, calendrier, lieu, tarif, publish…",
             )}
           >
             <div className="grid gap-4 sm:grid-cols-2">
@@ -1091,17 +1409,11 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                 </div>
               </div>
             ) : null}
-          </EventPhaseSection>
 
-          <EventPhaseSection
-            phase={journeyPhases.find((p) => p.id === "definitive")!}
-            open={openPhases.has("definitive")}
-            onToggle={() => togglePhase("definitive")}
-            footer={phaseSaveFooter(
-              "Éléments définitifs",
-              "Lieu, tarif, menu, date butoir paiement…",
-            )}
-          >
+            <div className="border-t border-gray-100 pt-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-ns-secondary">
+                Lieu, tarif & publication
+              </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className={LABEL_CLASS}>{labels["fields.venueName"]}</label>
@@ -1222,12 +1534,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     </h3>
                     <p className="mb-3 text-xs text-ns-secondary">
                       {labels["fields.accessSectionHint"] ??
-                        "Montant payé à l’avance pour confirmer la place (virement). Les consommations se règlent sur place."}
+                        "Montant payé à l’avance par virement (SPEI) pour confirmer la place — pas de paiement en ligne. Les consommations se règlent sur place."}
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label className={LABEL_CLASS}>
-                          {labels["fields.priceMxn"] ?? "Ticket (MXN / pers., hors IVA)"}
+                          {labels["fields.priceMxn"] ?? "Prix de vente HT (MXN / pers.)"}
                         </label>
                         <input
                           type="number"
@@ -1238,29 +1550,70 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                           className={INPUT_CLASS}
                           placeholder="450"
                         />
+                        <PricingFlagToggle
+                          label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                          included={priceIncludesIva}
+                          onChange={setPriceIncludesIva}
+                          yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                          noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                        />
+                        <PricingFlagToggle
+                          label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
+                          included={priceIncludesService}
+                          onChange={setPriceIncludesService}
+                          yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                          noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
+                        />
                         <p className="mt-1 text-xs text-ns-secondary">
                           {labels["fields.priceMxnHint"] ??
-                            "Montant libre à préciser. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                            "Selon la négo : seuls IVA / service cochés entrent dans le TTC (et le CA)."}
                         </p>
-                        {(() => {
-                          const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
-                          if (!Number.isFinite(n) || n <= 0) return null;
-                          const { iva, totalWithIva } = computeEventIva(n);
-                          return (
-                            <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
-                              <p>
-                                {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                                <strong>{formatMxn(iva, "es")}</strong>
-                              </p>
-                              <p className="mt-0.5">
-                                {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                                <strong>{formatMxn(totalWithIva, "es")}</strong>
-                              </p>
-                            </div>
-                          );
-                        })()}
+                        <PriceBreakdownBox
+                          base={priceMxn.trim() === "" ? 0 : Number(priceMxn)}
+                          includeIva={priceIncludesIva}
+                          includeService={priceIncludesService}
+                          totalLabel="Total TTC"
+                        />
                       </div>
-                      <div className="space-y-3">
+                      <div>
+                        <label className={LABEL_CLASS}>
+                          {labels["fields.costMxn"] ?? "Cost du dîner HT (MXN / pers.)"}
+                        </label>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={costMxn}
+                          onChange={(e) => setCostMxn(e.target.value)}
+                          className={INPUT_CLASS}
+                          placeholder="ex. 350"
+                        />
+                        <PricingFlagToggle
+                          label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                          included={costIncludesIva}
+                          onChange={setCostIncludesIva}
+                          yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                          noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                        />
+                        <PricingFlagToggle
+                          label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
+                          included={costIncludesService}
+                          onChange={setCostIncludesService}
+                          yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                          noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
+                        />
+                        <p className="mt-1 text-xs text-ns-secondary">
+                          {labels["fields.costMxnHint"] ??
+                            "Coût restaurant / couvert — interne (marge, places Invité). Même logique négo."}
+                        </p>
+                        <PriceBreakdownBox
+                          base={costMxn.trim() === "" ? 0 : Number(costMxn)}
+                          includeIva={costIncludesIva}
+                          includeService={costIncludesService}
+                          totalLabel="COST TTC"
+                        />
+                      </div>
+                      <div className="space-y-3 sm:col-span-2">
                         <p className={`${LABEL_CLASS} mb-0`}>
                           {labels["fields.accessIncludes"] ?? "Inclus dans le ticket"}
                         </p>
@@ -1372,12 +1725,13 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                   </h3>
                   <p className="mb-3 text-xs text-ns-secondary">
                     {labels["fields.allInSectionHint"] ??
-                      "Un seul montant payé à l’avance : accès + repas + boissons (ou boissons à part si tu le précises)."}
+                      "Un seul montant payé à l’avance par virement : accès + repas + boissons. Renseigne aussi le COST interne pour la marge."}
                   </p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className={LABEL_CLASS}>
-                        {labels["fields.allInTicketMxn"] ?? "Ticket avec boissons incluses (MXN / pers., hors IVA)"}
+                        {labels["fields.allInTicketMxn"] ??
+                          "Prix de vente HT (MXN / pers.)"}
                       </label>
                       <input
                         type="number"
@@ -1386,30 +1740,102 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                         value={priceMxn}
                         onChange={(e) => setPriceMxn(e.target.value)}
                         className={INPUT_CLASS}
-                        placeholder="1000"
+                        placeholder="1300"
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                        included={priceIncludesIva}
+                        onChange={setPriceIncludesIva}
+                        yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                        noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
+                        included={priceIncludesService}
+                        onChange={setPriceIncludesService}
+                        yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                        noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
                       />
                       <p className="mt-1 text-xs text-ns-secondary">
                         {labels["fields.allInTicketHint"] ??
-                          "Montant libre. L’IVA (16%) et le total TTC sont calculés automatiquement."}
+                          "Ce que le membre paie (virement). Seuls IVA / service cochés entrent dans le TTC et le CA."}
                       </p>
-                      {(() => {
-                        const n = priceMxn.trim() === "" ? 0 : Number(priceMxn);
-                        if (!Number.isFinite(n) || n <= 0) return null;
-                        const { iva, totalWithIva } = computeEventIva(n);
-                        return (
-                          <div className="mt-2 rounded-lg border border-ns-alternate bg-white px-3 py-2 text-xs text-ns-tertiary">
-                            <p>
-                              {labels["fields.ivaLabel"] ?? "IVA (16%)"}:{" "}
-                              <strong>{formatMxn(iva, "es")}</strong>
-                            </p>
-                            <p className="mt-0.5">
-                              {labels["fields.totalWithIva"] ?? "Total avec IVA"}:{" "}
-                              <strong>{formatMxn(totalWithIva, "es")}</strong>
-                            </p>
-                          </div>
-                        );
-                      })()}
+                      <PriceBreakdownBox
+                        base={priceMxn.trim() === "" ? 0 : Number(priceMxn)}
+                        includeIva={priceIncludesIva}
+                        includeService={priceIncludesService}
+                        totalLabel="Total TTC"
+                      />
                     </div>
+                    <div>
+                      <label className={LABEL_CLASS}>
+                        {labels["fields.costMxn"] ?? "Cost du dîner HT (MXN / pers.)"}
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={costMxn}
+                        onChange={(e) => setCostMxn(e.target.value)}
+                        className={INPUT_CLASS}
+                        placeholder="ex. 900"
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.ivaToggleLabel"] ?? "IVA 16%"}
+                        included={costIncludesIva}
+                        onChange={setCostIncludesIva}
+                        yesLabel={labels["fields.ivaIncludedYes"] ?? "Avec IVA"}
+                        noLabel={labels["fields.ivaIncludedNo"] ?? "Sans IVA"}
+                      />
+                      <PricingFlagToggle
+                        label={labels["fields.serviceToggleLabel"] ?? "Service 15%"}
+                        included={costIncludesService}
+                        onChange={setCostIncludesService}
+                        yesLabel={labels["fields.serviceIncludedYes"] ?? "Avec service"}
+                        noLabel={labels["fields.serviceIncludedNo"] ?? "Sans service"}
+                      />
+                      <p className="mt-1 text-xs text-ns-secondary">
+                        {labels["fields.costMxnHint"] ??
+                          "Coût restaurant / couvert — interne (marge, places Invité). Même logique négo."}
+                      </p>
+                      <PriceBreakdownBox
+                        base={costMxn.trim() === "" ? 0 : Number(costMxn)}
+                        includeIva={costIncludesIva}
+                        includeService={costIncludesService}
+                        totalLabel="COST TTC"
+                      />
+                    </div>
+                    {(() => {
+                      const sale = priceMxn.trim() === "" ? 0 : Number(priceMxn);
+                      const cost = costMxn.trim() === "" ? 0 : Number(costMxn);
+                      if (!Number.isFinite(sale) || sale <= 0 || !Number.isFinite(cost) || cost <= 0) {
+                        return null;
+                      }
+                      const saleTtc = computeSeatPriceBreakdown(sale, {
+                        includeIva: priceIncludesIva,
+                        includeService: priceIncludesService,
+                      }).total;
+                      const costTtc = computeSeatPriceBreakdown(cost, {
+                        includeIva: costIncludesIva,
+                        includeService: costIncludesService,
+                      }).total;
+                      const margin = Math.round((saleTtc - costTtc) * 100) / 100;
+                      return (
+                        <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-xs text-ns-tertiary">
+                          <p>
+                            Marge / place payée (TTC) :{" "}
+                            <strong>{formatMxn(margin, "es")}</strong>
+                            <span className="text-ns-secondary">
+                              {" "}
+                              — vente {formatMxn(saleTtc, "es")} − cost {formatMxn(costTtc, "es")}
+                            </span>
+                          </p>
+                          <p className="mt-0.5 text-ns-secondary">
+                            Place Invité : CA 0, cost TTC compté quand même.
+                          </p>
+                        </div>
+                      );
+                    })()}
                     <div>
                       <label className={LABEL_CLASS}>
                         {labels["fields.allInDrinks"] ?? "Boissons"}
@@ -1542,38 +1968,78 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
 
 
             </div>
+            </div>
+          </EventPhaseSection>
+
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("audience")}
+            open={focusPhase === "audience"}
+            onToggle={() => jumpToPhase("audience")}
+          >
+            <div>
+              <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+                {labels.inviteGroup ?? "Constituer un groupe (invités)"}
+              </h4>
+              <p className="mt-1 mb-3 text-xs text-ns-secondary">
+                {labels.inviteGroupHint ??
+                  "Recherche par nom/société/email. Signaux observés (jamais invité, déjà venu, ville, sat) pour choisir. Au-delà des places → liste d’attente."}
+              </p>
+              <ContactPicker
+                selected={selectedInvitees}
+                onChange={setSelectedInvitees}
+                participations={participations}
+                eventCity={city || activeEvent?.city || null}
+                excludeEventId={activeId}
+                interestByEmail={isInterestMode ? interestByEmail : null}
+                labels={{
+                  search: labels.searchContacts,
+                  selected: activeId
+                    ? `${labels.selectedContacts} (à ajouter)`
+                    : labels.selectedContacts,
+                  addExternal: labels.addExternal,
+                  externalEmail: "Email",
+                  externalName: "Nom",
+                }}
+              />
+            </div>
+            {activeEvent ? (
+              <AdminEventParticipantRoster
+                participations={activeParticipations}
+                capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                title={labels.selectedContacts}
+                interestByEmail={isInterestMode ? interestByEmail : null}
+                labels={{
+                  invited: labels["statuses.invited"] ?? "À payer",
+                  attending: labels["statuses.attending"] ?? "Attending",
+                  confirmed: labels["statuses.confirmed"] ?? "Payé",
+                  comped: labels["statuses.comped"] ?? "Invité",
+                  not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                  waitlist: labels["statuses.waitlist"],
+                  seatedSummary: labels.seatingSummary,
+                }}
+                onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
+                onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                onWhatsAppAll={() => void openWhatsAppForAll()}
+              />
+            ) : (
+              <p className="text-sm text-ns-secondary">
+                Enregistre l’événement pour voir le roster participants.
+              </p>
+            )}
           </EventPhaseSection>
 
           {isInterestMode ? (
             <EventPhaseSection
-              phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={openPhases.has("std_email")}
-              onToggle={() => togglePhase("std_email")}
+              hideWhenCollapsed
+              phase={phaseMeta("save_the_date")}
+              open={focusPhase === "save_the_date"}
+              onToggle={() => jumpToPhase("save_the_date")}
             >
-              <div>
-                <h4 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-                  {labels.inviteGroup ?? "Constituer un groupe (invités)"}
-                </h4>
-                <p className="mt-1 mb-3 text-xs text-ns-secondary">
-                  {labels.inviteGroupHint ??
-                    "Recherche par nom/société/email. Au-delà des places → liste d’attente."}
-                </p>
-                <ContactPicker
-                  selected={selectedInvitees}
-                  onChange={setSelectedInvitees}
-                  labels={{
-                    search: labels.searchContacts,
-                    selected: activeId
-                      ? `${labels.selectedContacts} (à ajouter)`
-                      : labels.selectedContacts,
-                    addExternal: labels.addExternal,
-                    externalEmail: "Email",
-                    externalName: "Nom",
-                  }}
-                />
-              </div>
               {activeEvent ? (
-                <>
+                <div className="space-y-4">
                   <div className="rounded-xl border border-gray-100 bg-ns-brand-light p-4">
                     <p className="text-sm font-bold text-ns-hero">Lien public</p>
                     <a
@@ -1601,11 +2067,12 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                       </button>
                     </div>
                   </div>
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="save_the_date"
+                    label="Éditer le modèle Save the Date"
                     onEventUpdated={() => void loadAll()}
-                    hint="Personnalise le Save the Date avant l’envoi blast."
+                    hint="Personnalise avant l’envoi blast."
                   />
                   <button
                     type="button"
@@ -1622,281 +2089,78 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     <Mail className="h-4 w-4" />{" "}
                     {sendingSaveTheDate ? "Envoi Save the Date…" : "Envoyer Save the Date"}
                   </button>
-                  <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
-            <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
-                <button
-                  type="button"
-                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
-                  onClick={() => void openWhatsAppForAll()}
-                  disabled={activeParticipations.length === 0}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp à tous
-                </button>
-              </div>
-              {(() => {
-                const seatCap =
-                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
-                const seated = countSeatedParticipations(activeParticipations);
-                const waitlistCount = activeParticipations.filter(
-                  (p) => p.status === "waitlist",
-                ).length;
-                const summary =
-                  labels.seatingSummary
-                    ?.replace("{seated}", String(seated))
-                    .replace("{capacity}", String(seatCap))
-                    .replace("{waitlist}", String(waitlistCount))
-                    .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
-                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
-                return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
-              })()}
-              <ul className="mt-3 space-y-2">
-                {activeParticipations.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 flex-1">
-                      {p.fullName ?? p.email}
-                      {p.companyName ? ` · ${p.companyName}` : ""}
-                      {p.phone ? (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
-                      ) : (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">
-                          Pas de téléphone
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.status === "waitlist" && (
-                        <button
-                          type="button"
-                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
-                          onClick={() => void inviteFromWaitlist(p.id)}
-                          title="Passer en Invité et envoyer l’invitation calendrier"
-                        >
-                          INVITER
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
-                        onClick={() => openWhatsAppForParticipation(p)}
-                        title="Envoyer l’invitation par WhatsApp"
-                        aria-label="WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <select
-                        value={
-                          p.status === "present"
-                            ? "confirmed"
-                            : p.status === "declined"
-                              ? "not_attending"
-                              : p.status
-                        }
-                        onChange={(e) =>
-                          void setParticipationStatus(
-                            p.id,
-                            e.target.value as AdminEventParticipation["status"],
-                          )
-                        }
-                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
-                      >
-                      <option value="invited">{labels["statuses.invited"]}</option>
-                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
-                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
-                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
-                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                      </select>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-                </>
+                  <p className="text-xs text-ns-secondary">
+                    Les réponses OUI/NON et la relance se gèrent ensuite en{" "}
+                    <button
+                      type="button"
+                      className="font-semibold text-ns-primary underline-offset-2 hover:underline"
+                      onClick={() => jumpToPhase("qualify")}
+                    >
+                      Qualification
+                    </button>
+                    .
+                  </p>
+                </div>
               ) : (
                 <p className="text-sm text-ns-secondary">
                   Enregistre l’événement pour éditer le template STD et envoyer.
                 </p>
               )}
             </EventPhaseSection>
-          ) : (
-            <EventPhaseSection
-              phase={journeyPhases.find((p) => p.id === "std_email")!}
-              open={openPhases.has("std_email")}
-              onToggle={() => togglePhase("std_email")}
-            >
-              <ContactPicker
-                selected={selectedInvitees}
-                onChange={setSelectedInvitees}
-                labels={{
-                  search: labels.searchContacts,
-                  selected: activeId
-                    ? `${labels.selectedContacts} (à ajouter)`
-                    : labels.selectedContacts,
-                  addExternal: labels.addExternal,
-                  externalEmail: "Email",
-                  externalName: "Nom",
-                }}
-              />
-              {activeEvent ? (
-            <section className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
-              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className={FORM_SECTION_TITLE}>{labels.selectedContacts}</h3>
-                <button
-                  type="button"
-                  className={`${BTN_SECONDARY} inline-flex items-center gap-1 text-xs`}
-                  onClick={() => void openWhatsAppForAll()}
-                  disabled={activeParticipations.length === 0}
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  WhatsApp à tous
-                </button>
-              </div>
-              {(() => {
-                const seatCap =
-                  activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity);
-                const seated = countSeatedParticipations(activeParticipations);
-                const waitlistCount = activeParticipations.filter(
-                  (p) => p.status === "waitlist",
-                ).length;
-                const summary =
-                  labels.seatingSummary
-                    ?.replace("{seated}", String(seated))
-                    .replace("{capacity}", String(seatCap))
-                    .replace("{waitlist}", String(waitlistCount))
-                    .replace("{total}", String(totalCoversWithAdmin(seatCap))) ??
-                  `${seated}/${seatCap} places · ${waitlistCount} en attente · ${totalCoversWithAdmin(seatCap)} couverts (dont Gregory)`;
-                return <p className="mt-1 text-xs text-ns-secondary">{summary}</p>;
-              })()}
-              <ul className="mt-3 space-y-2">
-                {activeParticipations.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ns-alternate px-3 py-2 text-sm"
-                  >
-                    <span className="min-w-0 flex-1">
-                      {p.fullName ?? p.email}
-                      {p.companyName ? ` · ${p.companyName}` : ""}
-                      {p.phone ? (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">{p.phone}</span>
-                      ) : (
-                        <span className="mt-0.5 block text-xs text-ns-secondary">
-                          Pas de téléphone
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {p.status === "waitlist" && (
-                        <button
-                          type="button"
-                          className={`${BTN_PRIMARY} px-2 py-1 text-xs`}
-                          onClick={() => void inviteFromWaitlist(p.id)}
-                          title="Passer en Invité et envoyer l’invitation calendrier"
-                        >
-                          INVITER
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="inline-flex h-7 items-center justify-center gap-1 rounded border border-ns-alternate bg-ns-surface px-1.5 text-ns-tertiary transition hover:border-ns-primary hover:bg-ns-brand-light"
-                        onClick={() => openWhatsAppForParticipation(p)}
-                        title="Envoyer l’invitation par WhatsApp"
-                        aria-label="WhatsApp"
-                      >
-                        <MessageCircle className="h-3.5 w-3.5" />
-                      </button>
-                      <select
-                        value={
-                          p.status === "present"
-                            ? "confirmed"
-                            : p.status === "declined"
-                              ? "not_attending"
-                              : p.status
-                        }
-                        onChange={(e) =>
-                          void setParticipationStatus(
-                            p.id,
-                            e.target.value as AdminEventParticipation["status"],
-                          )
-                        }
-                        className="rounded border border-ns-alternate px-2 py-1 text-xs"
-                      >
-                      <option value="invited">{labels["statuses.invited"]}</option>
-                      <option value="attending">{labels["statuses.attending"] ?? "Attending"}</option>
-                      <option value="confirmed">{labels["statuses.confirmed"] ?? "Confirmé"}</option>
-                      <option value="not_attending">{labels["statuses.not_attending"] ?? "Not attending"}</option>
-                      <option value="waitlist">{labels["statuses.waitlist"]}</option>
-                      </select>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-              ) : null}
-            </EventPhaseSection>
-          )}
+          ) : null}
 
-          {isInterestMode && activeEvent ? (
+          {isInterestMode ? (
             <EventPhaseSection
-              phase={journeyPhases.find((p) => p.id === "std_relance")!}
-              open={openPhases.has("std_relance")}
-              onToggle={() => togglePhase("std_relance")}
+              hideWhenCollapsed
+              phase={phaseMeta("qualify")}
+              open={focusPhase === "qualify"}
+              onToggle={() => jumpToPhase("qualify")}
             >
-              <StdRelancePanel event={activeEvent} />
+              {activeEvent ? (
+                <div className="space-y-4">
+                  <StdRelancePanel event={activeEvent} />
+                  <AdminEventInterestInbox eventId={activeEvent.id} eventSlug={activeEvent.slug} />
+                </div>
+              ) : (
+                <p className="text-sm text-ns-secondary">
+                  Enregistre l’événement pour qualifier les réponses.
+                </p>
+              )}
             </EventPhaseSection>
           ) : null}
 
           <EventPhaseSection
-            phase={journeyPhases.find((p) => p.id === "formal")!}
-            open={openPhases.has("formal")}
-            onToggle={() => togglePhase("formal")}
+            hideWhenCollapsed
+            phase={phaseMeta("formal")}
+            open={focusPhase === "formal"}
+            onToggle={() => jumpToPhase("formal")}
           >
             {activeEvent ? (
               isInterestMode ? (
                 <div className="space-y-4">
                   <p className="text-xs text-ns-secondary">
-                    Vérifie le prix et la date butoir (phase 2) — ils alimentent{" "}
-                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail. Après envoi,
-                    marque les virements reçus dans <strong>Suivi paiement ACCESS</strong>{" "}
-                    (statut → Payé).
+                    Vérifie le prix et la date butoir (préparation) — ils alimentent{" "}
+                    {"{{paymentDeadlineBlock}}"} et les montants dans le mail. Le suivi paiement
+                    est dans l’étape suivante.
                   </p>
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="calendar_invite"
+                    label="Éditer le modèle invitation formelle"
                     onEventUpdated={() => void loadAll()}
-                    hint="Invitation formelle : détails, prix, coordonnées bancaires."
+                    hint="Détails, prix, coordonnées bancaires."
                   />
                   <FormalInviteOuiPanel
-                    event={activeEvent}
-                    onEventUpdated={() => void loadAll()}
-                  />
-                  <EventEmailTemplateEditor
-                    event={activeEvent}
-                    templateKey="payment_relance"
-                    onEventUpdated={() => void loadAll()}
-                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
-                  />
-                  <AdminEventPaymentFollowupPanel
-                    event={activeEvent}
-                    participations={activeParticipations}
-                    onStatusChange={(id, status) => void setParticipationStatus(id, status)}
-                    onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                    onUpdated={() => void loadAll()}
-                  />
-                  <AdminEventPlacesAvailablePanel
                     event={activeEvent}
                     onEventUpdated={() => void loadAll()}
                   />
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <EventEmailTemplateEditor
+                  <EventTemplateDrawer
                     event={activeEvent}
                     templateKey="calendar_invite"
+                    label="Éditer le modèle invitation"
                     onEventUpdated={() => void loadAll()}
                   />
                   <button
@@ -1904,26 +2168,27 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
                     onClick={openInviteModal}
                     disabled={activeParticipations.filter((p) => p.status === "invited").length === 0}
                     className={`${BTN_PRIMARY} inline-flex items-center gap-2`}
-                    title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts Invité"
+                    title="Envoie l’invitation calendrier (ICS + YES/NO) aux statuts À payer"
                   >
                     <Mail className="h-4 w-4" /> Lancer les invitations
                   </button>
-                  <EventEmailTemplateEditor
-                    event={activeEvent}
-                    templateKey="payment_relance"
-                    onEventUpdated={() => void loadAll()}
-                    hint="Relance paiement ACCESS — même ton que l’invitation. Balises de mise en forme supportées (bold, b, i, liens). Clique « Réinit. cette langue » si le corps est tronqué, puis sauve."
-                  />
-                  <AdminEventPaymentFollowupPanel
-                    event={activeEvent}
+                  <AdminEventParticipantRoster
                     participations={activeParticipations}
+                    capacity={activeEvent.capacity ?? guestCapacityFromTotalCovers(capacity)}
+                    title="Suivi participants"
+                    interestByEmail={isInterestMode ? interestByEmail : null}
+                    labels={{
+                      invited: labels["statuses.invited"] ?? "À payer",
+                      attending: labels["statuses.attending"] ?? "Attending",
+                      confirmed: labels["statuses.confirmed"] ?? "Payé",
+                      comped: labels["statuses.comped"] ?? "Invité",
+                      not_attending: labels["statuses.not_attending"] ?? "Not attending",
+                      waitlist: labels["statuses.waitlist"],
+                      seatedSummary: labels.seatingSummary,
+                    }}
                     onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                    onInviteFromWaitlist={(id) => void inviteFromWaitlist(id)}
                     onWhatsApp={(p) => openWhatsAppForParticipation(p)}
-                    onUpdated={() => void loadAll()}
-                  />
-                  <AdminEventPlacesAvailablePanel
-                    event={activeEvent}
-                    onEventUpdated={() => void loadAll()}
                   />
                 </div>
               )
@@ -1933,9 +2198,94 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
           </EventPhaseSection>
 
           <EventPhaseSection
-            phase={journeyPhases.find((p) => p.id === "auto")!}
-            open={openPhases.has("auto")}
-            onToggle={() => togglePhase("auto")}
+            hideWhenCollapsed
+            phase={phaseMeta("payment")}
+            open={focusPhase === "payment"}
+            onToggle={() => jumpToPhase("payment")}
+          >
+            {activeEvent ? (
+              <div className="space-y-4">
+                <EventTemplateDrawer
+                  event={activeEvent}
+                  templateKey="payment_relance"
+                  label="Éditer le modèle relance paiement"
+                  onEventUpdated={() => void loadAll()}
+                  hint="Relance ACCESS — bold/liens supportés."
+                />
+                <AdminEventPaymentFollowupPanel
+                  event={activeEvent}
+                  participations={activeParticipations}
+                  onStatusChange={(id, status) => void setParticipationStatus(id, status)}
+                  onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                  onUpdated={() => void loadAll()}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("dinner_prep")}
+            open={focusPhase === "dinner_prep"}
+            onToggle={() => jumpToPhase("dinner_prep")}
+          >
+            {activeEvent ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <p className="text-xs text-ns-secondary">
+                    Places restantes et last-call — puis composer les tables dans Tables.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/admin/tables?eventId=${encodeURIComponent(activeEvent.id)}`}
+                      className={`${BTN_PRIMARY} inline-flex items-center text-sm`}
+                    >
+                      Composer les tables →
+                    </Link>
+                    <Link
+                      href={`/admin/tables?eventId=${encodeURIComponent(activeEvent.id)}&generate=1`}
+                      className={`${BTN_SECONDARY} inline-flex items-center text-sm`}
+                    >
+                      Générer des idées
+                    </Link>
+                  </div>
+                </div>
+                <AdminEventPlacesAvailablePanel
+                  event={activeEvent}
+                  onEventUpdated={() => void loadAll()}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("checkin")}
+            open={focusPhase === "checkin"}
+            onToggle={() => jumpToPhase("checkin")}
+          >
+            {activeEvent ? (
+              <AdminEventCheckinPanel
+                participations={activeParticipations}
+                onWhatsApp={(p) => openWhatsAppForParticipation(p)}
+                onUpdated={() => void loadAll()}
+              />
+            ) : (
+              <p className="text-sm text-ns-secondary">
+                Enregistre l’événement pour le check-in le soir J.
+              </p>
+            )}
+          </EventPhaseSection>
+
+          <EventPhaseSection
+            hideWhenCollapsed
+            phase={phaseMeta("feedback")}
+            open={focusPhase === "feedback"}
+            onToggle={() => jumpToPhase("feedback")}
           >
             {activeEvent ? (
               <div className="space-y-4">
@@ -1950,6 +2300,7 @@ export function AdminEventsPanel({ labels, locale, publicBaseUrl }: AdminEventsP
               <p className="text-sm text-ns-secondary">Enregistre l’événement pour cette étape.</p>
             )}
           </EventPhaseSection>
+          </div>
 
           <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-100 bg-white/95 p-4 shadow-sm backdrop-blur">
             <button

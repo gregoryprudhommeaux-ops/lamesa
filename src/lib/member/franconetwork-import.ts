@@ -7,6 +7,7 @@ import { resolveCityHub } from "@/lib/constants/city-hubs";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendFranconetworkAnnouncementEmail } from "@/lib/email/send-fn-announcement";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
 import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
 import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
@@ -246,15 +247,7 @@ export async function upsertFranconetworkWaitlistMember(
         { ...record, referredByCode: undefined },
         "[franconetwork-import]",
       );
-      if (sync.id) {
-        await db.collection(COLLECTIONS.waitlist).doc(existing.id).set(
-          {
-            databasePersoContactId: sync.id,
-            databasePersoSyncedAt: new Date().toISOString(),
-          },
-          { merge: true },
-        );
-      }
+      await persistDatabasePersoSyncStatus(existing.id, sync);
       await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
       await sendFranconetworkAnnouncementEmail({
@@ -274,15 +267,7 @@ export async function upsertFranconetworkWaitlistMember(
       { ...record, referredByCode: undefined },
       "[franconetwork-import]",
     );
-    if (sync.id) {
-      await db.collection(COLLECTIONS.waitlist).doc(ref.id).set(
-        {
-          databasePersoContactId: sync.id,
-          databasePersoSyncedAt: new Date().toISOString(),
-        },
-        { merge: true },
-      );
-    }
+    await persistDatabasePersoSyncStatus(ref.id, sync);
     await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
     await sendFranconetworkAnnouncementEmail({

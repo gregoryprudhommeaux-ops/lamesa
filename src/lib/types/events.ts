@@ -2,6 +2,8 @@ export type EventParticipationStatus =
   | "invited"
   | "attending"
   | "confirmed"
+  /** Complimentary seat — LA MESA covers COST, no CA. */
+  | "comped"
   | "not_attending"
   | "waitlist"
   /** @deprecated legacy — normalized to confirmed */
@@ -31,9 +33,6 @@ export type EmailTemplateKey =
   | "participation_confirmed"
   | "payment_relance"
   | "places_available"
-  | "reminder_7d"
-  | "reminder_36h"
-  | "reminder_90m"
   | "satisfaction_survey"
   | "light_signup"
   | "referral_invite"
@@ -43,6 +42,8 @@ export type EmailTemplateKey =
   | "profile_incomplete"
   /** Nominative Save the Date / interest invite */
   | "save_the_date"
+  /** One follow-up to STD contacts still without OUI/NON */
+  | "std_relance"
   /** Auto ack after member validates Save the Date interest reply */
   | "interest_ack"
   /** Custom admin-created templates: custom_<slug> */
@@ -77,7 +78,14 @@ export type SatisfactionSurveyAnswers = {
   menuQuality: number;
   guestsQuality: number;
   wouldReturn: number;
-  wantInviteOther: boolean;
+  /** 0–5: would recommend the LA MESA concept (new surveys). */
+  wouldRecommend?: number;
+  /** 0–5: experience quality vs price paid (new surveys). */
+  valueForMoney?: number;
+  /** Optional free-text constructive feedback. */
+  comment?: string;
+  /** @deprecated Prefer wouldRecommend. Kept for older submissions. */
+  wantInviteOther?: boolean;
   invitedEmail?: string;
   submittedAt: string;
 };
@@ -125,10 +133,35 @@ export interface AdminEvent {
   parking?: "secure_nearby" | "valet" | "on_site" | "unknown";
   capacity?: number;
   /**
-   * ACCESS ticket before IVA (MXN) — amount charged to confirm the seat.
-   * Typical default ~450 MXN.
+   * ACCESS ticket HT (MXN / pers.) — prix de vente before IVA / service.
+   * TTC guest = HT + (IVA 16% if `priceIncludesIva`) + (service 15% if `priceIncludesService`).
    */
   priceMxn?: number | null;
+  /**
+   * Internal COST HT (MXN / pers.) — restaurant / cover cost for margin.
+   * Cost TTC follows `costIncludesIva` / `costIncludesService`. Not shown to guests.
+   */
+  costMxn?: number | null;
+  /**
+   * Whether the selling price TTC includes IVA 16%.
+   * Default true when omitted (legacy). Set false when the nego did not include IVA.
+   */
+  priceIncludesIva?: boolean | null;
+  /**
+   * Whether the selling price TTC includes service 15%.
+   * Default true when omitted (legacy).
+   */
+  priceIncludesService?: boolean | null;
+  /**
+   * Whether the internal COST TTC includes IVA 16%.
+   * Default true when omitted (legacy).
+   */
+  costIncludesIva?: boolean | null;
+  /**
+   * Whether the internal COST TTC includes service 15%.
+   * Default true when omitted (legacy).
+   */
+  costIncludesService?: boolean | null;
   /** ACCESS includes a welcome drink */
   accessIncludesWelcomeDrink?: boolean;
   /** ACCESS includes amuse-bouches */
@@ -181,6 +214,15 @@ export interface AdminEvent {
   inviteEmailSentAt?: string;
   /** Last Save the Date / interest blast (event-level stamp). */
   saveTheDateSentAt?: string;
+  /**
+   * When true, the daily cron sends satisfaction surveys 12–48h after startsAt.
+   * Default / omitted = OFF — admin sends manually.
+   */
+  satisfactionSurveyAutoSend?: boolean;
+  /** ISO stamp when admin validated survey language + questions before first send. */
+  satisfactionContentValidatedAt?: string | null;
+  /** Locale that was validated (es | fr | en). */
+  satisfactionContentValidatedLocale?: "es" | "fr" | "en" | null;
   /** Per-event overrides of global email templates (per locale) */
   emailTemplateOverrides?: Partial<
     Record<
@@ -221,9 +263,28 @@ export interface AdminEventParticipation {
   reminder36hSentAt?: string;
   reminder90mSentAt?: string;
   rsvpAt?: string;
+  /** Door check-in the night of (ISO). Independent of payment status. */
+  checkedInAt?: string | null;
+  /**
+   * Member declared they sent the SPEI transfer (ISO).
+   * Epistemic: **declared** — not proof of receipt. Admin still marks Payé.
+   */
+  paymentDeclaredAt?: string | null;
+  /**
+   * Interest / STD answer mirrored onto participation (vague 3 Audience fusion).
+   * Epistemic: **observed** from formulaire or playlist OUI promote.
+   */
+  interestResponse?: EventInterestResponse | null;
   /** Thank-you + satisfaction survey email sent (~12h after start) */
   satisfactionSurveySentAt?: string;
   satisfactionSurvey?: SatisfactionSurveyAnswers;
+  /**
+   * Opaque durable survey link token (stored + emailed).
+   * Survives RSVP_TOKEN_SECRET rotation; short enough for email clients.
+   */
+  satisfactionSurveyAccessToken?: string;
+  /** SHA-256 hex of the access token (optional secondary lookup). */
+  satisfactionSurveyAccessTokenHash?: string;
 }
 
 
@@ -276,6 +337,17 @@ export interface WaitlistRegistration {
   invitationMotivation: string;
   canBring?: string;
   isSeeking?: string;
+  /**
+   * Declared dinner themes the member cares about (industry, experience, problem space).
+   * Free-text complement to `dinnerSubjectInterests` catalog picks.
+   * Used by table-matching / dinner creation profile scan — not inferred.
+   */
+  dinnerThemesInterest?: string;
+  /**
+   * Catalog subject interests (past + upcoming periods). Declared at signup/profile;
+   * admin validates coherence before they feed table pools / theme scan.
+   */
+  dinnerSubjectInterests?: DinnerSubjectInterest[];
   locale: string;
   source: string;
   tags: string[];
@@ -290,8 +362,12 @@ export interface WaitlistRegistration {
   /** Linked Database Perso contact id after upsert sync */
   databasePersoContactId?: string;
   databasePersoSyncedAt?: string;
+  /** Last time we pulled complementary fields from Database Perso into LA MESA. */
+  databasePersoPulledAt?: string;
   /** Outcome of Database Perso upsert at signup / profile sync */
   databasePersoSyncStatus?: "synced" | "failed" | "skipped";
+  /** Last Perso upsert error (cleared on success) */
+  databasePersoSyncError?: string;
   /** Welcome / express confirmation email to the member */
   welcomeEmailStatus?: "sent" | "failed" | "skipped";
   welcomeEmailSentAt?: string;
@@ -310,7 +386,8 @@ export interface WaitlistRegistration {
   referredById?: string;
   referralAcceptedAt?: string;
   /**
-   * Admin ops notes (post-dinner CRM, curation). Not synced to Database Perso.
+   * Admin ops notes (post-dinner CRM, table curation feedback).
+   * Fed into AI table-matching scans. Not synced to Database Perso.
    */
   opsNotes?: string;
   /** Admin prioritization band for cockpit queues. */
@@ -321,6 +398,50 @@ export interface WaitlistRegistration {
   opsTouchedAt?: string;
 }
 
+/** Catalog entry: a dinner subject open for a period (month) + city — no precise date. */
+export type DinnerSubjectStatus = "draft" | "published" | "archived";
+
+export type DinnerSubjectLocale = "fr" | "en" | "es";
+
+export interface DinnerSubject {
+  id: string;
+  title: string;
+  /** Short blurb shown at signup / profile. */
+  summary?: string;
+  /**
+   * Locale of the admin-authored title/summary (defaults to fr).
+   * `titleI18n` / `summaryI18n` hold auto-translations for /themes.
+   */
+  sourceLocale?: DinnerSubjectLocale;
+  titleI18n?: Partial<Record<DinnerSubjectLocale, string>>;
+  summaryI18n?: Partial<Record<DinnerSubjectLocale, string>>;
+  /** YYYY-MM — planning period only (no day). */
+  periodMonth: string;
+  city: string;
+  status: DinnerSubjectStatus;
+  /** Optional tokens for theme-fit / scan. */
+  keywords?: string[];
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DinnerSubjectInterestValidation = "pending" | "validated" | "rejected";
+
+/** Member interest in a catalog subject — pending until admin validates profile coherence. */
+export interface DinnerSubjectInterest {
+  subjectId: string;
+  /** Title snapshot at declaration (catalog may rename later). */
+  title: string;
+  periodMonth?: string;
+  city?: string;
+  declaredAt: string;
+  validation: DinnerSubjectInterestValidation;
+  validatedAt?: string;
+  /** Admin note on profile ↔ subject coherence. */
+  validationNote?: string;
+}
+
 export interface DatabasePersoContact {
   id: string;
   fullName: string;
@@ -328,6 +449,15 @@ export interface DatabasePersoContact {
   emails: string[];
   phones: string[];
   tags: string[];
+  linkedinUrl?: string | null;
+  sector?: string | null;
+  position?: string | null;
+  city?: string | null;
+  notes?: string | null;
+  keywords?: string[];
+  extraActivities?: string[];
+  /** ISO timestamp when Perso last updated the contact (if provided). */
+  updatedAt?: string | null;
 }
 
 export type TableDraftStatus = "draft" | "used" | "archived";
@@ -340,6 +470,12 @@ export interface TableDraftMemberSnapshot {
   sector: string;
   position: string;
   city: string;
+  /** Past formal invites — optional for legacy drafts. */
+  invitationCount?: number;
+  /** Invited on the immediately previous event — optional for legacy drafts. */
+  invitedToPreviousEvent?: boolean;
+  /** Lexical theme fit band when composed in admin_theme — optional for legacy drafts. */
+  themeFitBand?: "strong" | "medium" | "weak" | "none";
 }
 
 export interface TableDraft {
@@ -355,6 +491,11 @@ export interface TableDraft {
   warnings: string[];
   primary: TableDraftMemberSnapshot[];
   alternates: TableDraftMemberSnapshot[];
+  /**
+   * Named Prospects playlist for theme sourcing (CSV Perso / Mesa / manual).
+   * Used for cold-mail campaigns from Coms.
+   */
+  prospectListName?: string;
   status: TableDraftStatus;
   linkedEventId?: string;
   /** ISO timestamp — admin confirmed human review before invites. */

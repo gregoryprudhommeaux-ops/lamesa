@@ -42,6 +42,15 @@ vi.mock("@/lib/firebase/admin", () => ({
   getAdminFirestore,
 }));
 
+vi.mock("@/lib/admin/load-core-collections", () => ({
+  loadAdminCoreCollections: vi.fn(async () => ({
+    events: [],
+    participations: [],
+    waitlist: [],
+    fromCache: false,
+  })),
+}));
+
 vi.mock("@/lib/admin/table-matching", () => ({
   composeTableIdeas,
   TableIdeasError,
@@ -57,6 +66,8 @@ function jsonRequest(body: unknown) {
   });
 }
 
+const validCity = "Guadalajara";
+
 describe("POST /api/admin/table-ideas", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -69,7 +80,7 @@ describe("POST /api/admin/table-ideas", () => {
     const unauthorized = NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
     requirePlatformAdmin.mockResolvedValue(unauthorized);
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(401);
     expect(composeTableIdeas).not.toHaveBeenCalled();
     expect(getAdminFirestore).not.toHaveBeenCalled();
@@ -77,7 +88,7 @@ describe("POST /api/admin/table-ideas", () => {
 
   it("returns 400 validation for invalid request bodies", async () => {
     const response = await POST(
-      jsonRequest({ city: "Mexico City", mode: "admin_theme" }),
+      jsonRequest({ city: "Guadalajara", mode: "admin_theme" }),
     );
     const json = await response.json();
     expect(response.status).toBe(400);
@@ -95,7 +106,7 @@ describe("POST /api/admin/table-ideas", () => {
     });
     composeTableIdeas.mockRejectedValue(new TableIdeasError("pool_too_small"));
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ ok: false, error: "pool_too_small" });
   });
@@ -108,7 +119,7 @@ describe("POST /api/admin/table-ideas", () => {
     });
     composeTableIdeas.mockRejectedValue(new TableIdeasError("ai_not_configured"));
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ ok: false, error: "ai_not_configured" });
   });
@@ -121,7 +132,7 @@ describe("POST /api/admin/table-ideas", () => {
     });
     composeTableIdeas.mockRejectedValue(new TableIdeasError("ai_invalid"));
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ ok: false, error: "ai_invalid" });
   });
@@ -134,7 +145,7 @@ describe("POST /api/admin/table-ideas", () => {
     });
     composeTableIdeas.mockRejectedValue(new TableIdeasError("fetch_failed", "provider_http_429"));
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ ok: false, error: "fetch_failed" });
   });
@@ -147,14 +158,14 @@ describe("POST /api/admin/table-ideas", () => {
     });
     composeTableIdeas.mockRejectedValue(new Error("boom"));
 
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ ok: false, error: "fetch_failed" });
   });
 
   it("returns 503 not_configured when Firebase Admin is missing", async () => {
     isFirebaseAdminConfigured.mockReturnValue(false);
-    const response = await POST(jsonRequest({ city: "Mexico City", mode: "spontaneous" }));
+    const response = await POST(jsonRequest({ city: "Guadalajara", mode: "spontaneous" }));
     expect(response.status).toBe(503);
     expect(await response.json()).toEqual({ ok: false, error: "not_configured" });
     expect(composeTableIdeas).not.toHaveBeenCalled();

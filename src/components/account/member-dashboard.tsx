@@ -1,5 +1,6 @@
 "use client";
 
+import { MemberNextActionsCard } from "@/components/account/member-next-actions-card";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import { Link } from "@/i18n/navigation";
 import type { MePayload } from "@/lib/types/member-me";
@@ -30,7 +31,7 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
   const locale = useLocale();
   const authFetch = useAuthFetch();
 
-  const { stats, referral, upcomingInvitations } = data;
+  const { stats, referral, upcomingInvitations, nextActions = [] } = data;
 
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [loadingInvite, setLoadingInvite] = useState(false);
@@ -101,6 +102,8 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
 
   return (
     <div className="space-y-8">
+      <MemberNextActionsCard actions={nextActions} />
+
       <section>
         <h3 className={FORM_SECTION_TITLE}>{t("dashboard.statsTitle")}</h3>
         <div className="mt-3 grid grid-cols-2 gap-6 sm:grid-cols-4">

@@ -1,8 +1,8 @@
 import { configuredAdminEmails, normalizeEmail } from "@/lib/auth/platform-admin";
 
 /**
- * Personalised event emails stay 1:1 in `to`, with platform admins in `bcc`
- * so invitees never see each other (or the admin copy).
+ * Optional addressing helper: 1:1 `to`, platform admins in `bcc`.
+ * Not applied by default — pass `bccAdmins: true` to `sendTransactionalEmail` when needed.
  */
 export function eventMailAddressing(to: string): {
   to: string[];

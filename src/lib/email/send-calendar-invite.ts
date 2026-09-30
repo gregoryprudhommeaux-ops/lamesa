@@ -313,10 +313,7 @@ export async function sendCalendarInviteEmail(input: {
 export async function sendTemplatedEventEmail(input: {
   key:
     | "participation_confirmed"
-    | "payment_relance"
-    | "reminder_7d"
-    | "reminder_36h"
-    | "reminder_90m";
+    | "payment_relance";
   event: AdminEvent;
   participation: AdminEventParticipation;
 }): Promise<{ ok: true } | { ok: false; error: string } | { ok: true; skipped: true }> {

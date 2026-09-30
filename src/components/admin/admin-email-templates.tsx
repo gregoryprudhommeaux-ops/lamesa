@@ -1,14 +1,21 @@
 "use client";
 
 import { ColdOutreachPanel } from "@/components/admin/cold-outreach-panel";
+import { IncompleteProfilesBlastPanel } from "@/components/admin/incomplete-profiles-blast-panel";
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
-import { wrapLaMesaPlainBody } from "@/lib/email/la-mesa-email-shell";
+import { wrapLaMesaPlainBody, wrapLaMesaEmailHtml } from "@/lib/email/la-mesa-email-shell";
+import {
+  satisfactionBodyToHtml,
+  satisfactionSurveyButtonHtml,
+  satisfactionTestSurveyUrl,
+} from "@/lib/email/satisfaction-survey-html";
+import { PRODUCTION_SITE_URL } from "@/lib/site-url";
 import {
   DEFAULT_SEND_LOCALE,
-  EMAIL_TEMPLATE_LABELS,
+  DINNER_FUNNEL_TEMPLATE_KEYS,
   isCustomEmailTemplateKey,
   isSystemEmailTemplateKey,
-  SYSTEM_EMAIL_TEMPLATE_KEYS,
+  OUTSIDE_DINNER_TEMPLATE_KEYS,
   TEMPLATE_LOCALE_LABELS,
   TEMPLATE_LOCALES,
   templateLabel,
@@ -21,10 +28,14 @@ import type {
 } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
 import { Copy, MoreVertical, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export function AdminEmailTemplatesPanel() {
   const authFetch = useAuthFetch();
+  const searchParams = useSearchParams();
+  const prospectListFromUrl = (searchParams.get("prospectList") ?? "").trim();
   const [events, setEvents] = useState<AdminEvent[]>([]);
   const [templates, setTemplates] = useState<EmailTemplateDoc[]>([]);
   const [activeKey, setActiveKey] = useState<EmailTemplateKey>("calendar_invite");
@@ -37,6 +48,8 @@ export function AdminEmailTemplatesPanel() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sendingTest, setSendingTest] = useState(false);
+  const [showIncompleteBlast, setShowIncompleteBlast] = useState(false);
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState("");
@@ -53,7 +66,13 @@ export function AdminEmailTemplatesPanel() {
     [templates, activeKey],
   );
   const isCustom = isCustomEmailTemplateKey(activeKey);
+  const supportsIncompleteBlast =
+    activeKey === "light_signup" || activeKey === "profile_incomplete";
   const selectionKey = `${activeKey}|${editLocale}|${eventId}`;
+
+  useEffect(() => {
+    setShowIncompleteBlast(false);
+  }, [activeKey]);
 
   // Debounce preview so typing doesn't remount the iframe (layout jump)
   useEffect(() => {
@@ -61,13 +80,27 @@ export function AdminEmailTemplatesPanel() {
     return () => window.clearTimeout(t);
   }, [body]);
 
-  const previewHtml = useMemo(
-    () =>
-      wrapLaMesaPlainBody(previewBody || "(Aperçu du corps…)", {
+  const previewHtml = useMemo(() => {
+    const raw = previewBody || "(Aperçu du corps…)";
+    if (activeKey === "satisfaction_survey") {
+      const surveyUrl = satisfactionTestSurveyUrl(PRODUCTION_SITE_URL, editLocale);
+      const format =
+        editLocale === "fr" ? "Dîner" : editLocale === "en" ? "Dinner" : "Cena";
+      const bodyText = raw
+        .replaceAll("{{fullName}}", "Test LA MESA")
+        .replaceAll("{{firstName}}", "Test")
+        .replaceAll("{{email}}", "test@example.com")
+        .replaceAll("{{eventTitle}}", "LA MESA — aperçu test")
+        .replaceAll("{{format}}", format)
+        .replaceAll("{{surveyUrl}}", surveyUrl);
+      return wrapLaMesaEmailHtml({
         lang: editLocale,
-      }),
-    [previewBody, editLocale],
-  );
+        bodyHtml: satisfactionBodyToHtml(bodyText, surveyUrl),
+        footerHtml: satisfactionSurveyButtonHtml(surveyUrl, editLocale),
+      });
+    }
+    return wrapLaMesaPlainBody(raw, { lang: editLocale });
+  }, [previewBody, editLocale, activeKey]);
   const previewFooterHint =
     editLocale === "en"
       ? "How it works"
@@ -450,45 +483,73 @@ export function AdminEmailTemplatesPanel() {
 
   return (
     <div className="w-full min-w-0 max-w-full space-y-6 overflow-x-hidden">
-      <div className="rounded-2xl border border-gray-100 bg-ns-surface p-4">
-        <h2 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
-          Créer un template
-        </h2>
-        <p className="mt-1 text-xs text-ns-secondary">
-          Même design que les mails LA MESA (fond sombre, carte blanche, marque lime). Les
-          templates custom sont globaux — utiles pour drafts / campagnes manuelles. Les
-          automations (invitation, rappel, etc.) restent dans la liste système.
-        </p>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <div className="min-w-0 flex-1 basis-[220px]">
-            <label className={LABEL_CLASS} htmlFor="new-tpl-label">
-              Nom du template
-            </label>
-            <input
-              id="new-tpl-label"
-              className={INPUT_CLASS}
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="Ex. Nurture J+7"
-            />
-          </div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-xl font-bold text-ns-hero">Coms</h2>
+          <p className="mt-1 text-sm text-ns-secondary">
+            Envoyer et suivre — templates au service de l’envoi, pas l’inverse.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             className={BTN_PRIMARY}
-            disabled={creating || newLabel.trim().length < 2}
-            onClick={() => void createTemplate()}
+            onClick={() => {
+              const firstCustom = customTemplates[0]?.key;
+              if (firstCustom) {
+                setActiveKey(firstCustom);
+                setMessage(null);
+                window.requestAnimationFrame(() => {
+                  document
+                    .getElementById("coms-send-panel")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
+              } else {
+                setShowCreateTemplate(true);
+                setMessage("Crée un template custom pour lancer un blast Prospects.");
+              }
+            }}
           >
-            {creating ? "Création…" : "Créer"}
+            Envoyer un blast
           </button>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => {
+              setActiveKey("profile_incomplete");
+              setShowIncompleteBlast(true);
+              setMessage(null);
+              window.requestAnimationFrame(() => {
+                document
+                  .getElementById("incomplete-profiles-blast")
+                  ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+              });
+            }}
+          >
+            Profils incomplets
+          </button>
+          <Link
+            href="/admin/personnes?tab=prospects"
+            className={`${BTN_SECONDARY} inline-flex items-center text-sm`}
+          >
+            Listes Prospects →
+          </Link>
         </div>
       </div>
 
+      {prospectListFromUrl ? (
+        <div className="rounded-xl border border-ns-primary/20 bg-ns-brand-light/60 px-4 py-3 text-sm text-ns-tertiary">
+          Liste table pré-sélectionnée pour l’envoi cold :{" "}
+          <span className="font-semibold text-ns-hero">{prospectListFromUrl}</span>
+          . Ouvre un template custom pour envoyer à cette liste.
+        </div>
+      ) : null}
       <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           {customTemplates.length > 0 ? (
             <div className="space-y-1">
               <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-                Custom
+                Envoi · custom
               </p>
               {customTemplates.map((t) => (
                 <div
@@ -558,49 +619,53 @@ export function AdminEmailTemplatesPanel() {
                 Custom
               </p>
               <p className="mt-1 text-xs text-ns-secondary">
-                Aucun template custom — crée-en un ci-dessus.
+                Aucun template custom — crée-en un en bas de page.
               </p>
             </div>
           )}
 
-          <div className="space-y-1 border-t border-gray-100 pt-3">
-            <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
-              Automatiques
-            </p>
-            {(systemTemplates.length
-              ? systemTemplates
-              : SYSTEM_EMAIL_TEMPLATE_KEYS.map((key) => ({
-                  key,
-                  enabled: true,
-                  label: EMAIL_TEMPLATE_LABELS[key],
-                }))
-            ).map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => {
-                  setActiveKey(t.key);
-                  setMessage(null);
-                }}
-                className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
-                  activeKey === t.key
-                    ? "bg-ns-primary/15 font-semibold text-ns-primary"
-                    : "hover:bg-ns-brand-light"
-                }`}
-              >
-                <span className="block truncate">
-                  {templateLabel(t.key, "label" in t ? t.label : undefined)}
-                </span>
-                <span
-                  className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
-                    t.enabled !== false ? "text-ns-primary" : "text-red-600"
-                  }`}
-                >
-                  {t.enabled !== false ? "Actif" : "Désactivé"}
-                </span>
-              </button>
-            ))}
-          </div>
+          {(
+            [
+              ["Funnel dîner", DINNER_FUNNEL_TEMPLATE_KEYS],
+              ["Hors dîner", OUTSIDE_DINNER_TEMPLATE_KEYS],
+            ] as const
+          ).map(([title, keys]) => (
+            <div key={title} className="space-y-1 border-t border-gray-100 pt-3">
+              <p className="px-1 text-[10px] font-bold uppercase tracking-wide text-ns-secondary">
+                {title}
+              </p>
+              {keys.map((key) => {
+                const loaded = systemTemplates.find((t) => t.key === key);
+                const enabled = loaded ? loaded.enabled !== false : true;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => {
+                      setActiveKey(key);
+                      setMessage(null);
+                    }}
+                    className={`w-full min-w-0 rounded-lg px-3 py-2 text-left text-sm ${
+                      activeKey === key
+                        ? "bg-ns-primary/15 font-semibold text-ns-primary"
+                        : "hover:bg-ns-brand-light"
+                    }`}
+                  >
+                    <span className="block truncate">
+                      {templateLabel(key, loaded?.label)}
+                    </span>
+                    <span
+                      className={`mt-1 inline-block text-[10px] font-bold uppercase tracking-wide ${
+                        enabled ? "text-ns-primary" : "text-red-600"
+                      }`}
+                    >
+                      {enabled ? "Actif" : "Désactivé"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </aside>
 
         <section className="min-w-0 max-w-full space-y-4 overflow-hidden rounded-2xl border border-gray-100 bg-ns-surface p-5">
@@ -767,6 +832,23 @@ export function AdminEmailTemplatesPanel() {
             >
               {sendingTest ? "Envoi test…" : "Envoyer un email test"}
             </button>
+            {supportsIncompleteBlast ? (
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={saving || sendingTest}
+                onClick={() => {
+                  setShowIncompleteBlast(true);
+                  window.requestAnimationFrame(() => {
+                    document
+                      .getElementById("incomplete-profiles-blast")
+                      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                  });
+                }}
+              >
+                Envoyer
+              </button>
+            ) : null}
             <button
               type="button"
               className={BTN_SECONDARY}
@@ -775,6 +857,28 @@ export function AdminEmailTemplatesPanel() {
               {showPreview ? "Masquer l’aperçu" : "Aperçu design"}
             </button>
           </div>
+
+          {supportsIncompleteBlast ? (
+            <IncompleteProfilesBlastPanel
+              templateKey={activeKey}
+              locale={editLocale}
+              subject={subject}
+              body={body}
+              open={showIncompleteBlast}
+              onOpenChange={setShowIncompleteBlast}
+            />
+          ) : null}
+
+          {isCustom ? (
+            <div id="coms-send-panel" className="min-w-0 max-w-full overflow-hidden">
+              <ColdOutreachPanel
+                templateKey={activeKey}
+                locale={editLocale}
+                enabled={enabled}
+                initialListName={prospectListFromUrl || null}
+              />
+            </div>
+          ) : null}
 
           {showPreview ? (
             <div className="max-w-full overflow-hidden rounded-xl border border-gray-200">
@@ -798,15 +902,7 @@ export function AdminEmailTemplatesPanel() {
             </div>
           ) : null}
 
-          {isCustom ? (
-            <div className="min-w-0 max-w-full overflow-hidden">
-              <ColdOutreachPanel
-                templateKey={activeKey}
-                locale={editLocale}
-                enabled={enabled}
-              />
-            </div>
-          ) : null}
+          {/* cold outreach was here — moved above preview */}
 
           <div className="flex flex-wrap gap-2">
             <button
@@ -859,6 +955,50 @@ export function AdminEmailTemplatesPanel() {
             </button>
           </div>
         </section>
+      </div>
+
+      <div className="rounded-2xl border border-dashed border-gray-200 bg-ns-surface/60 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">
+              Bibliothèque · créer un template
+            </h3>
+            <p className="mt-1 text-xs text-ns-secondary">
+              Secondaire — pour une nouvelle campagne custom (même shell LA MESA).
+            </p>
+          </div>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => setShowCreateTemplate((v) => !v)}
+          >
+            {showCreateTemplate ? "Masquer" : "Nouveau template"}
+          </button>
+        </div>
+        {showCreateTemplate ? (
+          <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-gray-100 pt-3">
+            <div className="min-w-0 flex-1 basis-[220px]">
+              <label className={LABEL_CLASS} htmlFor="new-tpl-label">
+                Nom du template
+              </label>
+              <input
+                id="new-tpl-label"
+                className={INPUT_CLASS}
+                value={newLabel}
+                onChange={(e) => setNewLabel(e.target.value)}
+                placeholder="Ex. Nurture J+7"
+              />
+            </div>
+            <button
+              type="button"
+              className={BTN_PRIMARY}
+              disabled={creating || newLabel.trim().length < 2}
+              onClick={() => void createTemplate()}
+            >
+              {creating ? "Création…" : "Créer"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

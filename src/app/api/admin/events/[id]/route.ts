@@ -4,6 +4,7 @@ import {
   requirePlatformAdmin,
 } from "@/lib/auth/require-platform-admin.server";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
+import { ensureOrganizerParticipation } from "@/lib/events/ensure-organizer-participation";
 import { eventSlugFromTitleAndDate, slugify } from "@/lib/events/utils";
 import { z } from "zod";
 
@@ -18,6 +19,11 @@ const updateSchema = z.object({
   endsAt: z.string().optional().nullable(),
   capacity: z.number().int().min(1).max(100).optional(),
   priceMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  costMxn: z.number().min(0).max(1_000_000).optional().nullable(),
+  priceIncludesService: z.boolean().optional().nullable(),
+  costIncludesService: z.boolean().optional().nullable(),
+  priceIncludesIva: z.boolean().optional().nullable(),
+  costIncludesIva: z.boolean().optional().nullable(),
   accessIncludesWelcomeDrink: z.boolean().optional(),
   accessIncludesAmuseBouche: z.boolean().optional(),
   menuIncluded: z.string().trim().max(4000).optional().nullable(),
@@ -38,6 +44,7 @@ const updateSchema = z.object({
     .nullable(),
   parking: z.enum(["secure_nearby", "valet", "on_site", "unknown"]).optional().nullable(),
   shareEnabled: z.boolean().optional(),
+  satisfactionSurveyAutoSend: z.boolean().optional(),
   responseMode: z.enum(["rsvp", "interest"]).optional(),
   subtitle: z.string().trim().max(200).optional().nullable(),
   interestDeadlineAt: z.string().optional().nullable(),
@@ -85,14 +92,17 @@ export async function PATCH(request: Request, { params }: Params) {
       eventSlugFromTitleAndDate(data.title, data.startsAt) ||
       slugify(data.title);
 
+    const now = new Date().toISOString();
     await db.collection(COLLECTIONS.events).doc(id).set(
       {
         ...data,
         slug: nextSlug,
-        updatedAt: new Date().toISOString(),
+        updatedAt: now,
       },
       { merge: true },
     );
+    // Normalize organizer seat to Invité (comped) — COST yes, CA no.
+    await ensureOrganizerParticipation(db, id, now);
     return NextResponse.json({ ok: true, id });
   } catch (error) {
     console.error("[admin/events PATCH]", error);

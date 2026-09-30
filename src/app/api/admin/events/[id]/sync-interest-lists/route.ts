@@ -5,6 +5,8 @@ import {
 } from "@/lib/auth/require-platform-admin.server";
 import { findWaitlistByEmail } from "@/lib/auth/member.server";
 import { normalizeEmail } from "@/lib/auth/platform-admin";
+import { applyOuiEmailsToParticipations } from "@/lib/events/apply-interest-oui-to-participations";
+import { listFormalInviteRecipients } from "@/lib/events/formal-invite-recipients";
 import {
   ensureInterestProspectLists,
   interestProspectListNames,
@@ -88,6 +90,19 @@ export async function POST(request: Request, { params }: Params) {
   const reconciled = await reconcileAnsweredStdProspectLists(slug);
   const sansReponse = await syncStdSansReponseList({ eventSlug: slug, eventId });
 
+  /** Vague 3 — OUI (form ∪ playlist) → Audience participations. */
+  let audience = { create: 0, promote: 0, noop: 0 };
+  try {
+    const ouiRecipients = await listFormalInviteRecipients({ eventId, eventSlug: slug });
+    audience = await applyOuiEmailsToParticipations({
+      db,
+      eventId,
+      ouiEmails: ouiRecipients.map((r) => r.email),
+    });
+  } catch (error) {
+    console.warn("[sync-interest-lists] audience OUI upsert failed", error);
+  }
+
   return NextResponse.json({
     ok: true,
     lists: interestProspectListNames(slug),
@@ -98,5 +113,6 @@ export async function POST(request: Request, { params }: Params) {
     skipped,
     reconciled,
     sansReponse,
+    audience,
   });
 }

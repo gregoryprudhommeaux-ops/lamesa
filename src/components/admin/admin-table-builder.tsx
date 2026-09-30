@@ -2,14 +2,21 @@
 
 import { useAuthFetch } from "@/hooks/use-auth-fetch";
 import {
+  formatTableCurationNote,
+  type TableCurationAction,
+} from "@/lib/admin/ops-notes";
+import {
   setPendingInvitees,
   tableMembersToInviteEmails,
   tableMembersToPendingInvitees,
 } from "@/lib/admin/pending-invitees";
 import type { ComposedTableIdea, TableIdeaSeat } from "@/lib/admin/table-matching";
+import { ALTERNATE_SEATS, PRIMARY_SEATS } from "@/lib/admin/table-matching";
 import type { TableIdeasErrorCode } from "@/lib/admin/table-matching";
 import type { TableIdeaMode } from "@/lib/admin/table-matching/types";
+import { tableThemeProspectListName } from "@/lib/admin/table-theme-prospect-list";
 import { labelCityHubFr, labelPositionFr, labelSectorFr } from "@/lib/admin/waitlist-labels-fr";
+import { TableIdeaProspectsPanel } from "@/components/admin/table-idea-prospects-panel";
 import { CITY_HUBS, DEFAULT_CITY_HUB, resolveCityHub } from "@/lib/constants/city-hubs";
 import {
   DEFAULT_EVENT_FORMAT,
@@ -19,12 +26,20 @@ import {
 } from "@/lib/constants/event-formats";
 import type { AdminEvent, TableDraft } from "@/lib/types/events";
 import { BTN_PRIMARY, BTN_SECONDARY, CHIP, CHIP_ACTIVE, ERROR_TEXT, INPUT_CLASS, LABEL_CLASS } from "@/lib/ui/nextstep";
-import { ArrowLeftRight, X } from "lucide-react";
+import { ArrowLeftRight, History, X } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type LoadState = "idle" | "loading" | "success" | "error";
 type TableIdea = ComposedTableIdea;
+type SeatListKind = "primary" | "alternates";
+type SeatActionMode = "move" | "remove";
+
+type SeatActionTarget = {
+  member: TableIdeaSeat;
+  list: SeatListKind;
+};
 
 const GENERATE_ERROR_LABELS_FR: Record<TableIdeasErrorCode | "generate_failed", string> = {
   validation: "Paramètres invalides. Vérifie la ville et le thème.",
@@ -70,6 +85,21 @@ function memberSubtitle(member: TableIdeaSeat): string {
     .join(" · ");
 }
 
+function seatFromSnapshot(member: TableDraft["primary"][number]): TableIdeaSeat {
+  return {
+    id: member.id,
+    fullName: member.fullName,
+    email: member.email,
+    company: member.company,
+    sector: member.sector,
+    position: member.position,
+    city: member.city,
+    invitationCount: member.invitationCount ?? 0,
+    invitedToPreviousEvent: member.invitedToPreviousEvent ?? false,
+    ...(member.themeFitBand ? { themeFitBand: member.themeFitBand } : {}),
+  };
+}
+
 function ideaFromDraft(draft: TableDraft): TableIdea {
   return {
     title: draft.title,
@@ -78,8 +108,54 @@ function ideaFromDraft(draft: TableDraft): TableIdea {
     commonalities: draft.commonalities,
     complementarities: draft.complementarities,
     warnings: draft.warnings,
-    primary: draft.primary,
-    alternates: draft.alternates,
+    primary: draft.primary.map(seatFromSnapshot),
+    alternates: draft.alternates.map(seatFromSnapshot),
+  };
+}
+
+function priorInviteLabel(member: TableIdeaSeat): { short: string; title: string } | null {
+  if (member.invitedToPreviousEvent) {
+    return {
+      short: "Table préc.",
+      title: "Invité à la table précédente — priorité réduite au scoring",
+    };
+  }
+  if (member.invitationCount > 0) {
+    return {
+      short: member.invitationCount === 1 ? "Déjà invité" : `Invité ×${member.invitationCount}`,
+      title: `Déjà invité ${member.invitationCount} fois — priorité réduite au scoring`,
+    };
+  }
+  return null;
+}
+
+function themeFitLabel(member: TableIdeaSeat): { short: string; title: string; className: string } | null {
+  if (!member.themeFitBand) return null;
+  if (member.themeFitBand === "strong") {
+    return {
+      short: "Fit fort",
+      title: "Alignement fort avec le thème de la table",
+      className: "bg-emerald-50 text-emerald-900",
+    };
+  }
+  if (member.themeFitBand === "medium") {
+    return {
+      short: "Fit moyen",
+      title: "Alignement moyen avec le thème de la table",
+      className: "bg-sky-50 text-sky-900",
+    };
+  }
+  if (member.themeFitBand === "weak") {
+    return {
+      short: "Fit faible",
+      title: "Alignement faible — à vérifier manuellement",
+      className: "bg-amber-50 text-amber-900",
+    };
+  }
+  return {
+    short: "Hors thème",
+    title: "Pas de signal thème — ne devrait pas être titulaire en mode qualité",
+    className: "bg-rose-50 text-rose-900",
   };
 }
 
@@ -102,10 +178,15 @@ export function AdminTableBuilder() {
   const searchParams = useSearchParams();
   const generateSectionRef = useRef<HTMLDivElement>(null);
 
-  const [city, setCity] = useState<string>(DEFAULT_CITY_HUB);
+  const [city, setCity] = useState<string>(() => {
+    const fromUrl = resolveCityHub(searchParams.get("city") ?? "");
+    return fromUrl ?? DEFAULT_CITY_HUB;
+  });
   const [format, setFormat] = useState<EventFormat>(DEFAULT_EVENT_FORMAT);
-  const [mode, setMode] = useState<TableIdeaMode>("spontaneous");
-  const [theme, setTheme] = useState("");
+  const [mode, setMode] = useState<TableIdeaMode>(() =>
+    searchParams.get("mode") === "admin_theme" ? "admin_theme" : "spontaneous",
+  );
+  const [theme, setTheme] = useState(() => (searchParams.get("theme") ?? "").trim());
 
   const [loadState, setLoadState] = useState<LoadState>("idle");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -115,6 +196,7 @@ export function AdminTableBuilder() {
 
   const [primary, setPrimary] = useState<TableIdeaSeat[]>([]);
   const [alternates, setAlternates] = useState<TableIdeaSeat[]>([]);
+  const [prospectListName, setProspectListName] = useState<string | null>(null);
 
   const [drafts, setDrafts] = useState<TableDraft[]>([]);
   const [draftsLoadState, setDraftsLoadState] = useState<LoadState>("idle");
@@ -130,8 +212,19 @@ export function AdminTableBuilder() {
   const [targetEventId, setTargetEventId] = useState("");
   const [adding, setAdding] = useState(false);
   const [addResultMsg, setAddResultMsg] = useState<string | null>(null);
+  const [contextEventTitle, setContextEventTitle] = useState<string | null>(null);
+
+  const [seatAction, setSeatAction] = useState<SeatActionTarget | null>(null);
+  const [seatActionMode, setSeatActionMode] = useState<SeatActionMode>("move");
+  const [seatActionComment, setSeatActionComment] = useState("");
+  const [seatActionBusy, setSeatActionBusy] = useState(false);
+  const [seatActionError, setSeatActionError] = useState<string | null>(null);
 
   const selectedIdea = ideas[selectedIdeaIndex];
+  const eventIdFromUrl = (searchParams.get("eventId") ?? "").trim();
+  const dinerReturnHref = eventIdFromUrl
+    ? `/admin/evenements?id=${encodeURIComponent(eventIdFromUrl)}&phase=dinner_prep`
+    : null;
 
   const loadDrafts = useCallback(async () => {
     setDraftsLoadState("loading");
@@ -150,15 +243,55 @@ export function AdminTableBuilder() {
     void loadDrafts();
   }, [loadDrafts]);
 
-  // ?generate=1 only focuses the generation controls — it must never trigger an AI call.
+  // Prefill theme / city / mode from demand panel (?theme=&mode=admin_theme&city=).
   useEffect(() => {
-    if (searchParams.get("generate") !== "1") return;
+    const themeFromUrl = (searchParams.get("theme") ?? "").trim();
+    const modeFromUrl = searchParams.get("mode");
+    const cityFromUrl = resolveCityHub(searchParams.get("city") ?? "");
+    if (themeFromUrl) {
+      setTheme(themeFromUrl);
+      setMode("admin_theme");
+    } else if (modeFromUrl === "admin_theme" || modeFromUrl === "spontaneous") {
+      setMode(modeFromUrl);
+    }
+    if (cityFromUrl) setCity(cityFromUrl);
+  }, [searchParams]);
+
+  // ?generate=1 or #table-generate focuses controls — never auto-triggers AI.
+  useEffect(() => {
+    const hash =
+      typeof window !== "undefined" ? window.location.hash.replace(/^#/, "") : "";
+    if (searchParams.get("generate") !== "1" && hash !== "table-generate") return;
     generateSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     const focusable = generateSectionRef.current?.querySelector<HTMLElement>(
       "input, select, textarea, button",
     );
     focusable?.focus();
   }, [searchParams]);
+
+  // ?eventId= — keep dinner context when arriving from dinner_prep.
+  useEffect(() => {
+    if (!eventIdFromUrl) {
+      setContextEventTitle(null);
+      return;
+    }
+    setTargetEventId(eventIdFromUrl);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await authFetch("/api/admin/events");
+        const json = (await res.json()) as { ok?: boolean; events?: AdminEvent[]; error?: string };
+        if (!res.ok || !json.ok || cancelled) return;
+        const match = (json.events ?? []).find((e) => e.id === eventIdFromUrl);
+        if (match) setContextEventTitle(match.title);
+      } catch {
+        // Banner still works with id alone.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authFetch, eventIdFromUrl]);
 
   function selectIdea(index: number) {
     const idea = ideas[index];
@@ -169,6 +302,13 @@ export function AdminTableBuilder() {
     setDraftMessage(null);
     setPrimary(idea.primary);
     setAlternates(idea.alternates);
+    setProspectListName(
+      tableThemeProspectListName({
+        theme: mode === "admin_theme" ? theme : undefined,
+        title: idea.title,
+        city,
+      }),
+    );
   }
 
   async function handleGenerate() {
@@ -197,6 +337,15 @@ export function AdminTableBuilder() {
       setDraftMessage(null);
       setPrimary(nextIdeas[0]?.primary ?? []);
       setAlternates(nextIdeas[0]?.alternates ?? []);
+      setProspectListName(
+        nextIdeas[0]
+          ? tableThemeProspectListName({
+              theme: mode === "admin_theme" ? theme : undefined,
+              title: nextIdeas[0].title,
+              city,
+            })
+          : null,
+      );
       setLoadState("success");
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "generate_failed");
@@ -208,14 +357,124 @@ export function AdminTableBuilder() {
     setHumanValidatedAt(null);
   }
 
-  function removeFromPrimary(id: string) {
-    setPrimary((prev) => prev.filter((m) => m.id !== id));
-    clearHumanValidation();
+  function openSeatAction(member: TableIdeaSeat, list: SeatListKind) {
+    setSeatAction({ member, list });
+    setSeatActionMode(list === "primary" ? "move" : "remove");
+    setSeatActionComment("");
+    setSeatActionError(null);
   }
 
-  function removeFromAlternates(id: string) {
-    setAlternates((prev) => prev.filter((m) => m.id !== id));
+  function closeSeatAction() {
+    if (seatActionBusy) return;
+    setSeatAction(null);
+    setSeatActionComment("");
+    setSeatActionError(null);
+  }
+
+  function moveSeatToOtherList(member: TableIdeaSeat, from: SeatListKind): string | null {
+    if (from === "primary") {
+      if (alternates.some((seat) => seat.id === member.id)) {
+        return "Ce profil est déjà en remplaçants.";
+      }
+      if (alternates.length >= ALTERNATE_SEATS) {
+        return `Remplaçants complets (${ALTERNATE_SEATS}). Retire un remplacant d’abord.`;
+      }
+      setPrimary((prev) => prev.filter((seat) => seat.id !== member.id));
+      setAlternates((prev) => [...prev, member]);
+      clearHumanValidation();
+      return null;
+    }
+
+    if (primary.some((seat) => seat.id === member.id)) {
+      return "Ce profil est déjà en titulaires.";
+    }
+    if (primary.length >= PRIMARY_SEATS) {
+      return `Titulaires complets (${PRIMARY_SEATS}). Retire un titulaire d’abord.`;
+    }
+    setAlternates((prev) => prev.filter((seat) => seat.id !== member.id));
+    setPrimary((prev) => [...prev, member]);
     clearHumanValidation();
+    return null;
+  }
+
+  async function persistCurationComment(
+    member: TableIdeaSeat,
+    list: SeatListKind,
+    comment: string,
+  ): Promise<string | null> {
+    const action: TableCurationAction =
+      list === "primary" ? "removed_from_primary" : "removed_from_alternate";
+    const appendOpsNote = formatTableCurationNote({
+      comment,
+      action,
+      themeTitle: selectedIdea?.title || theme || undefined,
+    });
+    const res = await authFetch(`/api/admin/waitlist/${encodeURIComponent(member.id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ appendOpsNote }),
+    });
+    const json = (await res.json()) as { ok?: boolean; error?: string };
+    if (!res.ok || !json.ok) {
+      return json.error ?? "save_failed";
+    }
+    return null;
+  }
+
+  async function confirmSeatAction() {
+    if (!seatAction) return;
+    setSeatActionError(null);
+
+    if (seatActionMode === "move") {
+      const moveError = moveSeatToOtherList(seatAction.member, seatAction.list);
+      if (moveError) {
+        setSeatActionError(moveError);
+        return;
+      }
+      setSeatAction(null);
+      setDraftMessage(
+        seatAction.list === "primary"
+          ? `${seatAction.member.fullName} déplacé en remplaçants.`
+          : `${seatAction.member.fullName} déplacé en titulaires.`,
+      );
+      return;
+    }
+
+    const comment = seatActionComment.trim();
+    if (comment.length < 8) {
+      setSeatActionError("Ajoute un commentaire (min. 8 caractères) pour affiner le profil.");
+      return;
+    }
+
+    setSeatActionBusy(true);
+    try {
+      const persistError = await persistCurationComment(
+        seatAction.member,
+        seatAction.list,
+        comment,
+      );
+      if (persistError) {
+        setSeatActionError(
+          describeActionError(persistError, "Impossible d’enregistrer le commentaire profil."),
+        );
+        return;
+      }
+      if (seatAction.list === "primary") {
+        setPrimary((prev) => prev.filter((seat) => seat.id !== seatAction.member.id));
+      } else {
+        setAlternates((prev) => prev.filter((seat) => seat.id !== seatAction.member.id));
+      }
+      clearHumanValidation();
+      setDraftMessage(
+        `Retiré · commentaire ajouté au profil de ${seatAction.member.fullName}.`,
+      );
+      setSeatAction(null);
+      setSeatActionComment("");
+    } catch (e) {
+      setSeatActionError(e instanceof Error ? e.message : "save_failed");
+    } finally {
+      setSeatActionBusy(false);
+    }
   }
 
   function swapRow(index: number) {
@@ -279,6 +538,9 @@ export function AdminTableBuilder() {
       warnings: selectedIdea.warnings,
       primary,
       alternates,
+      ...(prospectListName?.trim()
+        ? { prospectListName: prospectListName.trim().slice(0, 60) }
+        : {}),
       humanValidatedAt: null as null,
     };
     try {
@@ -297,6 +559,7 @@ export function AdminTableBuilder() {
           body: JSON.stringify({
             title: payload.title,
             city: payload.city,
+            format: payload.format,
             themeAngle: payload.themeAngle,
             rationale: payload.rationale,
             commonalities: payload.commonalities,
@@ -304,6 +567,9 @@ export function AdminTableBuilder() {
             warnings: payload.warnings,
             primary: payload.primary,
             alternates: payload.alternates,
+            ...(payload.prospectListName
+              ? { prospectListName: payload.prospectListName }
+              : {}),
           }),
         });
         const json = (await res.json()) as { ok?: boolean; id?: string; error?: string };
@@ -333,8 +599,16 @@ export function AdminTableBuilder() {
     setFormat(draft.format ?? DEFAULT_EVENT_FORMAT);
     setIdeas([ideaFromDraft(draft)]);
     setSelectedIdeaIndex(0);
-    setPrimary(draft.primary);
-    setAlternates(draft.alternates);
+    setPrimary(draft.primary.map(seatFromSnapshot));
+    setAlternates(draft.alternates.map(seatFromSnapshot));
+    setProspectListName(
+      draft.prospectListName?.trim() ||
+        tableThemeProspectListName({
+          title: draft.title,
+          theme: draft.themeAngle,
+          city: draft.city,
+        }),
+    );
     setDraftMessage(null);
   }
 
@@ -380,7 +654,13 @@ export function AdminTableBuilder() {
       const json = (await res.json()) as { ok?: boolean; events?: AdminEvent[]; error?: string };
       if (!res.ok || !json.ok) throw new Error(json.error ?? "load_failed");
       setEvents(json.events ?? []);
-      setTargetEventId(json.events?.[0]?.id ?? "");
+      const preferred =
+        (eventIdFromUrl && json.events?.some((e) => e.id === eventIdFromUrl)
+          ? eventIdFromUrl
+          : null) ||
+        json.events?.[0]?.id ||
+        "";
+      setTargetEventId(preferred);
     } catch (e) {
       setAddResultMsg(describeActionError(e instanceof Error ? e.message : undefined, "Échec du chargement."));
     } finally {
@@ -423,14 +703,38 @@ export function AdminTableBuilder() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-xl font-bold text-ns-hero">Constructeur de tables</h2>
+        <h2 className="text-xl font-bold text-ns-hero">Tables</h2>
+        <p className="mt-1 text-xs text-ns-secondary">
+          Étape 3 — composer les sièges après Idées → Nouveau dîner. Préremplir le thème depuis
+          Idées (Composer) ou ouvrir depuis un dîner (?eventId=).
+        </p>
         <p className="mt-1 text-sm text-ns-secondary">
           Génère des idées de tables à partir de la waitlist, ajuste les invités puis crée un
           événement ou complète-en un existant.
         </p>
       </div>
 
-      <div ref={generateSectionRef} className="rounded-2xl border border-gray-100 bg-ns-surface p-5">
+      {dinerReturnHref ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ns-primary/20 bg-ns-brand-light/50 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-ns-secondary">
+              Contexte dîner
+            </p>
+            <p className="truncate text-sm font-semibold text-ns-tertiary">
+              {contextEventTitle || "Événement en cours"}
+            </p>
+          </div>
+          <Link href={dinerReturnHref} className={`${BTN_SECONDARY} text-sm`}>
+            ← Retour prépa dîner
+          </Link>
+        </div>
+      ) : null}
+
+      <div
+        id="table-generate"
+        ref={generateSectionRef}
+        className="rounded-2xl border border-gray-100 bg-ns-surface p-5"
+      >
         <h3 className="text-sm font-bold uppercase tracking-wide text-ns-secondary">Génération</h3>
 
         <div className="mt-4 space-y-4">
@@ -608,18 +912,62 @@ export function AdminTableBuilder() {
                 <MemberSeatList
                   title={`Titulaires (${primary.length})`}
                   members={primary}
-                  onRemove={removeFromPrimary}
+                  list="primary"
+                  onOpenSeat={(member) => openSeatAction(member, "primary")}
                   swapPartner={alternates}
                   onSwap={swapRow}
                 />
                 <MemberSeatList
                   title={`Remplaçants (${alternates.length})`}
                   members={alternates}
-                  onRemove={removeFromAlternates}
+                  list="alternates"
+                  onOpenSeat={(member) => openSeatAction(member, "alternates")}
                   swapPartner={primary}
                   onSwap={swapRow}
                 />
               </div>
+
+              <TableIdeaProspectsPanel
+                theme={mode === "admin_theme" ? theme : undefined}
+                title={selectedIdea.title}
+                city={city}
+                listName={prospectListName}
+                onListNameChange={setProspectListName}
+                seatedEmails={
+                  new Set(
+                    [...primary, ...alternates]
+                      .map((seat) => seat.email.trim().toLowerCase())
+                      .filter(Boolean),
+                  )
+                }
+                onPromoteMember={(member) => {
+                  if (
+                    primary.some(
+                      (seat) => seat.id === member.id || seat.email === member.email,
+                    )
+                  ) {
+                    return;
+                  }
+                  if (primary.length >= PRIMARY_SEATS) {
+                    setDraftMessage(`Titulaires complets (${PRIMARY_SEATS}).`);
+                    return;
+                  }
+                  setAlternates((prev) =>
+                    prev.filter(
+                      (seat) => seat.id !== member.id && seat.email !== member.email,
+                    ),
+                  );
+                  setPrimary((prev) => [
+                    ...prev,
+                    {
+                      ...member,
+                      invitationCount: 0,
+                      invitedToPreviousEvent: false,
+                    },
+                  ]);
+                  setDraftMessage(`${member.fullName} ajouté en titulaire.`);
+                }}
+              />
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
@@ -782,6 +1130,115 @@ export function AdminTableBuilder() {
           </div>
         </div>
       ) : null}
+
+      {seatAction ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="table-seat-action-title"
+            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <h3 id="table-seat-action-title" className="text-lg font-bold text-ns-hero">
+              {seatAction.member.fullName}
+            </h3>
+            <p className="mt-1 text-sm text-ns-secondary">{memberSubtitle(seatAction.member)}</p>
+            <p className="mt-3 text-sm text-ns-tertiary">
+              {seatAction.list === "primary"
+                ? "Déplace en remplaçants, ou retire avec un commentaire pour affiner le prochain scan."
+                : "Remonte en titulaires, ou retire avec un commentaire pour affiner le prochain scan."}
+            </p>
+
+            <fieldset className="mt-4 space-y-2">
+              <legend className="sr-only">Action</legend>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-100 p-3 has-[:checked]:border-ns-primary has-[:checked]:bg-ns-brand-light">
+                <input
+                  type="radio"
+                  name="seat-action-mode"
+                  className="mt-1"
+                  checked={seatActionMode === "move"}
+                  onChange={() => {
+                    setSeatActionMode("move");
+                    setSeatActionError(null);
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ns-tertiary">
+                    {seatAction.list === "primary" ? "Placer en remplaçants" : "Placer en titulaires"}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ns-secondary">
+                    Garde le profil dans la composition sans toucher aux notes.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-gray-100 p-3 has-[:checked]:border-ns-primary has-[:checked]:bg-ns-brand-light">
+                <input
+                  type="radio"
+                  name="seat-action-mode"
+                  className="mt-1"
+                  checked={seatActionMode === "remove"}
+                  onChange={() => {
+                    setSeatActionMode("remove");
+                    setSeatActionError(null);
+                  }}
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-ns-tertiary">
+                    Retirer de la sélection
+                  </span>
+                  <span className="mt-0.5 block text-xs text-ns-secondary">
+                    Le commentaire enrichit le profil et oriente les prochains scans IA.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
+
+            {seatActionMode === "remove" ? (
+              <div className="mt-4">
+                <label className={LABEL_CLASS} htmlFor="table-seat-curation-comment">
+                  Pourquoi retirer ce profil ?
+                </label>
+                <textarea
+                  id="table-seat-curation-comment"
+                  className={`${INPUT_CLASS} min-h-[96px]`}
+                  value={seatActionComment}
+                  onChange={(e) => setSeatActionComment(e.target.value)}
+                  placeholder="Ex. trop junior pour PE/FO, doublon secteur, mauvais fit thème…"
+                  maxLength={600}
+                />
+                <p className="mt-1 text-xs text-ns-secondary">
+                  Enregistré dans les notes ops du membre (min. 8 caractères).
+                </p>
+              </div>
+            ) : null}
+
+            {seatActionError ? <p className={`mt-3 text-sm ${ERROR_TEXT}`}>{seatActionError}</p> : null}
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                disabled={seatActionBusy}
+                onClick={closeSeatAction}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                className={BTN_PRIMARY}
+                disabled={seatActionBusy}
+                onClick={() => void confirmSeatAction()}
+              >
+                {seatActionBusy
+                  ? "Enregistrement…"
+                  : seatActionMode === "move"
+                    ? "Déplacer"
+                    : "Retirer + commenter"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -822,13 +1279,15 @@ function IdeaTagList({
 function MemberSeatList({
   title,
   members,
-  onRemove,
+  list,
+  onOpenSeat,
   swapPartner,
   onSwap,
 }: {
   title: string;
   members: TableIdeaSeat[];
-  onRemove: (id: string) => void;
+  list: SeatListKind;
+  onOpenSeat: (member: TableIdeaSeat) => void;
   swapPartner: TableIdeaSeat[];
   onSwap: (index: number) => void;
 }) {
@@ -841,15 +1300,45 @@ function MemberSeatList({
         <ul className="mt-3 space-y-2">
           {members.map((member, index) => {
             const canSwap = Boolean(swapPartner[index]);
+            const priorInvite = priorInviteLabel(member);
+            const themeFit = themeFitLabel(member);
             return (
               <li
                 key={member.id}
                 className="flex items-start justify-between gap-2 rounded-lg border border-gray-50 bg-white p-2.5"
               >
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 rounded-md text-left transition hover:bg-ns-brand-light/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ns-primary"
+                  onClick={() => onOpenSeat(member)}
+                  title="Gérer ce siège"
+                  aria-label={`Gérer ${member.fullName}`}
+                >
+                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                    <p className="truncate text-sm font-semibold text-ns-tertiary">{member.fullName}</p>
+                    {themeFit ? (
+                      <span
+                        title={themeFit.title}
+                        className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${themeFit.className}`}
+                      >
+                        {themeFit.short}
+                      </span>
+                    ) : null}
+                    {priorInvite ? (
+                      <span
+                        title={priorInvite.title}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-900"
+                      >
+                        <History className="h-3 w-3" aria-hidden />
+                        {priorInvite.short}
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-0.5 truncate text-xs text-ns-secondary">{memberSubtitle(member)}</p>
-                </div>
+                  <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-ns-secondary">
+                    {list === "primary" ? "Cliquer · remplacant ou retirer" : "Cliquer · titulaire ou retirer"}
+                  </p>
+                </button>
                 <div className="flex shrink-0 gap-1">
                   {canSwap ? (
                     <button
@@ -864,10 +1353,10 @@ function MemberSeatList({
                   ) : null}
                   <button
                     type="button"
-                    title="Retirer"
-                    aria-label="Retirer"
+                    title="Gérer / retirer"
+                    aria-label={`Gérer ${member.fullName}`}
                     className="rounded-full p-1.5 text-ns-secondary transition hover:bg-red-50 hover:text-red-700"
-                    onClick={() => onRemove(member.id)}
+                    onClick={() => onOpenSeat(member)}
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>

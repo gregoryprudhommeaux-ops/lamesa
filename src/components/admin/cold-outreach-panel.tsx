@@ -25,19 +25,23 @@ type Props = {
   templateKey: EmailTemplateKey;
   locale: TemplateLocale;
   enabled: boolean;
+  /** Preselect a Prospects playlist (e.g. from Tables Idées). */
+  initialListName?: string | null;
 };
 
 const BATCH_LIMIT = 50;
 /** Sentinel: pool « à contacter » (hors listes). */
 const LIST_TO_CONTACT = "";
 
-export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
+export function ColdOutreachPanel({ templateKey, locale, enabled, initialListName }: Props) {
   const authFetch = useAuthFetch();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [skippedWaitlist, setSkippedWaitlist] = useState<Recipient[]>([]);
   const [alreadySent, setAlreadySent] = useState<Recipient[]>([]);
   const [lists, setLists] = useState<ProspectListOption[]>([]);
-  const [listFilter, setListFilter] = useState(LIST_TO_CONTACT);
+  const [listFilter, setListFilter] = useState(
+    () => (initialListName?.trim() || LIST_TO_CONTACT),
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -270,7 +274,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
           Choisis une <strong>liste Prospects</strong> ou le pool « à contacter ». Après envoi →{" "}
           <strong>contacté</strong> (sauf Gagné / Ne pas contacter). Batch max{" "}
           <strong>{BATCH_LIMIT}</strong>. Gérer les listes →{" "}
-          <Link href="/admin/prospects" className="font-semibold text-ns-primary underline">
+          <Link href="/admin/personnes?tab=prospects" className="font-semibold text-ns-primary underline">
             Prospects
           </Link>
           .
@@ -399,7 +403,7 @@ export function ColdOutreachPanel({ templateKey, locale, enabled }: Props) {
             ? `Aucun contact dans « ${listFilter} ».`
             : "Aucun prospect « à contacter »."}{" "}
           Gère les listes sur{" "}
-          <Link href="/admin/prospects" className="font-semibold underline">
+          <Link href="/admin/personnes?tab=prospects" className="font-semibold underline">
             Prospects
           </Link>
           .
