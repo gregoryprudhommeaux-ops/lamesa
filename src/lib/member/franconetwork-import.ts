@@ -8,7 +8,10 @@ import { normalizeEmail } from "@/lib/auth/platform-admin";
 import { sendFranconetworkAnnouncementEmail } from "@/lib/email/send-fn-announcement";
 import { COLLECTIONS, getAdminFirestore, isFirebaseAdminConfigured } from "@/lib/firebase/admin";
 import { persistDatabasePersoSyncStatus } from "@/lib/member/persist-signup-delivery";
-import { syncWaitlistMemberToDatabasePerso } from "@/lib/member/sync-database-perso";
+import {
+  syncWaitlistMemberToDatabasePerso,
+  type WaitlistSyncInput,
+} from "@/lib/member/sync-database-perso";
 import { syncWaitlistMemberToProspects } from "@/lib/member/sync-waitlist-to-prospects";
 import { isSoftDeleted } from "@/lib/member/soft-delete";
 
@@ -129,6 +132,7 @@ export function mapFnProfileToWaitlist(
   const linkedinUrl = trimText(input.linkedin);
   const invitationMotivation = pickMotivation(input);
   const locale = normalizeLocale(input.communicationLanguage);
+  const isProspect = input.isValidated === false;
 
   const draft: FranconetworkWaitlistRecord = {
     fullName,
@@ -143,12 +147,38 @@ export function mapFnProfileToWaitlist(
     invitationMotivation,
     locale,
     source: "franconetwork",
-    tags: [...FN_TAGS],
+    tags: isProspect
+      ? [...FN_TAGS, "franconetwork-express", "a-contacter"]
+      : [...FN_TAGS],
     profileComplete: false,
     createdAt: nowIso,
   };
   draft.profileComplete = computeFranconetworkProfileComplete(draft);
   return draft;
+}
+
+function toPersoSyncInput(record: FranconetworkWaitlistRecord): WaitlistSyncInput {
+  return {
+    fullName: record.fullName,
+    email: record.email,
+    phone: record.phone,
+    company: record.company,
+    sector: record.sector,
+    position: record.position,
+    city: record.city,
+    linkedinUrl: record.linkedinUrl,
+    extraActivities: record.extraActivities,
+    invitationMotivation: record.invitationMotivation,
+    canBring: "",
+    isSeeking: "",
+    dinnerThemesInterest: "",
+    dinnerSubjectInterests: [],
+    locale: record.locale,
+    source: "franconetwork",
+    tags: record.tags,
+    referredByCode: undefined,
+    updatedAt: undefined,
+  };
 }
 
 function mergeEmptyOnly(
@@ -157,7 +187,7 @@ function mergeEmptyOnly(
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {
     source: "franconetwork",
-    tags: [...FN_TAGS],
+    tags: incoming.tags.length ? incoming.tags : [...FN_TAGS],
     profileComplete: incoming.profileComplete,
     updatedAt: incoming.createdAt,
   };
@@ -197,22 +227,25 @@ function mergeEmptyOnly(
 /**
  * Upsert into la_mesa_waitlist.
  * - Active email → skip (no re-send)
- * - Soft-deleted → revive + fill empty fields; announcement if not already sent
- * - Missing → create + announcement email (ES)
+ * - Soft-deleted → revive + fill empty fields
+ * - Unvalidated FN express → waitlist OK (tags a-contacter); no member announcement
+ * - Validated → waitlist + Perso INSCRITS path; announcement if new
+ *
+ * Database Perso CONTACTER for express prospects is handled in parallel by FrancoNetwork
+ * Cloud Functions (add-to-contacter). LA MESA only pushes Perso INSCRITS when validated.
  */
 export async function upsertFranconetworkWaitlistMember(
   input: FranconetworkProfileInput,
 ): Promise<UpsertFranconetworkResult> {
-  if (!isFranconetworkDirectoryVisible(input)) {
-    return { status: "skipped", reason: "not_validated" };
-  }
-
   const record = mapFnProfileToWaitlist(input);
   if (!record) {
     if (!trimText(input.email)) return { status: "skipped", reason: "missing_email" };
     if (!trimText(input.fullName)) return { status: "skipped", reason: "missing_fullName" };
     return { status: "skipped", reason: "missing_email" };
   }
+
+  const isProspect = input.isValidated === false;
+  const directoryVisible = isFranconetworkDirectoryVisible(input);
 
   if (!isFirebaseAdminConfigured()) {
     return { status: "error", error: "firebase_not_configured" };
@@ -227,6 +260,16 @@ export async function upsertFranconetworkWaitlistMember(
     const db = getAdminFirestore();
     const existing = await findWaitlistByEmailIncludingDeleted(record.email);
     const now = record.createdAt;
+    const persoInput = toPersoSyncInput(record);
+
+    async function syncPersoIfValidated(waitlistId: string) {
+      if (isProspect || !directoryVisible) return;
+      const sync = await syncWaitlistMemberToDatabasePerso(
+        persoInput,
+        "[franconetwork-import]",
+      );
+      await persistDatabasePersoSyncStatus(waitlistId, sync);
+    }
 
     if (existing && isSoftDeleted(existing)) {
       const patch = mergeEmptyOnly(existing as unknown as Record<string, unknown>, {
@@ -236,47 +279,43 @@ export async function upsertFranconetworkWaitlistMember(
       await db.collection(COLLECTIONS.waitlist).doc(existing.id).set(
         {
           ...patch,
+          tags: record.tags,
           email: record.email,
           deletedAt: FieldValue.delete(),
         },
         { merge: true },
       );
 
-      // Await Perso sync (same as /api/register) — void fire-and-forget is dropped on Vercel after response.
-      const sync = await syncWaitlistMemberToDatabasePerso(
-        { ...record, referredByCode: undefined },
-        "[franconetwork-import]",
-      );
-      await persistDatabasePersoSyncStatus(existing.id, sync);
+      await syncPersoIfValidated(existing.id);
       await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
-      await sendFranconetworkAnnouncementEmail({
-        to: record.email,
-        fullName: record.fullName,
-        waitlistId: existing.id,
-        member: { ...record, ...patch },
-        alreadySent: existing.fnAnnouncementEmailStatus === "sent",
-      });
+      if (!isProspect) {
+        await sendFranconetworkAnnouncementEmail({
+          to: record.email,
+          fullName: record.fullName,
+          waitlistId: existing.id,
+          member: { ...record, ...patch },
+          alreadySent: existing.fnAnnouncementEmailStatus === "sent",
+        });
+      }
 
       return { status: "revived", id: existing.id, profileComplete: record.profileComplete };
     }
 
     const ref = await db.collection(COLLECTIONS.waitlist).add(record);
 
-    const sync = await syncWaitlistMemberToDatabasePerso(
-      { ...record, referredByCode: undefined },
-      "[franconetwork-import]",
-    );
-    await persistDatabasePersoSyncStatus(ref.id, sync);
+    await syncPersoIfValidated(ref.id);
     await syncWaitlistMemberToProspects(record, "[franconetwork-import]");
 
-    await sendFranconetworkAnnouncementEmail({
-      to: record.email,
-      fullName: record.fullName,
-      waitlistId: ref.id,
-      member: record,
-      alreadySent: false,
-    });
+    if (!isProspect) {
+      await sendFranconetworkAnnouncementEmail({
+        to: record.email,
+        fullName: record.fullName,
+        waitlistId: ref.id,
+        member: record,
+        alreadySent: false,
+      });
+    }
 
     return { status: "created", id: ref.id, profileComplete: record.profileComplete };
   } catch (e) {
