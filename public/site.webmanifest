@@ -1,0 +1,29 @@
+{
+  "name": "LA MESA",
+  "short_name": "LA MESA",
+  "description": "Cenas privadas en Guadalajara",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#b4e600",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
