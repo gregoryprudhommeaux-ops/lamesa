@@ -42,14 +42,26 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     metadataBase: new URL(getSiteUrl() || PRODUCTION_SITE_URL),
     title,
     description,
+    applicationName: "LA MESA",
+    appleWebApp: {
+      capable: true,
+      title: "LA MESA",
+      statusBarStyle: "black-translucent",
+    },
     icons: {
       icon: [
         { url: "/favicon.ico", sizes: "48x48" },
         { url: "/favicon.png", type: "image/png", sizes: "512x512" },
         { url: "/icon", type: "image/png", sizes: "32x32" },
+        { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+        { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
       ],
-      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+      apple: [
+        { url: "/apple-icon", type: "image/png", sizes: "180x180" },
+        { url: "/apple-touch-icon.png", type: "image/png", sizes: "180x180" },
+      ],
     },
+    manifest: "/site.webmanifest",
     alternates: {
       canonical: `/${locale}`,
     },
